@@ -1,5 +1,5 @@
 
-import { BarChart4, CalendarClock, DollarSign, FileText, Layers, Package, ShoppingCart, Users } from "lucide-react";
+import { BarChart4, CalendarClock, DollarSign, FileText, Layers, Package, ShoppingCart, Users, GasPump, Droplets, Truck, CreditCard, ClipboardList, Camera, Home, User, UserCircle } from "lucide-react";
 
 export const ModuleIcons = {
   Dashboard: Layers,
@@ -10,4 +10,13 @@ export const ModuleIcons = {
   Reports: BarChart4,
   Documents: FileText,
   Planning: CalendarClock,
+  FuelPump: GasPump,
+  Fuel: Droplets,
+  TankUnload: Truck,
+  Transaction: CreditCard,
+  Testing: ClipboardList,
+  Camera: Camera,
+  Home: Home,
+  Staff: User,
+  Customer: UserCircle,
 };
