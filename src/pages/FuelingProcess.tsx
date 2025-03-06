@@ -1,15 +1,16 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, CreditCard, Truck, Camera, FileText } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
+import TransactionForm from '@/components/fuel/TransactionForm';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
+// Interfaces moved from the main component
 interface Vehicle {
   id: string;
   number: string;
@@ -54,6 +55,7 @@ interface Transaction {
   meterReading: string;
 }
 
+// Mock data remains the same
 const mockCustomers: Customer[] = [
   {
     id: 'C001',
@@ -237,27 +239,18 @@ const FuelingProcess = () => {
      indent.id.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleRecordTransaction = () => {
-    if (!vehicleNumber || !amount || !quantity || !fuelType || !paymentMethod || !meterReading) {
-      toast({
-        title: "Missing information",
-        description: "Please fill all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
+  const handleRecordTransaction = (transaction: any) => {
     const newTransaction: Transaction = {
       id: `T${transactions.length + 1}`.padStart(4, '0'),
       indentId: selectedIndent ? selectedIndent.id : null,
-      vehicleNumber,
+      vehicleNumber: transaction.vehicleNumber,
       customerName: selectedCustomer ? selectedCustomer.name : null,
-      fuelType,
-      amount: parseFloat(amount),
-      quantity: parseFloat(quantity),
-      paymentMethod: paymentMethod as 'cash' | 'card' | 'upi' | 'credit',
-      timestamp: new Date().toISOString(),
-      meterReading
+      fuelType: transaction.fuelType,
+      amount: transaction.amount,
+      quantity: transaction.quantity,
+      paymentMethod: transaction.paymentMethod as 'cash' | 'card' | 'upi' | 'credit',
+      timestamp: transaction.timestamp,
+      meterReading: transaction.meterReading
     };
 
     setTransactions([newTransaction, ...transactions]);
@@ -267,13 +260,12 @@ const FuelingProcess = () => {
       description: "The fueling transaction has been successfully recorded",
     });
 
-    // Reset form
+    // Reset form state if needed
     if (!selectedCustomer) {
       setVehicleNumber('');
     }
     setAmount('');
     setQuantity('');
-    setMeterReading('');
     setSelectedIndent(null);
     setIndentId('');
   };
@@ -302,91 +294,9 @@ const FuelingProcess = () => {
                 <CardTitle>Record Fueling Transaction</CardTitle>
                 <CardDescription>Enter details to record a direct fueling transaction</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="vehicleNumber">Vehicle Number</Label>
-                  <Input 
-                    id="vehicleNumber" 
-                    placeholder="Enter vehicle number" 
-                    value={vehicleNumber}
-                    onChange={(e) => setVehicleNumber(e.target.value)}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fuelType">Fuel Type</Label>
-                    <Select value={fuelType} onValueChange={setFuelType}>
-                      <SelectTrigger id="fuelType">
-                        <SelectValue placeholder="Select fuel type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Petrol">Petrol</SelectItem>
-                        <SelectItem value="Diesel">Diesel</SelectItem>
-                        <SelectItem value="Premium Petrol">Premium Petrol</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="paymentMethod">Payment Method</Label>
-                    <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                      <SelectTrigger id="paymentMethod">
-                        <SelectValue placeholder="Select payment method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="card">Card</SelectItem>
-                        <SelectItem value="upi">UPI</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="amount">Amount (₹)</Label>
-                    <Input 
-                      id="amount" 
-                      type="number" 
-                      placeholder="Enter amount" 
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">Quantity (L)</Label>
-                    <Input 
-                      id="quantity" 
-                      type="number" 
-                      placeholder="Enter quantity" 
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="meterReading">Meter Reading</Label>
-                  <div className="flex gap-2">
-                    <Input 
-                      id="meterReading" 
-                      placeholder="Enter meter reading" 
-                      value={meterReading}
-                      onChange={(e) => setMeterReading(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button variant="outline" onClick={handleTakePicture}>
-                      <Camera className="h-4 w-4 mr-2" />
-                      Take Picture
-                    </Button>
-                  </div>
-                </div>
+              <CardContent>
+                <TransactionForm onSubmit={handleRecordTransaction} />
               </CardContent>
-              <CardFooter>
-                <Button className="w-full" onClick={handleRecordTransaction}>Record Transaction</Button>
-              </CardFooter>
             </Card>
 
             <Card>
@@ -478,72 +388,18 @@ const FuelingProcess = () => {
                   )}
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="indentId">Indent ID</Label>
-                    <Input 
-                      id="indentId" 
-                      value={indentId}
-                      readOnly
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="indentVehicle">Vehicle Number</Label>
-                    <Input 
-                      id="indentVehicle" 
-                      value={vehicleNumber}
-                      readOnly
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="indentAmount">Amount (₹)</Label>
-                    <Input 
-                      id="indentAmount" 
-                      value={amount}
-                      readOnly
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="indentQuantity">Quantity (L)</Label>
-                    <Input 
-                      id="indentQuantity" 
-                      value={quantity}
-                      readOnly
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="indentMeterReading">Meter Reading</Label>
-                  <div className="flex gap-2">
-                    <Input 
-                      id="indentMeterReading" 
-                      placeholder="Enter meter reading"
-                      value={meterReading}
-                      onChange={(e) => setMeterReading(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button variant="outline" onClick={handleTakePicture}>
-                      <Camera className="h-4 w-4 mr-2" />
-                      Take Picture
-                    </Button>
-                  </div>
-                </div>
+                {selectedIndent && (
+                  <TransactionForm 
+                    onSubmit={handleRecordTransaction}
+                    vehicleNumber={vehicleNumber}
+                    amount={amount}
+                    quantity={quantity}
+                    fuelType={fuelType}
+                    customerId={selectedIndent.customerId}
+                    customerName={selectedIndent.customerName}
+                  />
+                )}
               </CardContent>
-              <CardFooter>
-                <Button 
-                  className="w-full" 
-                  disabled={!selectedIndent || !meterReading} 
-                  onClick={handleRecordTransaction}
-                >
-                  Process Indent Fueling
-                </Button>
-              </CardFooter>
             </Card>
             
             <div className="space-y-6">
