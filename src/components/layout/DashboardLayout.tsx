@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,7 @@ import {
   LogOut,
   Menu,
   X,
-  GasPump,
+  Droplets,
   UserCircle 
 } from 'lucide-react';
 
@@ -63,12 +62,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: <UserCircle size={20} />, label: 'Staff', to: '/staff' },
     { icon: <Package size={20} />, label: 'Consumables', to: '/consumables' },
     { icon: <ClipboardList size={20} />, label: 'Shift Management', to: '/shift' },
-    { icon: <GasPump size={20} />, label: 'Fueling Process', to: '/fueling' },
+    { icon: <Droplets size={20} />, label: 'Fueling Process', to: '/fueling' },
   ];
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Mobile sidebar toggle */}
       <button
         className="fixed left-4 top-4 z-50 md:hidden"
         onClick={toggleSidebar}
@@ -76,7 +74,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
       
-      {/* Sidebar */}
       <aside
         className={`${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
@@ -119,7 +116,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
       </aside>
       
-      {/* Main content */}
       <main className="flex-1 md:ml-64">
         <div className="container py-6">
           {children}
