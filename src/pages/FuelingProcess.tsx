@@ -10,7 +10,6 @@ import TransactionForm from '@/components/fuel/TransactionForm';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
-// Interfaces moved from the main component
 interface Vehicle {
   id: string;
   number: string;
@@ -55,7 +54,6 @@ interface Transaction {
   meterReading: string;
 }
 
-// Mock data remains the same
 const mockCustomers: Customer[] = [
   {
     id: 'C001',
@@ -195,7 +193,6 @@ const FuelingProcess = () => {
       setVehicleNumber(vehicle.number);
       setFuelType(vehicle.fuelType);
       
-      // Check if there's an indent for this vehicle
       const indent = indents.find(i => 
         i.customerId === selectedCustomer.id && 
         i.vehicleId === vehicle.id && 
@@ -240,16 +237,18 @@ const FuelingProcess = () => {
   );
 
   const handleRecordTransaction = (transaction: any) => {
+    console.log("Recording transaction:", transaction);
+    
     const newTransaction: Transaction = {
       id: `T${transactions.length + 1}`.padStart(4, '0'),
       indentId: selectedIndent ? selectedIndent.id : null,
       vehicleNumber: transaction.vehicleNumber,
-      customerName: selectedCustomer ? selectedCustomer.name : null,
+      customerName: selectedCustomer ? selectedCustomer.name : transaction.customerName || null,
       fuelType: transaction.fuelType,
-      amount: transaction.amount,
-      quantity: transaction.quantity,
+      amount: parseFloat(transaction.amount.toString()),
+      quantity: parseFloat(transaction.quantity.toString()),
       paymentMethod: transaction.paymentMethod as 'cash' | 'card' | 'upi' | 'credit',
-      timestamp: transaction.timestamp,
+      timestamp: transaction.timestamp || new Date().toISOString(),
       meterReading: transaction.meterReading
     };
 
@@ -260,7 +259,6 @@ const FuelingProcess = () => {
       description: "The fueling transaction has been successfully recorded",
     });
 
-    // Reset form state if needed
     if (!selectedCustomer) {
       setVehicleNumber('');
     }

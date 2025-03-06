@@ -77,10 +77,23 @@ const TransactionForm = ({
       const calculatedAmount = (parseFloat(value) * rate).toFixed(2);
       setTransaction(prev => ({ ...prev, amount: calculatedAmount }));
     }
+
+    // Auto-update rate if fuel type changes
+    if (field === 'fuelType' && transaction.quantity) {
+      const fuelRates = {
+        'Petrol': 100,
+        'Diesel': 90,
+        'Premium Petrol': 110
+      };
+      const rate = fuelRates[value as keyof typeof fuelRates] || 100;
+      const calculatedAmount = (parseFloat(transaction.quantity) * rate).toFixed(2);
+      setTransaction(prev => ({ ...prev, amount: calculatedAmount }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Submitting transaction:", transaction);
 
     // Validation
     if (!transaction.vehicleNumber || !transaction.amount || !transaction.quantity || !transaction.meterReading) {
@@ -92,7 +105,7 @@ const TransactionForm = ({
       return;
     }
 
-    // Submit the transaction
+    // Submit the transaction with parsed numeric values
     onSubmit({
       ...transaction,
       amount: parseFloat(transaction.amount),

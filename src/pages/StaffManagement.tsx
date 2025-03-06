@@ -1,11 +1,10 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Plus, Search, UserCog, DollarSign } from 'lucide-react';
+import { Users, Plus, Search, UserCog } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import StaffForm from '@/components/staff/StaffForm';
 
@@ -71,16 +70,21 @@ const StaffManagement = () => {
     if (editingStaff) {
       // Update existing staff
       setStaff(staff.map(s => s.id === editingStaff.id ? { ...staffData, id: editingStaff.id } : s));
-      toast({ title: "Staff updated", description: `${staffData.name}'s information has been updated` });
+      toast({ 
+        title: "Staff updated", 
+        description: `${staffData.name}'s information has been updated` 
+      });
     } else {
       // Add new staff
       const newStaff = {
         ...staffData,
         id: `S${staff.length + 1}`.padStart(3, '0'),
-        salary: parseFloat(staffData.salary)
       };
       setStaff([...staff, newStaff]);
-      toast({ title: "Staff added", description: `${staffData.name} has been added to the staff list` });
+      toast({ 
+        title: "Staff added", 
+        description: `${staffData.name} has been added to the staff list` 
+      });
     }
     setFormOpen(false);
   };
@@ -88,7 +92,10 @@ const StaffManagement = () => {
   const handleDeleteStaff = (id: string) => {
     if (confirm("Are you sure you want to remove this staff member?")) {
       setStaff(staff.filter(s => s.id !== id));
-      toast({ title: "Staff removed", description: "Staff member has been removed" });
+      toast({ 
+        title: "Staff removed", 
+        description: "Staff member has been removed" 
+      });
     }
   };
 

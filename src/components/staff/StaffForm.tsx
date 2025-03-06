@@ -59,8 +59,14 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
       return;
     }
 
+    // Process the data before submission
+    const processedData = {
+      ...staffData,
+      salary: parseFloat(staffData.salary.toString()),
+    };
+
     // Submit the form
-    onSubmit(staffData);
+    onSubmit(processedData);
   };
 
   return (
