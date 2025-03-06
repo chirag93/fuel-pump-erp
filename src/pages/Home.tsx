@@ -57,11 +57,6 @@ const QuickAction = ({
 };
 
 const Home = () => {
-  const handleActionClick = (action: string) => {
-    console.log(`Action clicked: ${action}`);
-    // This would trigger a modal or redirect to the specific page
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -74,49 +69,49 @@ const Home = () => {
           title="Daily Readings"
           description="Add shift-wise opening and closing readings"
           icon={<Droplets size={20} />}
-          onClick={() => handleActionClick('daily-readings')}
+          href="/shift"
         />
         
         <QuickAction
           title="Tank Unload"
           description="Record incoming tank unloads and payments"
           icon={<Truck size={20} />}
-          onClick={() => handleActionClick('tank-unload')}
+          href="/consumables"
         />
         
         <QuickAction
           title="Stock Levels"
           description="Record end-of-day stock levels"
           icon={<Package size={20} />}
-          onClick={() => handleActionClick('stock-levels')}
+          href="/consumables"
         />
         
         <QuickAction
           title="Testing Details"
           description="Record fuel testing information"
           icon={<ClipboardList size={20} />}
-          onClick={() => handleActionClick('testing-details')}
+          href="/consumables"
         />
         
         <QuickAction
           title="Record Transaction"
           description="Record sales via QR, card, or cash"
           icon={<CreditCard size={20} />}
-          onClick={() => handleActionClick('record-transaction')}
+          href="/fueling"
         />
         
         <QuickAction
           title="Staff Cash"
           description="Record cash provided to staff at shift start"
           icon={<BarChart size={20} />}
-          onClick={() => handleActionClick('staff-cash')}
+          href="/staff"
         />
         
         <QuickAction
           title="Fuel Dispensing"
           description="Record fuel dispensing for customers"
           icon={<Camera size={20} />}
-          onClick={() => handleActionClick('fuel-dispensing')}
+          href="/fueling"
         />
         
         <QuickAction
