@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -9,10 +8,9 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Line, LineChart } from 'recharts';
-import { ArrowUpCircle, DollarSign, Users, Droplets, TrendingUp, GasPump } from 'lucide-react';
+import { ArrowUpCircle, DollarSign, Users, Droplets, TrendingUp, Fuel } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Mock data for charts
 const salesData = [
   { name: 'Mon', total: 5300 },
   { name: 'Tue', total: 6200 },
@@ -37,7 +35,6 @@ const Dashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Mock data for metrics
   const metrics = {
     totalSales: '₹58,500',
     customers: '134',
@@ -193,7 +190,7 @@ const Dashboard = () => {
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="flex items-center gap-4 rounded-lg border p-3">
                       <div className="rounded-full bg-primary/10 p-2 text-primary">
-                        <GasPump size={16} />
+                        <Droplets size={16} />
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium">Transaction #{10000 + i}</p>

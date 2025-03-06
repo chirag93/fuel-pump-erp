@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import {
   Card,
@@ -18,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Plus, FileText, Car, Edit, Trash, PenSquare } from 'lucide-react';
+import { Search, Plus, FileText, Car, Edit, Trash, PenSquare, Users } from 'lucide-react';
 
 // Mock data for customers
 const mockCustomers = [

@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -9,7 +8,7 @@ import {
 } from '@/components/ui/card';
 import { ModuleIcons } from '@/assets/icons';
 import {
-  GasPump,
+  Droplets,
   FileText,
   Package,
   Truck,
@@ -74,7 +73,7 @@ const Home = () => {
         <QuickAction
           title="Daily Readings"
           description="Add shift-wise opening and closing readings"
-          icon={<GasPump size={20} />}
+          icon={<Droplets size={20} />}
           onClick={() => handleActionClick('daily-readings')}
         />
         
@@ -131,7 +130,6 @@ const Home = () => {
       <div className="mt-8">
         <h3 className="mb-4 text-xl font-semibold">Recent Activity</h3>
         <div className="space-y-4">
-          {/* These would be dynamically generated in a real app */}
           {[
             {
               time: "10:45 AM",

@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { GasPump } from 'lucide-react';
+import { Droplets, Users } from 'lucide-react';
 import { CardFeature } from '@/components/ui/custom/CardFeature';
 
 const Login = () => {
@@ -35,7 +35,7 @@ const Login = () => {
         <div className="flex flex-col justify-center space-y-6">
           <div className="space-y-2 text-center md:text-left">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary md:mx-0">
-              <GasPump size={28} />
+              <Droplets size={28} />
             </div>
             <h1 className="text-3xl font-bold">Fuel Pump Management System</h1>
             <p className="text-muted-foreground">
@@ -45,7 +45,7 @@ const Login = () => {
           
           <div className="grid gap-4">
             <CardFeature
-              icon={<GasPump size={24} />}
+              icon={<Droplets size={24} />}
               title="Complete Management"
               description="Track staff, customers, inventory, and finances in one place"
               className="border-primary/20"

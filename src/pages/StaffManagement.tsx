@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import {
   Card,
@@ -18,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Plus, Edit, Trash, GasPump, Banknote, UserCircle } from 'lucide-react';
+import { Search, Plus, Edit, Trash, Droplets, Banknote, UserCircle } from 'lucide-react';
 
 // Mock data for staff
 const mockStaff = [
@@ -183,7 +182,7 @@ const StaffManagement = () => {
                   className="w-full justify-start" 
                   onClick={() => setActiveTab('pump-assignment')}
                 >
-                  <GasPump className="mr-2 h-4 w-4" />
+                  <Droplets className="mr-2 h-4 w-4" />
                   Pump Assignment
                 </Button>
               </div>
