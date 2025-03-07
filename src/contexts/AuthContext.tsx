@@ -52,6 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
+      // Update the API endpoint to match the Django URL pattern
       const response = await fetch('/api/login/', {
         method: 'POST',
         headers: {
@@ -59,6 +60,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
         body: JSON.stringify({ username, password }),
       });
+      
+      if (!response.ok) {
+        throw new Error(`Login failed with status: ${response.status}`);
+      }
       
       const data = await response.json();
       
@@ -91,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Login error:', error);
       toast({
         title: "Login failed",
-        description: "An error occurred during login",
+        description: "An error occurred during login. Please check if the server is running.",
         variant: "destructive",
       });
       return false;
