@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from "sonner";
 
 interface Shift {
   id: string;
@@ -92,7 +90,7 @@ const mockShifts: Shift[] = [
 ];
 
 const ShiftManagement = () => {
-  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>(mockShifts);
   const [formOpen, setFormOpen] = useState(false);
   const [newShift, setNewShift] = useState<Partial<Shift>>({
     date: new Date().toISOString().split('T')[0],
@@ -104,28 +102,10 @@ const ShiftManagement = () => {
     status: 'active'
   });
 
-  useEffect(() => {
-    const savedShifts = localStorage.getItem('shifts');
-    if (savedShifts) {
-      setShifts(JSON.parse(savedShifts));
-    } else {
-      setShifts(mockShifts);
-      localStorage.setItem('shifts', JSON.stringify(mockShifts));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (shifts.length > 0) {
-      localStorage.setItem('shifts', JSON.stringify(shifts));
-    }
-  }, [shifts]);
-
   const activeShifts = shifts.filter(shift => shift.status === 'active');
   const completedShifts = shifts.filter(shift => shift.status === 'completed');
 
   const handleAddShift = () => {
-    const currentTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    
     const shift: Shift = {
       id: (shifts.length + 1).toString(),
       staffId: newShift.staffId || '',
@@ -133,7 +113,7 @@ const ShiftManagement = () => {
                 newShift.staffId === 'S002' ? 'Priya Patel' : 
                 newShift.staffId === 'S003' ? 'Arun Kumar' : 'Unknown Staff',
       date: newShift.date || new Date().toISOString().split('T')[0],
-      startTime: currentTime,
+      startTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
       endTime: '',
       pumpId: newShift.pumpId || '',
       openingReading: newShift.openingReading || 0,
@@ -147,11 +127,9 @@ const ShiftManagement = () => {
     };
 
     setShifts([...shifts, shift]);
-    toast.success("New shift started successfully");
-    
     setNewShift({
       date: new Date().toISOString().split('T')[0],
-      startTime: currentTime,
+      startTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
       staffId: '',
       pumpId: '',
       cashGiven: 0,
@@ -176,7 +154,6 @@ const ShiftManagement = () => {
         } : 
         shift
     ));
-    toast.success("Shift ended successfully");
   };
 
   return (
@@ -237,15 +214,6 @@ const ShiftManagement = () => {
                   type="date"
                   value={newShift.date}
                   onChange={(e) => setNewShift({...newShift, date: e.target.value})}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="startTime">Start Time (Current Time)</Label>
-                <Input
-                  id="startTime"
-                  type="time"
-                  value={newShift.startTime}
-                  onChange={(e) => setNewShift({...newShift, startTime: e.target.value})}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
