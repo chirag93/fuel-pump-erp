@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -17,6 +18,8 @@ import {
   Camera,
   BarChart,
 } from 'lucide-react';
+import FuelTankDisplay from '@/components/fuel/FuelTankDisplay';
+import { getFuelLevels } from '@/utils/fuelCalculations';
 
 interface QuickActionProps {
   title: string;
@@ -57,6 +60,9 @@ const QuickAction = ({
 };
 
 const Home = () => {
+  // Get current fuel levels
+  const fuelLevels = getFuelLevels();
+
   return (
     <div className="space-y-6">
       <div>
@@ -64,62 +70,84 @@ const Home = () => {
         <p className="text-muted-foreground">Quick access to frequent operations</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        <QuickAction
-          title="Daily Readings"
-          description="Add shift-wise opening and closing readings"
-          icon={<Droplets size={20} />}
-          href="/shift"
-        />
-        
-        <QuickAction
-          title="Tank Unload"
-          description="Record incoming tank unloads and payments"
-          icon={<Truck size={20} />}
-          href="/consumables"
-        />
-        
-        <QuickAction
-          title="Stock Levels"
-          description="Record end-of-day stock levels"
-          icon={<Package size={20} />}
-          href="/consumables"
-        />
-        
-        <QuickAction
-          title="Testing Details"
-          description="Record fuel testing information"
-          icon={<ClipboardList size={20} />}
-          href="/consumables"
-        />
-        
-        <QuickAction
-          title="Record Transaction"
-          description="Record sales via QR, card, or cash"
-          icon={<CreditCard size={20} />}
-          href="/fueling"
-        />
-        
-        <QuickAction
-          title="Staff Cash"
-          description="Record cash provided to staff at shift start"
-          icon={<BarChart size={20} />}
-          href="/staff"
-        />
-        
-        <QuickAction
-          title="Fuel Dispensing"
-          description="Record fuel dispensing for customers"
-          icon={<Camera size={20} />}
-          href="/fueling"
-        />
-        
-        <QuickAction
-          title="Reports"
-          description="View daily and periodic reports"
-          icon={<FileText size={20} />}
-          href="/reports"
-        />
+      {/* Fuel Tank Status */}
+      <div>
+        <h3 className="mb-4 text-xl font-semibold">Fuel Storage Status</h3>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FuelTankDisplay 
+            fuelType="Petrol" 
+            capacity={fuelLevels.Petrol.capacity} 
+            currentLevel={fuelLevels.Petrol.current} 
+            lastUpdated="Today, 8:30 AM"
+          />
+          <FuelTankDisplay 
+            fuelType="Diesel" 
+            capacity={fuelLevels.Diesel.capacity} 
+            currentLevel={fuelLevels.Diesel.current} 
+            lastUpdated="Today, 8:30 AM"
+          />
+        </div>
+      </div>
+
+      <div>
+        <h3 className="mb-4 text-xl font-semibold">Quick Actions</h3>
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <QuickAction
+            title="Daily Readings"
+            description="Add shift-wise opening and closing readings"
+            icon={<Droplets size={20} />}
+            href="/shift"
+          />
+          
+          <QuickAction
+            title="Tank Unload"
+            description="Record incoming tank unloads and payments"
+            icon={<Truck size={20} />}
+            href="/consumables"
+          />
+          
+          <QuickAction
+            title="Stock Levels"
+            description="Record end-of-day stock levels"
+            icon={<Package size={20} />}
+            href="/consumables"
+          />
+          
+          <QuickAction
+            title="Testing Details"
+            description="Record fuel testing information"
+            icon={<ClipboardList size={20} />}
+            href="/consumables"
+          />
+          
+          <QuickAction
+            title="Record Transaction"
+            description="Record sales via QR, card, or cash"
+            icon={<CreditCard size={20} />}
+            href="/fueling"
+          />
+          
+          <QuickAction
+            title="Staff Cash"
+            description="Record cash provided to staff at shift start"
+            icon={<BarChart size={20} />}
+            href="/staff"
+          />
+          
+          <QuickAction
+            title="Fuel Dispensing"
+            description="Record fuel dispensing for customers"
+            icon={<Camera size={20} />}
+            href="/fueling"
+          />
+          
+          <QuickAction
+            title="Reports"
+            description="View daily and periodic reports"
+            icon={<FileText size={20} />}
+            href="/reports"
+          />
+        </div>
       </div>
 
       <div className="mt-8">
