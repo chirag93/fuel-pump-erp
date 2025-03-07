@@ -1,12 +1,15 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface User {
   id: string;
   username: string;
   email: string;
   role: 'admin' | 'staff';
+  fuel_pump?: number;
+  fuel_pump_name?: string;
 }
 
 interface AuthContextType {
@@ -30,6 +33,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Check for saved user in localStorage
@@ -48,40 +52,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // For now, we'll use a mock authentication since we're using a file-based backend
-      // In a real app, this would be an API call to your Django backend
-      if (username === 'admin' && password === 'admin123') {
-        const mockUser: User = {
-          id: '1',
-          username: 'admin',
-          email: 'admin@example.com',
-          role: 'admin'
-        };
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
+      const response = await fetch('/api/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setUser(data.user);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
         toast({
           title: "Login successful",
-          description: "Welcome back, admin!",
+          description: `Welcome back, ${data.user.username}!`,
         });
-        return true;
-      } else if (username === 'staff' && password === 'staff123') {
-        const mockUser: User = {
-          id: '2',
-          username: 'staff',
-          email: 'staff@example.com',
-          role: 'staff'
-        };
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        toast({
-          title: "Login successful",
-          description: "Welcome back, staff!",
-        });
+        
+        // Redirect based on role
+        if (data.user.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
+        
         return true;
       } else {
         toast({
           title: "Login failed",
-          description: "Invalid username or password",
+          description: data.message || "Invalid username or password",
           variant: "destructive",
         });
         return false;
@@ -106,6 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       title: "Logged out",
       description: "You have been successfully logged out.",
     });
+    navigate('/login');
   };
 
   return (

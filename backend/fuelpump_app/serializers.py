@@ -1,11 +1,18 @@
 
 from rest_framework import serializers
-from .models import User, Customer, Vehicle, Staff, Shift, Reading, Indent, Transaction
+from .models import User, Customer, Vehicle, Staff, Shift, Reading, Indent, Transaction, FuelPump
+
+class FuelPumpSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FuelPump
+        fields = '__all__'
 
 class UserSerializer(serializers.ModelSerializer):
+    fuel_pump_name = serializers.CharField(source='fuel_pump.name', read_only=True)
+    
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'role']
+        fields = ['id', 'username', 'email', 'role', 'fuel_pump', 'fuel_pump_name']
         extra_kwargs = {'password': {'write_only': True}}
 
 class CustomerSerializer(serializers.ModelSerializer):

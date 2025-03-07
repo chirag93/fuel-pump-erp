@@ -4,6 +4,8 @@ from rest_framework.routers import DefaultRouter
 from . import views
 
 router = DefaultRouter()
+router.register(r'fuelpumps', views.FuelPumpViewSet)
+router.register(r'users', views.UserViewSet)
 router.register(r'customers', views.CustomerViewSet)
 router.register(r'vehicles', views.VehicleViewSet)
 router.register(r'staff', views.StaffViewSet)

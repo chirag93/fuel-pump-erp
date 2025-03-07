@@ -3,17 +3,31 @@ from django.db import models
 import uuid
 from django.utils import timezone
 
+class FuelPump(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    location = models.CharField(max_length=100)
+    petrol_capacity = models.DecimalField(max_digits=12, decimal_places=2, default=10000)
+    diesel_capacity = models.DecimalField(max_digits=12, decimal_places=2, default=10000)
+    petrol_current_level = models.DecimalField(max_digits=12, decimal_places=2, default=5000)
+    diesel_current_level = models.DecimalField(max_digits=12, decimal_places=2, default=5000)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
 class User(models.Model):
     username = models.CharField(max_length=100, unique=True)
     email = models.EmailField(max_length=100, unique=True)
     password = models.CharField(max_length=100)  # In production, use Django's auth system
     role = models.CharField(max_length=20, choices=[('admin', 'Admin'), ('staff', 'Staff')])
+    fuel_pump = models.ForeignKey(FuelPump, on_delete=models.CASCADE, related_name='users', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.username
 
 class Customer(models.Model):
+    fuel_pump = models.ForeignKey(FuelPump, on_delete=models.CASCADE, related_name='customers')
     name = models.CharField(max_length=100)
     contact = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
@@ -36,6 +50,7 @@ class Vehicle(models.Model):
         return self.number
 
 class Staff(models.Model):
+    fuel_pump = models.ForeignKey(FuelPump, on_delete=models.CASCADE, related_name='staff')
     name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
     email = models.EmailField(max_length=100, blank=True, null=True)
@@ -60,6 +75,7 @@ class Shift(models.Model):
         return f"{self.staff.name} - {self.date} - {self.start_time}"
 
 class Reading(models.Model):
+    fuel_pump = models.ForeignKey(FuelPump, on_delete=models.CASCADE, related_name='readings')
     pump_id = models.CharField(max_length=20)
     shift = models.ForeignKey(Shift, on_delete=models.CASCADE, related_name='readings')
     opening_reading = models.DecimalField(max_digits=12, decimal_places=2)
@@ -72,6 +88,7 @@ class Reading(models.Model):
         return f"{self.pump_id} - {self.date}"
 
 class Indent(models.Model):
+    fuel_pump = models.ForeignKey(FuelPump, on_delete=models.CASCADE, related_name='indents')
     indent_id = models.CharField(max_length=20, unique=True, editable=False)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
@@ -90,6 +107,7 @@ class Indent(models.Model):
         return self.indent_id
 
 class Transaction(models.Model):
+    fuel_pump = models.ForeignKey(FuelPump, on_delete=models.CASCADE, related_name='transactions')
     transaction_id = models.CharField(max_length=20, unique=True, editable=False)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
