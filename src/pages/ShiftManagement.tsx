@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -123,6 +124,8 @@ const ShiftManagement = () => {
   const completedShifts = shifts.filter(shift => shift.status === 'completed');
 
   const handleAddShift = () => {
+    const currentTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    
     const shift: Shift = {
       id: (shifts.length + 1).toString(),
       staffId: newShift.staffId || '',
@@ -130,7 +133,7 @@ const ShiftManagement = () => {
                 newShift.staffId === 'S002' ? 'Priya Patel' : 
                 newShift.staffId === 'S003' ? 'Arun Kumar' : 'Unknown Staff',
       date: newShift.date || new Date().toISOString().split('T')[0],
-      startTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      startTime: currentTime,
       endTime: '',
       pumpId: newShift.pumpId || '',
       openingReading: newShift.openingReading || 0,
@@ -148,7 +151,7 @@ const ShiftManagement = () => {
     
     setNewShift({
       date: new Date().toISOString().split('T')[0],
-      startTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      startTime: currentTime,
       staffId: '',
       pumpId: '',
       cashGiven: 0,
@@ -234,6 +237,15 @@ const ShiftManagement = () => {
                   type="date"
                   value={newShift.date}
                   onChange={(e) => setNewShift({...newShift, date: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="startTime">Start Time (Current Time)</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={newShift.startTime}
+                  onChange={(e) => setNewShift({...newShift, startTime: e.target.value})}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">

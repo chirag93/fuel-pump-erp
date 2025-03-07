@@ -49,7 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       // For now, we'll use a mock authentication since we're using a file-based backend
-      // In a real app, this would be an API call to your Python backend
+      // In a real app, this would be an API call to your Django backend
       if (username === 'admin' && password === 'admin123') {
         const mockUser: User = {
           id: '1',
