@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   LayoutDashboard,
-  GasPump,
+  Fuel,
   Users,
   LogOut,
   Menu,
@@ -57,7 +57,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
   const navItems = [
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', to: '/admin/dashboard' },
-    { icon: <GasPump size={20} />, label: 'Fuel Pumps', to: '/admin/fuel-pumps' },
+    { icon: <Fuel size={20} />, label: 'Fuel Pumps', to: '/admin/fuel-pumps' },
     { icon: <PlusCircle size={20} />, label: 'Create Pump', to: '/admin/fuel-pumps/create' },
     { icon: <Settings size={20} />, label: 'Settings', to: '/admin/settings' },
   ];

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -28,9 +27,8 @@ import {
 } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, GasPump, Users, UserPlus, Droplets } from 'lucide-react';
+import { ArrowLeft, Fuel, Users, UserPlus, Droplets } from 'lucide-react';
 
-// User creation form schema
 const userFormSchema = z.object({
   username: z.string().min(3, { message: 'Username must be at least 3 characters' }),
   email: z.string().email({ message: 'Please enter a valid email' }),
@@ -39,7 +37,6 @@ const userFormSchema = z.object({
 
 type UserFormData = z.infer<typeof userFormSchema>;
 
-// Refill form schema
 const refillFormSchema = z.object({
   fuel_type: z.enum(['Petrol', 'Diesel']),
   amount: z.string().refine(value => !isNaN(Number(value)) && Number(value) > 0, {
@@ -67,7 +64,6 @@ const AdminPumpDetail = () => {
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isRefillDialogOpen, setIsRefillDialogOpen] = useState(false);
   
-  // Fetch fuel pump details
   const { data: fuelPump, isLoading } = useQuery({
     queryKey: ['fuelPump', id],
     queryFn: async () => {
@@ -79,7 +75,6 @@ const AdminPumpDetail = () => {
     }
   });
   
-  // Fetch pump users
   const { data: pumpUsers, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['pumpUsers', id],
     queryFn: async () => {
@@ -92,7 +87,6 @@ const AdminPumpDetail = () => {
     enabled: !!id
   });
 
-  // Form setup for creating users
   const userForm = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
@@ -102,7 +96,6 @@ const AdminPumpDetail = () => {
     },
   });
 
-  // Form setup for refilling tanks
   const refillForm = useForm<RefillFormData>({
     resolver: zodResolver(refillFormSchema),
     defaultValues: {
@@ -111,7 +104,6 @@ const AdminPumpDetail = () => {
     },
   });
 
-  // Mutation for creating a user
   const createUserMutation = useMutation({
     mutationFn: async (values: UserFormData) => {
       const response = await fetch('/api/users/create_pump_user/', {
@@ -153,7 +145,6 @@ const AdminPumpDetail = () => {
     },
   });
 
-  // Mutation for refilling tanks
   const refillTankMutation = useMutation({
     mutationFn: async (values: RefillFormData) => {
       const response = await fetch(`/api/fuelpumps/${id}/`, {
@@ -363,7 +354,7 @@ const AdminPumpDetail = () => {
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">
-            <GasPump className="h-4 w-4 mr-2" />
+            <Fuel className="h-4 w-4 mr-2" />
             Overview
           </TabsTrigger>
           <TabsTrigger value="users">

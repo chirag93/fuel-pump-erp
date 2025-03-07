@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -13,7 +12,7 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { GasPump, Plus, Search, ExternalLink } from 'lucide-react';
+import { Fuel, Plus, Search, ExternalLink } from 'lucide-react';
 
 interface FuelPump {
   id: number;
@@ -93,7 +92,7 @@ const AdminFuelPumps = () => {
                   <TableRow>
                     <TableCell colSpan={6} className="text-center h-24">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
-                        <GasPump className="h-8 w-8 mb-2" />
+                        <Fuel className="h-8 w-8 mb-2" />
                         <p>No fuel pumps found</p>
                       </div>
                     </TableCell>

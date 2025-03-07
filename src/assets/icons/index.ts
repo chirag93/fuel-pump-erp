@@ -10,7 +10,7 @@ export const ModuleIcons = {
   Reports: BarChart4,
   Documents: FileText,
   Planning: CalendarClock,
-  Fuel: Droplets,
+  Fuel: Fuel,
   TankUnload: Truck,
   Transaction: CreditCard,
   Testing: ClipboardList,

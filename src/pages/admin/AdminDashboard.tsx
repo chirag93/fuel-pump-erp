@@ -1,7 +1,6 @@
-
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { GasPump, Users, Truck, AlertCircle, TrendingUp } from 'lucide-react';
+import { Fuel, Users, Truck, AlertCircle, TrendingUp } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 interface FuelPumpStats {
@@ -58,7 +57,6 @@ const AdminDashboard = () => {
     return <div className="flex h-full items-center justify-center">Loading...</div>;
   }
 
-  // Calculate total stats
   const totalPetrolSales = pumpsStats.reduce((sum, pump) => sum + pump.today_petrol_sales, 0);
   const totalDieselSales = pumpsStats.reduce((sum, pump) => sum + pump.today_diesel_sales, 0);
   const totalTransactions = pumpsStats.reduce((sum, pump) => sum + pump.today_transaction_count, 0);
@@ -76,7 +74,7 @@ const AdminDashboard = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Pumps</CardTitle>
-            <GasPump className="h-4 w-4 text-muted-foreground" />
+            <Fuel className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalPumps}</div>
