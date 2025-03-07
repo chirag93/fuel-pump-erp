@@ -9,16 +9,21 @@ import { Droplets, Users } from 'lucide-react';
 import { CardFeature } from '@/components/ui/custom/CardFeature';
 import { toast } from '@/hooks/use-toast';
 
+// Display the current API URL being used from environment variables
+const apiUrl = import.meta.env.VITE_API_URL || 'Default URL (not set)';
+
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
     
     console.log('Login form submitted for user:', username);
     
@@ -31,9 +36,11 @@ const Login = () => {
       }
     } catch (error) {
       console.error('Login error in component:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      setError(errorMessage);
       toast({
         title: "Login Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -78,6 +85,11 @@ const Login = () => {
               <p className="text-sm text-muted-foreground">
                 Enter your credentials to access your account
               </p>
+              {error && (
+                <div className="mt-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -113,6 +125,9 @@ const Login = () => {
               <p>Demo Credentials:</p>
               <p>Admin: admin / admin123</p>
               <p>Staff: staff / staff123</p>
+              <div className="mt-2 text-xs opacity-50">
+                API URL: {apiUrl}
+              </div>
             </div>
           </div>
         </div>

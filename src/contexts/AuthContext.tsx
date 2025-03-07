@@ -20,6 +20,11 @@ interface AuthContextType {
   isLoading: boolean;
 }
 
+// Create a base API URL that can be configured for different environments
+// For local development this could be http://localhost:8000
+// For Supabase hosting this would be your Supabase function URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://your-supabase-project.supabase.co/functions/api';
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const useAuth = () => {
@@ -52,15 +57,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
-    // Let's try both URLs to see which one works
-    const apiEndpoints = [
-      '/api/login/', // With trailing slash (Django style)
-      '/api/login'   // Without trailing slash
+    console.log('Attempting login with username:', username);
+    console.log('Using API base URL:', API_BASE_URL);
+    
+    // Try both with and without trailing slash
+    const loginEndpoints = [
+      `${API_BASE_URL}/login`,
+      `${API_BASE_URL}/login/`,
+      // Also try Flask app endpoints if Django fails
+      `${API_BASE_URL}/api/login`,
+      `${API_BASE_URL}/api/login/`
     ];
     
-    console.log('Attempting login with username:', username);
-    
-    for (const endpoint of apiEndpoints) {
+    for (const endpoint of loginEndpoints) {
       try {
         console.log(`Trying login endpoint: ${endpoint}`);
         
@@ -123,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // If we get here, all endpoints failed
     toast({
       title: "Login failed",
-      description: "Server connection error. Please check if the Django server is running at http://localhost:8000.",
+      description: "Could not connect to the server. Please check if your backend is properly configured and running.",
       variant: "destructive",
     });
     
