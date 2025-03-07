@@ -52,20 +52,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Update the API endpoint to match the Django URL pattern
+      // Ensure we're using the correct API endpoint based on the Django URLs
+      // Django URLs typically don't have trailing slashes in the configuration
+      // but Django will redirect to URLs with trailing slashes
       const response = await fetch('/api/login/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username, password }),
+        // Add credentials to ensure cookies are sent with the request if needed
+        credentials: 'include',
       });
       
+      console.log('Login response status:', response.status);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Login response error:', errorText);
         throw new Error(`Login failed with status: ${response.status}`);
       }
       
       const data = await response.json();
+      console.log('Login response data:', data);
       
       if (data.success) {
         setUser(data.user);
