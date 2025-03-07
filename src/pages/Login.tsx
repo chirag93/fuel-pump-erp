@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Droplets, Users } from 'lucide-react';
 import { CardFeature } from '@/components/ui/custom/CardFeature';
+import { toast } from '@/hooks/use-toast';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -19,11 +20,22 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
     
+    console.log('Login form submitted for user:', username);
+    
     try {
       const success = await login(username, password);
+      console.log('Login result:', success);
+      
       if (success) {
         navigate('/dashboard');
       }
+    } catch (error) {
+      console.error('Login error in component:', error);
+      toast({
+        title: "Login Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }

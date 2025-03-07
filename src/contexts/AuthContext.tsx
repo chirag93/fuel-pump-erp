@@ -51,67 +51,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    try {
-      // Ensure we're using the correct API endpoint based on the Django URLs
-      // Django URLs typically don't have trailing slashes in the configuration
-      // but Django will redirect to URLs with trailing slashes
-      const response = await fetch('/api/login/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-        // Add credentials to ensure cookies are sent with the request if needed
-        credentials: 'include',
-      });
-      
-      console.log('Login response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Login response error:', errorText);
-        throw new Error(`Login failed with status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Login response data:', data);
-      
-      if (data.success) {
-        setUser(data.user);
-        localStorage.setItem('user', JSON.stringify(data.user));
+    
+    // Let's try both URLs to see which one works
+    const apiEndpoints = [
+      '/api/login/', // With trailing slash (Django style)
+      '/api/login'   // Without trailing slash
+    ];
+    
+    console.log('Attempting login with username:', username);
+    
+    for (const endpoint of apiEndpoints) {
+      try {
+        console.log(`Trying login endpoint: ${endpoint}`);
         
-        toast({
-          title: "Login successful",
-          description: `Welcome back, ${data.user.username}!`,
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, password }),
+          credentials: 'include', // Include cookies
         });
         
-        // Redirect based on role
-        if (data.user.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/dashboard');
+        console.log(`Login response from ${endpoint}:`, {
+          status: response.status,
+          statusText: response.statusText
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Login error from ${endpoint}:`, errorText);
+          continue; // Try the next endpoint
         }
         
-        return true;
-      } else {
-        toast({
-          title: "Login failed",
-          description: data.message || "Invalid username or password",
-          variant: "destructive",
-        });
-        return false;
+        const data = await response.json();
+        console.log(`Login data from ${endpoint}:`, data);
+        
+        if (data.success) {
+          setUser(data.user);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          
+          toast({
+            title: "Login successful",
+            description: `Welcome back, ${data.user.username}!`,
+          });
+          
+          // Redirect based on role
+          if (data.user.role === 'admin') {
+            navigate('/admin/dashboard');
+          } else {
+            navigate('/dashboard');
+          }
+          
+          setIsLoading(false);
+          return true;
+        } else {
+          toast({
+            title: "Login failed",
+            description: data.message || "Invalid username or password",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return false;
+        }
+      } catch (error) {
+        console.error(`Login error with endpoint ${endpoint}:`, error);
+        // Continue to try the next endpoint
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      toast({
-        title: "Login failed",
-        description: "An error occurred during login. Please check if the server is running.",
-        variant: "destructive",
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
     }
+    
+    // If we get here, all endpoints failed
+    toast({
+      title: "Login failed",
+      description: "Server connection error. Please check if the Django server is running at http://localhost:8000.",
+      variant: "destructive",
+    });
+    
+    setIsLoading(false);
+    return false;
   };
 
   const logout = () => {

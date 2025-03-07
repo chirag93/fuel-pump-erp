@@ -15,6 +15,7 @@ router.register(r'indents', views.IndentViewSet)
 router.register(r'transactions', views.TransactionViewSet)
 
 urlpatterns = [
+    # Make sure the login URL is properly defined and accessible
     path('login/', views.login, name='login'),
     path('', include(router.urls)),
 ]
