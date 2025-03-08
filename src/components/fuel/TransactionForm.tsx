@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +5,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Camera, CreditCard, Banknote, Smartphone } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+interface FuelRate {
+  fuel_type: string;
+  price_per_unit: number;
+}
 
 interface TransactionFormProps {
   onSubmit: (transaction: any) => void;
@@ -37,6 +42,52 @@ const TransactionForm = ({
     meterReading: '',
     notes: ''
   });
+  
+  const [fuelRates, setFuelRates] = useState<Record<string, number>>({
+    'Petrol': 100,
+    'Diesel': 90,
+    'Premium Petrol': 110
+  });
+  
+  const [fuelTypes, setFuelTypes] = useState<string[]>(['Petrol', 'Diesel', 'Premium Petrol']);
+  const [isLoadingRates, setIsLoadingRates] = useState(false);
+
+  // Fetch fuel rates from inventory
+  useEffect(() => {
+    const fetchFuelRates = async () => {
+      setIsLoadingRates(true);
+      try {
+        const { data, error } = await supabase
+          .from('inventory')
+          .select('fuel_type, price_per_unit')
+          .order('fuel_type');
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data && data.length > 0) {
+          const rates: Record<string, number> = {};
+          const types: string[] = [];
+          
+          data.forEach((item: FuelRate) => {
+            rates[item.fuel_type] = item.price_per_unit;
+            types.push(item.fuel_type);
+          });
+          
+          setFuelRates(rates);
+          setFuelTypes(types);
+        }
+      } catch (error) {
+        console.error('Error fetching fuel rates:', error);
+        // Keep default rates if fetch fails
+      } finally {
+        setIsLoadingRates(false);
+      }
+    };
+    
+    fetchFuelRates();
+  }, []);
 
   // Update form when props change
   useEffect(() => {
@@ -54,38 +105,23 @@ const TransactionForm = ({
   const handleChange = (field: string, value: string) => {
     setTransaction({ ...transaction, [field]: value });
 
-    // Auto-calculate quantity if amount changes (assuming fixed rate)
+    // Auto-calculate quantity if amount changes
     if (field === 'amount' && value) {
-      const fuelRates = {
-        'Petrol': 100, // ₹100 per liter
-        'Diesel': 90,  // ₹90 per liter
-        'Premium Petrol': 110 // ₹110 per liter
-      };
-      const rate = fuelRates[transaction.fuelType as keyof typeof fuelRates] || 100;
+      const rate = fuelRates[transaction.fuelType] || 100;
       const calculatedQuantity = (parseFloat(value) / rate).toFixed(2);
       setTransaction(prev => ({ ...prev, quantity: calculatedQuantity }));
     }
 
     // Auto-calculate amount if quantity changes
     if (field === 'quantity' && value) {
-      const fuelRates = {
-        'Petrol': 100,
-        'Diesel': 90,
-        'Premium Petrol': 110
-      };
-      const rate = fuelRates[transaction.fuelType as keyof typeof fuelRates] || 100;
+      const rate = fuelRates[transaction.fuelType] || 100;
       const calculatedAmount = (parseFloat(value) * rate).toFixed(2);
       setTransaction(prev => ({ ...prev, amount: calculatedAmount }));
     }
 
     // Auto-update rate if fuel type changes
     if (field === 'fuelType' && transaction.quantity) {
-      const fuelRates = {
-        'Petrol': 100,
-        'Diesel': 90,
-        'Premium Petrol': 110
-      };
-      const rate = fuelRates[value as keyof typeof fuelRates] || 100;
+      const rate = fuelRates[value] || 100;
       const calculatedAmount = (parseFloat(transaction.quantity) * rate).toFixed(2);
       setTransaction(prev => ({ ...prev, amount: calculatedAmount }));
     }
@@ -153,14 +189,17 @@ const TransactionForm = ({
           <Select
             value={transaction.fuelType}
             onValueChange={(value) => handleChange('fuelType', value)}
+            disabled={isLoadingRates}
           >
             <SelectTrigger id="fuelType">
-              <SelectValue placeholder="Select fuel type" />
+              <SelectValue placeholder={isLoadingRates ? "Loading fuel types..." : "Select fuel type"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Petrol">Petrol</SelectItem>
-              <SelectItem value="Diesel">Diesel</SelectItem>
-              <SelectItem value="Premium Petrol">Premium Petrol</SelectItem>
+              {fuelTypes.map(type => (
+                <SelectItem key={type} value={type}>
+                  {type} (₹{fuelRates[type]}/L)
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

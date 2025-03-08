@@ -1,8 +1,10 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Session, User } from '@supabase/supabase-js';
 
-interface User {
+interface AuthUser {
   id: string;
   username: string;
   email: string;
@@ -10,9 +12,9 @@ interface User {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -28,69 +30,111 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for saved user in localStorage
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
+    // Check for current session on initial load
+    const initAuth = async () => {
+      setIsLoading(true);
       try {
-        setUser(JSON.parse(savedUser));
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          handleSession(session);
+        }
       } catch (error) {
-        console.error('Failed to parse saved user', error);
-        localStorage.removeItem('user');
+        console.error('Error checking authentication status:', error);
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session) {
+          handleSession(session);
+        } else {
+          setUser(null);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    initAuth();
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      // For now, we'll use a mock authentication since we're using a file-based backend
-      // In a real app, this would be an API call to your Python backend
-      if (username === 'admin' && password === 'admin123') {
-        const mockUser: User = {
-          id: '1',
-          username: 'admin',
-          email: 'admin@example.com',
-          role: 'admin'
+  const handleSession = async (session: Session) => {
+    const supabaseUser = session.user;
+    if (supabaseUser) {
+      try {
+        // Get the user's profile from the profiles table
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .single();
+
+        if (error) throw error;
+
+        const authUser: AuthUser = {
+          id: supabaseUser.id,
+          username: profile?.username || supabaseUser.email?.split('@')[0] || 'user',
+          email: supabaseUser.email || '',
+          role: (profile?.role as 'admin' | 'staff') || 'staff'
         };
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        toast({
-          title: "Login successful",
-          description: "Welcome back, admin!",
-        });
-        return true;
-      } else if (username === 'staff' && password === 'staff123') {
-        const mockUser: User = {
-          id: '2',
-          username: 'staff',
-          email: 'staff@example.com',
+        
+        setUser(authUser);
+      } catch (error) {
+        console.error('Error getting user profile:', error);
+        // Fallback to basic user info
+        const authUser: AuthUser = {
+          id: supabaseUser.id,
+          username: supabaseUser.email?.split('@')[0] || 'user',
+          email: supabaseUser.email || '',
           role: 'staff'
         };
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        toast({
-          title: "Login successful",
-          description: "Welcome back, staff!",
-        });
-        return true;
-      } else {
+        setUser(authUser);
+      }
+    }
+  };
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
         toast({
           title: "Login failed",
-          description: "Invalid username or password",
+          description: error.message || "Invalid credentials",
           variant: "destructive",
         });
         return false;
       }
+
+      if (data.session) {
+        toast({
+          title: "Login successful",
+          description: `Welcome back!`,
+        });
+        return true;
+      }
+      
+      return false;
     } catch (error) {
       console.error('Login error:', error);
       toast({
         title: "Login failed",
-        description: "An error occurred during login",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
       return false;
@@ -99,13 +143,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout failed",
+        description: "An error occurred during logout",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

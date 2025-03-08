@@ -9,7 +9,393 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      consumables: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          name: string
+          price_per_unit: number
+          quantity: number
+          total_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          name: string
+          price_per_unit: number
+          quantity: number
+          total_price: number
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          name?: string
+          price_per_unit?: number
+          quantity?: number
+          total_price?: number
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          balance: number | null
+          contact: string
+          created_at: string | null
+          email: string
+          gst: string
+          id: string
+          name: string
+          phone: string
+        }
+        Insert: {
+          balance?: number | null
+          contact: string
+          created_at?: string | null
+          email: string
+          gst: string
+          id?: string
+          name: string
+          phone: string
+        }
+        Update: {
+          balance?: number | null
+          contact?: string
+          created_at?: string | null
+          email?: string
+          gst?: string
+          id?: string
+          name?: string
+          phone?: string
+        }
+        Relationships: []
+      }
+      indents: {
+        Row: {
+          amount: number
+          created_at: string | null
+          customer_id: string
+          fuel_type: string
+          id: string
+          quantity: number
+          status: string | null
+          vehicle_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          customer_id: string
+          fuel_type: string
+          id: string
+          quantity: number
+          status?: string | null
+          vehicle_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          customer_id?: string
+          fuel_type?: string
+          id?: string
+          quantity?: number
+          status?: string | null
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indents_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indents_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory: {
+        Row: {
+          date: string
+          fuel_type: string
+          id: string
+          price_per_unit: number
+          quantity: number
+          updated_at: string | null
+        }
+        Insert: {
+          date: string
+          fuel_type: string
+          id?: string
+          price_per_unit: number
+          quantity: number
+          updated_at?: string | null
+        }
+        Update: {
+          date?: string
+          fuel_type?: string
+          id?: string
+          price_per_unit?: number
+          quantity?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          role: string | null
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id: string
+          role?: string | null
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          role?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      readings: {
+        Row: {
+          closing_reading: number
+          created_at: string | null
+          date: string
+          id: string
+          opening_reading: number
+          pump_id: string
+          shift_id: string
+          staff_id: string
+        }
+        Insert: {
+          closing_reading: number
+          created_at?: string | null
+          date: string
+          id?: string
+          opening_reading: number
+          pump_id: string
+          shift_id: string
+          staff_id: string
+        }
+        Update: {
+          closing_reading?: number
+          created_at?: string | null
+          date?: string
+          id?: string
+          opening_reading?: number
+          pump_id?: string
+          shift_id?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "readings_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "readings_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts: {
+        Row: {
+          created_at: string | null
+          end_time: string | null
+          id: string
+          shift_type: string
+          staff_id: string
+          start_time: string
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          end_time?: string | null
+          id?: string
+          shift_type: string
+          staff_id: string
+          start_time: string
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          end_time?: string | null
+          id?: string
+          shift_type?: string
+          staff_id?: string
+          start_time?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff: {
+        Row: {
+          assigned_pumps: Json | null
+          email: string
+          id: string
+          joining_date: string
+          name: string
+          phone: string
+          role: string
+          salary: number
+        }
+        Insert: {
+          assigned_pumps?: Json | null
+          email: string
+          id?: string
+          joining_date: string
+          name: string
+          phone: string
+          role: string
+          salary: number
+        }
+        Update: {
+          assigned_pumps?: Json | null
+          email?: string
+          id?: string
+          joining_date?: string
+          name?: string
+          phone?: string
+          role?: string
+          salary?: number
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          customer_id: string | null
+          date: string
+          fuel_type: string
+          id: string
+          indent_id: string | null
+          payment_method: string
+          quantity: number
+          staff_id: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          customer_id?: string | null
+          date: string
+          fuel_type: string
+          id: string
+          indent_id?: string | null
+          payment_method: string
+          quantity: number
+          staff_id: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          customer_id?: string | null
+          date?: string
+          fuel_type?: string
+          id?: string
+          indent_id?: string | null
+          payment_method?: string
+          quantity?: number
+          staff_id?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_indent_id_fkey"
+            columns: ["indent_id"]
+            isOneToOne: false
+            referencedRelation: "indents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          capacity: string
+          created_at: string | null
+          customer_id: string
+          id: string
+          number: string
+          type: string
+        }
+        Insert: {
+          capacity: string
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          number: string
+          type: string
+        }
+        Update: {
+          capacity?: string
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          number?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

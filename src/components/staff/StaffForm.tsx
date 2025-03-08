@@ -1,10 +1,11 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { Json } from '@/integrations/supabase/types';
 
 interface StaffFormProps {
   onSubmit: (staff: any) => void;
@@ -19,21 +20,41 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     email: initialData?.email || '',
     role: initialData?.role || '',
     salary: initialData?.salary || '',
-    joiningDate: initialData?.joiningDate || new Date().toISOString().split('T')[0],
-    assignedPumps: initialData?.assignedPumps || []
+    joining_date: initialData?.joining_date || new Date().toISOString().split('T')[0],
+    assigned_pumps: Array.isArray(initialData?.assigned_pumps) 
+      ? initialData.assigned_pumps 
+      : (initialData?.assigned_pumps ? [initialData.assigned_pumps] : [])
   });
 
   const [selectedPump, setSelectedPump] = useState<string>('');
+
+  // Ensure initialData.assigned_pumps is properly processed when component mounts or initialData changes
+  useEffect(() => {
+    if (initialData) {
+      setStaffData(prev => ({
+        ...prev,
+        name: initialData.name || '',
+        phone: initialData.phone || '',
+        email: initialData.email || '',
+        role: initialData.role || '',
+        salary: initialData.salary || '',
+        joining_date: initialData.joining_date || new Date().toISOString().split('T')[0],
+        assigned_pumps: Array.isArray(initialData.assigned_pumps) 
+          ? initialData.assigned_pumps 
+          : (initialData.assigned_pumps ? [initialData.assigned_pumps] : [])
+      }));
+    }
+  }, [initialData]);
 
   const handleChange = (field: string, value: string) => {
     setStaffData({ ...staffData, [field]: value });
   };
 
   const handleAddPump = () => {
-    if (selectedPump && !staffData.assignedPumps.includes(selectedPump)) {
+    if (selectedPump && !staffData.assigned_pumps.includes(selectedPump)) {
       setStaffData({ 
         ...staffData, 
-        assignedPumps: [...staffData.assignedPumps, selectedPump] 
+        assigned_pumps: [...staffData.assigned_pumps, selectedPump] 
       });
       setSelectedPump('');
     }
@@ -42,7 +63,7 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
   const handleRemovePump = (pump: string) => {
     setStaffData({
       ...staffData,
-      assignedPumps: staffData.assignedPumps.filter((p: string) => p !== pump)
+      assigned_pumps: staffData.assigned_pumps.filter((p: string) => p !== pump)
     });
   };
 
@@ -134,12 +155,12 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="joiningDate">Joining Date</Label>
+          <Label htmlFor="joining_date">Joining Date</Label>
           <Input
-            id="joiningDate"
+            id="joining_date"
             type="date"
-            value={staffData.joiningDate}
-            onChange={(e) => handleChange('joiningDate', e.target.value)}
+            value={staffData.joining_date}
+            onChange={(e) => handleChange('joining_date', e.target.value)}
           />
         </div>
       </div>
@@ -161,7 +182,7 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
         </div>
 
         <div className="mt-2 flex flex-wrap gap-2">
-          {staffData.assignedPumps.map((pump: string) => (
+          {staffData.assigned_pumps.map((pump: string) => (
             <div key={pump} className="bg-muted px-3 py-1 rounded-full flex items-center gap-1">
               <span>{pump}</span>
               <Button 
