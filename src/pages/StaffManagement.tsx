@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import StaffForm from '@/components/staff/StaffForm';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { Json } from '@/integrations/supabase/types';
 
 // Define staff type based on database schema
 interface Staff {
@@ -20,7 +21,7 @@ interface Staff {
   role: string;
   salary: number;
   joining_date: string;
-  assigned_pumps: string[];
+  assigned_pumps: string[] | Json;
 }
 
 const StaffManagement = () => {
@@ -47,7 +48,15 @@ const StaffManagement = () => {
           throw error;
         }
         
-        setStaff(data || []);
+        // Process the data to ensure assigned_pumps is always an array
+        const processedData = data?.map(staffMember => ({
+          ...staffMember,
+          assigned_pumps: Array.isArray(staffMember.assigned_pumps) 
+            ? staffMember.assigned_pumps 
+            : (staffMember.assigned_pumps ? [staffMember.assigned_pumps] : [])
+        }));
+        
+        setStaff(processedData || []);
       } catch (error) {
         console.error('Error fetching staff:', error);
         toast({
@@ -76,7 +85,15 @@ const StaffManagement = () => {
   };
 
   const handleEditStaff = (staffMember: Staff) => {
-    setEditingStaff(staffMember);
+    // Ensure assigned_pumps is an array before editing
+    const processedStaff = {
+      ...staffMember,
+      assigned_pumps: Array.isArray(staffMember.assigned_pumps) 
+        ? staffMember.assigned_pumps 
+        : (staffMember.assigned_pumps ? [staffMember.assigned_pumps] : [])
+    };
+    
+    setEditingStaff(processedStaff);
     setFormOpen(true);
   };
 
@@ -113,7 +130,7 @@ const StaffManagement = () => {
             phone: staffData.phone,
             email: staffData.email,
             role: staffData.role,
-            salary: staffData.salary,
+            salary: parseFloat(staffData.salary.toString()),
             joining_date: staffData.joining_date,
             assigned_pumps: staffData.assigned_pumps || []
           })
@@ -122,7 +139,14 @@ const StaffManagement = () => {
         if (error) throw error;
         
         if (data && data[0]) {
-          setStaff([...staff, data[0]]);
+          const newStaff = {
+            ...data[0],
+            assigned_pumps: Array.isArray(data[0].assigned_pumps) 
+              ? data[0].assigned_pumps 
+              : (data[0].assigned_pumps ? [data[0].assigned_pumps] : [])
+          };
+          
+          setStaff([...staff, newStaff]);
           toast({ 
             title: "Staff added", 
             description: `${staffData.name} has been added to the staff list` 
