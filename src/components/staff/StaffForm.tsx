@@ -155,12 +155,12 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="joiningDate">Joining Date</Label>
+          <Label htmlFor="joining_date">Joining Date</Label>
           <Input
-            id="joiningDate"
+            id="joining_date"
             type="date"
-            value={staffData.joiningDate}
-            onChange={(e) => handleChange('joiningDate', e.target.value)}
+            value={staffData.joining_date}
+            onChange={(e) => handleChange('joining_date', e.target.value)}
           />
         </div>
       </div>
@@ -182,7 +182,7 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
         </div>
 
         <div className="mt-2 flex flex-wrap gap-2">
-          {staffData.assignedPumps.map((pump: string) => (
+          {staffData.assigned_pumps.map((pump: string) => (
             <div key={pump} className="bg-muted px-3 py-1 rounded-full flex items-center gap-1">
               <span>{pump}</span>
               <Button 
