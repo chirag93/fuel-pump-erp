@@ -9,6 +9,7 @@ import { Users, Plus, Search, UserCog } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import StaffForm from '@/components/staff/StaffForm';
 import { supabase } from '@/integrations/supabase/client';
+import { Json } from '@/integrations/supabase/types';
 
 // Staff interface reflecting the Supabase schema
 interface Staff {
@@ -43,7 +44,14 @@ const StaffManagement = () => {
         }
         
         if (data) {
-          setStaff(data);
+          // Convert Json to string[] for assigned_pumps
+          const formattedData = data.map(item => ({
+            ...item,
+            assigned_pumps: Array.isArray(item.assigned_pumps) 
+              ? item.assigned_pumps 
+              : []
+          }));
+          setStaff(formattedData as Staff[]);
         }
       } catch (error) {
         console.error('Error fetching staff:', error);
@@ -88,7 +96,16 @@ const StaffManagement = () => {
           
         if (error) throw error;
         
-        setStaff(staff.map(s => s.id === editingStaff.id ? { ...staffData, id: editingStaff.id } : s));
+        // Create a properly typed staff object for state update
+        const updatedStaff: Staff = {
+          ...staffData,
+          id: editingStaff.id,
+          assigned_pumps: Array.isArray(staffData.assigned_pumps) 
+            ? staffData.assigned_pumps 
+            : []
+        };
+        
+        setStaff(staff.map(s => s.id === editingStaff.id ? updatedStaff : s));
         toast({ 
           title: "Staff updated", 
           description: `${staffData.name}'s information has been updated` 
@@ -103,7 +120,15 @@ const StaffManagement = () => {
         if (error) throw error;
         
         if (data && data.length > 0) {
-          setStaff([...staff, data[0]]);
+          // Create a properly typed staff object for state update
+          const newStaff: Staff = {
+            ...data[0],
+            assigned_pumps: Array.isArray(data[0].assigned_pumps) 
+              ? data[0].assigned_pumps 
+              : []
+          };
+          
+          setStaff([...staff, newStaff]);
           toast({ 
             title: "Staff added", 
             description: `${staffData.name} has been added to the staff list` 
