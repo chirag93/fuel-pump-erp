@@ -69,25 +69,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const handleSession = (session: Session) => {
+  const handleSession = async (session: Session) => {
     const supabaseUser = session.user;
     if (supabaseUser) {
-      // Extract role from user metadata or use a default
-      const role = getRoleFromMetadata(supabaseUser);
-      
-      const authUser: AuthUser = {
-        id: supabaseUser.id,
-        username: supabaseUser.email?.split('@')[0] || 'user',
-        email: supabaseUser.email || '',
-        role: role
-      };
-      setUser(authUser);
-    }
-  };
+      try {
+        // Get the user's profile from the profiles table
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .single();
 
-  // Get role from user metadata, defaulting to staff if not set
-  const getRoleFromMetadata = (user: User): 'admin' | 'staff' => {
-    return (user.user_metadata?.role as 'admin' | 'staff') || 'staff';
+        if (error) throw error;
+
+        const authUser: AuthUser = {
+          id: supabaseUser.id,
+          username: profile?.username || supabaseUser.email?.split('@')[0] || 'user',
+          email: supabaseUser.email || '',
+          role: (profile?.role as 'admin' | 'staff') || 'staff'
+        };
+        
+        setUser(authUser);
+      } catch (error) {
+        console.error('Error getting user profile:', error);
+        // Fallback to basic user info
+        const authUser: AuthUser = {
+          id: supabaseUser.id,
+          username: supabaseUser.email?.split('@')[0] || 'user',
+          email: supabaseUser.email || '',
+          role: 'staff'
+        };
+        setUser(authUser);
+      }
+    }
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -153,6 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await supabase.auth.signOut();
+      setUser(null);
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
