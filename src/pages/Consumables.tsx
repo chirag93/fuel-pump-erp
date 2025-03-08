@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,74 +8,75 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Package, Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Consumable {
   id: string;
   name: string;
-  category: string;
   quantity: number;
-  unit: string;
-  pricePerUnit: number;
-  lastRestockedDate: string;
+  price_per_unit: number;
+  total_price: number;
+  date: string;
+  created_at?: string;
 }
 
-const initialConsumables: Consumable[] = [
-  {
-    id: 'C001',
-    name: 'Engine Oil',
-    category: 'Lubricant',
-    quantity: 50,
-    unit: 'Litres',
-    pricePerUnit: 450,
-    lastRestockedDate: '2023-04-15',
-  },
-  {
-    id: 'C002',
-    name: 'Air Filter',
-    category: 'Filter',
-    quantity: 25,
-    unit: 'Pieces',
-    pricePerUnit: 200,
-    lastRestockedDate: '2023-04-10',
-  },
-  {
-    id: 'C003',
-    name: 'Coolant',
-    category: 'Fluid',
-    quantity: 30,
-    unit: 'Litres',
-    pricePerUnit: 180,
-    lastRestockedDate: '2023-04-12',
-  },
-];
-
 const Consumables = () => {
-  const [consumables, setConsumables] = useState<Consumable[]>(initialConsumables);
+  const [consumables, setConsumables] = useState<Consumable[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingConsumable, setEditingConsumable] = useState<Consumable | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
-    category: '',
     quantity: '',
-    unit: '',
-    pricePerUnit: '',
+    price_per_unit: '',
   });
+  const { isAuthenticated } = useAuth();
+
+  // Fetch consumables from Supabase
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const fetchConsumables = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('consumables')
+          .select('*')
+          .order('name');
+          
+        if (error) {
+          throw error;
+        }
+        
+        setConsumables(data || []);
+      } catch (error) {
+        console.error('Error fetching consumables:', error);
+        toast({
+          title: 'Failed to load consumables data',
+          description: 'Please try refreshing the page',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchConsumables();
+  }, [isAuthenticated]);
 
   // Filter consumables based on search term
   const filteredConsumables = consumables.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.category.toLowerCase().includes(searchTerm.toLowerCase())
+    c.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleAddConsumable = () => {
     setEditingConsumable(null);
     setFormData({
       name: '',
-      category: '',
       quantity: '',
-      unit: '',
-      pricePerUnit: '',
+      price_per_unit: '',
     });
     setFormOpen(true);
   };
@@ -84,19 +85,17 @@ const Consumables = () => {
     setEditingConsumable(consumable);
     setFormData({
       name: consumable.name,
-      category: consumable.category,
       quantity: consumable.quantity.toString(),
-      unit: consumable.unit,
-      pricePerUnit: consumable.pricePerUnit.toString(),
+      price_per_unit: consumable.price_per_unit.toString(),
     });
     setFormOpen(true);
   };
 
-  const handleSaveConsumable = (e: React.FormEvent) => {
+  const handleSaveConsumable = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
-    if (!formData.name || !formData.category || !formData.quantity || !formData.unit || !formData.pricePerUnit) {
+    if (!formData.name || !formData.quantity || !formData.price_per_unit) {
       toast({
         title: "Missing information",
         description: "Please fill all required fields",
@@ -105,38 +104,90 @@ const Consumables = () => {
       return;
     }
 
-    if (editingConsumable) {
-      // Update existing consumable
-      setConsumables(consumables.map(c => c.id === editingConsumable.id ? {
-        ...c,
-        name: formData.name,
-        category: formData.category,
-        quantity: parseFloat(formData.quantity),
-        unit: formData.unit,
-        pricePerUnit: parseFloat(formData.pricePerUnit),
-      } : c));
-      toast({ title: "Consumable updated", description: `${formData.name} has been updated` });
-    } else {
-      // Add new consumable
-      const newConsumable: Consumable = {
-        id: `C${consumables.length + 1}`.padStart(3, '0'),
-        name: formData.name,
-        category: formData.category,
-        quantity: parseFloat(formData.quantity),
-        unit: formData.unit,
-        pricePerUnit: parseFloat(formData.pricePerUnit),
-        lastRestockedDate: new Date().toISOString().split('T')[0],
-      };
-      setConsumables([...consumables, newConsumable]);
-      toast({ title: "Consumable added", description: `${formData.name} has been added` });
+    const quantity = parseFloat(formData.quantity);
+    const price_per_unit = parseFloat(formData.price_per_unit);
+    const total_price = quantity * price_per_unit;
+    
+    try {
+      if (editingConsumable) {
+        // Update existing consumable
+        const { error } = await supabase
+          .from('consumables')
+          .update({
+            name: formData.name,
+            quantity: quantity,
+            price_per_unit: price_per_unit,
+            total_price: total_price,
+            date: new Date().toISOString().split('T')[0]
+          })
+          .eq('id', editingConsumable.id);
+          
+        if (error) throw error;
+        
+        setConsumables(consumables.map(c => c.id === editingConsumable.id ? {
+          ...c,
+          name: formData.name,
+          quantity: quantity,
+          price_per_unit: price_per_unit,
+          total_price: total_price,
+          date: new Date().toISOString().split('T')[0]
+        } : c));
+        
+        toast({ title: "Consumable updated", description: `${formData.name} has been updated` });
+      } else {
+        // Add new consumable
+        const newConsumable = {
+          name: formData.name,
+          quantity: quantity,
+          price_per_unit: price_per_unit,
+          total_price: total_price,
+          date: new Date().toISOString().split('T')[0]
+        };
+        
+        const { data, error } = await supabase
+          .from('consumables')
+          .insert(newConsumable)
+          .select();
+          
+        if (error) throw error;
+        
+        if (data && data[0]) {
+          setConsumables([...consumables, data[0]]);
+          toast({ title: "Consumable added", description: `${formData.name} has been added` });
+        }
+      }
+      
+      setFormOpen(false);
+    } catch (error) {
+      console.error('Error saving consumable:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save consumable information',
+        variant: 'destructive'
+      });
     }
-    setFormOpen(false);
   };
 
-  const handleDeleteConsumable = (id: string) => {
+  const handleDeleteConsumable = async (id: string) => {
     if (confirm("Are you sure you want to remove this item?")) {
-      setConsumables(consumables.filter(c => c.id !== id));
-      toast({ title: "Consumable removed", description: "Item has been removed" });
+      try {
+        const { error } = await supabase
+          .from('consumables')
+          .delete()
+          .eq('id', id);
+          
+        if (error) throw error;
+        
+        setConsumables(consumables.filter(c => c.id !== id));
+        toast({ title: "Consumable removed", description: "Item has been removed" });
+      } catch (error) {
+        console.error('Error deleting consumable:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to delete consumable',
+          variant: 'destructive'
+        });
+      }
     }
   };
 
@@ -158,7 +209,7 @@ const Consumables = () => {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name or category"
+            placeholder="Search by name"
             className="pl-8"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -177,7 +228,9 @@ const Consumables = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredConsumables.length === 0 ? (
+          {isLoading ? (
+            <div className="py-8 text-center">Loading consumables data...</div>
+          ) : filteredConsumables.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
               No consumables found. Add your first item using the "Add Consumable" button.
             </div>
@@ -186,10 +239,10 @@ const Consumables = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Category</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>Price/Unit</TableHead>
-                  <TableHead>Last Restocked</TableHead>
+                  <TableHead>Total Price</TableHead>
+                  <TableHead>Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -197,12 +250,10 @@ const Consumables = () => {
                 {filteredConsumables.map((consumable) => (
                   <TableRow key={consumable.id}>
                     <TableCell className="font-medium">{consumable.name}</TableCell>
-                    <TableCell>{consumable.category}</TableCell>
-                    <TableCell>
-                      {consumable.quantity} {consumable.unit}
-                    </TableCell>
-                    <TableCell>₹{consumable.pricePerUnit}</TableCell>
-                    <TableCell>{consumable.lastRestockedDate}</TableCell>
+                    <TableCell>{consumable.quantity}</TableCell>
+                    <TableCell>₹{consumable.price_per_unit}</TableCell>
+                    <TableCell>₹{consumable.total_price}</TableCell>
+                    <TableCell>{new Date(consumable.date).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button
                         variant="ghost"
@@ -246,16 +297,6 @@ const Consumables = () => {
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Input
-                id="category"
-                value={formData.category}
-                onChange={(e) => handleInputChange('category', e.target.value)}
-                placeholder="Enter category"
-              />
-            </div>
-            
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="quantity">Quantity</Label>
@@ -269,25 +310,15 @@ const Consumables = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="unit">Unit</Label>
+                <Label htmlFor="pricePerUnit">Price Per Unit (₹)</Label>
                 <Input
-                  id="unit"
-                  value={formData.unit}
-                  onChange={(e) => handleInputChange('unit', e.target.value)}
-                  placeholder="e.g. Litres, Pieces"
+                  id="pricePerUnit"
+                  type="number"
+                  value={formData.price_per_unit}
+                  onChange={(e) => handleInputChange('price_per_unit', e.target.value)}
+                  placeholder="Enter price per unit"
                 />
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="pricePerUnit">Price Per Unit (₹)</Label>
-              <Input
-                id="pricePerUnit"
-                type="number"
-                value={formData.pricePerUnit}
-                onChange={(e) => handleInputChange('pricePerUnit', e.target.value)}
-                placeholder="Enter price per unit"
-              />
             </div>
 
             <div className="flex justify-end gap-2 pt-4">

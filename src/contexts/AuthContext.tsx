@@ -107,33 +107,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Try to login with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        // For development purposes, still check for mock users
-        if ((email === 'admin@example.com' && password === 'admin123') || 
-            (email === 'staff@example.com' && password === 'staff123')) {
-          
-          const isMockAdmin = email === 'admin@example.com';
-          const mockUser: AuthUser = {
-            id: isMockAdmin ? '1' : '2',
-            username: isMockAdmin ? 'admin' : 'staff',
-            email,
-            role: isMockAdmin ? 'admin' : 'staff'
-          };
-          
-          setUser(mockUser);
-          toast({
-            title: "Login successful (development mode)",
-            description: `Welcome back, ${mockUser.username}!`,
-          });
-          return true;
-        }
-        
         toast({
           title: "Login failed",
           description: error.message || "Invalid credentials",
