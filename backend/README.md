@@ -1,74 +1,106 @@
 
-# Fuel Pump Management System - Backend
+# Fuel Pump Management System - Django Backend
 
-This is the Python Flask backend for the Fuel Pump Management System. It provides a simple file-based data store and API endpoints for the frontend.
+This is the Django backend for the Fuel Pump Management System. It provides a RESTful API for the frontend.
 
 ## Setup
 
 1. Make sure you have Python installed (Python 3.8+ recommended)
-2. Install required dependencies:
+2. Create a virtual environment:
 
 ```bash
-pip install flask flask-cors
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. Run the server:
+3. Install required dependencies:
 
 ```bash
-python app.py
+pip install -r requirements.txt
 ```
 
-The server will start on http://localhost:5000.
+4. Set up environment variables (copy .env.example to .env and edit):
+
+```bash
+cp .env.example .env
+# Edit .env file with your settings
+```
+
+5. Run database migrations:
+
+```bash
+python manage.py migrate
+```
+
+6. Create a superuser:
+
+```bash
+python manage.py createsuperuser
+```
+
+7. Run the server:
+
+```bash
+python manage.py runserver
+```
+
+The server will start on http://localhost:8000.
 
 ## API Endpoints
 
 ### Authentication
-- POST `/api/login` - Authenticate a user
+- POST `/api/login/` - Authenticate a user
+- POST `/api/logout/` - Log out the current user
 
 ### Customers
-- GET `/api/customers` - Get all customers
-- GET `/api/customers/<id>` - Get a specific customer
-- POST `/api/customers` - Create a new customer
-- PUT `/api/customers/<id>` - Update a customer
+- GET `/api/customers/` - Get all customers
+- GET `/api/customers/{id}/` - Get a specific customer
+- POST `/api/customers/` - Create a new customer
+- PUT `/api/customers/{id}/` - Update a customer
+- DELETE `/api/customers/{id}/` - Delete a customer
 
 ### Vehicles
-- GET `/api/vehicles` - Get all vehicles (can filter by customer_id)
-- POST `/api/vehicles` - Create a new vehicle
+- GET `/api/vehicles/` - Get all vehicles (can filter by customer_id)
+- GET `/api/vehicles/{id}/` - Get a specific vehicle
+- POST `/api/vehicles/` - Create a new vehicle
+- PUT `/api/vehicles/{id}/` - Update a vehicle
+- DELETE `/api/vehicles/{id}/` - Delete a vehicle
 
 ### Staff
-- GET `/api/staff` - Get all staff
-- GET `/api/staff/<id>` - Get a specific staff member
-- POST `/api/staff` - Create a new staff member
+- GET `/api/staff/` - Get all staff
+- GET `/api/staff/{id}/` - Get a specific staff member
+- POST `/api/staff/` - Create a new staff member
+- PUT `/api/staff/{id}/` - Update a staff member
+- DELETE `/api/staff/{id}/` - Delete a staff member
 
-### Indents
-- GET `/api/indents` - Get all indents (can filter by customer_id)
-- POST `/api/indents` - Create a new indent
+### Shifts
+- GET `/api/shifts/` - Get all shifts
+- GET `/api/shifts/{id}/` - Get a specific shift
+- POST `/api/shifts/` - Create a new shift
+- PUT `/api/shifts/{id}/` - Update a shift
+- DELETE `/api/shifts/{id}/` - Delete a shift
 
 ### Readings
-- GET `/api/readings` - Get all readings (can filter by date)
-- POST `/api/readings` - Create a new reading
+- GET `/api/readings/` - Get all readings (can filter by date)
+- GET `/api/readings/{id}/` - Get a specific reading
+- POST `/api/readings/` - Create a new reading
+- PUT `/api/readings/{id}/` - Update a reading
+- DELETE `/api/readings/{id}/` - Delete a reading
+
+### Indents
+- GET `/api/indents/` - Get all indents (can filter by customer_id)
+- GET `/api/indents/{id}/` - Get a specific indent
+- POST `/api/indents/` - Create a new indent
+- PUT `/api/indents/{id}/` - Update an indent
+- DELETE `/api/indents/{id}/` - Delete an indent
 
 ### Transactions
-- GET `/api/transactions` - Get all transactions (can filter by date)
-- POST `/api/transactions` - Create a new transaction
+- GET `/api/transactions/` - Get all transactions (can filter by date)
+- GET `/api/transactions/{id}/` - Get a specific transaction
+- POST `/api/transactions/` - Create a new transaction
+- PUT `/api/transactions/{id}/` - Update a transaction
+- DELETE `/api/transactions/{id}/` - Delete a transaction
 
-## Data Storage
+## Deployment on Heroku
 
-All data is stored in JSON files in the `data` directory. The following files are used:
-
-- `users.json` - User accounts
-- `customers.json` - Customer information
-- `vehicles.json` - Vehicle information
-- `staff.json` - Staff information
-- `shifts.json` - Shift information
-- `readings.json` - Pump readings
-- `inventory.json` - Inventory information
-- `consumables.json` - Consumables sales
-- `indents.json` - Customer indents
-- `transactions.json` - Fuel transactions
-
-## Notes
-
-- This is a simple file-based backend for demonstration purposes.
-- In a production environment, you would use a proper database.
-- Authentication is very basic - in production, use proper authentication with JWT tokens.
+See the deployment instructions in the main README.

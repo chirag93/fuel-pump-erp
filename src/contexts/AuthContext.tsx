@@ -27,6 +27,9 @@ export const useAuth = () => {
   return context;
 };
 
+// API URL from environment or default to localhost
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,8 +51,78 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // For now, we'll use a mock authentication since we're using a file-based backend
-      // In a real app, this would be an API call to your Python backend
+      // Try to login with the Django backend
+      const response = await fetch(`${API_URL}/api/login/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const userData: User = {
+          id: data.user.id,
+          username: data.user.username,
+          email: data.user.email,
+          role: username === 'admin' ? 'admin' : 'staff', // Set role based on username until we implement proper roles
+        };
+
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        toast({
+          title: "Login successful",
+          description: `Welcome back, ${userData.username}!`,
+        });
+        
+        return true;
+      } else {
+        // Fallback to mock users for development purposes
+        if (username === 'admin' && password === 'admin123') {
+          const mockUser: User = {
+            id: '1',
+            username: 'admin',
+            email: 'admin@example.com',
+            role: 'admin'
+          };
+          setUser(mockUser);
+          localStorage.setItem('user', JSON.stringify(mockUser));
+          toast({
+            title: "Login successful",
+            description: "Welcome back, admin!",
+          });
+          return true;
+        } else if (username === 'staff' && password === 'staff123') {
+          const mockUser: User = {
+            id: '2',
+            username: 'staff',
+            email: 'staff@example.com',
+            role: 'staff'
+          };
+          setUser(mockUser);
+          localStorage.setItem('user', JSON.stringify(mockUser));
+          toast({
+            title: "Login successful",
+            description: "Welcome back, staff!",
+          });
+          return true;
+        } else {
+          toast({
+            title: "Login failed",
+            description: data.message || "Invalid username or password",
+            variant: "destructive",
+          });
+          return false;
+        }
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      
+      // Fallback to mock users if API is not available
       if (username === 'admin' && password === 'admin123') {
         const mockUser: User = {
           id: '1',
@@ -60,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(mockUser);
         localStorage.setItem('user', JSON.stringify(mockUser));
         toast({
-          title: "Login successful",
+          title: "Login successful (offline mode)",
           description: "Welcome back, admin!",
         });
         return true;
@@ -74,38 +147,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(mockUser);
         localStorage.setItem('user', JSON.stringify(mockUser));
         toast({
-          title: "Login successful",
+          title: "Login successful (offline mode)",
           description: "Welcome back, staff!",
         });
         return true;
       } else {
         toast({
           title: "Login failed",
-          description: "Invalid username or password",
+          description: "An error occurred during login or invalid credentials",
           variant: "destructive",
         });
         return false;
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      toast({
-        title: "Login failed",
-        description: "An error occurred during login",
-        variant: "destructive",
-      });
-      return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
+  const logout = async () => {
+    try {
+      // Try to logout with the Django backend
+      await fetch(`${API_URL}/api/logout/`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local user state
+      setUser(null);
+      localStorage.removeItem('user');
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+    }
   };
 
   return (

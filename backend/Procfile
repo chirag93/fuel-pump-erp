@@ -1,0 +1,2 @@
+
+web: gunicorn fuel_pump_project.wsgi --log-file -
