@@ -30,6 +30,18 @@ const StaffManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   
+  // Helper function to safely convert Json to string array
+  const convertJsonToStringArray = (jsonValue: Json | null): string[] => {
+    if (!jsonValue) return [];
+    
+    // If it's already an array, map each item to string
+    if (Array.isArray(jsonValue)) {
+      return jsonValue.map(item => String(item));
+    }
+    
+    return [];
+  };
+  
   // Fetch staff data from Supabase
   useEffect(() => {
     const fetchStaff = async () => {
@@ -47,9 +59,7 @@ const StaffManagement = () => {
           // Convert Json to string[] for assigned_pumps
           const formattedData = data.map(item => ({
             ...item,
-            assigned_pumps: Array.isArray(item.assigned_pumps) 
-              ? item.assigned_pumps 
-              : []
+            assigned_pumps: convertJsonToStringArray(item.assigned_pumps)
           }));
           setStaff(formattedData as Staff[]);
         }
@@ -100,9 +110,7 @@ const StaffManagement = () => {
         const updatedStaff: Staff = {
           ...staffData,
           id: editingStaff.id,
-          assigned_pumps: Array.isArray(staffData.assigned_pumps) 
-            ? staffData.assigned_pumps 
-            : []
+          assigned_pumps: convertJsonToStringArray(staffData.assigned_pumps)
         };
         
         setStaff(staff.map(s => s.id === editingStaff.id ? updatedStaff : s));
@@ -123,9 +131,7 @@ const StaffManagement = () => {
           // Create a properly typed staff object for state update
           const newStaff: Staff = {
             ...data[0],
-            assigned_pumps: Array.isArray(data[0].assigned_pumps) 
-              ? data[0].assigned_pumps 
-              : []
+            assigned_pumps: convertJsonToStringArray(data[0].assigned_pumps)
           };
           
           setStaff([...staff, newStaff]);
