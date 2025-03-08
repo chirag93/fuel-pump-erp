@@ -1,8 +1,10 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
-interface User {
+interface UserProfile {
   id: string;
   username: string;
   email: string;
@@ -10,11 +12,12 @@ interface User {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: UserProfile | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
+  session: Session | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -28,64 +31,66 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for saved user in localStorage
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error('Failed to parse saved user', error);
-        localStorage.removeItem('user');
-      }
-    }
-    setIsLoading(false);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session ? mapUserToProfile(session.user) : null);
+      setIsLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session ? mapUserToProfile(session.user) : null);
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  // Helper function to map Supabase user to our UserProfile format
+  const mapUserToProfile = (supabaseUser: User): UserProfile => {
+    return {
+      id: supabaseUser.id,
+      username: supabaseUser.email?.split('@')[0] || 'user',
+      email: supabaseUser.email || '',
+      // Default to 'staff' role - this would ideally come from a profiles table
+      role: (supabaseUser.app_metadata.role as 'admin' | 'staff') || 'staff'
+    };
+  };
+
+  const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // For now, we'll use a mock authentication since we're using a file-based backend
-      // In a real app, this would be an API call to your Python backend
-      if (username === 'admin' && password === 'admin123') {
-        const mockUser: User = {
-          id: '1',
-          username: 'admin',
-          email: 'admin@example.com',
-          role: 'admin'
-        };
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        toast({
-          title: "Login successful",
-          description: "Welcome back, admin!",
-        });
-        return true;
-      } else if (username === 'staff' && password === 'staff123') {
-        const mockUser: User = {
-          id: '2',
-          username: 'staff',
-          email: 'staff@example.com',
-          role: 'staff'
-        };
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        toast({
-          title: "Login successful",
-          description: "Welcome back, staff!",
-        });
-        return true;
-      } else {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
         toast({
           title: "Login failed",
-          description: "Invalid username or password",
+          description: error.message,
           variant: "destructive",
         });
         return false;
       }
+
+      if (data.user) {
+        toast({
+          title: "Login successful",
+          description: `Welcome back, ${data.user.email?.split('@')[0] || 'user'}!`,
+        });
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Login error:', error);
       toast({
@@ -99,17 +104,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setUser(null);
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, isLoading, session }}>
       {children}
     </AuthContext.Provider>
   );

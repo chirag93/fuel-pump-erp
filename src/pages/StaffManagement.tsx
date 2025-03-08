@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Users, Plus, Search, UserCog } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import StaffForm from '@/components/staff/StaffForm';
+import { supabase } from '@/integrations/supabase/client';
 
-// Mock data for staff
+// Staff interface reflecting the Supabase schema
 interface Staff {
   id: string;
   name: string;
@@ -16,38 +18,47 @@ interface Staff {
   email: string;
   role: string;
   salary: number;
-  joiningDate: string;
-  assignedPumps: string[];
+  joining_date: string;
+  assigned_pumps: string[];
 }
 
-const initialStaffData: Staff[] = [
-  {
-    id: '1',
-    name: 'Rahul Sharma',
-    phone: '9876543210',
-    email: 'rahul@example.com',
-    role: 'Pump Operator',
-    salary: 15000,
-    joiningDate: '2023-01-15',
-    assignedPumps: ['Pump-1', 'Pump-2']
-  },
-  {
-    id: '2',
-    name: 'Priya Patel',
-    phone: '8765432109',
-    email: 'priya@example.com',
-    role: 'Cashier',
-    salary: 18000,
-    joiningDate: '2022-11-10',
-    assignedPumps: ['Pump-3']
-  }
-];
-
 const StaffManagement = () => {
-  const [staff, setStaff] = useState<Staff[]>(initialStaffData);
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Fetch staff data from Supabase
+  useEffect(() => {
+    const fetchStaff = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('staff')
+          .select('*');
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          setStaff(data);
+        }
+      } catch (error) {
+        console.error('Error fetching staff:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load staff data",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchStaff();
+  }, []);
   
   // Filter staff based on search term
   const filteredStaff = staff.filter(s => 
@@ -66,36 +77,73 @@ const StaffManagement = () => {
     setFormOpen(true);
   };
 
-  const handleSaveStaff = (staffData: any) => {
-    if (editingStaff) {
-      // Update existing staff
-      setStaff(staff.map(s => s.id === editingStaff.id ? { ...staffData, id: editingStaff.id } : s));
-      toast({ 
-        title: "Staff updated", 
-        description: `${staffData.name}'s information has been updated` 
-      });
-    } else {
-      // Add new staff
-      const newStaff = {
-        ...staffData,
-        id: `S${staff.length + 1}`.padStart(3, '0'),
-      };
-      setStaff([...staff, newStaff]);
-      toast({ 
-        title: "Staff added", 
-        description: `${staffData.name} has been added to the staff list` 
+  const handleSaveStaff = async (staffData: any) => {
+    try {
+      if (editingStaff) {
+        // Update existing staff
+        const { error } = await supabase
+          .from('staff')
+          .update(staffData)
+          .eq('id', editingStaff.id);
+          
+        if (error) throw error;
+        
+        setStaff(staff.map(s => s.id === editingStaff.id ? { ...staffData, id: editingStaff.id } : s));
+        toast({ 
+          title: "Staff updated", 
+          description: `${staffData.name}'s information has been updated` 
+        });
+      } else {
+        // Add new staff
+        const { data, error } = await supabase
+          .from('staff')
+          .insert([staffData])
+          .select();
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setStaff([...staff, data[0]]);
+          toast({ 
+            title: "Staff added", 
+            description: `${staffData.name} has been added to the staff list` 
+          });
+        }
+      }
+      setFormOpen(false);
+    } catch (error) {
+      console.error('Error saving staff:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save staff data",
+        variant: "destructive"
       });
     }
-    setFormOpen(false);
   };
 
-  const handleDeleteStaff = (id: string) => {
+  const handleDeleteStaff = async (id: string) => {
     if (confirm("Are you sure you want to remove this staff member?")) {
-      setStaff(staff.filter(s => s.id !== id));
-      toast({ 
-        title: "Staff removed", 
-        description: "Staff member has been removed" 
-      });
+      try {
+        const { error } = await supabase
+          .from('staff')
+          .delete()
+          .eq('id', id);
+          
+        if (error) throw error;
+        
+        setStaff(staff.filter(s => s.id !== id));
+        toast({ 
+          title: "Staff removed", 
+          description: "Staff member has been removed" 
+        });
+      } catch (error) {
+        console.error('Error deleting staff:', error);
+        toast({
+          title: "Error",
+          description: "Failed to remove staff member",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -132,7 +180,11 @@ const StaffManagement = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredStaff.length === 0 ? (
+          {isLoading ? (
+            <div className="py-8 text-center text-muted-foreground">
+              Loading staff data...
+            </div>
+          ) : filteredStaff.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
               No staff members found. Add your first staff member using the "Add Staff" button.
             </div>
@@ -160,11 +212,14 @@ const StaffManagement = () => {
                     <TableCell>₹{staffMember.salary.toLocaleString()}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {staffMember.assignedPumps.map((pump) => (
-                          <span key={pump} className="bg-muted text-xs px-2 py-1 rounded-full">
-                            {pump}
-                          </span>
-                        ))}
+                        {staffMember.assigned_pumps && Array.isArray(staffMember.assigned_pumps) ? 
+                          staffMember.assigned_pumps.map((pump) => (
+                            <span key={pump} className="bg-muted text-xs px-2 py-1 rounded-full">
+                              {pump}
+                            </span>
+                          )) : 
+                          <span className="text-xs text-muted-foreground">None assigned</span>
+                        }
                       </div>
                     </TableCell>
                     <TableCell className="text-right space-x-2">
@@ -210,7 +265,7 @@ const StaffManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              ₹{staff.reduce((total, s) => total + s.salary, 0).toLocaleString()}
+              ₹{staff.reduce((total, s) => total + (s.salary || 0), 0).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Monthly payroll</p>
           </CardContent>
@@ -222,7 +277,7 @@ const StaffManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {(new Set(staff.flatMap(s => s.assignedPumps))).size}
+              {(new Set(staff.flatMap(s => s.assigned_pumps || []))).size}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Pumps with assigned staff</p>
           </CardContent>

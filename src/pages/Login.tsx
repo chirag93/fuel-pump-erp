@@ -9,7 +9,7 @@ import { Droplets, Users } from 'lucide-react';
 import { CardFeature } from '@/components/ui/custom/CardFeature';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
@@ -20,7 +20,7 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const success = await login(username, password);
+      const success = await login(email, password);
       if (success) {
         navigate('/dashboard');
       }
@@ -70,12 +70,13 @@ const Login = () => {
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="username"
-                  placeholder="Enter your username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -98,9 +99,10 @@ const Login = () => {
             </form>
             
             <div className="text-center text-sm text-muted-foreground">
-              <p>Demo Credentials:</p>
-              <p>Admin: admin / admin123</p>
-              <p>Staff: staff / staff123</p>
+              <p>Need to create an account? Contact your administrator.</p>
+              <p className="mt-2">Demo Credentials:</p>
+              <p>admin@example.com / admin123</p>
+              <p>staff@example.com / staff123</p>
             </div>
           </div>
         </div>
