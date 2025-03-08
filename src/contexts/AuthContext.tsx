@@ -1,8 +1,10 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Session, User } from '@supabase/supabase-js';
 
-interface User {
+interface AuthUser {
   id: string;
   username: string;
   email: string;
@@ -10,9 +12,9 @@ interface User {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -27,138 +29,122 @@ export const useAuth = () => {
   return context;
 };
 
-// API URL from environment or default to localhost
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for saved user in localStorage
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
+    // Check for current session on initial load
+    const initAuth = async () => {
+      setIsLoading(true);
       try {
-        setUser(JSON.parse(savedUser));
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          handleSession(session);
+        }
       } catch (error) {
-        console.error('Failed to parse saved user', error);
-        localStorage.removeItem('user');
+        console.error('Error checking authentication status:', error);
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session) {
+          handleSession(session);
+        } else {
+          setUser(null);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    initAuth();
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const handleSession = (session: Session) => {
+    const supabaseUser = session.user;
+    if (supabaseUser) {
+      // Extract role from user metadata or use a default
+      const role = getRoleFromMetadata(supabaseUser);
+      
+      const authUser: AuthUser = {
+        id: supabaseUser.id,
+        username: supabaseUser.email?.split('@')[0] || 'user',
+        email: supabaseUser.email || '',
+        role: role
+      };
+      setUser(authUser);
+    }
+  };
+
+  // Get role from user metadata, defaulting to staff if not set
+  const getRoleFromMetadata = (user: User): 'admin' | 'staff' => {
+    return (user.user_metadata?.role as 'admin' | 'staff') || 'staff';
+  };
+
+  const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Try to login with the Django backend
-      const response = await fetch(`${API_URL}/api/login/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-        credentials: 'include',
+      // Try to login with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        const userData: User = {
-          id: data.user.id,
-          username: data.user.username,
-          email: data.user.email,
-          role: username === 'admin' ? 'admin' : 'staff', // Set role based on username until we implement proper roles
-        };
-
-        setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-        
-        toast({
-          title: "Login successful",
-          description: `Welcome back, ${userData.username}!`,
-        });
-        
-        return true;
-      } else {
-        // Fallback to mock users for development purposes
-        if (username === 'admin' && password === 'admin123') {
-          const mockUser: User = {
-            id: '1',
-            username: 'admin',
-            email: 'admin@example.com',
-            role: 'admin'
+      if (error) {
+        // For development purposes, still check for mock users
+        if ((email === 'admin@example.com' && password === 'admin123') || 
+            (email === 'staff@example.com' && password === 'staff123')) {
+          
+          const isMockAdmin = email === 'admin@example.com';
+          const mockUser: AuthUser = {
+            id: isMockAdmin ? '1' : '2',
+            username: isMockAdmin ? 'admin' : 'staff',
+            email,
+            role: isMockAdmin ? 'admin' : 'staff'
           };
+          
           setUser(mockUser);
-          localStorage.setItem('user', JSON.stringify(mockUser));
           toast({
-            title: "Login successful",
-            description: "Welcome back, admin!",
+            title: "Login successful (development mode)",
+            description: `Welcome back, ${mockUser.username}!`,
           });
           return true;
-        } else if (username === 'staff' && password === 'staff123') {
-          const mockUser: User = {
-            id: '2',
-            username: 'staff',
-            email: 'staff@example.com',
-            role: 'staff'
-          };
-          setUser(mockUser);
-          localStorage.setItem('user', JSON.stringify(mockUser));
-          toast({
-            title: "Login successful",
-            description: "Welcome back, staff!",
-          });
-          return true;
-        } else {
-          toast({
-            title: "Login failed",
-            description: data.message || "Invalid username or password",
-            variant: "destructive",
-          });
-          return false;
         }
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      
-      // Fallback to mock users if API is not available
-      if (username === 'admin' && password === 'admin123') {
-        const mockUser: User = {
-          id: '1',
-          username: 'admin',
-          email: 'admin@example.com',
-          role: 'admin'
-        };
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        toast({
-          title: "Login successful (offline mode)",
-          description: "Welcome back, admin!",
-        });
-        return true;
-      } else if (username === 'staff' && password === 'staff123') {
-        const mockUser: User = {
-          id: '2',
-          username: 'staff',
-          email: 'staff@example.com',
-          role: 'staff'
-        };
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        toast({
-          title: "Login successful (offline mode)",
-          description: "Welcome back, staff!",
-        });
-        return true;
-      } else {
+        
         toast({
           title: "Login failed",
-          description: "An error occurred during login or invalid credentials",
+          description: error.message || "Invalid credentials",
           variant: "destructive",
         });
         return false;
       }
+
+      if (data.session) {
+        toast({
+          title: "Login successful",
+          description: `Welcome back!`,
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        title: "Login failed",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -166,20 +152,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      // Try to logout with the Django backend
-      await fetch(`${API_URL}/api/logout/`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      // Always clear local user state
-      setUser(null);
-      localStorage.removeItem('user');
+      await supabase.auth.signOut();
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout failed",
+        description: "An error occurred during logout",
+        variant: "destructive",
       });
     }
   };
