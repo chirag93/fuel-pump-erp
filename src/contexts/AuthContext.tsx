@@ -69,14 +69,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string, rememberMe: boolean = false): Promise<boolean> => {
     setIsLoading(true);
     try {
+      // The expiresIn property needs to be part of the session object, not the options object
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: {
-          // Set session duration based on rememberMe flag
-          // 3600 = 1 hour (default), 86400 = 24 hours (1 day)
-          expiresIn: rememberMe ? 86400 : 3600
-        }
       });
 
       if (error) {
@@ -89,6 +85,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
+        // If rememberMe is true, update the session expiry time
+        if (rememberMe) {
+          // This updates the session on the client side
+          const { error: sessionError } = await supabase.auth.setSession({
+            ...data.session,
+            expires_in: 86400 // 24 hours in seconds (1 day)
+          });
+          
+          if (sessionError) {
+            console.error('Session update error:', sessionError);
+          }
+        }
+        
         toast({
           title: "Login successful",
           description: `Welcome back, ${data.user.email?.split('@')[0] || 'user'}!`,
