@@ -86,9 +86,9 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated, showTankIcon
           style={{ height: `${fillPercentage}%` }}
         ></div>
         
-        {/* Show fill percentage in the middle of the tank - Fix text color to be visible regardless of background */}
+        {/* Fix text color with proper contrast */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="font-bold text-lg text-black bg-white/70 px-2 py-0.5 rounded z-10 drop-shadow-sm">{fillPercentage}%</span>
+          <span className="font-bold text-lg text-black bg-white/80 px-2 py-1 rounded-md shadow-sm">{fillPercentage}%</span>
         </div>
       </div>
     );

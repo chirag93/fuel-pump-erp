@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -33,7 +32,7 @@ interface QuickActionProps {
 }
 
 interface FuelLevel {
-  fuelType: 'Petrol' | 'Diesel' | 'CNG';
+  fuelType: 'Petrol' | 'Diesel';
   capacity: number;
   lastUpdated: string;
 }
@@ -96,11 +95,11 @@ const Home = () => {
           });
           
           // Format the data for our component
-          const fuelData = Object.values(latestByFuelType).map(item => {
-            // Ensure we have a valid fuel_type before using it
-            if (item && typeof item.fuel_type === 'string') {
+          const fuelData = Object.values(latestByFuelType)
+            .filter(item => item.fuel_type === 'Petrol' || item.fuel_type === 'Diesel')
+            .map(item => {
               return {
-                fuelType: item.fuel_type as 'Petrol' | 'Diesel' | 'CNG',
+                fuelType: item.fuel_type as 'Petrol' | 'Diesel',
                 capacity: item.fuel_type === 'Petrol' ? 10000 : 12000, // Default capacities
                 lastUpdated: item.date ? new Date(item.date).toLocaleDateString('en-US', {
                   year: 'numeric',
@@ -108,9 +107,7 @@ const Home = () => {
                   day: 'numeric'
                 }) : 'Unknown'
               }
-            }
-            return null;
-          }).filter(Boolean) as FuelLevel[];
+            });
           
           if (fuelData.length > 0) {
             setFuelLevels(fuelData);
@@ -175,7 +172,7 @@ const Home = () => {
             title="Testing Details"
             description="Record fuel testing information"
             icon={<ClipboardList size={20} />}
-            href="/fueling"
+            href="/testing"
           />
           
           <QuickAction

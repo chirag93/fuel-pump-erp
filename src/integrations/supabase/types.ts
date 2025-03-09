@@ -78,6 +78,53 @@ export type Database = {
         }
         Relationships: []
       }
+      fuel_tests: {
+        Row: {
+          appearance: string
+          created_at: string
+          density: number
+          fuel_type: string
+          id: string
+          notes: string | null
+          temperature: number
+          test_date: string
+          test_time: string
+          tested_by: string
+        }
+        Insert: {
+          appearance: string
+          created_at?: string
+          density: number
+          fuel_type: string
+          id?: string
+          notes?: string | null
+          temperature: number
+          test_date: string
+          test_time: string
+          tested_by: string
+        }
+        Update: {
+          appearance?: string
+          created_at?: string
+          density?: number
+          fuel_type?: string
+          id?: string
+          notes?: string | null
+          temperature?: number
+          test_date?: string
+          test_time?: string
+          tested_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_tests_tested_by_fkey"
+            columns: ["tested_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       indents: {
         Row: {
           amount: number

@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { Loader2, TestTube, Calendar, Clipboard, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -31,6 +31,7 @@ interface FuelTest {
   notes: string;
   tested_by: string;
   created_at: string;
+  tested_by_name?: string;
 }
 
 const TestingDetails = () => {
@@ -79,6 +80,7 @@ const TestingDetails = () => {
       try {
         setIsLoading(true);
         
+        // Use the new fuel_tests table
         const { data, error } = await supabase
           .from('fuel_tests')
           .select('*')
