@@ -6,16 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertCircle, Lock, Mail } from 'lucide-react';
+import { AlertCircle, Lock, Mail, Database } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { seedStaffData } from '@/utils/seedDatabase';
+import { migrateAllData } from '@/utils/seedDatabase';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -45,10 +45,10 @@ const Login = () => {
     }
   };
 
-  const handleSeedDatabase = async () => {
-    setIsSeeding(true);
-    await seedStaffData();
-    setIsSeeding(false);
+  const handleMigrateData = async () => {
+    setIsMigrating(true);
+    await migrateAllData();
+    setIsMigrating(false);
   };
 
   return (
@@ -110,13 +110,15 @@ const Login = () => {
             <Button 
               variant="outline" 
               className="w-full" 
-              onClick={handleSeedDatabase}
-              disabled={isSeeding}
+              onClick={handleMigrateData}
+              disabled={isMigrating}
             >
-              {isSeeding ? 'Seeding Database...' : 'Seed Database with Sample Data'}
+              <Database className="mr-2 h-4 w-4" />
+              {isMigrating ? 'Migrating Data...' : 'Migrate Sample Data (One-Time)'}
             </Button>
             <p className="text-xs text-center text-muted-foreground mt-2">
-              This will add sample data to your database for testing.
+              This will perform a one-time migration of sample data to your database.
+              Already migrated data will not be duplicated.
             </p>
           </div>
         </CardFooter>
