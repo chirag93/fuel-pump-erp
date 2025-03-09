@@ -128,7 +128,8 @@ const sampleShifts = [
     shift_type: 'morning',
     start_time: '06:00',
     end_time: '14:00',
-    status: 'completed',
+    status: 'completed', // Explicitly use 'active' or 'completed'
+    date: new Date().toISOString().split('T')[0],
     pump_id: 'P001',
     opening_reading: 45678.5,
     closing_reading: 46123.8,
@@ -143,7 +144,8 @@ const sampleShifts = [
     shift_type: 'evening',
     start_time: '14:00',
     end_time: '22:00',
-    status: 'completed',
+    status: 'completed', // Explicitly use 'active' or 'completed'
+    date: new Date().toISOString().split('T')[0],
     pump_id: 'P001',
     opening_reading: 46123.8,
     closing_reading: 46578.2,
@@ -158,7 +160,8 @@ const sampleShifts = [
     shift_type: 'morning',
     start_time: '06:00',
     end_time: null,
-    status: 'active',
+    status: 'active', // Explicitly use 'active' or 'completed'
+    date: new Date().toISOString().split('T')[0],
     pump_id: 'P002',
     opening_reading: 34567.8,
     closing_reading: null,
@@ -443,9 +446,7 @@ const migrateShiftsData = async () => {
     
     // Link shifts to staff by email (this is a simple assignment for sample data)
     const shiftsWithStaff = sampleShifts.map(shift => ({
-      ...shift,
-      // Add the required shift_type field
-      shift_type: shift.shift_type || 'day'
+      ...shift
     }));
     
     // Assign shifts to staff members
@@ -496,7 +497,7 @@ const migrateShiftsData = async () => {
         shift_id: shift.id,
         staff_id: shift.staff_id,
         pump_id: shiftsWithStaff[index].pump_id || 'P001', 
-        date: new Date().toISOString().split('T')[0],
+        date: shiftsWithStaff[index].date || new Date().toISOString().split('T')[0],
         opening_reading: shiftsWithStaff[index].opening_reading || 0,
         closing_reading: shiftsWithStaff[index].closing_reading || null
       }));

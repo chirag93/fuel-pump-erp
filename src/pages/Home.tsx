@@ -95,17 +95,25 @@ const Home = () => {
           });
           
           // Format the data for our component
-          const fuelData = Object.values(latestByFuelType).map(item => ({
-            fuelType: item.fuel_type as 'Petrol' | 'Diesel' | 'CNG',
-            capacity: item.fuel_type === 'Petrol' ? 10000 : 12000, // Default capacities
-            lastUpdated: new Date(item.date).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric'
-            })
-          }));
+          const fuelData = Object.values(latestByFuelType).map(item => {
+            // Ensure we have a valid fuel_type before using it
+            if (item && typeof item.fuel_type === 'string') {
+              return {
+                fuelType: item.fuel_type as 'Petrol' | 'Diesel' | 'CNG',
+                capacity: item.fuel_type === 'Petrol' ? 10000 : 12000, // Default capacities
+                lastUpdated: item.date ? new Date(item.date).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                }) : 'Unknown'
+              }
+            }
+            return null;
+          }).filter(Boolean) as FuelLevel[];
           
-          setFuelLevels(fuelData);
+          if (fuelData.length > 0) {
+            setFuelLevels(fuelData);
+          }
         }
       } catch (error) {
         console.error('Error fetching fuel levels:', error);

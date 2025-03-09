@@ -190,7 +190,7 @@ const ShiftManagement = () => {
         .from('shifts')
         .insert([{
           staff_id: newShift.staff_id,
-          shift_type: newShift.shift_type || 'day',  // Add shift_type to comply with database schema
+          shift_type: newShift.shift_type || 'day',
           start_time: newShift.start_time,
           status: 'active'
         }])
@@ -232,7 +232,8 @@ const ShiftManagement = () => {
         cash_remaining: null,
         card_sales: null,
         upi_sales: null,
-        cash_sales: null
+        cash_sales: null,
+        status: 'active' as 'active' // Explicitly type as 'active'
       };
       
       setShifts([...shifts, newShiftWithName]);
@@ -307,7 +308,7 @@ const ShiftManagement = () => {
         shift.id === id ? 
           {
             ...shift, 
-            status: 'completed', 
+            status: 'completed' as 'completed', // Explicitly type as 'completed'
             end_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
             closing_reading: closingReading,
             cash_remaining: cashRemaining,
