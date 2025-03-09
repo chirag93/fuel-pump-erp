@@ -1,0 +1,9 @@
+
+# Netlify configuration file
+
+# This redirects all routes to index.html, which is needed for single-page applications
+# that use client-side routing (like React Router)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
