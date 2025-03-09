@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -36,6 +37,7 @@ interface Shift {
   card_sales: number | null;
   upi_sales: number | null;
   cash_sales: number | null;
+  created_at?: string | null;
 }
 
 interface Staff {
@@ -55,7 +57,8 @@ const ShiftManagement = () => {
     pump_id: '',
     cash_given: 0,
     opening_reading: 0,
-    status: 'active'
+    status: 'active',
+    shift_type: 'day' // Default shift type
   });
 
   // Fetch staff data
@@ -91,6 +94,7 @@ const ShiftManagement = () => {
     const fetchShifts = async () => {
       setIsLoading(true);
       try {
+        // First get all shifts
         const { data: shiftsData, error: shiftsError } = await supabase
           .from('shifts')
           .select(`
@@ -100,40 +104,52 @@ const ShiftManagement = () => {
             start_time,
             end_time,
             status,
-            pump_id,
-            opening_reading,
-            closing_reading,
-            cash_given,
-            cash_remaining,
-            card_sales,
-            upi_sales,
-            cash_sales
+            created_at
           `);
           
         if (shiftsError) {
           throw shiftsError;
         }
         
-        // Get staff names for each shift
-        if (shiftsData) {
-          const shiftsWithStaffNames = await Promise.all(
-            shiftsData.map(async (shift) => {
-              const { data: staffData } = await supabase
-                .from('staff')
-                .select('name')
-                .eq('id', shift.staff_id)
-                .single();
-                
-              return {
-                ...shift,
-                staff_name: staffData?.name || 'Unknown Staff',
-                date: new Date().toISOString().split('T')[0], // Set current date for now
-              };
-            })
-          );
-          
-          setShifts(shiftsWithStaffNames as Shift[]);
+        if (!shiftsData) {
+          setShifts([]);
+          setIsLoading(false);
+          return;
         }
+        
+        // Get staff names for each shift
+        const shiftsWithStaffNames = await Promise.all(
+          shiftsData.map(async (shift) => {
+            const { data: staffData } = await supabase
+              .from('staff')
+              .select('name')
+              .eq('id', shift.staff_id)
+              .single();
+              
+            // Get the shift's readings for additional details
+            const { data: readingsData } = await supabase
+              .from('readings')
+              .select('*')
+              .eq('shift_id', shift.id)
+              .single();
+              
+            return {
+              ...shift,
+              staff_name: staffData?.name || 'Unknown Staff',
+              date: readingsData?.date || new Date().toISOString().split('T')[0],
+              pump_id: readingsData?.pump_id || 'Unknown',
+              opening_reading: readingsData?.opening_reading || 0,
+              closing_reading: readingsData?.closing_reading || null,
+              cash_given: 0, // Default values for fields not in database
+              cash_remaining: null,
+              card_sales: null,
+              upi_sales: null,
+              cash_sales: null
+            } as Shift;
+          })
+        );
+        
+        setShifts(shiftsWithStaffNames);
       } catch (error) {
         console.error('Error fetching shifts:', error);
         toast({
@@ -169,48 +185,73 @@ const ShiftManagement = () => {
       // Get staff name
       const staffName = staffList.find(s => s.id === newShift.staff_id)?.name || 'Unknown Staff';
       
-      const shiftData = {
-        staff_id: newShift.staff_id,
-        date: newShift.date,
-        start_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-        pump_id: newShift.pump_id,
-        opening_reading: newShift.opening_reading,
-        cash_given: newShift.cash_given || 0,
-        status: 'active'
-      };
-      
-      const { data, error } = await supabase
+      // First create the shift record
+      const { data: shiftData, error: shiftError } = await supabase
         .from('shifts')
-        .insert([shiftData])
+        .insert([{
+          staff_id: newShift.staff_id,
+          shift_type: newShift.shift_type || 'day',  // Add shift_type to comply with database schema
+          start_time: newShift.start_time,
+          status: 'active'
+        }])
         .select();
         
-      if (error) {
-        throw error;
+      if (shiftError) {
+        throw shiftError;
       }
       
-      if (data && data.length > 0) {
-        const newShiftWithName = {
-          ...data[0],
-          staff_name: staffName
-        };
-        
-        setShifts([...shifts, newShiftWithName as Shift]);
-        toast({
-          title: "Success",
-          description: "New shift started successfully"
-        });
-        
-        setNewShift({
-          date: new Date().toISOString().split('T')[0],
-          start_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-          staff_id: '',
-          pump_id: '',
-          cash_given: 0,
-          opening_reading: 0,
-          status: 'active'
-        });
-        setFormOpen(false);
+      if (!shiftData || shiftData.length === 0) {
+        throw new Error("Failed to create shift record");
       }
+      
+      // Then create a reading record linked to the shift
+      const { error: readingError } = await supabase
+        .from('readings')
+        .insert([{
+          shift_id: shiftData[0].id,
+          staff_id: newShift.staff_id,
+          pump_id: newShift.pump_id,
+          date: newShift.date,
+          opening_reading: newShift.opening_reading,
+          closing_reading: null
+        }]);
+        
+      if (readingError) {
+        throw readingError;
+      }
+      
+      // Create the full shift object for the UI
+      const newShiftWithName: Shift = {
+        ...shiftData[0],
+        staff_name: staffName,
+        date: newShift.date || new Date().toISOString().split('T')[0],
+        pump_id: newShift.pump_id || '',
+        opening_reading: newShift.opening_reading || 0,
+        closing_reading: null,
+        cash_given: newShift.cash_given || 0,
+        cash_remaining: null,
+        card_sales: null,
+        upi_sales: null,
+        cash_sales: null
+      };
+      
+      setShifts([...shifts, newShiftWithName]);
+      toast({
+        title: "Success",
+        description: "New shift started successfully"
+      });
+      
+      setNewShift({
+        date: new Date().toISOString().split('T')[0],
+        start_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        staff_id: '',
+        pump_id: '',
+        cash_given: 0,
+        opening_reading: 0,
+        status: 'active',
+        shift_type: 'day'
+      });
+      setFormOpen(false);
     } catch (error) {
       console.error('Error adding shift:', error);
       toast({
@@ -225,31 +266,43 @@ const ShiftManagement = () => {
     try {
       // Generate random values for demonstration
       // In a real app, these would be entered by the user
-      const closingReading = shifts.find(s => s.id === id)?.opening_reading as number + Math.floor(Math.random() * 500);
-      const cashRemaining = Math.floor(Math.random() * (shifts.find(s => s.id === id)?.cash_given as number));
+      const currentShift = shifts.find(s => s.id === id);
+      if (!currentShift) {
+        throw new Error("Shift not found");
+      }
+      
+      const closingReading = currentShift.opening_reading + Math.floor(Math.random() * 500);
+      const cashRemaining = Math.floor(Math.random() * (currentShift.cash_given));
       const cardSales = Math.floor(Math.random() * 15000);
       const upiSales = Math.floor(Math.random() * 12000);
       const cashSales = Math.floor(Math.random() * 18000);
       
-      const updateData = {
-        status: 'completed',
-        end_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-        closing_reading: closingReading,
-        cash_remaining: cashRemaining,
-        card_sales: cardSales,
-        upi_sales: upiSales,
-        cash_sales: cashSales
-      };
-      
-      const { error } = await supabase
+      // Update the shift record
+      const { error: shiftError } = await supabase
         .from('shifts')
-        .update(updateData)
+        .update({
+          status: 'completed',
+          end_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+        })
         .eq('id', id);
         
-      if (error) {
-        throw error;
+      if (shiftError) {
+        throw shiftError;
       }
       
+      // Update the reading record
+      const { error: readingError } = await supabase
+        .from('readings')
+        .update({
+          closing_reading: closingReading
+        })
+        .eq('shift_id', id);
+        
+      if (readingError) {
+        throw readingError;
+      }
+      
+      // Update local state
       setShifts(shifts.map(shift => 
         shift.id === id ? 
           {

@@ -19,6 +19,7 @@ interface Consumable {
   price_per_unit: number;
   total_price: number;
   date: string;
+  created_at?: string;
 }
 
 const Consumables = () => {
@@ -170,7 +171,13 @@ const Consumables = () => {
         
         // Update local state with the returned data which includes the generated ID
         if (data && data.length > 0) {
-          setConsumables([...consumables, data[0]]);
+          // Ensure the data adheres to the Consumable interface
+          const newConsumable: Consumable = {
+            ...data[0],
+            category: data[0].category || formData.category,
+            unit: data[0].unit || formData.unit
+          };
+          setConsumables([...consumables, newConsumable]);
           toast({ title: "Consumable added", description: `${formData.name} has been added` });
         }
       }

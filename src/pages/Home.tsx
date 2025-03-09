@@ -85,9 +85,9 @@ const Home = () => {
           throw error;
         }
         
-        if (data) {
+        if (data && data.length > 0) {
           // Group the latest entries by fuel type
-          const latestByFuelType = {};
+          const latestByFuelType: Record<string, any> = {};
           data.forEach(item => {
             if (!latestByFuelType[item.fuel_type] || new Date(item.date) > new Date(latestByFuelType[item.fuel_type].date)) {
               latestByFuelType[item.fuel_type] = item;

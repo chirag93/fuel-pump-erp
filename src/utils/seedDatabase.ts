@@ -338,10 +338,18 @@ const migrateCustomerData = async () => {
 const migrateConsumablesData = async () => {
   try {
     console.log('Migrating consumables data...');
+    
+    // Add category and unit fields to the sample data
+    const updatedConsumables = sampleConsumables.map(item => ({
+      ...item,
+      category: item.category || 'General',
+      unit: item.unit || 'Units'
+    }));
+    
     // Use upsert with name + date as the unique constraint
     const { error: insertError, data } = await supabase
       .from('consumables')
-      .upsert(sampleConsumables, { 
+      .upsert(updatedConsumables, { 
         onConflict: 'name,date',
         ignoreDuplicates: false
       });
@@ -434,7 +442,11 @@ const migrateShiftsData = async () => {
     }
     
     // Link shifts to staff by email (this is a simple assignment for sample data)
-    const shiftsWithStaff = [...sampleShifts];
+    const shiftsWithStaff = sampleShifts.map(shift => ({
+      ...shift,
+      // Add the required shift_type field
+      shift_type: shift.shift_type || 'day'
+    }));
     
     // Assign shifts to staff members
     if (staffMembers.length > 0) {
@@ -455,20 +467,54 @@ const migrateShiftsData = async () => {
       }
     }
     
+    // First insert the base shift records
+    const shiftBaseRecords = shiftsWithStaff.map(shift => ({
+      staff_id: shift.staff_id,
+      shift_type: shift.shift_type,
+      start_time: shift.start_time,
+      end_time: shift.end_time,
+      status: shift.status
+    }));
+    
     // Insert shifts
-    const { error: insertError, data } = await supabase
+    const { error: insertError, data: insertedShifts } = await supabase
       .from('shifts')
-      .upsert(shiftsWithStaff, { 
-        onConflict: 'staff_id,date,start_time',
+      .upsert(shiftBaseRecords, { 
+        onConflict: 'staff_id,start_time',
         ignoreDuplicates: false
-      });
+      })
+      .select();
     
     if (insertError) {
       console.error('Shifts insertion error:', insertError);
       throw insertError;
     }
     
-    console.log("Shifts data migrated successfully:", data);
+    // If shifts were inserted, also insert the corresponding readings
+    if (insertedShifts && insertedShifts.length > 0) {
+      const readingsRecords = insertedShifts.map((shift, index) => ({
+        shift_id: shift.id,
+        staff_id: shift.staff_id,
+        pump_id: shiftsWithStaff[index].pump_id || 'P001', 
+        date: new Date().toISOString().split('T')[0],
+        opening_reading: shiftsWithStaff[index].opening_reading || 0,
+        closing_reading: shiftsWithStaff[index].closing_reading || null
+      }));
+      
+      const { error: readingsError } = await supabase
+        .from('readings')
+        .upsert(readingsRecords, {
+          onConflict: 'shift_id',
+          ignoreDuplicates: false
+        });
+        
+      if (readingsError) {
+        console.error('Readings insertion error:', readingsError);
+        throw readingsError;
+      }
+    }
+    
+    console.log("Shifts data migrated successfully:", insertedShifts);
     return true;
   } catch (error) {
     console.error('Error migrating shifts data:', error);
