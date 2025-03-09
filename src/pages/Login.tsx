@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AlertCircle, Lock, Mail, Database } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { migrateAllData } from '@/utils/seedDatabase';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -16,6 +17,7 @@ const Login = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -31,7 +33,7 @@ const Login = () => {
     }
 
     try {
-      const success = await login(email, password);
+      const success = await login(email, password, rememberMe);
       if (success) {
         navigate('/dashboard');
       } else {
@@ -118,6 +120,16 @@ const Login = () => {
                   required
                 />
               </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="rememberMe" 
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked === true)}
+              />
+              <Label htmlFor="rememberMe" className="cursor-pointer text-sm font-medium">
+                Remember me
+              </Label>
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'Signing in...' : 'Sign In'}

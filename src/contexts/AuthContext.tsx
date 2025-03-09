@@ -14,7 +14,7 @@ interface UserProfile {
 interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
   session: Session | null;
@@ -66,12 +66,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string, rememberMe: boolean = false): Promise<boolean> => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
+        options: {
+          // Set session duration based on rememberMe flag
+          // 3600 = 1 hour (default), 86400 = 24 hours (1 day)
+          expiresIn: rememberMe ? 86400 : 3600
+        }
       });
 
       if (error) {
