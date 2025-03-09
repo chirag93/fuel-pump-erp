@@ -84,20 +84,21 @@ export const migrateAllData = async () => {
       description: "Beginning database migration process..."
     });
 
-    // Enable RLS bypassing for this operation using service role
-    const { data: { session } } = await supabase.auth.getSession();
-    
     // First check if tables are already populated before running migrations
     const staffCheckRes = await checkTableHasData('staff');
     const inventoryCheckRes = await checkTableHasData('inventory');
     const customersCheckRes = await checkTableHasData('customers');
     
+    console.log('Table status:', { staffCheckRes, inventoryCheckRes, customersCheckRes });
+    
     // Only run migrations for empty tables
     const results = await Promise.allSettled([
-      staffCheckRes ? "already migrated" : migrateStaffData(),
-      inventoryCheckRes ? "already migrated" : migrateInventoryData(),
-      customersCheckRes ? "already migrated" : migrateCustomerData()
+      staffCheckRes ? Promise.resolve("already migrated") : migrateStaffData(),
+      inventoryCheckRes ? Promise.resolve("already migrated") : migrateInventoryData(),
+      customersCheckRes ? Promise.resolve("already migrated") : migrateCustomerData()
     ]);
+    
+    console.log('Migration results:', results);
     
     // Check results to determine success
     const errors = results.filter(r => r.status === 'rejected');
@@ -132,11 +133,16 @@ export const migrateAllData = async () => {
 // Helper to check if a table already has data
 const checkTableHasData = async (tableName) => {
   try {
-    const { data, error, count } = await supabase
+    const { count, error } = await supabase
       .from(tableName)
       .select('*', { count: 'exact', head: true });
       
-    if (error) throw error;
+    if (error) {
+      console.error(`Error checking ${tableName} data:`, error);
+      return false;
+    }
+    
+    console.log(`${tableName} has ${count} records`);
     return count > 0;
   } catch (error) {
     console.error(`Error checking ${tableName} data:`, error);
@@ -148,14 +154,21 @@ const checkTableHasData = async (tableName) => {
 // Function to migrate staff data
 const migrateStaffData = async () => {
   try {
+    console.log('Migrating staff data...');
     // Insert sample staff data using upsert to avoid duplicates
     const { error: insertError, data } = await supabase
       .from('staff')
-      .upsert(sampleStaff, { onConflict: 'email' });
+      .upsert(sampleStaff, { 
+        onConflict: 'email',
+        ignoreDuplicates: false
+      });
     
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error('Staff insertion error:', insertError);
+      throw insertError;
+    }
     
-    console.log("Staff data migrated successfully");
+    console.log("Staff data migrated successfully:", data);
     return true;
   } catch (error) {
     console.error('Error migrating staff data:', error);
@@ -166,15 +179,21 @@ const migrateStaffData = async () => {
 // Function to migrate inventory data
 const migrateInventoryData = async () => {
   try {
-    // For inventory, we need a unique constraint that makes sense for upsert
-    // We'll use fuel_type + date as our "key"
-    const { error: insertError } = await supabase
+    console.log('Migrating inventory data...');
+    // For inventory, we now have a unique constraint for fuel_type + date
+    const { error: insertError, data } = await supabase
       .from('inventory')
-      .upsert(sampleInventory, { onConflict: 'fuel_type, date' });
+      .upsert(sampleInventory, { 
+        onConflict: 'fuel_type,date',
+        ignoreDuplicates: false
+      });
     
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error('Inventory insertion error:', insertError);
+      throw insertError;
+    }
     
-    console.log("Inventory data migrated successfully");
+    console.log("Inventory data migrated successfully:", data);
     return true;
   } catch (error) {
     console.error('Error migrating inventory data:', error);
@@ -185,14 +204,21 @@ const migrateInventoryData = async () => {
 // Function to migrate customer data
 const migrateCustomerData = async () => {
   try {
+    console.log('Migrating customer data...');
     // Use upsert with email as the unique constraint for customers
-    const { error: insertError } = await supabase
+    const { error: insertError, data } = await supabase
       .from('customers')
-      .upsert(sampleCustomers, { onConflict: 'email' });
+      .upsert(sampleCustomers, { 
+        onConflict: 'email',
+        ignoreDuplicates: false
+      });
     
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error('Customer insertion error:', insertError);
+      throw insertError;
+    }
     
-    console.log("Customer data migrated successfully");
+    console.log("Customer data migrated successfully:", data);
     return true;
   } catch (error) {
     console.error('Error migrating customer data:', error);

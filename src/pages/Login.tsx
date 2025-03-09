@@ -46,9 +46,21 @@ const Login = () => {
   };
 
   const handleMigrateData = async () => {
+    if (isMigrating) return; // Prevent multiple clicks
+    
     setIsMigrating(true);
+    
     try {
-      await migrateAllData();
+      console.log("Starting data migration...");
+      const success = await migrateAllData();
+      
+      if (success) {
+        toast({
+          title: "Migration successful",
+          description: "Sample data has been successfully migrated to the database.",
+        });
+      }
+      // Error toasts are handled inside migrateAllData
     } catch (error) {
       console.error("Migration error:", error);
       toast({
