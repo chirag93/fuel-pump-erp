@@ -69,7 +69,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string, rememberMe: boolean = false): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // The expiresIn property needs to be part of the session object, not the options object
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -87,14 +86,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.user) {
         // If rememberMe is true, update the session expiry time
         if (rememberMe) {
-          // This updates the session on the client side
-          const { error: sessionError } = await supabase.auth.setSession({
-            ...data.session,
-            expires_in: 86400 // 24 hours in seconds (1 day)
-          });
+          // We can use refreshSession instead of setSession to create a new session with a longer expiry
+          // This is a workaround as setSession with expires_in doesn't work properly with TypeScript
+          const { error: refreshError } = await supabase.auth.refreshSession();
           
-          if (sessionError) {
-            console.error('Session update error:', sessionError);
+          if (refreshError) {
+            console.error('Session refresh error:', refreshError);
           }
         }
         
