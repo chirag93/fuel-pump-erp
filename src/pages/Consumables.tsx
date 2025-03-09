@@ -51,10 +51,17 @@ const Consumables = () => {
         }
         
         if (data) {
+          // Transform the raw data into properly typed Consumable objects
           const formattedData: Consumable[] = data.map(item => ({
-            ...item,
-            category: item.category || 'General',
-            unit: item.unit || 'Units'
+            id: item.id,
+            name: item.name,
+            category: item.category || 'General', // Use default if null/undefined
+            quantity: item.quantity,
+            unit: item.unit || 'Units', // Use default if null/undefined
+            price_per_unit: item.price_per_unit,
+            total_price: item.total_price,
+            date: item.date,
+            created_at: item.created_at
           }));
           setConsumables(formattedData);
         }
@@ -171,12 +178,19 @@ const Consumables = () => {
         
         // Update local state with the returned data which includes the generated ID
         if (data && data.length > 0) {
-          // Ensure the data adheres to the Consumable interface
+          // Create a proper Consumable object from the returned data
           const newConsumable: Consumable = {
-            ...data[0],
+            id: data[0].id,
+            name: data[0].name,
             category: data[0].category || formData.category,
-            unit: data[0].unit || formData.unit
+            quantity: data[0].quantity,
+            unit: data[0].unit || formData.unit,
+            price_per_unit: data[0].price_per_unit,
+            total_price: data[0].total_price,
+            date: data[0].date,
+            created_at: data[0].created_at
           };
+          
           setConsumables([...consumables, newConsumable]);
           toast({ title: "Consumable added", description: `${formData.name} has been added` });
         }

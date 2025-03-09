@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       consumables: {
         Row: {
+          category: string | null
           created_at: string | null
           date: string
           id: string
@@ -18,8 +19,10 @@ export type Database = {
           price_per_unit: number
           quantity: number
           total_price: number
+          unit: string | null
         }
         Insert: {
+          category?: string | null
           created_at?: string | null
           date: string
           id?: string
@@ -27,8 +30,10 @@ export type Database = {
           price_per_unit: number
           quantity: number
           total_price: number
+          unit?: string | null
         }
         Update: {
+          category?: string | null
           created_at?: string | null
           date?: string
           id?: string
@@ -36,6 +41,7 @@ export type Database = {
           price_per_unit?: number
           quantity?: number
           total_price?: number
+          unit?: string | null
         }
         Relationships: []
       }
