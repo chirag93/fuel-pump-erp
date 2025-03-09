@@ -122,6 +122,55 @@ const sampleVehicles = [
   }
 ];
 
+// Sample shifts data
+const sampleShifts = [
+  {
+    staff_id: '',  // Will be filled in during migration based on staff email
+    date: new Date().toISOString().split('T')[0],
+    start_time: '06:00',
+    end_time: '14:00',
+    pump_id: 'P001',
+    opening_reading: 45678.5,
+    closing_reading: 46123.8,
+    cash_given: 5000,
+    cash_remaining: 2345.5,
+    card_sales: 15678.9,
+    upi_sales: 12567.4,
+    cash_sales: 17567.8,
+    status: 'completed'
+  },
+  {
+    staff_id: '',  // Will be filled in during migration based on staff email
+    date: new Date().toISOString().split('T')[0],
+    start_time: '14:00',
+    end_time: '22:00',
+    pump_id: 'P001',
+    opening_reading: 46123.8,
+    closing_reading: 46578.2,
+    cash_given: 5000,
+    cash_remaining: 3245.7,
+    card_sales: 12456.3,
+    upi_sales: 10234.5,
+    cash_sales: 14578.9,
+    status: 'completed'
+  },
+  {
+    staff_id: '',  // Will be filled in during migration based on staff email
+    date: new Date().toISOString().split('T')[0],
+    start_time: '06:00',
+    end_time: null,
+    pump_id: 'P002',
+    opening_reading: 34567.8,
+    closing_reading: null,
+    cash_given: 5000,
+    cash_remaining: null,
+    card_sales: null,
+    upi_sales: null,
+    cash_sales: null,
+    status: 'active'
+  }
+];
+
 // Master function to migrate all data
 export const migrateAllData = async () => {
   try {
@@ -137,13 +186,15 @@ export const migrateAllData = async () => {
     const customersCheckRes = await checkTableHasData('customers');
     const consumablesCheckRes = await checkTableHasData('consumables');
     const vehiclesCheckRes = await checkTableHasData('vehicles');
+    const shiftsCheckRes = await checkTableHasData('shifts');
     
     console.log('Table status:', { 
       staffCheckRes, 
       inventoryCheckRes, 
       customersCheckRes,
       consumablesCheckRes,
-      vehiclesCheckRes
+      vehiclesCheckRes,
+      shiftsCheckRes
     });
     
     // Only run migrations for empty tables
@@ -152,7 +203,8 @@ export const migrateAllData = async () => {
       inventoryCheckRes ? Promise.resolve("already migrated") : migrateInventoryData(),
       customersCheckRes ? Promise.resolve("already migrated") : migrateCustomerData(),
       consumablesCheckRes ? Promise.resolve("already migrated") : migrateConsumablesData(),
-      vehiclesCheckRes ? Promise.resolve("already migrated") : migrateVehiclesData()
+      vehiclesCheckRes ? Promise.resolve("already migrated") : migrateVehiclesData(),
+      shiftsCheckRes ? Promise.resolve("already migrated") : migrateShiftsData()
     ]);
     
     console.log('Migration results:', results);
@@ -359,6 +411,68 @@ const migrateVehiclesData = async () => {
     return true;
   } catch (error) {
     console.error('Error migrating vehicles data:', error);
+    return false;
+  }
+};
+
+// Function to migrate shifts data - linked to staff
+const migrateShiftsData = async () => {
+  try {
+    console.log('Migrating shifts data...');
+    
+    // First, get all staff to link shifts to the correct staff_id
+    const { data: staffMembers, error: staffError } = await supabase
+      .from('staff')
+      .select('id, email');
+    
+    if (staffError) {
+      throw staffError;
+    }
+    
+    if (!staffMembers || staffMembers.length === 0) {
+      console.log('No staff found, skipping shifts migration');
+      return false;
+    }
+    
+    // Link shifts to staff by email (this is a simple assignment for sample data)
+    const shiftsWithStaff = [...sampleShifts];
+    
+    // Assign shifts to staff members
+    if (staffMembers.length > 0) {
+      shiftsWithStaff[0].staff_id = staffMembers[0].id;
+      
+      if (shiftsWithStaff.length > 1 && staffMembers.length > 1) {
+        shiftsWithStaff[1].staff_id = staffMembers[1].id;
+      } else if (shiftsWithStaff.length > 1) {
+        shiftsWithStaff[1].staff_id = staffMembers[0].id;
+      }
+      
+      if (shiftsWithStaff.length > 2 && staffMembers.length > 2) {
+        shiftsWithStaff[2].staff_id = staffMembers[2].id;
+      } else if (shiftsWithStaff.length > 2 && staffMembers.length > 1) {
+        shiftsWithStaff[2].staff_id = staffMembers[1].id;
+      } else if (shiftsWithStaff.length > 2) {
+        shiftsWithStaff[2].staff_id = staffMembers[0].id;
+      }
+    }
+    
+    // Insert shifts
+    const { error: insertError, data } = await supabase
+      .from('shifts')
+      .upsert(shiftsWithStaff, { 
+        onConflict: 'staff_id,date,start_time',
+        ignoreDuplicates: false
+      });
+    
+    if (insertError) {
+      console.error('Shifts insertion error:', insertError);
+      throw insertError;
+    }
+    
+    console.log("Shifts data migrated successfully:", data);
+    return true;
+  } catch (error) {
+    console.error('Error migrating shifts data:', error);
     return false;
   }
 };

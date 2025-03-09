@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Fuel, Droplets, Loader2 } from 'lucide-react';
+import { Fuel, Droplets, Loader2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface FuelTankProps {
@@ -15,12 +15,14 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated }: FuelTankPr
   const [currentLevel, setCurrentLevel] = useState<number>(0);
   const [pricePerUnit, setPricePerUnit] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Fetch the current fuel level from the database
   useEffect(() => {
     const fetchFuelData = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         
         // Get the latest inventory entry for this fuel type
         const { data, error } = await supabase
@@ -37,9 +39,12 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated }: FuelTankPr
         if (data && data.length > 0) {
           setCurrentLevel(Number(data[0].quantity));
           setPricePerUnit(Number(data[0].price_per_unit));
+        } else {
+          setError(`No data found for ${fuelType} tank`);
         }
       } catch (error) {
         console.error(`Error fetching ${fuelType} data:`, error);
+        setError(`Failed to load ${fuelType} data`);
       } finally {
         setIsLoading(false);
       }
@@ -87,6 +92,11 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated }: FuelTankPr
         {isLoading ? (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-4 text-center">
+            <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
+            <p className="text-muted-foreground">{error}</p>
           </div>
         ) : (
           <div className="space-y-3">

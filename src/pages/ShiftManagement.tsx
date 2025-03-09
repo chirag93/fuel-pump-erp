@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { CalendarClock, Plus, ClipboardList, DollarSign } from 'lucide-react';
+import { CalendarClock, Plus, ClipboardList, DollarSign, Loader2 } from 'lucide-react';
 import { 
   Dialog,
   DialogContent,
@@ -16,164 +17,265 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Shift {
   id: string;
-  staffId: string;
-  staffName: string;
+  staff_id: string;
+  staff_name: string;
   date: string;
-  startTime: string;
-  endTime: string;
-  pumpId: string;
-  openingReading: number;
-  closingReading: number;
-  cashGiven: number;
-  cashRemaining: number;
-  cardSales: number;
-  upiSales: number;
-  cashSales: number;
+  start_time: string;
+  end_time: string | null;
+  pump_id: string;
+  opening_reading: number;
+  closing_reading: number | null;
+  cash_given: number;
+  cash_remaining: number | null;
+  card_sales: number | null;
+  upi_sales: number | null;
+  cash_sales: number | null;
   status: 'active' | 'completed';
 }
 
-const mockShifts: Shift[] = [
-  {
-    id: '1',
-    staffId: 'S001',
-    staffName: 'Rahul Sharma',
-    date: '2023-05-15',
-    startTime: '06:00',
-    endTime: '14:00',
-    pumpId: 'P001',
-    openingReading: 45678.5,
-    closingReading: 46123.8,
-    cashGiven: 5000,
-    cashRemaining: 2345.5,
-    cardSales: 15678.9,
-    upiSales: 12567.4,
-    cashSales: 17567.8,
-    status: 'completed'
-  },
-  {
-    id: '2',
-    staffId: 'S002',
-    staffName: 'Priya Patel',
-    date: '2023-05-15',
-    startTime: '14:00',
-    endTime: '22:00',
-    pumpId: 'P001',
-    openingReading: 46123.8,
-    closingReading: 46578.2,
-    cashGiven: 5000,
-    cashRemaining: 3245.7,
-    cardSales: 12456.3,
-    upiSales: 10234.5,
-    cashSales: 14578.9,
-    status: 'completed'
-  },
-  {
-    id: '3',
-    staffId: 'S003',
-    staffName: 'Arun Kumar',
-    date: '2023-05-16',
-    startTime: '06:00',
-    endTime: '',
-    pumpId: 'P002',
-    openingReading: 34567.8,
-    closingReading: 0,
-    cashGiven: 5000,
-    cashRemaining: 0,
-    cardSales: 0,
-    upiSales: 0,
-    cashSales: 0,
-    status: 'active'
-  }
-];
+interface Staff {
+  id: string;
+  name: string;
+}
 
 const ShiftManagement = () => {
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [staffList, setStaffList] = useState<Staff[]>([]);
   const [formOpen, setFormOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [newShift, setNewShift] = useState<Partial<Shift>>({
     date: new Date().toISOString().split('T')[0],
-    startTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-    staffId: '',
-    pumpId: '',
-    cashGiven: 0,
-    openingReading: 0,
+    start_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    staff_id: '',
+    pump_id: '',
+    cash_given: 0,
+    opening_reading: 0,
     status: 'active'
   });
 
+  // Fetch staff data
   useEffect(() => {
-    const savedShifts = localStorage.getItem('shifts');
-    if (savedShifts) {
-      setShifts(JSON.parse(savedShifts));
-    } else {
-      setShifts(mockShifts);
-      localStorage.setItem('shifts', JSON.stringify(mockShifts));
-    }
+    const fetchStaff = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('staff')
+          .select('id, name');
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          setStaffList(data);
+        }
+      } catch (error) {
+        console.error('Error fetching staff:', error);
+        toast({
+          title: "Error loading staff data",
+          description: "Failed to load staff data from the database.",
+          variant: "destructive"
+        });
+      }
+    };
+    
+    fetchStaff();
   }, []);
 
+  // Fetch shifts data
   useEffect(() => {
-    if (shifts.length > 0) {
-      localStorage.setItem('shifts', JSON.stringify(shifts));
-    }
-  }, [shifts]);
+    const fetchShifts = async () => {
+      setIsLoading(true);
+      try {
+        const { data: shiftsData, error: shiftsError } = await supabase
+          .from('shifts')
+          .select(`
+            id,
+            staff_id,
+            date,
+            start_time,
+            end_time,
+            pump_id,
+            opening_reading,
+            closing_reading,
+            cash_given,
+            cash_remaining,
+            card_sales,
+            upi_sales,
+            cash_sales,
+            status
+          `);
+          
+        if (shiftsError) {
+          throw shiftsError;
+        }
+        
+        // Get staff names for each shift
+        if (shiftsData) {
+          const shiftsWithStaffNames = await Promise.all(
+            shiftsData.map(async (shift) => {
+              const { data: staffData } = await supabase
+                .from('staff')
+                .select('name')
+                .eq('id', shift.staff_id)
+                .single();
+                
+              return {
+                ...shift,
+                staff_name: staffData?.name || 'Unknown Staff'
+              };
+            })
+          );
+          
+          setShifts(shiftsWithStaffNames as Shift[]);
+        }
+      } catch (error) {
+        console.error('Error fetching shifts:', error);
+        toast({
+          title: "Error loading shifts",
+          description: "Failed to load shift data from the database.",
+          variant: "destructive"
+        });
+        
+        // Initialize with an empty array if there's an error
+        setShifts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchShifts();
+  }, []);
 
   const activeShifts = shifts.filter(shift => shift.status === 'active');
   const completedShifts = shifts.filter(shift => shift.status === 'completed');
 
-  const handleAddShift = () => {
-    const shift: Shift = {
-      id: (shifts.length + 1).toString(),
-      staffId: newShift.staffId || '',
-      staffName: newShift.staffId === 'S001' ? 'Rahul Sharma' : 
-                newShift.staffId === 'S002' ? 'Priya Patel' : 
-                newShift.staffId === 'S003' ? 'Arun Kumar' : 'Unknown Staff',
-      date: newShift.date || new Date().toISOString().split('T')[0],
-      startTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-      endTime: '',
-      pumpId: newShift.pumpId || '',
-      openingReading: newShift.openingReading || 0,
-      closingReading: 0,
-      cashGiven: newShift.cashGiven || 0,
-      cashRemaining: 0,
-      cardSales: 0,
-      upiSales: 0,
-      cashSales: 0,
-      status: 'active'
-    };
-
-    setShifts([...shifts, shift]);
-    toast.success("New shift started successfully");
-    
-    setNewShift({
-      date: new Date().toISOString().split('T')[0],
-      startTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-      staffId: '',
-      pumpId: '',
-      cashGiven: 0,
-      openingReading: 0,
-      status: 'active'
-    });
-    setFormOpen(false);
+  const handleAddShift = async () => {
+    try {
+      if (!newShift.staff_id || !newShift.pump_id || !newShift.opening_reading) {
+        toast({
+          title: "Missing information",
+          description: "Please fill all required fields",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Get staff name
+      const staffName = staffList.find(s => s.id === newShift.staff_id)?.name || 'Unknown Staff';
+      
+      const shiftData = {
+        staff_id: newShift.staff_id,
+        date: newShift.date,
+        start_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        pump_id: newShift.pump_id,
+        opening_reading: newShift.opening_reading,
+        cash_given: newShift.cash_given || 0,
+        status: 'active'
+      };
+      
+      const { data, error } = await supabase
+        .from('shifts')
+        .insert([shiftData])
+        .select();
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        const newShiftWithName = {
+          ...data[0],
+          staff_name: staffName
+        };
+        
+        setShifts([...shifts, newShiftWithName as Shift]);
+        toast({
+          title: "Success",
+          description: "New shift started successfully"
+        });
+        
+        setNewShift({
+          date: new Date().toISOString().split('T')[0],
+          start_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          staff_id: '',
+          pump_id: '',
+          cash_given: 0,
+          opening_reading: 0,
+          status: 'active'
+        });
+        setFormOpen(false);
+      }
+    } catch (error) {
+      console.error('Error adding shift:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start new shift. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleEndShift = (id: string) => {
-    setShifts(shifts.map(shift => 
-      shift.id === id ? 
-        {
-          ...shift, 
-          status: 'completed', 
-          endTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-          closingReading: shift.openingReading + Math.floor(Math.random() * 500),
-          cashRemaining: Math.floor(Math.random() * shift.cashGiven),
-          cardSales: Math.floor(Math.random() * 15000),
-          upiSales: Math.floor(Math.random() * 12000),
-          cashSales: Math.floor(Math.random() * 18000)
-        } : 
-        shift
-    ));
-    toast.success("Shift ended successfully");
+  const handleEndShift = async (id: string) => {
+    try {
+      // Generate random values for demonstration
+      // In a real app, these would be entered by the user
+      const closingReading = shifts.find(s => s.id === id)?.opening_reading as number + Math.floor(Math.random() * 500);
+      const cashRemaining = Math.floor(Math.random() * (shifts.find(s => s.id === id)?.cash_given as number));
+      const cardSales = Math.floor(Math.random() * 15000);
+      const upiSales = Math.floor(Math.random() * 12000);
+      const cashSales = Math.floor(Math.random() * 18000);
+      
+      const updateData = {
+        status: 'completed',
+        end_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        closing_reading: closingReading,
+        cash_remaining: cashRemaining,
+        card_sales: cardSales,
+        upi_sales: upiSales,
+        cash_sales: cashSales
+      };
+      
+      const { error } = await supabase
+        .from('shifts')
+        .update(updateData)
+        .eq('id', id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      setShifts(shifts.map(shift => 
+        shift.id === id ? 
+          {
+            ...shift, 
+            status: 'completed', 
+            end_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            closing_reading: closingReading,
+            cash_remaining: cashRemaining,
+            card_sales: cardSales,
+            upi_sales: upiSales,
+            cash_sales: cashSales
+          } : 
+          shift
+      ));
+      
+      toast({
+        title: "Success",
+        description: "Shift ended successfully"
+      });
+    } catch (error) {
+      console.error('Error ending shift:', error);
+      toast({
+        title: "Error",
+        description: "Failed to end shift. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -198,24 +300,24 @@ const ShiftManagement = () => {
               <div className="grid gap-2">
                 <Label htmlFor="staffId">Staff</Label>
                 <Select 
-                  value={newShift.staffId}
-                  onValueChange={(value) => setNewShift({...newShift, staffId: value})}
+                  value={newShift.staff_id}
+                  onValueChange={(value) => setNewShift({...newShift, staff_id: value})}
                 >
                   <SelectTrigger id="staffId">
                     <SelectValue placeholder="Select staff" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="S001">Rahul Sharma</SelectItem>
-                    <SelectItem value="S002">Priya Patel</SelectItem>
-                    <SelectItem value="S003">Arun Kumar</SelectItem>
+                    {staffList.map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="pumpId">Pump</Label>
                 <Select 
-                  value={newShift.pumpId}
-                  onValueChange={(value) => setNewShift({...newShift, pumpId: value})}
+                  value={newShift.pump_id}
+                  onValueChange={(value) => setNewShift({...newShift, pump_id: value})}
                 >
                   <SelectTrigger id="pumpId">
                     <SelectValue placeholder="Select pump" />
@@ -242,8 +344,8 @@ const ShiftManagement = () => {
                   <Input
                     id="openingReading"
                     type="number"
-                    value={newShift.openingReading?.toString()}
-                    onChange={(e) => setNewShift({...newShift, openingReading: parseFloat(e.target.value)})}
+                    value={newShift.opening_reading?.toString()}
+                    onChange={(e) => setNewShift({...newShift, opening_reading: parseFloat(e.target.value)})}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -251,8 +353,8 @@ const ShiftManagement = () => {
                   <Input
                     id="cashGiven"
                     type="number"
-                    value={newShift.cashGiven?.toString()}
-                    onChange={(e) => setNewShift({...newShift, cashGiven: parseFloat(e.target.value)})}
+                    value={newShift.cash_given?.toString()}
+                    onChange={(e) => setNewShift({...newShift, cash_given: parseFloat(e.target.value)})}
                   />
                 </div>
               </div>
@@ -265,161 +367,170 @@ const ShiftManagement = () => {
         </Dialog>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl">Active Shifts</CardTitle>
-            <CardDescription>Currently running shifts</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold">{activeShifts.length}</div>
-            <p className="text-sm text-muted-foreground">shifts in progress</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl">Today's Completed</CardTitle>
-            <CardDescription>Shifts completed today</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold">
-              {completedShifts.filter(shift => shift.date === new Date().toISOString().split('T')[0]).length}
-            </div>
-            <p className="text-sm text-muted-foreground">shifts completed</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl">Total Sales Today</CardTitle>
-            <CardDescription>Combined sales from all shifts</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold">
-              ₹{completedShifts
-                .filter(shift => shift.date === new Date().toISOString().split('T')[0])
-                .reduce((sum, shift) => sum + shift.cardSales + shift.upiSales + shift.cashSales, 0)
-                .toLocaleString()}
-            </div>
-            <p className="text-sm text-muted-foreground">total sales amount</p>
-          </CardContent>
-        </Card>
-      </div>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-muted-foreground">Loading shifts data...</span>
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl">Active Shifts</CardTitle>
+                <CardDescription>Currently running shifts</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">{activeShifts.length}</div>
+                <p className="text-sm text-muted-foreground">shifts in progress</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl">Today's Completed</CardTitle>
+                <CardDescription>Shifts completed today</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">
+                  {completedShifts.filter(shift => shift.date === new Date().toISOString().split('T')[0]).length}
+                </div>
+                <p className="text-sm text-muted-foreground">shifts completed</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl">Total Sales Today</CardTitle>
+                <CardDescription>Combined sales from all shifts</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">
+                  ₹{completedShifts
+                    .filter(shift => shift.date === new Date().toISOString().split('T')[0])
+                    .reduce((sum, shift) => sum + (shift.card_sales || 0) + (shift.upi_sales || 0) + (shift.cash_sales || 0), 0)
+                    .toLocaleString()}
+                </div>
+                <p className="text-sm text-muted-foreground">total sales amount</p>
+              </CardContent>
+            </Card>
+          </div>
 
-      <Tabs defaultValue="active">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="active">Active Shifts</TabsTrigger>
-          <TabsTrigger value="completed">Completed Shifts</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="active">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Active Shifts</CardTitle>
-                <CalendarClock className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {activeShifts.length === 0 ? (
-                <div className="py-6 text-center text-muted-foreground">
-                  No active shifts at the moment
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Staff</TableHead>
-                      <TableHead>Pump</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Start Time</TableHead>
-                      <TableHead>Opening Reading</TableHead>
-                      <TableHead>Cash Given</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {activeShifts.map((shift) => (
-                      <TableRow key={shift.id}>
-                        <TableCell className="font-medium">{shift.staffName}</TableCell>
-                        <TableCell>{shift.pumpId}</TableCell>
-                        <TableCell>{shift.date}</TableCell>
-                        <TableCell>{shift.startTime}</TableCell>
-                        <TableCell>{shift.openingReading.toLocaleString()}</TableCell>
-                        <TableCell>₹{shift.cashGiven.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="gap-1"
-                            onClick={() => handleEndShift(shift.id)}
-                          >
-                            <ClipboardList size={14} />
-                            End Shift
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="completed">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Completed Shifts</CardTitle>
-                <DollarSign className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {completedShifts.length === 0 ? (
-                <div className="py-6 text-center text-muted-foreground">
-                  No completed shifts yet
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Staff</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Pump</TableHead>
-                      <TableHead>Volume</TableHead>
-                      <TableHead>Card Sales</TableHead>
-                      <TableHead>UPI Sales</TableHead>
-                      <TableHead>Cash Sales</TableHead>
-                      <TableHead>Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {completedShifts.map((shift) => {
-                      const totalVolume = shift.closingReading - shift.openingReading;
-                      const totalSales = shift.cardSales + shift.upiSales + shift.cashSales;
-                      
-                      return (
-                        <TableRow key={shift.id}>
-                          <TableCell className="font-medium">{shift.staffName}</TableCell>
-                          <TableCell>{shift.date}</TableCell>
-                          <TableCell>{`${shift.startTime}-${shift.endTime}`}</TableCell>
-                          <TableCell>{shift.pumpId}</TableCell>
-                          <TableCell>{totalVolume.toFixed(2)}L</TableCell>
-                          <TableCell>₹{shift.cardSales.toLocaleString()}</TableCell>
-                          <TableCell>₹{shift.upiSales.toLocaleString()}</TableCell>
-                          <TableCell>₹{shift.cashSales.toLocaleString()}</TableCell>
-                          <TableCell className="font-bold">₹{totalSales.toLocaleString()}</TableCell>
+          <Tabs defaultValue="active">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="active">Active Shifts</TabsTrigger>
+              <TabsTrigger value="completed">Completed Shifts</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="active">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Active Shifts</CardTitle>
+                    <CalendarClock className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {activeShifts.length === 0 ? (
+                    <div className="py-6 text-center text-muted-foreground">
+                      No active shifts at the moment
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Staff</TableHead>
+                          <TableHead>Pump</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Start Time</TableHead>
+                          <TableHead>Opening Reading</TableHead>
+                          <TableHead>Cash Given</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                      </TableHeader>
+                      <TableBody>
+                        {activeShifts.map((shift) => (
+                          <TableRow key={shift.id}>
+                            <TableCell className="font-medium">{shift.staff_name}</TableCell>
+                            <TableCell>{shift.pump_id}</TableCell>
+                            <TableCell>{shift.date}</TableCell>
+                            <TableCell>{shift.start_time}</TableCell>
+                            <TableCell>{shift.opening_reading.toLocaleString()}</TableCell>
+                            <TableCell>₹{shift.cash_given.toLocaleString()}</TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="gap-1"
+                                onClick={() => handleEndShift(shift.id)}
+                              >
+                                <ClipboardList size={14} />
+                                End Shift
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="completed">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Completed Shifts</CardTitle>
+                    <DollarSign className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {completedShifts.length === 0 ? (
+                    <div className="py-6 text-center text-muted-foreground">
+                      No completed shifts yet
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Staff</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Time</TableHead>
+                          <TableHead>Pump</TableHead>
+                          <TableHead>Volume</TableHead>
+                          <TableHead>Card Sales</TableHead>
+                          <TableHead>UPI Sales</TableHead>
+                          <TableHead>Cash Sales</TableHead>
+                          <TableHead>Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {completedShifts.map((shift) => {
+                          const totalVolume = (shift.closing_reading || 0) - shift.opening_reading;
+                          const totalSales = (shift.card_sales || 0) + (shift.upi_sales || 0) + (shift.cash_sales || 0);
+                          
+                          return (
+                            <TableRow key={shift.id}>
+                              <TableCell className="font-medium">{shift.staff_name}</TableCell>
+                              <TableCell>{shift.date}</TableCell>
+                              <TableCell>{`${shift.start_time}-${shift.end_time || 'N/A'}`}</TableCell>
+                              <TableCell>{shift.pump_id}</TableCell>
+                              <TableCell>{totalVolume.toFixed(2)}L</TableCell>
+                              <TableCell>₹{(shift.card_sales || 0).toLocaleString()}</TableCell>
+                              <TableCell>₹{(shift.upi_sales || 0).toLocaleString()}</TableCell>
+                              <TableCell>₹{(shift.cash_sales || 0).toLocaleString()}</TableCell>
+                              <TableCell className="font-bold">₹{totalSales.toLocaleString()}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
     </div>
   );
 };
