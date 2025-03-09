@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,9 +23,11 @@ interface Shift {
   id: string;
   staff_id: string;
   staff_name: string;
-  date: string;
+  shift_type: string;
   start_time: string;
   end_time: string | null;
+  status: 'active' | 'completed';
+  date: string;
   pump_id: string;
   opening_reading: number;
   closing_reading: number | null;
@@ -35,7 +36,6 @@ interface Shift {
   card_sales: number | null;
   upi_sales: number | null;
   cash_sales: number | null;
-  status: 'active' | 'completed';
 }
 
 interface Staff {
@@ -96,9 +96,10 @@ const ShiftManagement = () => {
           .select(`
             id,
             staff_id,
-            date,
+            shift_type,
             start_time,
             end_time,
+            status,
             pump_id,
             opening_reading,
             closing_reading,
@@ -106,8 +107,7 @@ const ShiftManagement = () => {
             cash_remaining,
             card_sales,
             upi_sales,
-            cash_sales,
-            status
+            cash_sales
           `);
           
         if (shiftsError) {
@@ -126,7 +126,8 @@ const ShiftManagement = () => {
                 
               return {
                 ...shift,
-                staff_name: staffData?.name || 'Unknown Staff'
+                staff_name: staffData?.name || 'Unknown Staff',
+                date: new Date().toISOString().split('T')[0], // Set current date for now
               };
             })
           );

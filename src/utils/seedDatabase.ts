@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -125,10 +124,11 @@ const sampleVehicles = [
 // Sample shifts data
 const sampleShifts = [
   {
-    staff_id: '',  // Will be filled in during migration based on staff email
-    date: new Date().toISOString().split('T')[0],
+    staff_id: '',  // Will be filled in during migration
+    shift_type: 'morning',
     start_time: '06:00',
     end_time: '14:00',
+    status: 'completed',
     pump_id: 'P001',
     opening_reading: 45678.5,
     closing_reading: 46123.8,
@@ -136,14 +136,14 @@ const sampleShifts = [
     cash_remaining: 2345.5,
     card_sales: 15678.9,
     upi_sales: 12567.4,
-    cash_sales: 17567.8,
-    status: 'completed'
+    cash_sales: 17567.8
   },
   {
-    staff_id: '',  // Will be filled in during migration based on staff email
-    date: new Date().toISOString().split('T')[0],
+    staff_id: '',  // Will be filled in during migration
+    shift_type: 'evening',
     start_time: '14:00',
     end_time: '22:00',
+    status: 'completed',
     pump_id: 'P001',
     opening_reading: 46123.8,
     closing_reading: 46578.2,
@@ -151,14 +151,14 @@ const sampleShifts = [
     cash_remaining: 3245.7,
     card_sales: 12456.3,
     upi_sales: 10234.5,
-    cash_sales: 14578.9,
-    status: 'completed'
+    cash_sales: 14578.9
   },
   {
-    staff_id: '',  // Will be filled in during migration based on staff email
-    date: new Date().toISOString().split('T')[0],
+    staff_id: '',  // Will be filled in during migration
+    shift_type: 'morning',
     start_time: '06:00',
     end_time: null,
+    status: 'active',
     pump_id: 'P002',
     opening_reading: 34567.8,
     closing_reading: null,
@@ -166,8 +166,7 @@ const sampleShifts = [
     cash_remaining: null,
     card_sales: null,
     upi_sales: null,
-    cash_sales: null,
-    status: 'active'
+    cash_sales: null
   }
 ];
 

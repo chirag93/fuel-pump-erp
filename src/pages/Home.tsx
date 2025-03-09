@@ -19,7 +19,8 @@ import {
   BarChart,
 } from 'lucide-react';
 import FuelTankDisplay from '@/components/fuel/FuelTankDisplay';
-import { getFuelLevels } from '@/utils/fuelCalculations';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface QuickActionProps {
   title: string;
@@ -28,6 +29,12 @@ interface QuickActionProps {
   href?: string;
   onClick?: () => void;
   className?: string;
+}
+
+interface FuelLevel {
+  fuelType: 'Petrol' | 'Diesel' | 'CNG';
+  capacity: number;
+  lastUpdated: string;
 }
 
 const QuickAction = ({
@@ -60,8 +67,53 @@ const QuickAction = ({
 };
 
 const Home = () => {
-  // Get current fuel levels
-  const fuelLevels = getFuelLevels();
+  const [fuelLevels, setFuelLevels] = useState<FuelLevel[]>([
+    { fuelType: 'Petrol', capacity: 10000, lastUpdated: 'Loading...' },
+    { fuelType: 'Diesel', capacity: 10000, lastUpdated: 'Loading...' }
+  ]);
+
+  // Fetch fuel levels from the database
+  useEffect(() => {
+    const fetchFuelLevels = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('inventory')
+          .select('*')
+          .order('date', { ascending: false });
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          // Group the latest entries by fuel type
+          const latestByFuelType = {};
+          data.forEach(item => {
+            if (!latestByFuelType[item.fuel_type] || new Date(item.date) > new Date(latestByFuelType[item.fuel_type].date)) {
+              latestByFuelType[item.fuel_type] = item;
+            }
+          });
+          
+          // Format the data for our component
+          const fuelData = Object.values(latestByFuelType).map(item => ({
+            fuelType: item.fuel_type as 'Petrol' | 'Diesel' | 'CNG',
+            capacity: item.fuel_type === 'Petrol' ? 10000 : 12000, // Default capacities
+            lastUpdated: new Date(item.date).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            })
+          }));
+          
+          setFuelLevels(fuelData);
+        }
+      } catch (error) {
+        console.error('Error fetching fuel levels:', error);
+      }
+    };
+    
+    fetchFuelLevels();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -74,18 +126,14 @@ const Home = () => {
       <div>
         <h3 className="mb-4 text-xl font-semibold">Fuel Storage Status</h3>
         <div className="grid gap-4 md:grid-cols-2">
-          <FuelTankDisplay 
-            fuelType="Petrol" 
-            capacity={fuelLevels.Petrol.capacity} 
-            currentLevel={fuelLevels.Petrol.current} 
-            lastUpdated="Today, 8:30 AM"
-          />
-          <FuelTankDisplay 
-            fuelType="Diesel" 
-            capacity={fuelLevels.Diesel.capacity} 
-            currentLevel={fuelLevels.Diesel.current} 
-            lastUpdated="Today, 8:30 AM"
-          />
+          {fuelLevels.map((fuel, index) => (
+            <FuelTankDisplay 
+              key={index}
+              fuelType={fuel.fuelType} 
+              capacity={fuel.capacity} 
+              lastUpdated={fuel.lastUpdated}
+            />
+          ))}
         </div>
       </div>
 

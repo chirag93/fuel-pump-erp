@@ -50,7 +50,12 @@ const Consumables = () => {
         }
         
         if (data) {
-          setConsumables(data);
+          const formattedData: Consumable[] = data.map(item => ({
+            ...item,
+            category: item.category || 'General',
+            unit: item.unit || 'Units'
+          }));
+          setConsumables(formattedData);
         }
       } catch (error) {
         console.error('Error fetching consumables:', error);
