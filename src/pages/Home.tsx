@@ -17,6 +17,7 @@ import {
   ClipboardList,
   Camera,
   BarChart,
+  Wrench,
 } from 'lucide-react';
 import FuelTankDisplay from '@/components/fuel/FuelTankDisplay';
 import { useEffect, useState } from 'react';
@@ -140,6 +141,7 @@ const Home = () => {
               fuelType={fuel.fuelType} 
               capacity={fuel.capacity} 
               lastUpdated={fuel.lastUpdated}
+              showTankIcon={true}
             />
           ))}
         </div>
@@ -157,23 +159,23 @@ const Home = () => {
           
           <QuickAction
             title="Tank Unload"
-            description="Record incoming tank unloads and payments"
+            description="Record incoming fuel unloads and payments"
             icon={<Truck size={20} />}
-            href="/consumables"
+            href="/fueling"
           />
           
           <QuickAction
             title="Stock Levels"
             description="Record end-of-day stock levels"
             icon={<Package size={20} />}
-            href="/consumables"
+            href="/inventory"
           />
           
           <QuickAction
             title="Testing Details"
             description="Record fuel testing information"
             icon={<ClipboardList size={20} />}
-            href="/consumables"
+            href="/fueling"
           />
           
           <QuickAction
@@ -191,10 +193,10 @@ const Home = () => {
           />
           
           <QuickAction
-            title="Fuel Dispensing"
-            description="Record fuel dispensing for customers"
-            icon={<Camera size={20} />}
-            href="/fueling"
+            title="Consumables"
+            description="Manage station consumables and parts"
+            icon={<Wrench size={20} />}
+            href="/consumables"
           />
           
           <QuickAction

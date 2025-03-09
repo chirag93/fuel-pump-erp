@@ -2,16 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Fuel, Droplets, Loader2, AlertTriangle } from 'lucide-react';
+import { Fuel, Droplets, Loader2, AlertTriangle, Container } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface FuelTankProps {
   fuelType: 'Petrol' | 'Diesel' | 'CNG';
   capacity?: number;
   lastUpdated?: string;
+  showTankIcon?: boolean;
 }
 
-const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated }: FuelTankProps) => {
+const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated, showTankIcon = false }: FuelTankProps) => {
   const [currentLevel, setCurrentLevel] = useState<number>(0);
   const [pricePerUnit, setPricePerUnit] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,6 +71,33 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated }: FuelTankPr
     colorBg = 'bg-green-100';
   }
   
+  // Tank icon representation
+  const renderTankIcon = () => {
+    if (!showTankIcon) return null;
+
+    // Create segments for the tank visualization
+    const segments = 5;
+    const filledSegments = Math.round((fillPercentage / 100) * segments);
+    
+    return (
+      <div className="mt-4 w-24 h-32 border-2 border-gray-300 rounded-md mx-auto relative overflow-hidden">
+        {/* Tank cap */}
+        <div className="w-8 h-3 bg-gray-400 absolute -top-3 left-1/2 transform -translate-x-1/2 rounded-t-md"></div>
+        
+        {/* Tank level visualization */}
+        <div 
+          className={`absolute bottom-0 left-0 right-0 ${color} transition-all duration-500`} 
+          style={{ height: `${fillPercentage}%` }}
+        ></div>
+        
+        {/* Show fill percentage in the middle of the tank */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="font-bold text-lg text-white z-10 drop-shadow-md">{fillPercentage}%</span>
+        </div>
+      </div>
+    );
+  };
+  
   return (
     <Card className="h-full">
       <CardHeader className="pb-2">
@@ -105,6 +133,10 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated }: FuelTankPr
               <span className="font-bold">{fillPercentage}%</span>
             </div>
             <Progress value={fillPercentage} className="h-3" />
+            
+            {/* Tank visualization */}
+            {renderTankIcon()}
+            
             <div className="grid grid-cols-2 gap-2 text-sm mt-4">
               <div>
                 <span className="text-muted-foreground">Capacity</span>

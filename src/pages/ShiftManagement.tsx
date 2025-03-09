@@ -52,7 +52,7 @@ const ShiftManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [newShift, setNewShift] = useState<Partial<Shift>>({
     date: new Date().toISOString().split('T')[0],
-    start_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    start_time: new Date().toISOString(), // Using proper ISO format instead of time string
     staff_id: '',
     pump_id: '',
     cash_given: 0,
@@ -185,13 +185,13 @@ const ShiftManagement = () => {
       // Get staff name
       const staffName = staffList.find(s => s.id === newShift.staff_id)?.name || 'Unknown Staff';
       
-      // First create the shift record
+      // First create the shift record with proper timestamp format
       const { data: shiftData, error: shiftError } = await supabase
         .from('shifts')
         .insert([{
           staff_id: newShift.staff_id,
           shift_type: newShift.shift_type || 'day',
-          start_time: newShift.start_time,
+          start_time: new Date().toISOString(), // Use proper ISO format
           status: 'active'
         }])
         .select();
@@ -233,7 +233,7 @@ const ShiftManagement = () => {
         card_sales: null,
         upi_sales: null,
         cash_sales: null,
-        status: 'active' as 'active' // Explicitly type as 'active'
+        status: 'active'
       };
       
       setShifts([...shifts, newShiftWithName]);
@@ -244,7 +244,7 @@ const ShiftManagement = () => {
       
       setNewShift({
         date: new Date().toISOString().split('T')[0],
-        start_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        start_time: new Date().toISOString(), // Use proper ISO format
         staff_id: '',
         pump_id: '',
         cash_given: 0,
@@ -278,12 +278,12 @@ const ShiftManagement = () => {
       const upiSales = Math.floor(Math.random() * 12000);
       const cashSales = Math.floor(Math.random() * 18000);
       
-      // Update the shift record
+      // Update the shift record with proper ISO format for end_time
       const { error: shiftError } = await supabase
         .from('shifts')
         .update({
           status: 'completed',
-          end_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+          end_time: new Date().toISOString() // Use proper ISO format
         })
         .eq('id', id);
         
@@ -308,8 +308,8 @@ const ShiftManagement = () => {
         shift.id === id ? 
           {
             ...shift, 
-            status: 'completed' as 'completed', // Explicitly type as 'completed'
-            end_time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            status: 'completed', 
+            end_time: new Date().toISOString(),
             closing_reading: closingReading,
             cash_remaining: cashRemaining,
             card_sales: cardSales,
