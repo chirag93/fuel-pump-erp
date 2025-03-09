@@ -52,7 +52,7 @@ const ShiftManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [newShift, setNewShift] = useState<Partial<Shift>>({
     date: new Date().toISOString().split('T')[0],
-    start_time: new Date().toISOString(), // Using proper ISO format instead of time string
+    start_time: new Date().toISOString(), // Using proper ISO format
     staff_id: '',
     pump_id: '',
     cash_given: 0,
@@ -204,7 +204,7 @@ const ShiftManagement = () => {
         throw new Error("Failed to create shift record");
       }
       
-      // Then create a reading record linked to the shift
+      // Then create a reading record linked to the shift - Note closing_reading is null initially
       const { error: readingError } = await supabase
         .from('readings')
         .insert([{
@@ -213,7 +213,7 @@ const ShiftManagement = () => {
           pump_id: newShift.pump_id,
           date: newShift.date,
           opening_reading: newShift.opening_reading,
-          closing_reading: null
+          closing_reading: null // This allows null value
         }]);
         
       if (readingError) {

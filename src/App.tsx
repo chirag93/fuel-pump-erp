@@ -14,6 +14,8 @@ import StaffManagement from "./pages/StaffManagement";
 import Consumables from "./pages/Consumables";
 import ShiftManagement from "./pages/ShiftManagement";
 import FuelingProcess from "./pages/FuelingProcess";
+import StockLevels from "./pages/StockLevels";
+import TestingDetails from "./pages/TestingDetails";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -37,6 +39,8 @@ const App = () => (
               <Route path="/consumables" element={<Consumables />} />
               <Route path="/shift" element={<ShiftManagement />} />
               <Route path="/fueling" element={<FuelingProcess />} />
+              <Route path="/inventory" element={<StockLevels />} />
+              <Route path="/testing" element={<TestingDetails />} />
             </Route>
             <Route path="/landing" element={<Index />} />
             <Route path="*" element={<NotFound />} />
