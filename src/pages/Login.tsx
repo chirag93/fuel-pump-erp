@@ -47,8 +47,18 @@ const Login = () => {
 
   const handleMigrateData = async () => {
     setIsMigrating(true);
-    await migrateAllData();
-    setIsMigrating(false);
+    try {
+      await migrateAllData();
+    } catch (error) {
+      console.error("Migration error:", error);
+      toast({
+        title: "Migration error",
+        description: "An unexpected error occurred during data migration.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsMigrating(false);
+    }
   };
 
   return (

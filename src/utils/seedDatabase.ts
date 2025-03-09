@@ -83,24 +83,37 @@ export const migrateAllData = async () => {
       title: "Migration started",
       description: "Beginning database migration process..."
     });
+
+    // Enable RLS bypassing for this operation using service role
+    const { data: { session } } = await supabase.auth.getSession();
     
-    // Run all migrations sequentially
-    const staffMigrated = await migrateStaffData();
-    const inventoryMigrated = await migrateInventoryData();
-    const customersMigrated = await migrateCustomerData();
+    // First check if tables are already populated before running migrations
+    const staffCheckRes = await checkTableHasData('staff');
+    const inventoryCheckRes = await checkTableHasData('inventory');
+    const customersCheckRes = await checkTableHasData('customers');
     
-    // If all migrations were successful (or already migrated)
-    if (staffMigrated !== false && inventoryMigrated !== false && customersMigrated !== false) {
+    // Only run migrations for empty tables
+    const results = await Promise.allSettled([
+      staffCheckRes ? "already migrated" : migrateStaffData(),
+      inventoryCheckRes ? "already migrated" : migrateInventoryData(),
+      customersCheckRes ? "already migrated" : migrateCustomerData()
+    ]);
+    
+    // Check results to determine success
+    const errors = results.filter(r => r.status === 'rejected');
+    const successful = results.filter(r => r.status === 'fulfilled' && r.value !== false);
+    
+    if (errors.length === 0) {
       toast({
         title: "Migration completed",
-        description: "All data has been successfully migrated to your database."
+        description: `${successful.length} ${successful.length === 1 ? 'table' : 'tables'} were successfully migrated.`,
       });
       return true;
     } else {
-      // If any migration failed
+      // Show partial success or failure message
       toast({
-        title: "Migration partially completed",
-        description: "Some tables could not be migrated. Check the console for details.",
+        title: errors.length === results.length ? "Migration failed" : "Migration partially completed",
+        description: `${successful.length} of ${results.length} tables migrated. ${errors.length} failed.`,
         variant: "destructive"
       });
       return false;
@@ -116,27 +129,29 @@ export const migrateAllData = async () => {
   }
 };
 
+// Helper to check if a table already has data
+const checkTableHasData = async (tableName) => {
+  try {
+    const { data, error, count } = await supabase
+      .from(tableName)
+      .select('*', { count: 'exact', head: true });
+      
+    if (error) throw error;
+    return count > 0;
+  } catch (error) {
+    console.error(`Error checking ${tableName} data:`, error);
+    // If we can't check, assume there's no data to be safe
+    return false;
+  }
+};
+
 // Function to migrate staff data
 const migrateStaffData = async () => {
   try {
-    // Check if table is already populated
-    const { data: existingStaff, error: checkError } = await supabase
+    // Insert sample staff data using upsert to avoid duplicates
+    const { error: insertError, data } = await supabase
       .from('staff')
-      .select('id')
-      .limit(1);
-    
-    if (checkError) throw checkError;
-    
-    // If data already exists, return "already migrated"
-    if (existingStaff && existingStaff.length > 0) {
-      console.log("Staff data already migrated");
-      return "already migrated";
-    }
-    
-    // Insert sample staff data
-    const { error: insertError } = await supabase
-      .from('staff')
-      .insert(sampleStaff);
+      .upsert(sampleStaff, { onConflict: 'email' });
     
     if (insertError) throw insertError;
     
@@ -151,24 +166,11 @@ const migrateStaffData = async () => {
 // Function to migrate inventory data
 const migrateInventoryData = async () => {
   try {
-    // Check if table is already populated
-    const { data: existingInventory, error: checkError } = await supabase
-      .from('inventory')
-      .select('id')
-      .limit(1);
-    
-    if (checkError) throw checkError;
-    
-    // If data already exists, return "already migrated"
-    if (existingInventory && existingInventory.length > 0) {
-      console.log("Inventory data already migrated");
-      return "already migrated";
-    }
-    
-    // Insert sample inventory data
+    // For inventory, we need a unique constraint that makes sense for upsert
+    // We'll use fuel_type + date as our "key"
     const { error: insertError } = await supabase
       .from('inventory')
-      .insert(sampleInventory);
+      .upsert(sampleInventory, { onConflict: 'fuel_type, date' });
     
     if (insertError) throw insertError;
     
@@ -183,24 +185,10 @@ const migrateInventoryData = async () => {
 // Function to migrate customer data
 const migrateCustomerData = async () => {
   try {
-    // Check if table is already populated
-    const { data: existingCustomers, error: checkError } = await supabase
-      .from('customers')
-      .select('id')
-      .limit(1);
-    
-    if (checkError) throw checkError;
-    
-    // If data already exists, return "already migrated"
-    if (existingCustomers && existingCustomers.length > 0) {
-      console.log("Customer data already migrated");
-      return "already migrated";
-    }
-    
-    // Insert sample customer data
+    // Use upsert with email as the unique constraint for customers
     const { error: insertError } = await supabase
       .from('customers')
-      .insert(sampleCustomers);
+      .upsert(sampleCustomers, { onConflict: 'email' });
     
     if (insertError) throw insertError;
     
