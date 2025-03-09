@@ -1,13 +1,14 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Package, Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Package, Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Consumable {
   id: string;
@@ -15,42 +16,14 @@ interface Consumable {
   category: string;
   quantity: number;
   unit: string;
-  pricePerUnit: number;
-  lastRestockedDate: string;
+  price_per_unit: number;
+  total_price: number;
+  date: string;
 }
 
-const initialConsumables: Consumable[] = [
-  {
-    id: 'C001',
-    name: 'Engine Oil',
-    category: 'Lubricant',
-    quantity: 50,
-    unit: 'Litres',
-    pricePerUnit: 450,
-    lastRestockedDate: '2023-04-15',
-  },
-  {
-    id: 'C002',
-    name: 'Air Filter',
-    category: 'Filter',
-    quantity: 25,
-    unit: 'Pieces',
-    pricePerUnit: 200,
-    lastRestockedDate: '2023-04-10',
-  },
-  {
-    id: 'C003',
-    name: 'Coolant',
-    category: 'Fluid',
-    quantity: 30,
-    unit: 'Litres',
-    pricePerUnit: 180,
-    lastRestockedDate: '2023-04-12',
-  },
-];
-
 const Consumables = () => {
-  const [consumables, setConsumables] = useState<Consumable[]>(initialConsumables);
+  const [consumables, setConsumables] = useState<Consumable[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingConsumable, setEditingConsumable] = useState<Consumable | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,8 +32,40 @@ const Consumables = () => {
     category: '',
     quantity: '',
     unit: '',
-    pricePerUnit: '',
+    price_per_unit: '',
   });
+
+  // Fetch consumables from the database
+  useEffect(() => {
+    const fetchConsumables = async () => {
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('consumables')
+          .select('*')
+          .order('name', { ascending: true });
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          setConsumables(data);
+        }
+      } catch (error) {
+        console.error('Error fetching consumables:', error);
+        toast({
+          title: "Error loading data",
+          description: "Could not load consumables. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchConsumables();
+  }, []);
 
   // Filter consumables based on search term
   const filteredConsumables = consumables.filter(c => 
@@ -75,7 +80,7 @@ const Consumables = () => {
       category: '',
       quantity: '',
       unit: '',
-      pricePerUnit: '',
+      price_per_unit: '',
     });
     setFormOpen(true);
   };
@@ -86,17 +91,17 @@ const Consumables = () => {
       name: consumable.name,
       category: consumable.category,
       quantity: consumable.quantity.toString(),
-      unit: consumable.unit,
-      pricePerUnit: consumable.pricePerUnit.toString(),
+      unit: consumable.unit || 'Units',
+      price_per_unit: consumable.price_per_unit.toString(),
     });
     setFormOpen(true);
   };
 
-  const handleSaveConsumable = (e: React.FormEvent) => {
+  const handleSaveConsumable = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
-    if (!formData.name || !formData.category || !formData.quantity || !formData.unit || !formData.pricePerUnit) {
+    if (!formData.name || !formData.category || !formData.quantity || !formData.unit || !formData.price_per_unit) {
       toast({
         title: "Missing information",
         description: "Please fill all required fields",
@@ -105,38 +110,98 @@ const Consumables = () => {
       return;
     }
 
-    if (editingConsumable) {
-      // Update existing consumable
-      setConsumables(consumables.map(c => c.id === editingConsumable.id ? {
-        ...c,
-        name: formData.name,
-        category: formData.category,
-        quantity: parseFloat(formData.quantity),
-        unit: formData.unit,
-        pricePerUnit: parseFloat(formData.pricePerUnit),
-      } : c));
-      toast({ title: "Consumable updated", description: `${formData.name} has been updated` });
-    } else {
-      // Add new consumable
-      const newConsumable: Consumable = {
-        id: `C${consumables.length + 1}`.padStart(3, '0'),
-        name: formData.name,
-        category: formData.category,
-        quantity: parseFloat(formData.quantity),
-        unit: formData.unit,
-        pricePerUnit: parseFloat(formData.pricePerUnit),
-        lastRestockedDate: new Date().toISOString().split('T')[0],
-      };
-      setConsumables([...consumables, newConsumable]);
-      toast({ title: "Consumable added", description: `${formData.name} has been added` });
+    try {
+      const quantity = parseFloat(formData.quantity);
+      const pricePerUnit = parseFloat(formData.price_per_unit);
+      const totalPrice = quantity * pricePerUnit;
+      const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+      if (editingConsumable) {
+        // Update existing consumable
+        const { error } = await supabase
+          .from('consumables')
+          .update({
+            name: formData.name,
+            category: formData.category,
+            quantity: quantity,
+            unit: formData.unit,
+            price_per_unit: pricePerUnit,
+            total_price: totalPrice,
+            date: today
+          })
+          .eq('id', editingConsumable.id);
+        
+        if (error) throw error;
+        
+        // Update local state
+        setConsumables(consumables.map(c => c.id === editingConsumable.id ? {
+          ...c,
+          name: formData.name,
+          category: formData.category,
+          quantity: quantity,
+          unit: formData.unit,
+          price_per_unit: pricePerUnit,
+          total_price: totalPrice,
+          date: today
+        } : c));
+        
+        toast({ title: "Consumable updated", description: `${formData.name} has been updated` });
+      } else {
+        // Add new consumable
+        const { data, error } = await supabase
+          .from('consumables')
+          .insert([{
+            name: formData.name,
+            category: formData.category,
+            quantity: quantity,
+            unit: formData.unit,
+            price_per_unit: pricePerUnit,
+            total_price: totalPrice,
+            date: today
+          }])
+          .select();
+        
+        if (error) throw error;
+        
+        // Update local state with the returned data which includes the generated ID
+        if (data && data.length > 0) {
+          setConsumables([...consumables, data[0]]);
+          toast({ title: "Consumable added", description: `${formData.name} has been added` });
+        }
+      }
+      
+      setFormOpen(false);
+    } catch (error) {
+      console.error('Error saving consumable:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save consumable. Please try again.",
+        variant: "destructive"
+      });
     }
-    setFormOpen(false);
   };
 
-  const handleDeleteConsumable = (id: string) => {
+  const handleDeleteConsumable = async (id: string) => {
     if (confirm("Are you sure you want to remove this item?")) {
-      setConsumables(consumables.filter(c => c.id !== id));
-      toast({ title: "Consumable removed", description: "Item has been removed" });
+      try {
+        const { error } = await supabase
+          .from('consumables')
+          .delete()
+          .eq('id', id);
+        
+        if (error) throw error;
+        
+        // Update local state
+        setConsumables(consumables.filter(c => c.id !== id));
+        toast({ title: "Consumable removed", description: "Item has been removed" });
+      } catch (error) {
+        console.error('Error deleting consumable:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete item. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -177,7 +242,12 @@ const Consumables = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredConsumables.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-muted-foreground">Loading consumables...</span>
+            </div>
+          ) : filteredConsumables.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
               No consumables found. Add your first item using the "Add Consumable" button.
             </div>
@@ -189,7 +259,7 @@ const Consumables = () => {
                   <TableHead>Category</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>Price/Unit</TableHead>
-                  <TableHead>Last Restocked</TableHead>
+                  <TableHead>Total Value</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -201,8 +271,8 @@ const Consumables = () => {
                     <TableCell>
                       {consumable.quantity} {consumable.unit}
                     </TableCell>
-                    <TableCell>₹{consumable.pricePerUnit}</TableCell>
-                    <TableCell>{consumable.lastRestockedDate}</TableCell>
+                    <TableCell>₹{consumable.price_per_unit}</TableCell>
+                    <TableCell>₹{consumable.total_price}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button
                         variant="ghost"
@@ -284,8 +354,8 @@ const Consumables = () => {
               <Input
                 id="pricePerUnit"
                 type="number"
-                value={formData.pricePerUnit}
-                onChange={(e) => handleInputChange('pricePerUnit', e.target.value)}
+                value={formData.price_per_unit}
+                onChange={(e) => handleInputChange('price_per_unit', e.target.value)}
                 placeholder="Enter price per unit"
               />
             </div>

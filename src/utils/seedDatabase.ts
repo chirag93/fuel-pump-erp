@@ -75,6 +75,53 @@ const sampleCustomers = [
   }
 ];
 
+// Sample consumables data
+const sampleConsumables = [
+  {
+    name: 'Engine Oil',
+    category: 'Lubricant',
+    quantity: 50,
+    unit: 'Litres',
+    price_per_unit: 450,
+    total_price: 22500,
+    date: new Date().toISOString().split('T')[0]
+  },
+  {
+    name: 'Air Filter',
+    category: 'Filter',
+    quantity: 25,
+    unit: 'Pieces',
+    price_per_unit: 200,
+    total_price: 5000,
+    date: new Date().toISOString().split('T')[0]
+  },
+  {
+    name: 'Coolant',
+    category: 'Fluid',
+    quantity: 30,
+    unit: 'Litres',
+    price_per_unit: 180,
+    total_price: 5400,
+    date: new Date().toISOString().split('T')[0]
+  }
+];
+
+// Sample vehicles data
+const sampleVehicles = [
+  {
+    customer_id: '',  // Will be filled in during migration based on customer email
+    number: 'KA-01-AB-1234',
+    type: 'Truck',
+    capacity: '12 Ton'
+  },
+  {
+    customer_id: '',  // Will be filled in during migration based on customer email
+    number: 'MH-12-GH-3456',
+    type: 'Truck',
+    capacity: '20 Ton'
+  }
+];
+
 // Master function to migrate all data
 export const migrateAllData = async () => {
   try {
@@ -88,14 +135,24 @@ export const migrateAllData = async () => {
     const staffCheckRes = await checkTableHasData('staff');
     const inventoryCheckRes = await checkTableHasData('inventory');
     const customersCheckRes = await checkTableHasData('customers');
+    const consumablesCheckRes = await checkTableHasData('consumables');
+    const vehiclesCheckRes = await checkTableHasData('vehicles');
     
-    console.log('Table status:', { staffCheckRes, inventoryCheckRes, customersCheckRes });
+    console.log('Table status:', { 
+      staffCheckRes, 
+      inventoryCheckRes, 
+      customersCheckRes,
+      consumablesCheckRes,
+      vehiclesCheckRes
+    });
     
     // Only run migrations for empty tables
     const results = await Promise.allSettled([
       staffCheckRes ? Promise.resolve("already migrated") : migrateStaffData(),
       inventoryCheckRes ? Promise.resolve("already migrated") : migrateInventoryData(),
-      customersCheckRes ? Promise.resolve("already migrated") : migrateCustomerData()
+      customersCheckRes ? Promise.resolve("already migrated") : migrateCustomerData(),
+      consumablesCheckRes ? Promise.resolve("already migrated") : migrateConsumablesData(),
+      vehiclesCheckRes ? Promise.resolve("already migrated") : migrateVehiclesData()
     ]);
     
     console.log('Migration results:', results);
@@ -222,6 +279,86 @@ const migrateCustomerData = async () => {
     return true;
   } catch (error) {
     console.error('Error migrating customer data:', error);
+    return false;
+  }
+};
+
+// Function to migrate consumables data
+const migrateConsumablesData = async () => {
+  try {
+    console.log('Migrating consumables data...');
+    // Use upsert with name + date as the unique constraint
+    const { error: insertError, data } = await supabase
+      .from('consumables')
+      .upsert(sampleConsumables, { 
+        onConflict: 'name,date',
+        ignoreDuplicates: false
+      });
+    
+    if (insertError) {
+      console.error('Consumables insertion error:', insertError);
+      throw insertError;
+    }
+    
+    console.log("Consumables data migrated successfully:", data);
+    return true;
+  } catch (error) {
+    console.error('Error migrating consumables data:', error);
+    return false;
+  }
+};
+
+// Function to migrate vehicles data - linked to customers
+const migrateVehiclesData = async () => {
+  try {
+    console.log('Migrating vehicles data...');
+    
+    // First, get all customers to link vehicles to the correct customer_id
+    const { data: customers, error: customerError } = await supabase
+      .from('customers')
+      .select('id, email');
+    
+    if (customerError) {
+      throw customerError;
+    }
+    
+    if (!customers || customers.length === 0) {
+      console.log('No customers found, skipping vehicles migration');
+      return false;
+    }
+    
+    // Link vehicles to customers by email (this is a simple assignment for sample data)
+    const vehiclesWithCustomers = [...sampleVehicles];
+    
+    // Assign first vehicle to first customer and second to second customer (if available)
+    if (customers.length > 0 && vehiclesWithCustomers.length > 0) {
+      vehiclesWithCustomers[0].customer_id = customers[0].id;
+    }
+    
+    if (customers.length > 1 && vehiclesWithCustomers.length > 1) {
+      vehiclesWithCustomers[1].customer_id = customers[1].id;
+    } else if (customers.length > 0 && vehiclesWithCustomers.length > 1) {
+      // If only one customer but multiple vehicles, assign all to same customer
+      vehiclesWithCustomers[1].customer_id = customers[0].id;
+    }
+    
+    // Insert vehicles
+    const { error: insertError, data } = await supabase
+      .from('vehicles')
+      .upsert(vehiclesWithCustomers, { 
+        onConflict: 'number',
+        ignoreDuplicates: false
+      });
+    
+    if (insertError) {
+      console.error('Vehicles insertion error:', insertError);
+      throw insertError;
+    }
+    
+    console.log("Vehicles data migrated successfully:", data);
+    return true;
+  } catch (error) {
+    console.error('Error migrating vehicles data:', error);
     return false;
   }
 };

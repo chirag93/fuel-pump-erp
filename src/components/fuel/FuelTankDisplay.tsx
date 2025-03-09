@@ -1,23 +1,69 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Fuel, Droplets } from 'lucide-react';
+import { Fuel, Droplets, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FuelTankProps {
-  fuelType: 'Petrol' | 'Diesel';
-  capacity: number;
-  currentLevel: number;
+  fuelType: 'Petrol' | 'Diesel' | 'CNG';
+  capacity?: number;
   lastUpdated?: string;
 }
 
-const FuelTankDisplay = ({ fuelType, capacity, currentLevel, lastUpdated }: FuelTankProps) => {
+const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated }: FuelTankProps) => {
+  const [currentLevel, setCurrentLevel] = useState<number>(0);
+  const [pricePerUnit, setPricePerUnit] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Fetch the current fuel level from the database
+  useEffect(() => {
+    const fetchFuelData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get the latest inventory entry for this fuel type
+        const { data, error } = await supabase
+          .from('inventory')
+          .select('*')
+          .eq('fuel_type', fuelType)
+          .order('date', { ascending: false })
+          .limit(1);
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data && data.length > 0) {
+          setCurrentLevel(Number(data[0].quantity));
+          setPricePerUnit(Number(data[0].price_per_unit));
+        }
+      } catch (error) {
+        console.error(`Error fetching ${fuelType} data:`, error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchFuelData();
+  }, [fuelType]);
+  
   const fillPercentage = Math.round((currentLevel / capacity) * 100);
   const isLow = fillPercentage < 20;
   
-  const color = fuelType === 'Petrol' ? 'bg-orange-500' : 'bg-blue-600';
-  const colorText = fuelType === 'Petrol' ? 'text-orange-500' : 'text-blue-600';
-  const colorBg = fuelType === 'Petrol' ? 'bg-orange-100' : 'bg-blue-100';
+  let color = 'bg-blue-600';
+  let colorText = 'text-blue-600';
+  let colorBg = 'bg-blue-100';
+  
+  if (fuelType === 'Petrol') {
+    color = 'bg-orange-500';
+    colorText = 'text-orange-500';
+    colorBg = 'bg-orange-100';
+  } else if (fuelType === 'CNG') {
+    color = 'bg-green-500';
+    colorText = 'text-green-500';
+    colorBg = 'bg-green-100';
+  }
   
   return (
     <Card className="h-full">
@@ -25,7 +71,7 @@ const FuelTankDisplay = ({ fuelType, capacity, currentLevel, lastUpdated }: Fuel
         <div className="flex justify-between items-center">
           <div className="flex gap-2 items-center">
             <div className={`flex h-10 w-10 items-center justify-center rounded-full ${colorBg} ${colorText}`}>
-              {fuelType === 'Petrol' ? <Fuel size={20} /> : <Droplets size={20} />}
+              {fuelType === 'Diesel' ? <Droplets size={20} /> : <Fuel size={20} />}
             </div>
             <CardTitle>{fuelType} Tank</CardTitle>
           </div>
@@ -38,23 +84,33 @@ const FuelTankDisplay = ({ fuelType, capacity, currentLevel, lastUpdated }: Fuel
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center text-sm">
-            <span className="font-medium">Storage Level</span>
-            <span className="font-bold">{fillPercentage}%</span>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-          <Progress value={fillPercentage} className="h-3" />
-          <div className="grid grid-cols-2 gap-2 text-sm mt-4">
-            <div>
-              <span className="text-muted-foreground">Capacity</span>
-              <p className="font-semibold">{capacity.toLocaleString()} liters</p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex justify-between items-center text-sm">
+              <span className="font-medium">Storage Level</span>
+              <span className="font-bold">{fillPercentage}%</span>
             </div>
-            <div>
-              <span className="text-muted-foreground">Available</span>
-              <p className="font-semibold">{currentLevel.toLocaleString()} liters</p>
+            <Progress value={fillPercentage} className="h-3" />
+            <div className="grid grid-cols-2 gap-2 text-sm mt-4">
+              <div>
+                <span className="text-muted-foreground">Capacity</span>
+                <p className="font-semibold">{capacity.toLocaleString()} liters</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Available</span>
+                <p className="font-semibold">{currentLevel.toLocaleString()} liters</p>
+              </div>
+            </div>
+            <div className="mt-2">
+              <span className="text-muted-foreground">Current Price</span>
+              <p className="font-semibold">₹{pricePerUnit.toFixed(2)}/liter</p>
             </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
