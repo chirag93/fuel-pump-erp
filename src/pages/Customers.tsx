@@ -1,429 +1,355 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Plus, FileText, Car, Edit, Trash, PenSquare, Users } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { toast } from "@/components/ui/use-toast";
+import { Loader2, Users, FileText, Plus, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
-import { toast } from '@/components/ui/use-toast';
-
-// Mock data for customer vehicles
-const mockVehicles = [
-  { id: '1', customer: '1', number: 'KA-01-AB-1234', type: 'Truck', capacity: '12 Ton' },
-  { id: '2', customer: '1', number: 'KA-01-CD-5678', type: 'Truck', capacity: '16 Ton' },
-  { id: '3', customer: '1', number: 'KA-02-EF-9012', type: 'Pickup', capacity: '2 Ton' },
-  { id: '4', customer: '2', number: 'MH-12-GH-3456', type: 'Truck', capacity: '20 Ton' },
-  { id: '5', customer: '2', number: 'MH-12-IJ-7890', type: 'Truck', capacity: '10 Ton' },
-];
-
-// Mock data for customer indents
-const mockIndents = [
-  { 
-    id: 'IND001', 
-    customer: '1', 
-    date: '2023-06-01', 
-    vehicle: 'KA-01-AB-1234', 
-    fuelType: 'Diesel',
-    quantity: '100L',
-    amount: '₹9,800',
-    status: 'Completed'
-  },
-  { 
-    id: 'IND002', 
-    customer: '1', 
-    date: '2023-06-05', 
-    vehicle: 'KA-01-CD-5678', 
-    fuelType: 'Diesel',
-    quantity: '150L',
-    amount: '₹14,700',
-    status: 'Completed'
-  },
-  { 
-    id: 'IND003', 
-    customer: '2', 
-    date: '2023-06-08', 
-    vehicle: 'MH-12-GH-3456', 
-    fuelType: 'Diesel',
-    quantity: '200L',
-    amount: '₹19,600',
-    status: 'Pending'
-  },
-];
 
 interface Customer {
   id: string;
   name: string;
-  contact: string;
-  phone: string;
-  email: string;
   gst: string;
+  email: string;
+  phone: string;
+  contact: string;
   balance: number;
+  created_at?: string;
 }
 
 const Customers = () => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('all-customers');
-
-  const { data: customers = [], isLoading } = useQuery({
-    queryKey: ['customers'],
-    queryFn: async () => {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  
+  const [newCustomer, setNewCustomer] = useState<Partial<Customer>>({
+    name: '',
+    gst: '',
+    email: '',
+    phone: '',
+    contact: '',
+    balance: 0
+  });
+  
+  useEffect(() => {
+    const fetchCustomers = async () => {
       try {
+        setIsLoading(true);
+        
         const { data, error } = await supabase
           .from('customers')
-          .select('*');
+          .select('*')
+          .order('name');
           
         if (error) {
           throw error;
         }
         
-        return data || [];
+        if (data) {
+          setCustomers(data as Customer[]);
+        }
       } catch (error) {
         console.error('Error fetching customers:', error);
         toast({
           title: "Error",
-          description: "Failed to load customer data",
+          description: "Failed to load customer data. Please try again.",
           variant: "destructive"
         });
-        return [];
+      } finally {
+        setIsLoading(false);
       }
+    };
+    
+    fetchCustomers();
+  }, []);
+  
+  const handleAddCustomer = async () => {
+    try {
+      if (!newCustomer.name || !newCustomer.gst || !newCustomer.email || 
+          !newCustomer.phone || !newCustomer.contact) {
+        toast({
+          title: "Missing information",
+          description: "Please fill all required fields",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('customers')
+        .insert([{
+          name: newCustomer.name,
+          gst: newCustomer.gst,
+          email: newCustomer.email,
+          phone: newCustomer.phone,
+          contact: newCustomer.contact,
+          balance: newCustomer.balance || 0
+        }])
+        .select();
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setCustomers([...customers, data[0] as Customer]);
+        toast({
+          title: "Success",
+          description: "Customer added successfully"
+        });
+        setIsDialogOpen(false);
+        setNewCustomer({
+          name: '',
+          gst: '',
+          email: '',
+          phone: '',
+          contact: '',
+          balance: 0
+        });
+      }
+    } catch (error) {
+      console.error('Error adding customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add customer. Please try again.",
+        variant: "destructive"
+      });
     }
-  });
-
-  const filteredCustomers = customers.filter((customer: Customer) => 
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    customer.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone.includes(searchTerm)
-  );
-
-  const handleSelectCustomer = (customerId: string) => {
-    navigate(`/customers/${customerId}`);
   };
-
-  const customerVehicles = mockVehicles.filter(vehicle => vehicle.customer === activeTab);
-  const customerIndents = mockIndents.filter(indent => indent.customer === activeTab);
-
+  
+  const filteredCustomers = search 
+    ? customers.filter(customer => 
+        customer.name.toLowerCase().includes(search.toLowerCase()) ||
+        customer.contact.toLowerCase().includes(search.toLowerCase()) ||
+        customer.phone.includes(search) ||
+        customer.email.toLowerCase().includes(search.toLowerCase()) ||
+        customer.gst.toLowerCase().includes(search.toLowerCase())
+      )
+    : customers;
+    
+  const handleRowClick = (customerId: string) => {
+    navigate(`/customer/${customerId}`);
+  };
+  
   return (
     <div className="space-y-6">
-      <div className="flex flex-col justify-between space-y-2 md:flex-row md:items-center md:space-y-0">
-        <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => navigate('/customers/new')}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Customer
-          </Button>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Customers</h1>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus size={16} />
+              Add Customer
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Add New Customer</DialogTitle>
+              <DialogDescription>
+                Enter the details of the new customer.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Business Name*</Label>
+                <Input
+                  id="name"
+                  value={newCustomer.name}
+                  onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})}
+                  placeholder="e.g. ABC Logistics"
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="gst">GST Number*</Label>
+                <Input
+                  id="gst"
+                  value={newCustomer.gst}
+                  onChange={(e) => setNewCustomer({...newCustomer, gst: e.target.value})}
+                  placeholder="e.g. 22AAAAA0000A1Z5"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="contact">Contact Person*</Label>
+                  <Input
+                    id="contact"
+                    value={newCustomer.contact}
+                    onChange={(e) => setNewCustomer({...newCustomer, contact: e.target.value})}
+                    placeholder="e.g. Rajesh Kumar"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="phone">Phone Number*</Label>
+                  <Input
+                    id="phone"
+                    value={newCustomer.phone}
+                    onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})}
+                    placeholder="e.g. 9876543210"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email*</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newCustomer.email}
+                  onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
+                  placeholder="e.g. info@abclogistics.com"
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="balance">Initial Balance</Label>
+                <Input
+                  id="balance"
+                  type="number"
+                  value={newCustomer.balance?.toString()}
+                  onChange={(e) => setNewCustomer({...newCustomer, balance: parseFloat(e.target.value)})}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddCustomer}>Add Customer</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+      
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search customers..."
+            className="pl-8"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
       </div>
-
-      <div className="flex gap-4 flex-col md:flex-row">
-        <div className="md:w-1/4">
-          <Card className="h-full">
-            <CardHeader className="pb-2">
-              <CardTitle>Customer Management</CardTitle>
+      
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-muted-foreground">Loading customers...</span>
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl">Total Customers</CardTitle>
+                <CardDescription>Number of registered customers</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">{customers.length}</div>
+                <p className="text-sm text-muted-foreground">registered accounts</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl">Total Credit</CardTitle>
+                <CardDescription>Total credit issued to customers</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">
+                  ₹{customers.reduce((sum, customer) => sum + (customer.balance > 0 ? customer.balance : 0), 0).toLocaleString()}
+                </div>
+                <p className="text-sm text-muted-foreground">in active credit</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl">Active Customers</CardTitle>
+                <CardDescription>Customers with active transactions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">
+                  {customers.filter(c => c.balance > 0).length}
+                </div>
+                <p className="text-sm text-muted-foreground">with outstanding balance</p>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Customer List</CardTitle>
+                <Users className="h-5 w-5 text-muted-foreground" />
+              </div>
               <CardDescription>
-                Manage your customers, vehicles, and indents
+                Click on a customer row to view details
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start" 
-                  onClick={() => setActiveTab('all-customers')}
-                >
-                  <Users className="mr-2 h-4 w-4" />
-                  All Customers
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start" 
-                  onClick={() => setActiveTab('vehicles')}
-                >
-                  <Car className="mr-2 h-4 w-4" />
-                  Vehicles
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start" 
-                  onClick={() => setActiveTab('indents')}
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Indents
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => setActiveTab('reminders')}
-                >
-                  <PenSquare className="mr-2 h-4 w-4" />
-                  Payment Reminders
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="md:w-3/4">
-          <Card>
-            <CardHeader className="pb-2">
-              <>
-                <CardTitle>
-                  {activeTab === 'all-customers' && 'All Customers'}
-                  {activeTab === 'vehicles' && 'Vehicles'}
-                  {activeTab === 'indents' && 'Indents'}
-                  {activeTab === 'reminders' && 'Payment Reminders'}
-                </CardTitle>
-                <CardDescription>
-                  {activeTab === 'all-customers' && 'View and manage all your customers'}
-                  {activeTab === 'vehicles' && 'View and manage all customer vehicles'}
-                  {activeTab === 'indents' && 'View and manage fuel indents'}
-                  {activeTab === 'reminders' && 'Send payment reminders via SMS and WhatsApp'}
-                </CardDescription>
-              </>
-            </CardHeader>
-
-            <CardContent>
-              {activeTab === 'all-customers' && (
-                <>
-                  <div className="mb-4 flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search customers..."
-                        className="pl-8"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  
-                  {isLoading ? (
-                    <div className="py-8 text-center">Loading customers...</div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Contact</TableHead>
-                          <TableHead>Phone</TableHead>
-                          <TableHead>GST</TableHead>
-                          <TableHead>Balance</TableHead>
-                          <TableHead>Actions</TableHead>
+              {filteredCustomers.length === 0 ? (
+                <div className="py-6 text-center text-muted-foreground">
+                  {search ? "No customers found matching your search" : "No customers yet. Add your first customer to get started."}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Contact Person</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>GST</TableHead>
+                        <TableHead className="text-right">Balance</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredCustomers.map((customer) => (
+                        <TableRow 
+                          key={customer.id} 
+                          className="cursor-pointer hover:bg-secondary/30"
+                          onClick={() => handleRowClick(customer.id)}
+                        >
+                          <TableCell className="font-medium">{customer.name}</TableCell>
+                          <TableCell>{customer.contact}</TableCell>
+                          <TableCell>{customer.phone}</TableCell>
+                          <TableCell>{customer.email}</TableCell>
+                          <TableCell>{customer.gst}</TableCell>
+                          <TableCell className="text-right">
+                            <span className={customer.balance > 0 ? "text-orange-600 font-medium" : ""}>
+                              ₹{customer.balance.toLocaleString()}
+                            </span>
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredCustomers.length > 0 ? (
-                          filteredCustomers.map((customer: Customer) => (
-                            <TableRow 
-                              key={customer.id} 
-                              className="cursor-pointer hover:bg-muted/50"
-                              onClick={() => handleSelectCustomer(customer.id)}
-                            >
-                              <TableCell className="font-medium">{customer.name}</TableCell>
-                              <TableCell>{customer.contact}</TableCell>
-                              <TableCell>{customer.phone}</TableCell>
-                              <TableCell>{customer.gst}</TableCell>
-                              <TableCell>₹{customer.balance?.toFixed(2) || '0.00'}</TableCell>
-                              <TableCell onClick={(e) => e.stopPropagation()}>
-                                <div className="flex space-x-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleSelectCustomer(customer.id);
-                                    }}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      // Delete functionality would go here
-                                    }}
-                                  >
-                                    <Trash className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={6} className="text-center">
-                              No customers found
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  )}
-                </>
-              )}
-
-              {activeTab === 'vehicles' && (
-                <div className="space-y-4">
-                  <div className="mb-4 flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="Search vehicles..." className="pl-8" />
-                    </div>
-                    <Button>
-                      <Plus className="mr-2 h-4 w-4" /> Add Vehicle
-                    </Button>
-                  </div>
-                  
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Vehicle Number</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Capacity</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {mockVehicles.map((vehicle) => {
-                        const owner = customers.find((c: Customer) => c.id === vehicle.customer);
-                        return (
-                          <TableRow key={vehicle.id}>
-                            <TableCell className="font-medium">{vehicle.number}</TableCell>
-                            <TableCell>{owner?.name || 'Unknown'}</TableCell>
-                            <TableCell>{vehicle.type}</TableCell>
-                            <TableCell>{vehicle.capacity}</TableCell>
-                            <TableCell>
-                              <div className="flex space-x-2">
-                                <Button variant="ghost" size="icon">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon">
-                                  <Trash className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      ))}
                     </TableBody>
                   </Table>
-                </div>
-              )}
-
-              {activeTab === 'indents' && (
-                <div className="space-y-4">
-                  <div className="mb-4 flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="Search indents..." className="pl-8" />
-                    </div>
-                    <Button>
-                      <Plus className="mr-2 h-4 w-4" /> Create Indent
-                    </Button>
-                  </div>
-                  
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Indent ID</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Vehicle</TableHead>
-                        <TableHead>Fuel Type</TableHead>
-                        <TableHead>Quantity</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {mockIndents.map((indent) => {
-                        const customer = customers.find((c: Customer) => c.id === indent.customer);
-                        return (
-                          <TableRow key={indent.id}>
-                            <TableCell className="font-medium">{indent.id}</TableCell>
-                            <TableCell>{customer?.name || 'Unknown'}</TableCell>
-                            <TableCell>{indent.date}</TableCell>
-                            <TableCell>{indent.vehicle}</TableCell>
-                            <TableCell>{indent.fuelType}</TableCell>
-                            <TableCell>{indent.quantity}</TableCell>
-                            <TableCell>{indent.amount}</TableCell>
-                            <TableCell>{indent.status}</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-
-              {activeTab === 'reminders' && (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="mb-4 text-center">
-                    <h3 className="text-xl font-semibold">Payment Reminders</h3>
-                    <p className="text-muted-foreground">
-                      Send SMS and WhatsApp reminders to customers about payment due
-                    </p>
-                  </div>
-                  <div className="w-full max-w-md">
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Customer</label>
-                            <select className="w-full rounded-md border border-input bg-background px-3 py-2">
-                              <option value="">Select customer</option>
-                              {customers.map((c: Customer) => (
-                                <option key={c.id} value={c.id}>{c.name} (Balance: ₹{c.balance?.toFixed(2) || '0.00'})</option>
-                              ))}
-                            </select>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Message</label>
-                            <textarea
-                              className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2"
-                              placeholder="Enter reminder message..."
-                              defaultValue={`Dear Customer,\nThis is a reminder that your payment of ₹X is due. Please make the payment at your earliest convenience.\nThank you,\nFuel Pump Management`}
-                            />
-                          </div>
-                          
-                          <div className="flex gap-2">
-                            <Button className="flex-1">
-                              Send SMS
-                            </Button>
-                            <Button className="flex-1">
-                              Send WhatsApp
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 };

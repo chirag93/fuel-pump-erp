@@ -78,6 +78,75 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_readings: {
+        Row: {
+          actual_meter_sales: number
+          closing_stock: number
+          created_at: string | null
+          date: string
+          dip_reading: number
+          fuel_type: string
+          id: string
+          opening_stock: number
+          receipt_quantity: number
+          sales_per_tank_stock: number | null
+          stock_variation: number | null
+        }
+        Insert: {
+          actual_meter_sales: number
+          closing_stock: number
+          created_at?: string | null
+          date: string
+          dip_reading: number
+          fuel_type: string
+          id?: string
+          opening_stock: number
+          receipt_quantity: number
+          sales_per_tank_stock?: number | null
+          stock_variation?: number | null
+        }
+        Update: {
+          actual_meter_sales?: number
+          closing_stock?: number
+          created_at?: string | null
+          date?: string
+          dip_reading?: number
+          fuel_type?: string
+          id?: string
+          opening_stock?: number
+          receipt_quantity?: number
+          sales_per_tank_stock?: number | null
+          stock_variation?: number | null
+        }
+        Relationships: []
+      }
+      fuel_settings: {
+        Row: {
+          current_level: number
+          current_price: number
+          fuel_type: string
+          id: string
+          tank_capacity: number
+          updated_at: string | null
+        }
+        Insert: {
+          current_level: number
+          current_price: number
+          fuel_type: string
+          id?: string
+          tank_capacity: number
+          updated_at?: string | null
+        }
+        Update: {
+          current_level?: number
+          current_price?: number
+          fuel_type?: string
+          id?: string
+          tank_capacity?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       fuel_tests: {
         Row: {
           appearance: string
@@ -85,6 +154,7 @@ export type Database = {
           density: number
           fuel_type: string
           id: string
+          litres_tested: number
           notes: string | null
           temperature: number
           test_date: string
@@ -97,6 +167,7 @@ export type Database = {
           density: number
           fuel_type: string
           id?: string
+          litres_tested?: number
           notes?: string | null
           temperature: number
           test_date: string
@@ -109,6 +180,7 @@ export type Database = {
           density?: number
           fuel_type?: string
           id?: string
+          litres_tested?: number
           notes?: string | null
           temperature?: number
           test_date?: string

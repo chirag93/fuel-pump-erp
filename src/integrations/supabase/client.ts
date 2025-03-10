@@ -13,3 +13,43 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
     autoRefreshToken: true,
   }
 });
+
+// Define interfaces for the new tables to help with TypeScript
+export interface FuelSettings {
+  id: string;
+  fuel_type: string;
+  current_price: number;
+  tank_capacity: number;
+  current_level: number;
+  updated_at?: string;
+}
+
+export interface DailyReading {
+  id: string;
+  date: string;
+  fuel_type: string;
+  dip_reading: number;
+  opening_stock: number;
+  receipt_quantity: number;
+  closing_stock: number;
+  sales_per_tank_stock?: number;
+  actual_meter_sales: number;
+  stock_variation?: number;
+  created_at?: string;
+}
+
+// Enhance fuel test interface to include the new column
+export interface FuelTest {
+  id: string;
+  fuel_type: 'Petrol' | 'Diesel';
+  test_date: string;
+  test_time: string;
+  temperature: number;
+  density: number;
+  appearance: string;
+  litres_tested: number;
+  notes: string;
+  tested_by: string;
+  created_at: string;
+  tested_by_name?: string;
+}

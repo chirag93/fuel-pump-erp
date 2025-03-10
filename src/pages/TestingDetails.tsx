@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,22 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, TestTube, Calendar, Clipboard, Plus } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-
-interface FuelTest {
-  id: string;
-  fuel_type: 'Petrol' | 'Diesel';
-  test_date: string;
-  test_time: string;
-  temperature: number;
-  density: number;
-  appearance: string;
-  litres_tested: number; // Added field for litres tested
-  notes: string;
-  tested_by: string;
-  created_at: string;
-  tested_by_name?: string;
-}
+import { supabase, FuelTest } from '@/integrations/supabase/client';
 
 const TestingDetails = () => {
   const [tests, setTests] = useState<FuelTest[]>([]);
@@ -48,12 +32,11 @@ const TestingDetails = () => {
     temperature: 25,
     density: 0.75,
     appearance: 'Clear',
-    litres_tested: 1, // Default value for litres tested
+    litres_tested: 1,
     notes: '',
     tested_by: ''
   });
   
-  // Fetch staff list for the dropdown
   useEffect(() => {
     const fetchStaff = async () => {
       try {
@@ -76,13 +59,11 @@ const TestingDetails = () => {
     fetchStaff();
   }, []);
   
-  // Fetch test data
   useEffect(() => {
     const fetchTestData = async () => {
       try {
         setIsLoading(true);
         
-        // Use the fuel_tests table
         const { data, error } = await supabase
           .from('fuel_tests')
           .select('*')
@@ -93,7 +74,6 @@ const TestingDetails = () => {
         }
         
         if (data) {
-          // For each test, get the staff name
           const testsWithStaffNames = await Promise.all(
             data.map(async (test) => {
               const { data: staffData } = await supabase
@@ -105,12 +85,12 @@ const TestingDetails = () => {
               return {
                 ...test,
                 tested_by_name: staffData?.name || 'Unknown Staff',
-                litres_tested: test.litres_tested || 1 // Default value if not exists
-              };
+                litres_tested: test.litres_tested || 1
+              } as FuelTest;
             })
           );
           
-          setTests(testsWithStaffNames as FuelTest[]);
+          setTests(testsWithStaffNames);
         }
       } catch (error) {
         console.error('Error fetching test data:', error);
@@ -158,15 +138,14 @@ const TestingDetails = () => {
       }
       
       if (data) {
-        // Get the staff name for the added test
         const staffName = staffList.find(s => s.id === newTest.tested_by)?.name || 'Unknown Staff';
         
         const newTestWithStaffName = {
           ...data[0],
           tested_by_name: staffName
-        };
+        } as FuelTest;
         
-        setTests([newTestWithStaffName as FuelTest, ...tests]);
+        setTests([newTestWithStaffName, ...tests]);
         toast({
           title: "Success",
           description: "Fuel test record added successfully"
