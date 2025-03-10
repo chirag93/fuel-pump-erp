@@ -289,6 +289,13 @@ def create_staff():
     data = request.json
     staff = load_data(STAFF_FILE)
     
+    # Check for duplicate phone number
+    if any(s['phone'] == data.get('phone') for s in staff):
+        return jsonify({
+            'success': False,
+            'message': 'A staff member with this phone number already exists'
+        }), 400
+    
     new_staff = {
         'id': str(uuid.uuid4()),
         'name': data.get('name'),
@@ -304,6 +311,29 @@ def create_staff():
     save_data(STAFF_FILE, staff)
     
     return jsonify({'success': True, 'staff': new_staff})
+
+# Add this new route for shifts with cash remaining
+@app.route('/api/shifts', methods=['PUT'])
+def update_shift():
+    data = request.json
+    shift_id = data.get('id')
+    end_time = data.get('end_time')
+    cash_remaining = data.get('cash_remaining', 0)
+    status = data.get('status', 'completed')
+    
+    shifts = load_data(SHIFTS_FILE)
+    
+    for i, shift in enumerate(shifts):
+        if shift['id'] == shift_id:
+            shifts[i].update({
+                'end_time': end_time,
+                'status': status,
+                'cash_remaining': cash_remaining
+            })
+            save_data(SHIFTS_FILE, shifts)
+            return jsonify({'success': True, 'shift': shifts[i]})
+    
+    return jsonify({'message': 'Shift not found'}), 404
 
 # Indent routes
 @app.route('/api/indents', methods=['GET'])
@@ -358,7 +388,7 @@ def create_reading():
         'pump_id': data.get('pump_id'),
         'shift': data.get('shift'),
         'opening_reading': data.get('opening_reading'),
-        'closing_reading': data.get('closing_reading'),
+        'closing_reading': None,  # Allow null for closing reading
         'staff_id': data.get('staff_id'),
         'date': data.get('date', datetime.now().strftime('%Y-%m-%d')),
         'created_at': datetime.now().isoformat()
@@ -368,6 +398,21 @@ def create_reading():
     save_data(READINGS_FILE, readings)
     
     return jsonify({'success': True, 'reading': new_reading})
+
+@app.route('/api/readings/<reading_id>', methods=['PUT'])
+def update_reading(reading_id):
+    data = request.json
+    readings = load_data(READINGS_FILE)
+    
+    for i, reading in enumerate(readings):
+        if reading['id'] == reading_id:
+            readings[i].update({
+                'closing_reading': data.get('closing_reading', reading.get('closing_reading')),
+            })
+            save_data(READINGS_FILE, readings)
+            return jsonify({'success': True, 'reading': readings[i]})
+    
+    return jsonify({'message': 'Reading not found'}), 404
 
 # Transaction routes
 @app.route('/api/transactions', methods=['GET'])

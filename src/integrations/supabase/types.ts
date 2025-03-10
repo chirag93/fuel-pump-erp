@@ -226,7 +226,7 @@ export type Database = {
       }
       readings: {
         Row: {
-          closing_reading: number
+          closing_reading: number | null
           created_at: string | null
           date: string
           id: string
@@ -236,7 +236,7 @@ export type Database = {
           staff_id: string
         }
         Insert: {
-          closing_reading: number
+          closing_reading?: number | null
           created_at?: string | null
           date: string
           id?: string
@@ -246,7 +246,7 @@ export type Database = {
           staff_id: string
         }
         Update: {
-          closing_reading?: number
+          closing_reading?: number | null
           created_at?: string | null
           date?: string
           id?: string

@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface StaffFormProps {
   onSubmit: (staff: any) => void;
@@ -22,11 +23,16 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     joining_date: initialData?.joining_date || new Date().toISOString().split('T')[0],
     assigned_pumps: initialData?.assigned_pumps || []
   });
-
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPump, setSelectedPump] = useState<string>('');
 
   const handleChange = (field: string, value: string) => {
     setStaffData({ ...staffData, [field]: value });
+    // Clear error when field is edited
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: '' });
+    }
   };
 
   const handleAddPump = () => {
@@ -46,32 +52,63 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!staffData.name.trim()) newErrors.name = "Name is required";
+    if (!staffData.phone.trim()) newErrors.phone = "Phone number is required";
+    if (!staffData.role) newErrors.role = "Role is required";
+    if (!staffData.salary) newErrors.salary = "Salary is required";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-    // Validation
-    if (!staffData.name || !staffData.phone || !staffData.role || !staffData.salary) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Check if phone number is already in use (only for new staff)
+      if (!initialData) {
+        const { data: existingStaff } = await supabase
+          .from('staff')
+          .select('id')
+          .eq('phone', staffData.phone);
+        
+        if (existingStaff && existingStaff.length > 0) {
+          setErrors({ phone: "This phone number is already in use" });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      // Process the data before submission
+      const processedData = {
+        ...staffData,
+        salary: parseFloat(staffData.salary.toString()),
+      };
+
+      // Submit the form
+      onSubmit(processedData);
+    } catch (error) {
+      console.error('Validation error:', error);
       toast({
-        title: "Missing information",
-        description: "Please fill all required fields",
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Process the data before submission
-    const processedData = {
-      ...staffData,
-      salary: parseFloat(staffData.salary.toString()),
-    };
-
-    // Submit the form
-    onSubmit(processedData);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Full Name</Label>
           <Input
@@ -79,7 +116,9 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
             value={staffData.name}
             onChange={(e) => handleChange('name', e.target.value)}
             placeholder="Enter staff name"
+            className={errors.name ? "border-red-500" : ""}
           />
+          {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="phone">Phone Number</Label>
@@ -88,11 +127,13 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
             value={staffData.phone}
             onChange={(e) => handleChange('phone', e.target.value)}
             placeholder="Enter phone number"
+            className={errors.phone ? "border-red-500" : ""}
           />
+          {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
@@ -109,7 +150,7 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
             value={staffData.role}
             onValueChange={(value) => handleChange('role', value)}
           >
-            <SelectTrigger id="role">
+            <SelectTrigger id="role" className={errors.role ? "border-red-500" : ""}>
               <SelectValue placeholder="Select role" />
             </SelectTrigger>
             <SelectContent>
@@ -119,10 +160,11 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
               <SelectItem value="Accountant">Accountant</SelectItem>
             </SelectContent>
           </Select>
+          {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="salary">Monthly Salary (₹)</Label>
           <Input
@@ -131,7 +173,9 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
             value={staffData.salary}
             onChange={(e) => handleChange('salary', e.target.value)}
             placeholder="Enter monthly salary"
+            className={errors.salary ? "border-red-500" : ""}
           />
+          {errors.salary && <p className="text-sm text-red-500">{errors.salary}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="joining_date">Joining Date</Label>
@@ -146,7 +190,7 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
 
       <div className="space-y-2">
         <Label>Assigned Pumps</Label>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Select value={selectedPump} onValueChange={setSelectedPump}>
             <SelectTrigger className="flex-1">
               <SelectValue placeholder="Select pump" />
@@ -179,8 +223,17 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-        <Button type="submit">Save Staff</Button>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <>
+              <span className="mr-2">Saving...</span>
+              <span className="animate-spin">⌛</span>
+            </>
+          ) : (
+            'Save Staff'
+          )}
+        </Button>
       </div>
     </form>
   );
