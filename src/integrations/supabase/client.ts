@@ -7,9 +7,6 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://svuritdhlgaonfefphkz.supabase.co";
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2dXJpdGRobGdhb25mZWZwaGt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEzMzIxOTQsImV4cCI6MjA1NjkwODE5NH0.vJ7t3i8QEA0pJLPG5j78u4qOt4eF_KoNC8_VOx_OoMo";
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
-
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,

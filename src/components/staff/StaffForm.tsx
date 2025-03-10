@@ -56,7 +56,14 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     const newErrors: Record<string, string> = {};
     
     if (!staffData.name.trim()) newErrors.name = "Name is required";
-    if (!staffData.phone.trim()) newErrors.phone = "Phone number is required";
+    
+    // Phone validation
+    if (!staffData.phone.trim()) {
+      newErrors.phone = "Phone number is required";
+    } else if (!/^\d{10}$/.test(staffData.phone.trim())) {
+      newErrors.phone = "Phone number must be 10 digits";
+    }
+    
     if (!staffData.role) newErrors.role = "Role is required";
     if (!staffData.salary) newErrors.salary = "Salary is required";
     
@@ -74,10 +81,15 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
       
       // Check if phone number is already in use (only for new staff)
       if (!initialData) {
-        const { data: existingStaff } = await supabase
+        const { data: existingStaff, error: checkError } = await supabase
           .from('staff')
           .select('id')
           .eq('phone', staffData.phone);
+        
+        if (checkError) {
+          console.error('Error checking staff:', checkError);
+          throw new Error(checkError.message);
+        }
         
         if (existingStaff && existingStaff.length > 0) {
           setErrors({ phone: "This phone number is already in use" });
@@ -98,7 +110,7 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
       console.error('Validation error:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: error.message || "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -126,7 +138,7 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
             id="phone"
             value={staffData.phone}
             onChange={(e) => handleChange('phone', e.target.value)}
-            placeholder="Enter phone number"
+            placeholder="Enter 10-digit phone number"
             className={errors.phone ? "border-red-500" : ""}
           />
           {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}

@@ -274,6 +274,7 @@ export type Database = {
       }
       shifts: {
         Row: {
+          cash_remaining: number | null
           created_at: string | null
           end_time: string | null
           id: string
@@ -283,6 +284,7 @@ export type Database = {
           status: string | null
         }
         Insert: {
+          cash_remaining?: number | null
           created_at?: string | null
           end_time?: string | null
           id?: string
@@ -292,6 +294,7 @@ export type Database = {
           status?: string | null
         }
         Update: {
+          cash_remaining?: number | null
           created_at?: string | null
           end_time?: string | null
           id?: string

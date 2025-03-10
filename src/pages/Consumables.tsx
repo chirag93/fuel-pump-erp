@@ -237,24 +237,22 @@ const Consumables = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Consumables Management</h1>
-        <Button onClick={handleAddConsumable}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl font-bold">Consumables Management</h1>
+        <Button onClick={handleAddConsumable} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Add Consumable
         </Button>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name or category"
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+      <div className="relative w-full">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search by name or category"
+          className="pl-8 w-full"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
       <Card>
@@ -267,7 +265,7 @@ const Consumables = () => {
             <Package className="h-5 w-5 text-muted-foreground" />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -278,50 +276,60 @@ const Consumables = () => {
               No consumables found. Add your first item using the "Add Consumable" button.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Price/Unit</TableHead>
-                  <TableHead>Total Value</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredConsumables.map((consumable) => (
-                  <TableRow key={consumable.id}>
-                    <TableCell className="font-medium">{consumable.name}</TableCell>
-                    <TableCell>{consumable.category}</TableCell>
-                    <TableCell>
-                      {consumable.quantity} {consumable.unit}
-                    </TableCell>
-                    <TableCell>₹{consumable.price_per_unit}</TableCell>
-                    <TableCell>₹{consumable.total_price}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditConsumable(consumable)}
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteConsumable(consumable.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
-                      </Button>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead className="hidden md:table-cell">Category</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead className="hidden sm:table-cell">Price/Unit</TableHead>
+                    <TableHead>Total Value</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredConsumables.map((consumable) => (
+                    <TableRow key={consumable.id}>
+                      <TableCell className="font-medium">
+                        {consumable.name}
+                        <div className="md:hidden text-xs text-muted-foreground mt-1">
+                          {consumable.category}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">{consumable.category}</TableCell>
+                      <TableCell>
+                        {consumable.quantity} {consumable.unit}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">₹{consumable.price_per_unit}</TableCell>
+                      <TableCell>₹{consumable.total_price}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditConsumable(consumable)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Edit</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteConsumable(consumable.id)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Delete</span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
