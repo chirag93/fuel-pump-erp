@@ -1,4 +1,6 @@
+
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
@@ -18,60 +20,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Plus, FileText, Car, Edit, Trash, PenSquare, Users } from 'lucide-react';
-
-// Mock data for customers
-const mockCustomers = [
-  {
-    id: '1',
-    name: 'Rajesh Enterprises',
-    contact: 'Rajesh Kumar',
-    phone: '9876543210',
-    email: 'rajesh@example.com',
-    gst: 'GSTIN12345678901',
-    balance: '₹15,000',
-    vehicles: 3,
-  },
-  {
-    id: '2',
-    name: 'ABC Logistics',
-    contact: 'Amit Singh',
-    phone: '8765432109',
-    email: 'amit@abclogistics.com',
-    gst: 'GSTIN23456789012',
-    balance: '₹8,500',
-    vehicles: 8,
-  },
-  {
-    id: '3',
-    name: 'XYZ Transport',
-    contact: 'Priya Sharma',
-    phone: '7654321098',
-    email: 'priya@xyztransport.com',
-    gst: 'GSTIN34567890123',
-    balance: '₹22,700',
-    vehicles: 12,
-  },
-  {
-    id: '4',
-    name: 'City Cabs',
-    contact: 'Vikram Patel',
-    phone: '6543210987',
-    email: 'vikram@citycabs.com',
-    gst: 'GSTIN45678901234',
-    balance: '₹5,200',
-    vehicles: 25,
-  },
-  {
-    id: '5',
-    name: 'Green Movers',
-    contact: 'Sanjay Verma',
-    phone: '9876543210',
-    email: 'sanjay@greenmovers.com',
-    gst: 'GSTIN56789012345',
-    balance: '₹12,800',
-    vehicles: 6,
-  },
-];
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import { toast } from '@/components/ui/use-toast';
 
 // Mock data for customer vehicles
 const mockVehicles = [
@@ -116,32 +67,65 @@ const mockIndents = [
   },
 ];
 
+interface Customer {
+  id: string;
+  name: string;
+  contact: string;
+  phone: string;
+  email: string;
+  gst: string;
+  balance: number;
+}
+
 const Customers = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all-customers');
-  const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
 
-  const filteredCustomers = mockCustomers.filter(customer => 
+  const { data: customers = [], isLoading } = useQuery({
+    queryKey: ['customers'],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('customers')
+          .select('*');
+          
+        if (error) {
+          throw error;
+        }
+        
+        return data || [];
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load customer data",
+          variant: "destructive"
+        });
+        return [];
+      }
+    }
+  });
+
+  const filteredCustomers = customers.filter((customer: Customer) => 
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     customer.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.phone.includes(searchTerm)
   );
 
   const handleSelectCustomer = (customerId: string) => {
-    setSelectedCustomer(customerId);
-    setActiveTab('customer-details');
+    navigate(`/customers/${customerId}`);
   };
 
-  const customerVehicles = mockVehicles.filter(vehicle => vehicle.customer === selectedCustomer);
-  const customerIndents = mockIndents.filter(indent => indent.customer === selectedCustomer);
-  const selectedCustomerData = mockCustomers.find(c => c.id === selectedCustomer);
+  const customerVehicles = mockVehicles.filter(vehicle => vehicle.customer === activeTab);
+  const customerIndents = mockIndents.filter(indent => indent.customer === activeTab);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between space-y-2 md:flex-row md:items-center md:space-y-0">
         <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
         <div className="flex items-center gap-2">
-          <Button>
+          <Button onClick={() => navigate('/customers/new')}>
             <Plus className="mr-2 h-4 w-4" />
             Add Customer
           </Button>
@@ -199,34 +183,20 @@ const Customers = () => {
         <div className="md:w-3/4">
           <Card>
             <CardHeader className="pb-2">
-              {activeTab === 'customer-details' && selectedCustomerData ? (
-                <div className="flex justify-between">
-                  <div>
-                    <CardTitle>{selectedCustomerData.name}</CardTitle>
-                    <CardDescription>
-                      Customer details and management
-                    </CardDescription>
-                  </div>
-                  <Button variant="outline" onClick={() => setActiveTab('all-customers')}>
-                    Back to List
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <CardTitle>
-                    {activeTab === 'all-customers' && 'All Customers'}
-                    {activeTab === 'vehicles' && 'Vehicles'}
-                    {activeTab === 'indents' && 'Indents'}
-                    {activeTab === 'reminders' && 'Payment Reminders'}
-                  </CardTitle>
-                  <CardDescription>
-                    {activeTab === 'all-customers' && 'View and manage all your customers'}
-                    {activeTab === 'vehicles' && 'View and manage all customer vehicles'}
-                    {activeTab === 'indents' && 'View and manage fuel indents'}
-                    {activeTab === 'reminders' && 'Send payment reminders via SMS and WhatsApp'}
-                  </CardDescription>
-                </>
-              )}
+              <>
+                <CardTitle>
+                  {activeTab === 'all-customers' && 'All Customers'}
+                  {activeTab === 'vehicles' && 'Vehicles'}
+                  {activeTab === 'indents' && 'Indents'}
+                  {activeTab === 'reminders' && 'Payment Reminders'}
+                </CardTitle>
+                <CardDescription>
+                  {activeTab === 'all-customers' && 'View and manage all your customers'}
+                  {activeTab === 'vehicles' && 'View and manage all customer vehicles'}
+                  {activeTab === 'indents' && 'View and manage fuel indents'}
+                  {activeTab === 'reminders' && 'Send payment reminders via SMS and WhatsApp'}
+                </CardDescription>
+              </>
             </CardHeader>
 
             <CardContent>
@@ -244,190 +214,70 @@ const Customers = () => {
                     </div>
                   </div>
                   
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>GST</TableHead>
-                        <TableHead>Balance</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredCustomers.length > 0 ? (
-                        filteredCustomers.map((customer) => (
-                          <TableRow key={customer.id}>
-                            <TableCell className="font-medium">{customer.name}</TableCell>
-                            <TableCell>{customer.contact}</TableCell>
-                            <TableCell>{customer.phone}</TableCell>
-                            <TableCell>{customer.gst}</TableCell>
-                            <TableCell>{customer.balance}</TableCell>
-                            <TableCell>
-                              <div className="flex space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleSelectCustomer(customer.id)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon">
-                                  <Trash className="h-4 w-4" />
-                                </Button>
-                              </div>
+                  {isLoading ? (
+                    <div className="py-8 text-center">Loading customers...</div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Contact</TableHead>
+                          <TableHead>Phone</TableHead>
+                          <TableHead>GST</TableHead>
+                          <TableHead>Balance</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredCustomers.length > 0 ? (
+                          filteredCustomers.map((customer: Customer) => (
+                            <TableRow 
+                              key={customer.id} 
+                              className="cursor-pointer hover:bg-muted/50"
+                              onClick={() => handleSelectCustomer(customer.id)}
+                            >
+                              <TableCell className="font-medium">{customer.name}</TableCell>
+                              <TableCell>{customer.contact}</TableCell>
+                              <TableCell>{customer.phone}</TableCell>
+                              <TableCell>{customer.gst}</TableCell>
+                              <TableCell>₹{customer.balance?.toFixed(2) || '0.00'}</TableCell>
+                              <TableCell onClick={(e) => e.stopPropagation()}>
+                                <div className="flex space-x-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectCustomer(customer.id);
+                                    }}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // Delete functionality would go here
+                                    }}
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center">
+                              No customers found
                             </TableCell>
                           </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center">
-                            No customers found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                        )}
+                      </TableBody>
+                    </Table>
+                  )}
                 </>
-              )}
-
-              {activeTab === 'customer-details' && selectedCustomerData && (
-                <div className="space-y-6">
-                  <Tabs defaultValue="details">
-                    <TabsList>
-                      <TabsTrigger value="details">Details</TabsTrigger>
-                      <TabsTrigger value="vehicles">Vehicles ({customerVehicles.length})</TabsTrigger>
-                      <TabsTrigger value="indents">Indents ({customerIndents.length})</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="details" className="space-y-4 pt-4">
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Company Name</label>
-                          <p className="text-lg">{selectedCustomerData.name}</p>
-                        </div>
-                        
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Contact Person</label>
-                          <p className="text-lg">{selectedCustomerData.contact}</p>
-                        </div>
-                        
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Phone</label>
-                          <p className="text-lg">{selectedCustomerData.phone}</p>
-                        </div>
-                        
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Email</label>
-                          <p className="text-lg">{selectedCustomerData.email}</p>
-                        </div>
-                        
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">GST Number</label>
-                          <p className="text-lg">{selectedCustomerData.gst}</p>
-                        </div>
-                        
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Current Balance</label>
-                          <p className="text-lg font-semibold">{selectedCustomerData.balance}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button>Edit Details</Button>
-                        <Button variant="outline">Send Reminder</Button>
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="vehicles" className="pt-4">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Vehicle Number</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Capacity</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {customerVehicles.length > 0 ? (
-                            customerVehicles.map((vehicle) => (
-                              <TableRow key={vehicle.id}>
-                                <TableCell className="font-medium">{vehicle.number}</TableCell>
-                                <TableCell>{vehicle.type}</TableCell>
-                                <TableCell>{vehicle.capacity}</TableCell>
-                                <TableCell>
-                                  <div className="flex space-x-2">
-                                    <Button variant="ghost" size="icon">
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon">
-                                      <Trash className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow>
-                              <TableCell colSpan={4} className="text-center">
-                                No vehicles found for this customer
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                      <div className="mt-4">
-                        <Button>
-                          <Plus className="mr-2 h-4 w-4" /> Add Vehicle
-                        </Button>
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="indents" className="pt-4">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Indent ID</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Vehicle</TableHead>
-                            <TableHead>Fuel Type</TableHead>
-                            <TableHead>Quantity</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {customerIndents.length > 0 ? (
-                            customerIndents.map((indent) => (
-                              <TableRow key={indent.id}>
-                                <TableCell className="font-medium">{indent.id}</TableCell>
-                                <TableCell>{indent.date}</TableCell>
-                                <TableCell>{indent.vehicle}</TableCell>
-                                <TableCell>{indent.fuelType}</TableCell>
-                                <TableCell>{indent.quantity}</TableCell>
-                                <TableCell>{indent.amount}</TableCell>
-                                <TableCell>{indent.status}</TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow>
-                              <TableCell colSpan={7} className="text-center">
-                                No indents found for this customer
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                      <div className="mt-4">
-                        <Button>
-                          <Plus className="mr-2 h-4 w-4" /> Create Indent
-                        </Button>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                </div>
               )}
 
               {activeTab === 'vehicles' && (
@@ -454,11 +304,11 @@ const Customers = () => {
                     </TableHeader>
                     <TableBody>
                       {mockVehicles.map((vehicle) => {
-                        const owner = mockCustomers.find(c => c.id === vehicle.customer);
+                        const owner = customers.find((c: Customer) => c.id === vehicle.customer);
                         return (
                           <TableRow key={vehicle.id}>
                             <TableCell className="font-medium">{vehicle.number}</TableCell>
-                            <TableCell>{owner?.name}</TableCell>
+                            <TableCell>{owner?.name || 'Unknown'}</TableCell>
                             <TableCell>{vehicle.type}</TableCell>
                             <TableCell>{vehicle.capacity}</TableCell>
                             <TableCell>
@@ -506,11 +356,11 @@ const Customers = () => {
                     </TableHeader>
                     <TableBody>
                       {mockIndents.map((indent) => {
-                        const customer = mockCustomers.find(c => c.id === indent.customer);
+                        const customer = customers.find((c: Customer) => c.id === indent.customer);
                         return (
                           <TableRow key={indent.id}>
                             <TableCell className="font-medium">{indent.id}</TableCell>
-                            <TableCell>{customer?.name}</TableCell>
+                            <TableCell>{customer?.name || 'Unknown'}</TableCell>
                             <TableCell>{indent.date}</TableCell>
                             <TableCell>{indent.vehicle}</TableCell>
                             <TableCell>{indent.fuelType}</TableCell>
@@ -541,8 +391,8 @@ const Customers = () => {
                             <label className="text-sm font-medium">Customer</label>
                             <select className="w-full rounded-md border border-input bg-background px-3 py-2">
                               <option value="">Select customer</option>
-                              {mockCustomers.map(c => (
-                                <option key={c.id} value={c.id}>{c.name} (Balance: {c.balance})</option>
+                              {customers.map((c: Customer) => (
+                                <option key={c.id} value={c.id}>{c.name} (Balance: ₹{c.balance?.toFixed(2) || '0.00'})</option>
                               ))}
                             </select>
                           </div>

@@ -28,6 +28,7 @@ interface FuelTest {
   temperature: number;
   density: number;
   appearance: string;
+  litres_tested: number; // Added field for litres tested
   notes: string;
   tested_by: string;
   created_at: string;
@@ -47,6 +48,7 @@ const TestingDetails = () => {
     temperature: 25,
     density: 0.75,
     appearance: 'Clear',
+    litres_tested: 1, // Default value for litres tested
     notes: '',
     tested_by: ''
   });
@@ -80,7 +82,7 @@ const TestingDetails = () => {
       try {
         setIsLoading(true);
         
-        // Use the new fuel_tests table
+        // Use the fuel_tests table
         const { data, error } = await supabase
           .from('fuel_tests')
           .select('*')
@@ -102,7 +104,8 @@ const TestingDetails = () => {
                 
               return {
                 ...test,
-                tested_by_name: staffData?.name || 'Unknown Staff'
+                tested_by_name: staffData?.name || 'Unknown Staff',
+                litres_tested: test.litres_tested || 1 // Default value if not exists
               };
             })
           );
@@ -126,7 +129,7 @@ const TestingDetails = () => {
   
   const handleAddTest = async () => {
     try {
-      if (!newTest.fuel_type || !newTest.test_date || !newTest.tested_by) {
+      if (!newTest.fuel_type || !newTest.test_date || !newTest.tested_by || !newTest.litres_tested) {
         toast({
           title: "Missing information",
           description: "Please fill all required fields",
@@ -144,6 +147,7 @@ const TestingDetails = () => {
           temperature: newTest.temperature,
           density: newTest.density,
           appearance: newTest.appearance,
+          litres_tested: newTest.litres_tested,
           notes: newTest.notes,
           tested_by: newTest.tested_by
         }])
@@ -175,6 +179,7 @@ const TestingDetails = () => {
           temperature: 25,
           density: 0.75,
           appearance: 'Clear',
+          litres_tested: 1,
           notes: '',
           tested_by: ''
         });
@@ -212,7 +217,7 @@ const TestingDetails = () => {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="fuel_type">Fuel Type</Label>
+                  <Label htmlFor="fuel_type">Fuel Type*</Label>
                   <Select 
                     value={newTest.fuel_type}
                     onValueChange={(value) => setNewTest({...newTest, fuel_type: value as 'Petrol' | 'Diesel'})}
@@ -227,7 +232,7 @@ const TestingDetails = () => {
                   </Select>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="tested_by">Tested By</Label>
+                  <Label htmlFor="tested_by">Tested By*</Label>
                   <Select 
                     value={newTest.tested_by}
                     onValueChange={(value) => setNewTest({...newTest, tested_by: value})}
@@ -246,7 +251,7 @@ const TestingDetails = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="test_date">Test Date</Label>
+                  <Label htmlFor="test_date">Test Date*</Label>
                   <Input
                     id="test_date"
                     type="date"
@@ -255,7 +260,7 @@ const TestingDetails = () => {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="test_time">Test Time</Label>
+                  <Label htmlFor="test_time">Test Time*</Label>
                   <Input
                     id="test_time"
                     type="time"
@@ -267,7 +272,7 @@ const TestingDetails = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="temperature">Temperature (°C)</Label>
+                  <Label htmlFor="temperature">Temperature (°C)*</Label>
                   <Input
                     id="temperature"
                     type="number"
@@ -276,7 +281,7 @@ const TestingDetails = () => {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="density">Density (g/cm³)</Label>
+                  <Label htmlFor="density">Density (g/cm³)*</Label>
                   <Input
                     id="density"
                     type="number"
@@ -287,22 +292,36 @@ const TestingDetails = () => {
                 </div>
               </div>
               
-              <div className="grid gap-2">
-                <Label htmlFor="appearance">Appearance</Label>
-                <Select 
-                  value={newTest.appearance}
-                  onValueChange={(value) => setNewTest({...newTest, appearance: value})}
-                >
-                  <SelectTrigger id="appearance">
-                    <SelectValue placeholder="Select appearance" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Clear">Clear</SelectItem>
-                    <SelectItem value="Slightly Cloudy">Slightly Cloudy</SelectItem>
-                    <SelectItem value="Cloudy">Cloudy</SelectItem>
-                    <SelectItem value="Contaminated">Contaminated</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="appearance">Appearance*</Label>
+                  <Select 
+                    value={newTest.appearance}
+                    onValueChange={(value) => setNewTest({...newTest, appearance: value})}
+                  >
+                    <SelectTrigger id="appearance">
+                      <SelectValue placeholder="Select appearance" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Clear">Clear</SelectItem>
+                      <SelectItem value="Slightly Cloudy">Slightly Cloudy</SelectItem>
+                      <SelectItem value="Cloudy">Cloudy</SelectItem>
+                      <SelectItem value="Contaminated">Contaminated</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="litres_tested">Litres Tested*</Label>
+                  <Input
+                    id="litres_tested"
+                    type="number"
+                    min="1"
+                    step="0.1"
+                    value={newTest.litres_tested?.toString()}
+                    onChange={(e) => setNewTest({...newTest, litres_tested: parseFloat(e.target.value)})}
+                    required
+                  />
+                </div>
               </div>
               
               <div className="grid gap-2">
@@ -382,51 +401,55 @@ const TestingDetails = () => {
                   No test records found. Add a new test record to get started.
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date & Time</TableHead>
-                      <TableHead>Fuel Type</TableHead>
-                      <TableHead>Temp. (°C)</TableHead>
-                      <TableHead>Density (g/cm³)</TableHead>
-                      <TableHead>Appearance</TableHead>
-                      <TableHead>Tested By</TableHead>
-                      <TableHead>Notes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tests.map((test) => (
-                      <TableRow key={test.id}>
-                        <TableCell>
-                          {new Date(test.test_date).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                          <br />
-                          <span className="text-muted-foreground text-sm">{test.test_time}</span>
-                        </TableCell>
-                        <TableCell className="font-medium">{test.fuel_type}</TableCell>
-                        <TableCell>{test.temperature}°C</TableCell>
-                        <TableCell>{test.density}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            test.appearance === 'Clear' ? 'bg-green-100 text-green-800' :
-                            test.appearance === 'Slightly Cloudy' ? 'bg-yellow-100 text-yellow-800' :
-                            test.appearance === 'Cloudy' ? 'bg-orange-100 text-orange-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {test.appearance}
-                          </span>
-                        </TableCell>
-                        <TableCell>{test.tested_by_name}</TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {test.notes || <span className="text-muted-foreground">No notes</span>}
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date & Time</TableHead>
+                        <TableHead>Fuel Type</TableHead>
+                        <TableHead>Temp. (°C)</TableHead>
+                        <TableHead>Density (g/cm³)</TableHead>
+                        <TableHead>Litres Tested</TableHead>
+                        <TableHead>Appearance</TableHead>
+                        <TableHead>Tested By</TableHead>
+                        <TableHead>Notes</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {tests.map((test) => (
+                        <TableRow key={test.id}>
+                          <TableCell>
+                            {new Date(test.test_date).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                            <br />
+                            <span className="text-muted-foreground text-sm">{test.test_time}</span>
+                          </TableCell>
+                          <TableCell className="font-medium">{test.fuel_type}</TableCell>
+                          <TableCell>{test.temperature}°C</TableCell>
+                          <TableCell>{test.density}</TableCell>
+                          <TableCell>{test.litres_tested || 'N/A'}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              test.appearance === 'Clear' ? 'bg-green-100 text-green-800' :
+                              test.appearance === 'Slightly Cloudy' ? 'bg-yellow-100 text-yellow-800' :
+                              test.appearance === 'Cloudy' ? 'bg-orange-100 text-orange-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {test.appearance}
+                            </span>
+                          </TableCell>
+                          <TableCell>{test.tested_by_name}</TableCell>
+                          <TableCell className="max-w-xs truncate">
+                            {test.notes || <span className="text-muted-foreground">No notes</span>}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>
