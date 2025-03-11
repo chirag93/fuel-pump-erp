@@ -67,7 +67,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: <CalendarClock size={20} />, label: 'Daily Readings', to: '/daily-readings' },
     { icon: <ClipboardList size={20} />, label: 'Shift Management', to: '/shift' },
     { icon: <Droplets size={20} />, label: 'Fueling Process', to: '/fueling' },
-    { icon: <Settings size={20} />, label: 'Fuel Settings', to: '/fuel-settings' },
   ];
 
   return (
@@ -88,7 +87,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <h2 className="text-xl font-bold">Fuel Pump ERP</h2>
         </div>
         
-        <div className="flex flex-col gap-1 p-4">
+        <div className="flex flex-col gap-1 p-4 h-[calc(100vh-64px-80px)] overflow-y-auto">
           {navItems.map((item) => (
             <SidebarItem
               key={item.to}
@@ -101,6 +100,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
         
         <div className="absolute bottom-0 w-full border-t p-4">
+          <div className="mb-2">
+            <SidebarItem
+              icon={<Settings size={20} />}
+              label="Settings"
+              to="/settings"
+              active={pathname === "/settings"}
+            />
+          </div>
           <div className="mb-4 flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
               <UserCircle />

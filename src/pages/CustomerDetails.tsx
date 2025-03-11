@@ -45,6 +45,16 @@ interface Indent {
   vehicle_number?: string;
 }
 
+interface NewIndentData {
+  start_number: string;
+  end_number: string;
+  customer_id: string;
+  vehicle_id: string;
+  fuel_type: string;
+  quantity: number;
+  amount: number;
+}
+
 const CustomerDetails = () => {
   const { id } = useParams<{ id: string }>();
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -58,6 +68,16 @@ const CustomerDetails = () => {
     capacity: ''
   });
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
+  const [indentDialogOpen, setIndentDialogOpen] = useState(false);
+  const [newIndent, setNewIndent] = useState<Partial<NewIndentData>>({
+    start_number: '',
+    end_number: '',
+    customer_id: id,
+    vehicle_id: '',
+    fuel_type: 'Petrol',
+    quantity: 0,
+    amount: 0
+  });
 
   useEffect(() => {
     if (id) {
@@ -174,6 +194,71 @@ const CustomerDetails = () => {
     }
   };
 
+  const handleAddIndent = async () => {
+    try {
+      if (!newIndent.vehicle_id || !newIndent.fuel_type || !newIndent.quantity || !newIndent.amount || 
+          !newIndent.start_number || !newIndent.end_number) {
+        toast({
+          title: "Missing information",
+          description: "Please fill all required fields",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Create a unique indent ID using the start and end numbers
+      const indentId = `IND-${newIndent.start_number}-${newIndent.end_number}`;
+
+      const { data, error } = await supabase
+        .from('indents')
+        .insert([{
+          id: indentId,
+          customer_id: id,
+          vehicle_id: newIndent.vehicle_id,
+          fuel_type: newIndent.fuel_type,
+          quantity: newIndent.quantity,
+          amount: newIndent.amount,
+          status: 'Pending'
+        }])
+        .select();
+
+      if (error) throw error;
+      
+      if (data) {
+        // Get the vehicle info for the newly added indent
+        const vehicle = vehicles.find(v => v.id === newIndent.vehicle_id);
+        const newIndentWithVehicle = {
+          ...data[0],
+          vehicle_number: vehicle ? vehicle.number : 'Unknown'
+        } as Indent;
+        
+        setIndents([...indents, newIndentWithVehicle]);
+        setIndentDialogOpen(false);
+        setNewIndent({
+          start_number: '',
+          end_number: '',
+          customer_id: id,
+          vehicle_id: '',
+          fuel_type: 'Petrol',
+          quantity: 0,
+          amount: 0
+        });
+        
+        toast({
+          title: "Success",
+          description: "Fuel indent created successfully"
+        });
+      }
+    } catch (error) {
+      console.error('Error adding indent:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create indent. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -246,7 +331,7 @@ const CustomerDetails = () => {
         </div>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6 bg-muted">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="details" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Building className="mr-2 h-4 w-4" />
               Customer Details
@@ -417,10 +502,99 @@ const CustomerDetails = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Fuel Indents</CardTitle>
-                  <Button size="sm" className="gap-1">
-                    <FileText className="h-4 w-4" />
-                    Create Indent
-                  </Button>
+                  <Dialog open={indentDialogOpen} onOpenChange={setIndentDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="gap-1">
+                        <FileText className="h-4 w-4" />
+                        Create Indent
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Create New Fuel Indent</DialogTitle>
+                        <DialogDescription>
+                          Create a new fuel indent for this customer.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="start_number">Indent Start Number</Label>
+                            <Input 
+                              id="start_number" 
+                              placeholder="e.g. 1001"
+                              value={newIndent.start_number}
+                              onChange={e => setNewIndent({...newIndent, start_number: e.target.value})}
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="end_number">Indent End Number</Label>
+                            <Input 
+                              id="end_number" 
+                              placeholder="e.g. 1010"
+                              value={newIndent.end_number}
+                              onChange={e => setNewIndent({...newIndent, end_number: e.target.value})}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="vehicle_id">Vehicle</Label>
+                          <select 
+                            id="vehicle_id"
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={newIndent.vehicle_id as string}
+                            onChange={e => setNewIndent({...newIndent, vehicle_id: e.target.value})}
+                          >
+                            <option value="">Select a vehicle</option>
+                            {vehicles.map(vehicle => (
+                              <option key={vehicle.id} value={vehicle.id}>
+                                {vehicle.number} ({vehicle.type})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="fuel_type">Fuel Type</Label>
+                          <select 
+                            id="fuel_type"
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={newIndent.fuel_type as string}
+                            onChange={e => setNewIndent({...newIndent, fuel_type: e.target.value})}
+                          >
+                            <option value="Petrol">Petrol</option>
+                            <option value="Diesel">Diesel</option>
+                            <option value="Premium Petrol">Premium Petrol</option>
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="quantity">Quantity (Liters)</Label>
+                            <Input 
+                              id="quantity" 
+                              type="number"
+                              placeholder="e.g. 100"
+                              value={newIndent.quantity?.toString()}
+                              onChange={e => setNewIndent({...newIndent, quantity: parseFloat(e.target.value)})}
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="amount">Amount (₹)</Label>
+                            <Input 
+                              id="amount" 
+                              type="number"
+                              placeholder="e.g. 9000"
+                              value={newIndent.amount?.toString()}
+                              onChange={e => setNewIndent({...newIndent, amount: parseFloat(e.target.value)})}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIndentDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAddIndent}>Create Indent</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </CardHeader>
               <CardContent>
@@ -428,7 +602,11 @@ const CustomerDetails = () => {
                   <div className="py-8 text-center">
                     <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">No fuel indents yet</p>
-                    <Button variant="outline" className="mt-4">
+                    <Button 
+                      variant="outline" 
+                      className="mt-4" 
+                      onClick={() => setIndentDialogOpen(true)}
+                    >
                       Create First Indent
                     </Button>
                   </div>

@@ -46,7 +46,7 @@ const App = () => (
               <Route path="/fueling" element={<FuelingProcess />} />
               <Route path="/inventory" element={<StockLevels />} />
               <Route path="/testing" element={<TestingDetails />} />
-              <Route path="/fuel-settings" element={<FuelPumpSettings />} />
+              <Route path="/settings" element={<FuelPumpSettings />} />
             </Route>
             <Route path="/landing" element={<Index />} />
             <Route path="*" element={<NotFound />} />

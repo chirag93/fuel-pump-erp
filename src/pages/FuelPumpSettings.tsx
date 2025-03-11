@@ -26,8 +26,32 @@ import {
   Save,
   Trash2
 } from 'lucide-react';
-import { supabase, type FuelSettings, type PumpSettings, type BusinessSettings } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from '@/components/layout/DashboardLayout';
+
+interface FuelSettings {
+  id: string;
+  fuel_type: string;
+  current_price: number;
+  tank_capacity: number;
+  current_level: number;
+  updated_at?: string;
+}
+
+interface PumpSettings {
+  id: string;
+  pump_number: string;
+  nozzle_count: number;
+  fuel_types: string[];
+  created_at?: string;
+}
+
+interface BusinessSettings {
+  id?: string;
+  gst_number: string;
+  business_name: string;
+  address: string;
+}
 
 const FuelPumpSettings = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -269,15 +293,24 @@ const FuelPumpSettings = () => {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Fuel Pump Settings</h1>
+          <h1 className="text-3xl font-bold">Settings</h1>
           <Settings className="h-8 w-8 text-muted-foreground" />
         </div>
         
-        <Tabs defaultValue="fuel">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
-            <TabsTrigger value="fuel">Fuel Types</TabsTrigger>
-            <TabsTrigger value="pumps">Pump Configuration</TabsTrigger>
-            <TabsTrigger value="business">Business Settings</TabsTrigger>
+        <Tabs defaultValue="fuel" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="fuel" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Droplet className="mr-2 h-4 w-4" />
+              Fuel Types
+            </TabsTrigger>
+            <TabsTrigger value="pumps" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Pump Configuration
+            </TabsTrigger>
+            <TabsTrigger value="business" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Settings className="mr-2 h-4 w-4" />
+              Business Settings
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="fuel" className="space-y-4">
