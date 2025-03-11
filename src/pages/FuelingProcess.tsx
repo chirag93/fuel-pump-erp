@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Search, AlignJustify } from 'lucide-react';
+import { Search, AlignJustify, FileText, Plus } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -15,11 +15,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import { supabase, Customer, Vehicle, Indent, Transaction } from '@/integrations/supabase/client';
+import { supabase, Customer, Vehicle, Indent, Transaction, IndentBooklet } from '@/integrations/supabase/client';
 
 interface ProcessIndentFormData {
-  indentId: string;
+  indentNumber: string;
   date: string;
   customerId: string;
   customerName: string;
@@ -27,26 +28,29 @@ interface ProcessIndentFormData {
   vehicleNumber: string;
   quantity: number;
   price: number;
-  discount: number;
   totalAmount: number;
   fuelType: string;
   staffId: string;
+  bookletId: string | null;
 }
 
 const FuelingProcess = () => {
-  const [indents, setIndents] = useState<(Indent & { customer_name?: string; vehicle_number?: string })[]>([]);
-  const [transactions, setTransactions] = useState<(Transaction & { customer_name?: string; vehicle_number?: string })[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [customerVehicles, setCustomerVehicles] = useState<Vehicle[]>([]);
   const [staffMembers, setStaffMembers] = useState<{id: string; name: string}[]>([]);
+  const [transactions, setTransactions] = useState<(Transaction & { customer_name?: string; vehicle_number?: string })[]>([]);
+  
+  const [customerIndentBooklets, setCustomerIndentBooklets] = useState<IndentBooklet[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   
   const [processIndentDialogOpen, setProcessIndentDialogOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [createIndentDialogOpen, setCreateIndentDialogOpen] = useState(false);
   
   // Default form data
   const [indentFormData, setIndentFormData] = useState<ProcessIndentFormData>({
-    indentId: '',
+    indentNumber: '',
     date: new Date().toISOString().split('T')[0],
     customerId: '',
     customerName: '',
@@ -54,51 +58,27 @@ const FuelingProcess = () => {
     vehicleNumber: '',
     quantity: 0,
     price: 0,
-    discount: 0,
     totalAmount: 0,
     fuelType: 'Petrol',
-    staffId: ''
+    staffId: '',
+    bookletId: null
   });
 
   // Fetch data on component mount
   useEffect(() => {
-    fetchIndents();
     fetchTransactions();
     fetchCustomers();
     fetchVehicles();
     fetchStaffMembers();
   }, []);
 
-  const fetchIndents = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('indents')
-        .select(`
-          *,
-          customer:customers(id, name),
-          vehicle:vehicles(id, number)
-        `)
-        .eq('status', 'Pending');
-      
-      if (error) throw error;
-      
-      if (data) {
-        const formattedIndents = data.map(item => ({
-          ...item,
-          customer_name: item.customer?.name,
-          vehicle_number: item.vehicle?.number
-        }));
-        setIndents(formattedIndents);
-      }
-    } catch (error) {
-      console.error('Error fetching indents:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load indents",
-        variant: "destructive"
-      });
+  // Fetch customer's indent booklets when a customer is selected
+  useEffect(() => {
+    if (selectedCustomerId) {
+      fetchCustomerIndentBooklets(selectedCustomerId);
+      fetchCustomerVehicles(selectedCustomerId);
     }
-  };
+  }, [selectedCustomerId]);
 
   const fetchTransactions = async () => {
     try {
@@ -174,27 +154,6 @@ const FuelingProcess = () => {
     }
   };
 
-  const fetchStaffMembers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('staff')
-        .select('id, name');
-      
-      if (error) throw error;
-      
-      if (data) {
-        setStaffMembers(data);
-      }
-    } catch (error) {
-      console.error('Error fetching staff members:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load staff members",
-        variant: "destructive"
-      });
-    }
-  };
-
   const fetchCustomerVehicles = async (customerId: string) => {
     try {
       const { data, error } = await supabase
@@ -217,25 +176,90 @@ const FuelingProcess = () => {
     }
   };
 
-  const handleSelectIndent = (indent: Indent & { customer_name?: string; vehicle_number?: string }) => {
-    if (indent) {
-      setIndentFormData({
-        indentId: indent.id,
-        date: new Date().toISOString().split('T')[0],
-        customerId: indent.customer_id,
-        customerName: indent.customer_name || '',
-        vehicleId: indent.vehicle_id,
-        vehicleNumber: indent.vehicle_number || '',
-        quantity: indent.quantity,
-        price: indent.amount / indent.quantity,
-        discount: 0,
-        totalAmount: indent.amount,
-        fuelType: indent.fuel_type,
-        staffId: staffMembers.length > 0 ? staffMembers[0].id : ''
-      });
+  const fetchStaffMembers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('id, name');
       
-      setProcessIndentDialogOpen(true);
+      if (error) throw error;
+      
+      if (data) {
+        setStaffMembers(data);
+      }
+    } catch (error) {
+      console.error('Error fetching staff members:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load staff members",
+        variant: "destructive"
+      });
     }
+  };
+
+  const fetchCustomerIndentBooklets = async (customerId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('indent_booklets')
+        .select('*')
+        .eq('customer_id', customerId)
+        .eq('status', 'Active');
+      
+      if (error) throw error;
+      
+      if (data) {
+        setCustomerIndentBooklets(data);
+      } else {
+        setCustomerIndentBooklets([]);
+      }
+    } catch (error) {
+      console.error('Error fetching indent booklets:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load indent booklets",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCustomerSelect = (customerId: string) => {
+    setSelectedCustomerId(customerId);
+    
+    const customer = customers.find(c => c.id === customerId);
+    
+    if (customer) {
+      setIndentFormData({
+        ...indentFormData,
+        customerId: customer.id,
+        customerName: customer.name,
+        vehicleId: '',
+        vehicleNumber: ''
+      });
+    }
+  };
+
+  const handleVehicleSelect = (vehicleId: string) => {
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    
+    if (vehicle) {
+      setIndentFormData({
+        ...indentFormData,
+        vehicleId: vehicle.id,
+        vehicleNumber: vehicle.number
+      });
+    }
+  };
+
+  const validateIndentNumber = (indentNumber: string, bookletId: string): boolean => {
+    const booklet = customerIndentBooklets.find(b => b.id === bookletId);
+    
+    if (!booklet) return false;
+    
+    const startNum = parseInt(booklet.start_number);
+    const endNum = parseInt(booklet.end_number);
+    const indentNum = parseInt(indentNumber);
+    
+    return indentNum >= startNum && indentNum <= endNum;
   };
 
   const handleProcessIndent = async () => {
@@ -248,12 +272,79 @@ const FuelingProcess = () => {
         });
         return;
       }
+
+      if (!indentFormData.indentNumber) {
+        toast({
+          title: "Error",
+          description: "Please enter an indent number",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!indentFormData.bookletId) {
+        toast({
+          title: "Error",
+          description: "Please select an indent booklet",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate that the indent number is within the range of the selected booklet
+      if (!validateIndentNumber(indentFormData.indentNumber, indentFormData.bookletId)) {
+        toast({
+          title: "Error",
+          description: "The indent number is not valid for the selected booklet",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check if this indent number has already been used
+      const { data: existingIndents, error: checkError } = await supabase
+        .from('indents')
+        .select('id')
+        .eq('indent_number', indentFormData.indentNumber)
+        .eq('booklet_id', indentFormData.bookletId);
+      
+      if (checkError) throw checkError;
+      
+      if (existingIndents && existingIndents.length > 0) {
+        toast({
+          title: "Error",
+          description: "This indent number has already been used",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Create a new indent record
+      const indentId = `IND-${indentFormData.indentNumber}`;
+      const indent = {
+        id: indentId,
+        customer_id: indentFormData.customerId,
+        vehicle_id: indentFormData.vehicleId,
+        fuel_type: indentFormData.fuelType,
+        amount: indentFormData.totalAmount,
+        quantity: indentFormData.quantity,
+        status: 'Completed',
+        indent_number: indentFormData.indentNumber,
+        booklet_id: indentFormData.bookletId,
+        date: indentFormData.date
+      };
+      
+      const { error: indentError } = await supabase
+        .from('indents')
+        .insert(indent);
+      
+      if (indentError) throw indentError;
       
       // Create transaction record with indent reference
       const transactionId = `TRX${new Date().getTime()}`;
       const transaction = {
         id: transactionId,
-        indent_id: indentFormData.indentId,
+        indent_id: indentId,
         customer_id: indentFormData.customerId,
         vehicle_id: indentFormData.vehicleId,
         staff_id: indentFormData.staffId,
@@ -269,14 +360,23 @@ const FuelingProcess = () => {
         .insert(transaction);
       
       if (transactionError) throw transactionError;
-      
-      // Update indent status to Completed
-      const { error: indentError } = await supabase
-        .from('indents')
-        .update({ status: 'Completed' })
-        .eq('id', indentFormData.indentId);
-      
-      if (indentError) throw indentError;
+
+      // Update the used_indents count in the booklet
+      const booklet = customerIndentBooklets.find(b => b.id === indentFormData.bookletId);
+      if (booklet) {
+        const newUsedCount = booklet.used_indents + 1;
+        const status = newUsedCount >= booklet.total_indents ? 'Completed' : 'Active';
+        
+        const { error: bookletError } = await supabase
+          .from('indent_booklets')
+          .update({ 
+            used_indents: newUsedCount,
+            status: status
+          })
+          .eq('id', indentFormData.bookletId);
+        
+        if (bookletError) throw bookletError;
+      }
       
       toast({
         title: "Success",
@@ -284,10 +384,28 @@ const FuelingProcess = () => {
       });
       
       // Refresh data
-      fetchIndents();
       fetchTransactions();
+      if (selectedCustomerId) {
+        fetchCustomerIndentBooklets(selectedCustomerId);
+      }
       
       setProcessIndentDialogOpen(false);
+      // Reset form data
+      setIndentFormData({
+        indentNumber: '',
+        date: new Date().toISOString().split('T')[0],
+        customerId: '',
+        customerName: '',
+        vehicleId: '',
+        vehicleNumber: '',
+        quantity: 0,
+        price: 0,
+        totalAmount: 0,
+        fuelType: 'Petrol',
+        staffId: '',
+        bookletId: null
+      });
+      setSelectedCustomerId(null);
     } catch (error) {
       console.error('Error processing indent:', error);
       toast({
@@ -298,24 +416,25 @@ const FuelingProcess = () => {
     }
   };
 
-  const handlePriceOrQuantityChange = (field: 'price' | 'quantity' | 'discount', value: number) => {
+  const handlePriceOrQuantityChange = (field: 'price' | 'quantity', value: number) => {
     const updates = { ...indentFormData, [field]: value };
     
     // Calculate total amount
-    const totalBeforeDiscount = updates.price * updates.quantity;
-    const totalAfterDiscount = totalBeforeDiscount - updates.discount;
+    const totalAmount = updates.price * updates.quantity;
     
     setIndentFormData({
       ...updates,
-      totalAmount: totalAfterDiscount
+      totalAmount: totalAmount
     });
   };
 
-  const filteredIndents = indents.filter(indent => 
-    indent.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    indent.vehicle_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    indent.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCustomers = searchTerm 
+    ? customers.filter(customer => 
+        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.phone.includes(searchTerm)
+      )
+    : customers;
 
   return (
     <div className="space-y-6">
@@ -323,17 +442,17 @@ const FuelingProcess = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Pending Indents</CardTitle>
-          <CardDescription>Process fuel transactions based on pending indent slips</CardDescription>
+          <CardTitle>Process Indent</CardTitle>
+          <CardDescription>Record fuel transactions based on customer indent slips</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="searchIndent">Search by Customer, Vehicle or Indent ID</Label>
+            <Label htmlFor="searchCustomer">Search Customer</Label>
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                id="searchIndent"
-                placeholder="Search indents..."
+                id="searchCustomer"
+                placeholder="Search by name, contact person or phone..."
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -342,37 +461,29 @@ const FuelingProcess = () => {
           </div>
           
           <div className="border rounded-md max-h-[300px] overflow-y-auto">
-            {filteredIndents.length > 0 ? (
+            {filteredCustomers.length > 0 ? (
               <div className="divide-y">
-                {filteredIndents.map((indent) => (
+                {filteredCustomers.map((customer) => (
                   <div 
-                    key={indent.id}
-                    className="p-3 hover:bg-muted/50"
+                    key={customer.id}
+                    className={`p-3 hover:bg-muted/50 cursor-pointer ${selectedCustomerId === customer.id ? 'bg-muted' : ''}`}
+                    onClick={() => handleCustomerSelect(customer.id)}
                   >
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium">
-                          {indent.customer_name}
+                          {customer.name}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Vehicle: {indent.vehicle_number}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          ID: {indent.id}
+                          Contact: {customer.contact} | Phone: {customer.phone}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">₹{indent.amount.toLocaleString()}</p>
-                        <p className="text-sm">{indent.quantity}L of {indent.fuel_type}</p>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex justify-end">
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleSelectIndent(indent)}
-                      >
-                        Process Indent
-                      </Button>
+                      {customer.balance !== null && (
+                        <div className="text-right">
+                          <p className="font-medium">₹{customer.balance.toLocaleString()}</p>
+                          <p className="text-sm text-muted-foreground">Current Balance</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -380,11 +491,19 @@ const FuelingProcess = () => {
             ) : (
               <div className="p-6 text-center text-muted-foreground">
                 {searchTerm 
-                  ? "No pending indents found matching your search" 
-                  : "No pending indents available"}
+                  ? "No customers found matching your search" 
+                  : "No customers available"}
               </div>
             )}
           </div>
+
+          {selectedCustomerId && (
+            <div className="mt-4">
+              <Button onClick={() => setProcessIndentDialogOpen(true)}>
+                Process Indent
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
       
@@ -397,6 +516,7 @@ const FuelingProcess = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Date</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Vehicle</TableHead>
                 <TableHead>Amount</TableHead>
@@ -409,6 +529,7 @@ const FuelingProcess = () => {
               {transactions.length > 0 ? (
                 transactions.map((transaction) => (
                   <TableRow key={transaction.id}>
+                    <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
                     <TableCell className="font-medium">{transaction.customer_name || 'Walk-in'}</TableCell>
                     <TableCell>{transaction.vehicle_number || 'N/A'}</TableCell>
                     <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
@@ -419,7 +540,7 @@ const FuelingProcess = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">No transactions found</TableCell>
+                  <TableCell colSpan={7} className="text-center py-4">No transactions found</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -432,31 +553,10 @@ const FuelingProcess = () => {
           <DialogHeader>
             <DialogTitle>Process Indent Transaction</DialogTitle>
             <DialogDescription>
-              Complete this fuel transaction based on the indent slip
+              Complete this fuel transaction based on an indent slip
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="indentId">Indent Number</Label>
-                <Input
-                  id="indentId"
-                  value={indentFormData.indentId}
-                  readOnly
-                  className="bg-muted"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="date">Transaction Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={indentFormData.date}
-                  onChange={(e) => setIndentFormData({...indentFormData, date: e.target.value})}
-                />
-              </div>
-            </div>
-            
             <div className="grid gap-2">
               <Label htmlFor="customerName">Customer</Label>
               <Input
@@ -466,25 +566,83 @@ const FuelingProcess = () => {
                 className="bg-muted"
               />
             </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="bookletId">Indent Booklet</Label>
+              <Select 
+                value={indentFormData.bookletId || ""} 
+                onValueChange={(value) => setIndentFormData({...indentFormData, bookletId: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select indent booklet" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customerIndentBooklets.map(booklet => (
+                    <SelectItem key={booklet.id} value={booklet.id}>
+                      {booklet.start_number} - {booklet.end_number} ({booklet.used_indents}/{booklet.total_indents} used)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {customerIndentBooklets.length === 0 && (
+                <p className="text-sm text-destructive">No active indent booklets available for this customer</p>
+              )}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="indentNumber">Indent Number</Label>
+              <Input
+                id="indentNumber"
+                value={indentFormData.indentNumber}
+                onChange={(e) => setIndentFormData({...indentFormData, indentNumber: e.target.value})}
+                placeholder="Enter the indent number from the slip"
+              />
+            </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="vehicleNumber">Vehicle</Label>
+              <Label htmlFor="date">Transaction Date</Label>
               <Input
-                id="vehicleNumber"
-                value={indentFormData.vehicleNumber}
-                readOnly
-                className="bg-muted"
+                id="date"
+                type="date"
+                value={indentFormData.date}
+                onChange={(e) => setIndentFormData({...indentFormData, date: e.target.value})}
               />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="vehicleId">Vehicle</Label>
+              <Select 
+                value={indentFormData.vehicleId} 
+                onValueChange={handleVehicleSelect}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select vehicle" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customerVehicles.map(vehicle => (
+                    <SelectItem key={vehicle.id} value={vehicle.id}>
+                      {vehicle.number} ({vehicle.type})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="fuelType">Fuel Type</Label>
-              <Input
-                id="fuelType"
-                value={indentFormData.fuelType}
-                readOnly
-                className="bg-muted"
-              />
+              <Select 
+                value={indentFormData.fuelType} 
+                onValueChange={(value) => setIndentFormData({...indentFormData, fuelType: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select fuel type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Petrol">Petrol</SelectItem>
+                  <SelectItem value="Diesel">Diesel</SelectItem>
+                  <SelectItem value="Premium Petrol">Premium Petrol</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
@@ -508,26 +666,15 @@ const FuelingProcess = () => {
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="discount">Discount (Optional)</Label>
-                <Input
-                  id="discount"
-                  type="number"
-                  value={indentFormData.discount.toString()}
-                  onChange={(e) => handlePriceOrQuantityChange('discount', parseFloat(e.target.value) || 0)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="totalAmount">Total Amount</Label>
-                <Input
-                  id="totalAmount"
-                  type="number"
-                  value={indentFormData.totalAmount.toString()}
-                  readOnly
-                  className="bg-muted"
-                />
-              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="totalAmount">Total Amount</Label>
+              <Input
+                id="totalAmount"
+                type="number"
+                value={indentFormData.totalAmount.toString()}
+                readOnly
+                className="bg-muted"
+              />
             </div>
 
             <div className="grid gap-2">

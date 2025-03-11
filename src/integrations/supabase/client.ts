@@ -105,6 +105,18 @@ export interface Vehicle {
   created_at?: string;
 }
 
+export interface IndentBooklet {
+  id: string;
+  customer_id: string;
+  start_number: string;
+  end_number: string;
+  issued_date: string;
+  total_indents: number;
+  used_indents: number;
+  status: 'Active' | 'Completed' | 'Cancelled';
+  created_at?: string;
+}
+
 export interface Indent {
   id: string;
   customer_id: string;
@@ -113,6 +125,9 @@ export interface Indent {
   amount: number;
   quantity: number;
   status: string | null;
+  indent_number: string;
+  booklet_id: string | null;
+  date: string;
   created_at?: string;
 }
 
