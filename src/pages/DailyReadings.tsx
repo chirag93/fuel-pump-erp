@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -114,7 +115,7 @@ const handleAddReading = async () => {
       stock_variation: calculatedValues.stock_variation
     };
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('daily_readings')
       .insert([readingData]);
       
@@ -210,12 +211,6 @@ const handleAddReading = async () => {
         </Card>
 
         <Dialog open={newReadingDialogOpen} onOpenChange={setNewReadingDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Calendar className="mr-2 h-4 w-4" />
-              Add New Reading
-            </Button>
-          </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Daily Reading</DialogTitle>
