@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -38,7 +37,7 @@ const FuelingProcess = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [customerVehicles, setCustomerVehicles] = useState<Vehicle[]>([]);
   const [staffMembers, setStaffMembers] = useState<{id: string; name: string}[]>([]);
-  const [transactions, setTransactions] = useState<(Transaction & { customer_name?: string; vehicle_number?: string })[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   
   const [customerIndentBooklets, setCustomerIndentBooklets] = useState<IndentBooklet[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -206,7 +205,12 @@ const FuelingProcess = () => {
       if (error) throw error;
       
       if (data) {
-        setCustomerIndentBooklets(data);
+        // Transform the data to ensure status is one of the allowed types
+        const typedBooklets: IndentBooklet[] = data.map(booklet => ({
+          ...booklet,
+          status: booklet.status as 'Active' | 'Completed' | 'Cancelled'
+        }));
+        setCustomerIndentBooklets(typedBooklets);
       } else {
         setCustomerIndentBooklets([]);
       }
@@ -363,13 +367,13 @@ const FuelingProcess = () => {
       const booklet = customerIndentBooklets.find(b => b.id === indentFormData.bookletId);
       if (booklet) {
         const newUsedCount = booklet.used_indents + 1;
-        const status = newUsedCount >= booklet.total_indents ? 'Completed' : 'Active';
+        const newStatus = newUsedCount >= booklet.total_indents ? 'Completed' : 'Active';
         
         const { error: bookletError } = await supabase
           .from('indent_booklets')
           .update({ 
             used_indents: newUsedCount,
-            status: status
+            status: newStatus as 'Active' | 'Completed' | 'Cancelled'
           })
           .eq('id', indentFormData.bookletId);
         

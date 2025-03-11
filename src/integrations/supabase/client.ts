@@ -143,4 +143,7 @@ export interface Transaction {
   payment_method: string;
   indent_id: string | null;
   created_at?: string;
+  // Extended properties for join data
+  customer_name?: string;
+  vehicle_number?: string;
 }

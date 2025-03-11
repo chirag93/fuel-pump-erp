@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,13 +18,18 @@ interface NewBookletData {
   issued_date: string;
 }
 
+// Define an extended transaction type for the view
+interface TransactionWithDetails extends Transaction {
+  vehicle_number?: string;
+}
+
 const CustomerDetails = () => {
   const { id } = useParams<{ id: string }>();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [indents, setIndents] = useState<Indent[]>([]);
   const [indentBooklets, setIndentBooklets] = useState<IndentBooklet[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [newVehicle, setNewVehicle] = useState<Partial<Vehicle>>({
@@ -123,7 +127,14 @@ const CustomerDetails = () => {
 
       if (error) throw error;
       
-      setIndentBooklets(data as IndentBooklet[]);
+      if (data) {
+        // Transform the data to ensure status is one of the allowed types
+        const typedBooklets: IndentBooklet[] = data.map(booklet => ({
+          ...booklet,
+          status: booklet.status as 'Active' | 'Completed' | 'Cancelled'
+        }));
+        setIndentBooklets(typedBooklets);
+      }
     } catch (error) {
       console.error('Error fetching indent booklets:', error);
     }
@@ -146,7 +157,7 @@ const CustomerDetails = () => {
         vehicle_number: transaction.vehicles ? transaction.vehicles.number : 'Unknown',
       }));
       
-      setTransactions(processedTransactions as unknown as Transaction[]);
+      setTransactions(processedTransactions as TransactionWithDetails[]);
     } catch (error) {
       console.error('Error fetching transactions:', error);
     }
@@ -241,7 +252,13 @@ const CustomerDetails = () => {
       if (error) throw error;
       
       if (data) {
-        setIndentBooklets([...indentBooklets, data[0] as IndentBooklet]);
+        // Transform to ensure status is of the correct type
+        const booklet: IndentBooklet = {
+          ...data[0],
+          status: data[0].status as 'Active' | 'Completed' | 'Cancelled'
+        };
+        
+        setIndentBooklets([...indentBooklets, booklet]);
         setBookletDialogOpen(false);
         setNewBooklet({
           customer_id: id,
@@ -650,7 +667,7 @@ const CustomerDetails = () => {
                     {transactions.map((transaction) => (
                       <TableRow key={transaction.id}>
                         <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
-                        <TableCell>{transaction.vehicle_number}</TableCell>
+                        <TableCell>{transaction.vehicle_number || 'N/A'}</TableCell>
                         <TableCell>{transaction.fuel_type}</TableCell>
                         <TableCell>{transaction.quantity} L</TableCell>
                         <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
