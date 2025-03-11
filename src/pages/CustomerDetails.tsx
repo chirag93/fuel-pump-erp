@@ -1,4 +1,3 @@
-
 // Import only what you need from the file
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -297,14 +296,34 @@ const CustomerDetails = () => {
         <h1 className="text-3xl font-bold">{customer.name}</h1>
       </div>
       
-      <Tabs defaultValue="details">
-        <TabsList>
-          <TabsTrigger value="details">Customer Details</TabsTrigger>
-          <TabsTrigger value="vehicles">Vehicles ({vehicles.length})</TabsTrigger>
-          <TabsTrigger value="indents">Fuel Indents ({indents.length})</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="details" className="w-full">
+        <div className="border-b mb-6">
+          <TabsList className="w-full bg-background justify-start h-auto p-0 border-b-0">
+            <TabsTrigger 
+              value="details" 
+              className="py-3 px-6 rounded-none data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none text-base font-medium"
+            >
+              <Clipboard className="h-4 w-4 mr-2" />
+              Customer Details
+            </TabsTrigger>
+            <TabsTrigger 
+              value="vehicles" 
+              className="py-3 px-6 rounded-none data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none text-base font-medium"
+            >
+              <Truck className="h-4 w-4 mr-2" />
+              Vehicles ({vehicles.length})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="indents" 
+              className="py-3 px-6 rounded-none data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none text-base font-medium"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Fuel Indents ({indents.length})
+            </TabsTrigger>
+          </TabsList>
+        </div>
         
-        <TabsContent value="details" className="space-y-4 mt-4">
+        <TabsContent value="details" className="space-y-4 mt-0">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -384,7 +403,7 @@ const CustomerDetails = () => {
           </Card>
         </TabsContent>
         
-        <TabsContent value="vehicles" className="space-y-4 mt-4">
+        <TabsContent value="vehicles" className="space-y-4 mt-0">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Registered Vehicles</h2>
             <Dialog open={isVehicleDialogOpen} onOpenChange={setIsVehicleDialogOpen}>
@@ -490,7 +509,7 @@ const CustomerDetails = () => {
           )}
         </TabsContent>
         
-        <TabsContent value="indents" className="space-y-4 mt-4">
+        <TabsContent value="indents" className="space-y-4 mt-0">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Fuel Indents</h2>
             <Dialog open={isIndentDialogOpen} onOpenChange={setIsIndentDialogOpen}>

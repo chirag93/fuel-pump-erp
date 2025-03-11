@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,8 @@ import {
   Menu,
   X,
   Droplets,
-  UserCircle 
+  UserCircle,
+  Settings
 } from 'lucide-react';
 
 interface SidebarItemProps {
@@ -64,6 +66,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: <ClipboardList size={20} />, label: 'Daily Readings', to: '/daily-readings' },
     { icon: <ClipboardList size={20} />, label: 'Shift Management', to: '/shift' },
     { icon: <Droplets size={20} />, label: 'Fueling Process', to: '/fueling' },
+    { icon: <Settings size={20} />, label: 'Fuel Settings', to: '/fuel-settings' },
   ];
 
   return (

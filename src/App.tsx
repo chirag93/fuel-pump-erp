@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,6 +18,7 @@ import StockLevels from "./pages/StockLevels";
 import TestingDetails from "./pages/TestingDetails";
 import CustomerDetails from "./pages/CustomerDetails";
 import DailyReadings from "./pages/DailyReadings";
+import FuelPumpSettings from "./pages/FuelPumpSettings";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -44,6 +46,7 @@ const App = () => (
               <Route path="/fueling" element={<FuelingProcess />} />
               <Route path="/inventory" element={<StockLevels />} />
               <Route path="/testing" element={<TestingDetails />} />
+              <Route path="/fuel-settings" element={<FuelPumpSettings />} />
             </Route>
             <Route path="/landing" element={<Index />} />
             <Route path="*" element={<NotFound />} />
