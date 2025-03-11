@@ -38,7 +38,6 @@ export interface DailyReading {
   created_at?: string;
 }
 
-// Define interface for new pump_settings table
 export interface PumpSettings {
   id?: string;
   pump_number: string;
@@ -47,7 +46,6 @@ export interface PumpSettings {
   created_at?: string;
 }
 
-// Define interface for new business_settings table
 export interface BusinessSettings {
   id?: string;
   gst_number: string;
@@ -56,7 +54,6 @@ export interface BusinessSettings {
   updated_at?: string;
 }
 
-// Enhanced reading interface to include the new columns
 export interface Reading {
   id: string;
   shift_id: string;
@@ -73,7 +70,6 @@ export interface Reading {
   created_at?: string;
 }
 
-// Enhance fuel test interface to include the new column
 export interface FuelTest {
   id: string;
   fuel_type: 'Petrol' | 'Diesel';
@@ -87,4 +83,49 @@ export interface FuelTest {
   tested_by: string;
   created_at: string;
   tested_by_name?: string;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  contact: string;
+  phone: string;
+  email: string;
+  gst: string;
+  balance: number | null;
+  created_at?: string;
+}
+
+export interface Vehicle {
+  id: string;
+  customer_id: string;
+  number: string;
+  type: string;
+  capacity: string;
+  created_at?: string;
+}
+
+export interface Indent {
+  id: string;
+  customer_id: string;
+  vehicle_id: string;
+  fuel_type: string;
+  amount: number;
+  quantity: number;
+  status: string | null;
+  created_at?: string;
+}
+
+export interface Transaction {
+  id: string;
+  customer_id: string | null;
+  vehicle_id: string | null;
+  staff_id: string;
+  date: string;
+  fuel_type: string;
+  amount: number;
+  quantity: number;
+  payment_method: string;
+  indent_id: string | null;
+  created_at?: string;
 }

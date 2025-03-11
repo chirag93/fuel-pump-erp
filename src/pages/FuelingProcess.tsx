@@ -1,10 +1,8 @@
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, CreditCard, Truck, FileText } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import TransactionForm from '@/components/fuel/TransactionForm';
@@ -18,262 +16,275 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { supabase } from '@/integrations/supabase/client';
 
+// New interfaces aligned with the database schema
 interface Vehicle {
   id: string;
   number: string;
   type: string;
-  fuelType: string;
-  customerId: string;
+  capacity: string;
+  customer_id: string;
 }
 
 interface Customer {
   id: string;
   name: string;
-  company: string;
-  gstNumber: string;
-  creditLimit: number;
-  creditUsed: number;
-  vehicles: Vehicle[];
+  contact: string;
+  phone: string;
+  email: string;
+  gst: string;
+  balance: number | null;
 }
 
 interface Indent {
   id: string;
-  customerId: string;
-  customerName: string;
-  vehicleId: string;
-  vehicleNumber: string;
+  customer_id: string;
+  vehicle_id: string;
+  fuel_type: string;
   amount: number;
   quantity: number;
-  fuelType: string;
-  date: string;
-  status: 'pending' | 'completed';
+  status: string | null;
+  created_at: string | null;
+  // These fields are from joins
+  customer_name?: string;
+  vehicle_number?: string;
 }
 
 interface Transaction {
   id: string;
-  indentId: string | null;
-  vehicleNumber: string;
-  customerName: string | null;
-  fuelType: string;
+  indent_id: string | null;
+  customer_id: string | null;
+  vehicle_id: string | null;
+  staff_id: string;
+  date: string;
+  fuel_type: string;
   amount: number;
   quantity: number;
-  paymentMethod: 'cash' | 'card' | 'upi' | 'credit';
-  timestamp: string;
-  meterReading: string;
+  payment_method: string;
+  created_at: string | null;
+  // Display properties
+  vehicle_number?: string;
+  customer_name?: string;
 }
 
 interface ProcessIndentFormData {
   indentId: string;
   date: string;
   customerName: string;
+  customerId: string;
   vehicleNumber: string;
+  vehicleId: string;
   quantity: number;
   price: number;
   discount: number;
   totalAmount: number;
+  fuelType: string;
 }
 
-const mockCustomers: Customer[] = [
-  {
-    id: 'C001',
-    name: 'Reliance Industries',
-    company: 'Reliance Industries Ltd.',
-    gstNumber: '27AADCB2580K1ZG',
-    creditLimit: 100000,
-    creditUsed: 35000,
-    vehicles: [
-      { id: 'V001', number: 'MH 02 AB 1234', type: 'Truck', fuelType: 'Diesel', customerId: 'C001' },
-      { id: 'V002', number: 'MH 02 CD 5678', type: 'Truck', fuelType: 'Diesel', customerId: 'C001' }
-    ]
-  },
-  {
-    id: 'C002',
-    name: 'Tata Motors',
-    company: 'Tata Motors Ltd.',
-    gstNumber: '27AAACT2727Q1ZF',
-    creditLimit: 75000,
-    creditUsed: 15000,
-    vehicles: [
-      { id: 'V003', number: 'MH 03 EF 9012', type: 'Truck', fuelType: 'Diesel', customerId: 'C002' }
-    ]
-  },
-  {
-    id: 'C003',
-    name: 'Infosys',
-    company: 'Infosys Ltd.',
-    gstNumber: '29AAACI4741P1ZA',
-    creditLimit: 50000,
-    creditUsed: 5000,
-    vehicles: [
-      { id: 'V004', number: 'KA 01 GH 3456', type: 'Van', fuelType: 'Petrol', customerId: 'C003' },
-      { id: 'V005', number: 'KA 01 IJ 7890', type: 'Car', fuelType: 'Petrol', customerId: 'C003' }
-    ]
-  }
-];
-
-const mockIndents: Indent[] = [
-  {
-    id: 'I001',
-    customerId: 'C001',
-    customerName: 'Reliance Industries',
-    vehicleId: 'V001',
-    vehicleNumber: 'MH 02 AB 1234',
-    amount: 10000,
-    quantity: 100,
-    fuelType: 'Diesel',
-    date: '2023-05-15',
-    status: 'pending'
-  },
-  {
-    id: 'I002',
-    customerId: 'C002',
-    customerName: 'Tata Motors',
-    vehicleId: 'V003',
-    vehicleNumber: 'MH 03 EF 9012',
-    amount: 5000,
-    quantity: 50,
-    fuelType: 'Diesel',
-    date: '2023-05-14',
-    status: 'pending'
-  }
-];
-
-const mockTransactions: Transaction[] = [
-  {
-    id: 'T001',
-    indentId: 'I001',
-    vehicleNumber: 'MH 02 AB 1234',
-    customerName: 'Reliance Industries',
-    fuelType: 'Diesel',
-    amount: 5000,
-    quantity: 50,
-    paymentMethod: 'credit',
-    timestamp: '2023-05-15T10:30:00',
-    meterReading: '45678.5'
-  },
-  {
-    id: 'T002',
-    indentId: null,
-    vehicleNumber: 'KA 05 MM 1234',
-    customerName: null,
-    fuelType: 'Petrol',
-    amount: 1000,
-    quantity: 10,
-    paymentMethod: 'cash',
-    timestamp: '2023-05-15T11:15:00',
-    meterReading: '23456.8'
-  },
-  {
-    id: 'T003',
-    indentId: null,
-    vehicleNumber: 'TN 07 XY 9876',
-    customerName: null,
-    fuelType: 'Petrol',
-    amount: 2000,
-    quantity: 20,
-    paymentMethod: 'upi',
-    timestamp: '2023-05-15T12:05:00',
-    meterReading: '34567.2'
-  }
-];
-
 const FuelingProcess = () => {
-  const [customers] = useState<Customer[]>(mockCustomers);
-  const [indents] = useState<Indent[]>(mockIndents);
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const [indents, setIndents] = useState<Indent[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [selectedIndent, setSelectedIndent] = useState<Indent | null>(null);
-  
-  const [searchTerm, setSearchTerm] = useState('');
   const [processIndentDialogOpen, setProcessIndentDialogOpen] = useState(false);
-  const [customerNameSearch, setCustomerNameSearch] = useState('');
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const [indentFormData, setIndentFormData] = useState<ProcessIndentFormData>({
     indentId: '',
     date: new Date().toISOString().split('T')[0],
     customerName: '',
+    customerId: '',
     vehicleNumber: '',
+    vehicleId: '',
     quantity: 0,
     price: 0,
     discount: 0,
-    totalAmount: 0
+    totalAmount: 0,
+    fuelType: 'Petrol'
   });
 
-  const handleSelectIndent = (id: string) => {
-    const indent = indents.find(i => i.id === id) || null;
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchIndents();
+    fetchTransactions();
+    fetchCustomers();
+    fetchVehicles();
+  }, []);
+
+  const fetchIndents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('indents')
+        .select(`
+          *,
+          customer:customers(name),
+          vehicle:vehicles(number)
+        `)
+        .eq('status', 'Pending');
+      
+      if (error) throw error;
+      
+      if (data) {
+        const formattedIndents = data.map(item => ({
+          ...item,
+          customer_name: item.customer?.name,
+          vehicle_number: item.vehicle?.number
+        }));
+        setIndents(formattedIndents);
+      }
+    } catch (error) {
+      console.error('Error fetching indents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load indents",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const fetchTransactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          customer:customers(name),
+          vehicle:vehicles(number)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      
+      if (data) {
+        const formattedTransactions = data.map(item => ({
+          ...item,
+          customer_name: item.customer?.name,
+          vehicle_number: item.vehicle?.number
+        }));
+        setTransactions(formattedTransactions);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load transactions",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*');
+      
+      if (error) throw error;
+      
+      if (data) {
+        setCustomers(data);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    }
+  };
+
+  const fetchVehicles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select('*');
+      
+      if (error) throw error;
+      
+      if (data) {
+        setVehicles(data);
+      }
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+    }
+  };
+
+  const handleSelectIndent = (indent: Indent) => {
     setSelectedIndent(indent);
     
     if (indent) {
-      const customer = customers.find(c => c.id === indent.customerId) || null;
-      
       setIndentFormData({
         indentId: indent.id,
         date: new Date().toISOString().split('T')[0],
-        customerName: indent.customerName,
-        vehicleNumber: indent.vehicleNumber,
+        customerName: indent.customer_name || '',
+        customerId: indent.customer_id,
+        vehicleNumber: indent.vehicle_number || '',
+        vehicleId: indent.vehicle_id,
         quantity: indent.quantity,
         price: indent.amount / indent.quantity,
         discount: 0,
-        totalAmount: indent.amount
+        totalAmount: indent.amount,
+        fuelType: indent.fuel_type
       });
       
-      setSelectedCustomer(customer);
       setProcessIndentDialogOpen(true);
     }
   };
 
-  const handleProcessIndent = () => {
-    // Process the indent with the form data
-    console.log("Processing indent with data:", indentFormData);
-    
-    const newTransaction: Transaction = {
-      id: `T${transactions.length + 1}`.padStart(4, '0'),
-      indentId: indentFormData.indentId,
-      vehicleNumber: indentFormData.vehicleNumber,
-      customerName: indentFormData.customerName,
-      fuelType: selectedIndent?.fuelType || 'Petrol',
-      amount: indentFormData.totalAmount,
-      quantity: indentFormData.quantity,
-      paymentMethod: 'credit', // Default for indents is usually credit
-      timestamp: new Date().toISOString(),
-      meterReading: "0" // This should be entered by the user in a real implementation
-    };
-
-    setTransactions([newTransaction, ...transactions]);
-
-    toast({
-      title: "Indent processed",
-      description: "The indent has been successfully processed",
-    });
-    
-    setProcessIndentDialogOpen(false);
-    setSelectedIndent(null);
-  };
-
-  const handleCustomerNameChange = (value: string) => {
-    setCustomerNameSearch(value);
-    setIndentFormData({...indentFormData, customerName: value});
-    
-    // Filter customers based on name search
-    if (value.trim() !== '') {
-      const filtered = customers.filter(c => 
-        c.name.toLowerCase().includes(value.toLowerCase())
-      );
-      setFilteredCustomers(filtered);
-    } else {
-      setFilteredCustomers([]);
+  const handleProcessIndent = async () => {
+    try {
+      // Get current staff ID (this would be from your auth context in a real app)
+      // For now, we'll use a placeholder
+      const staffId = "00000000-0000-0000-0000-000000000000"; // Replace with actual logic to get staff ID
+      
+      // Create transaction record
+      const transactionId = `TRX${new Date().getTime()}`;
+      const transaction = {
+        id: transactionId,
+        indent_id: indentFormData.indentId,
+        customer_id: indentFormData.customerId,
+        vehicle_id: indentFormData.vehicleId,
+        staff_id: staffId,
+        date: indentFormData.date,
+        fuel_type: indentFormData.fuelType,
+        amount: indentFormData.totalAmount,
+        quantity: indentFormData.quantity,
+        payment_method: 'credit', // Indents are typically on credit
+      };
+      
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert(transaction);
+      
+      if (transactionError) throw transactionError;
+      
+      // Update indent status
+      const { error: indentError } = await supabase
+        .from('indents')
+        .update({ status: 'Completed' })
+        .eq('id', indentFormData.indentId);
+      
+      if (indentError) throw indentError;
+      
+      toast({
+        title: "Success",
+        description: "Indent processed successfully",
+      });
+      
+      // Refresh data
+      fetchIndents();
+      fetchTransactions();
+      
+      setProcessIndentDialogOpen(false);
+      setSelectedIndent(null);
+    } catch (error) {
+      console.error('Error processing indent:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process indent",
+        variant: "destructive"
+      });
     }
-  };
-
-  const selectCustomerFromSearch = (customer: Customer) => {
-    setIndentFormData({...indentFormData, customerName: customer.name});
-    setCustomerNameSearch(customer.name);
-    setFilteredCustomers([]);
-    setSelectedCustomer(customer);
   };
 
   const handlePriceOrQuantityChange = (field: 'price' | 'quantity' | 'discount', value: number) => {
@@ -290,10 +301,9 @@ const FuelingProcess = () => {
   };
 
   const filteredIndents = indents.filter(indent => 
-    indent.status === 'pending' && 
-    (indent.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     indent.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     indent.id.toLowerCase().includes(searchTerm.toLowerCase()))
+    indent.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    indent.vehicle_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    indent.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -330,18 +340,18 @@ const FuelingProcess = () => {
                   >
                     <div className="flex justify-between">
                       <p className="font-medium">
-                        {indent.id} - {indent.customerName}
+                        {indent.id} - {indent.customer_name}
                       </p>
                       <p className="text-sm text-muted-foreground">₹{indent.amount.toLocaleString()}</p>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <p>Vehicle: {indent.vehicleNumber}</p>
+                      <p>Vehicle: {indent.vehicle_number}</p>
                       <p>Quantity: {indent.quantity}L</p>
                     </div>
                     <div className="mt-2 flex justify-end">
                       <Button 
                         size="sm" 
-                        onClick={() => handleSelectIndent(indent.id)}
+                        onClick={() => handleSelectIndent(indent)}
                       >
                         Process Indent
                       </Button>
@@ -375,20 +385,28 @@ const FuelingProcess = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.slice(0, 5).map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell className="font-medium">{transaction.vehicleNumber}</TableCell>
-                  <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
-                  <TableCell>{transaction.quantity}L</TableCell>
-                  <TableCell className="capitalize">{transaction.paymentMethod}</TableCell>
-                  <TableCell>
-                    {new Date(transaction.timestamp).toLocaleTimeString('en-US', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </TableCell>
+              {transactions.length > 0 ? (
+                transactions.map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell className="font-medium">{transaction.vehicle_number || 'N/A'}</TableCell>
+                    <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
+                    <TableCell>{transaction.quantity}L</TableCell>
+                    <TableCell className="capitalize">{transaction.payment_method}</TableCell>
+                    <TableCell>
+                      {transaction.created_at 
+                        ? new Date(transaction.created_at).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
+                        : 'N/A'}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-4">No transactions found</TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -425,27 +443,11 @@ const FuelingProcess = () => {
             
             <div className="grid gap-2">
               <Label htmlFor="customerName">Customer Name</Label>
-              <div className="relative">
-                <Input
-                  id="customerName"
-                  value={customerNameSearch}
-                  onChange={(e) => handleCustomerNameChange(e.target.value)}
-                  placeholder="Start typing to search customers..."
-                />
-                {filteredCustomers.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
-                    {filteredCustomers.map(customer => (
-                      <div 
-                        key={customer.id}
-                        className="p-2 hover:bg-gray-100 cursor-pointer"
-                        onClick={() => selectCustomerFromSearch(customer)}
-                      >
-                        {customer.name}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <Input
+                id="customerName"
+                value={indentFormData.customerName}
+                readOnly
+              />
             </div>
             
             <div className="grid gap-2">
@@ -453,7 +455,7 @@ const FuelingProcess = () => {
               <Input
                 id="vehicleNumber"
                 value={indentFormData.vehicleNumber}
-                onChange={(e) => setIndentFormData({...indentFormData, vehicleNumber: e.target.value})}
+                readOnly
               />
             </div>
             
@@ -464,7 +466,7 @@ const FuelingProcess = () => {
                   id="quantity"
                   type="number"
                   value={indentFormData.quantity.toString()}
-                  onChange={(e) => handlePriceOrQuantityChange('quantity', parseFloat(e.target.value))}
+                  onChange={(e) => handlePriceOrQuantityChange('quantity', parseFloat(e.target.value) || 0)}
                 />
               </div>
               <div className="grid gap-2">
@@ -473,7 +475,7 @@ const FuelingProcess = () => {
                   id="price"
                   type="number"
                   value={indentFormData.price.toString()}
-                  onChange={(e) => handlePriceOrQuantityChange('price', parseFloat(e.target.value))}
+                  onChange={(e) => handlePriceOrQuantityChange('price', parseFloat(e.target.value) || 0)}
                 />
               </div>
             </div>
@@ -485,7 +487,7 @@ const FuelingProcess = () => {
                   id="discount"
                   type="number"
                   value={indentFormData.discount.toString()}
-                  onChange={(e) => handlePriceOrQuantityChange('discount', parseFloat(e.target.value))}
+                  onChange={(e) => handlePriceOrQuantityChange('discount', parseFloat(e.target.value) || 0)}
                 />
               </div>
               <div className="grid gap-2">
