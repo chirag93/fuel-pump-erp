@@ -14,7 +14,8 @@ import {
   X,
   Droplets,
   UserCircle,
-  Settings
+  Settings,
+  CalendarClock
 } from 'lucide-react';
 
 interface SidebarItemProps {
@@ -63,7 +64,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: <Users size={20} />, label: 'Customers', to: '/customers' },
     { icon: <UserCircle size={20} />, label: 'Staff', to: '/staff' },
     { icon: <Package size={20} />, label: 'Consumables', to: '/consumables' },
-    { icon: <ClipboardList size={20} />, label: 'Daily Readings', to: '/daily-readings' },
+    { icon: <CalendarClock size={20} />, label: 'Daily Readings', to: '/daily-readings' },
     { icon: <ClipboardList size={20} />, label: 'Shift Management', to: '/shift' },
     { icon: <Droplets size={20} />, label: 'Fueling Process', to: '/fueling' },
     { icon: <Settings size={20} />, label: 'Fuel Settings', to: '/fuel-settings' },

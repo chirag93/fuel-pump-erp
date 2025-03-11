@@ -38,6 +38,41 @@ export interface DailyReading {
   created_at?: string;
 }
 
+// Define interface for new pump_settings table
+export interface PumpSettings {
+  id?: string;
+  pump_number: string;
+  nozzle_count: number;
+  fuel_types: string[];
+  created_at?: string;
+}
+
+// Define interface for new business_settings table
+export interface BusinessSettings {
+  id?: string;
+  gst_number: string;
+  business_name: string;
+  address: string;
+  updated_at?: string;
+}
+
+// Enhanced reading interface to include the new columns
+export interface Reading {
+  id: string;
+  shift_id: string;
+  staff_id: string;
+  pump_id: string;
+  date: string;
+  opening_reading: number;
+  closing_reading: number | null;
+  cash_given: number;
+  cash_remaining: number | null;
+  card_sales: number | null;
+  upi_sales: number | null;
+  cash_sales: number | null;
+  created_at?: string;
+}
+
 // Enhance fuel test interface to include the new column
 export interface FuelTest {
   id: string;

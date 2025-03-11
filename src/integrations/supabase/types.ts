@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      business_settings: {
+        Row: {
+          address: string | null
+          business_name: string
+          gst_number: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          business_name: string
+          gst_number: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          business_name?: string
+          gst_number?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       consumables: {
         Row: {
           category: string | null
@@ -296,8 +320,36 @@ export type Database = {
         }
         Relationships: []
       }
+      pump_settings: {
+        Row: {
+          created_at: string | null
+          fuel_types: string[]
+          id: string
+          nozzle_count: number
+          pump_number: string
+        }
+        Insert: {
+          created_at?: string | null
+          fuel_types?: string[]
+          id?: string
+          nozzle_count?: number
+          pump_number: string
+        }
+        Update: {
+          created_at?: string | null
+          fuel_types?: string[]
+          id?: string
+          nozzle_count?: number
+          pump_number?: string
+        }
+        Relationships: []
+      }
       readings: {
         Row: {
+          card_sales: number | null
+          cash_given: number | null
+          cash_remaining: number | null
+          cash_sales: number | null
           closing_reading: number | null
           created_at: string | null
           date: string
@@ -306,8 +358,13 @@ export type Database = {
           pump_id: string
           shift_id: string
           staff_id: string
+          upi_sales: number | null
         }
         Insert: {
+          card_sales?: number | null
+          cash_given?: number | null
+          cash_remaining?: number | null
+          cash_sales?: number | null
           closing_reading?: number | null
           created_at?: string | null
           date: string
@@ -316,8 +373,13 @@ export type Database = {
           pump_id: string
           shift_id: string
           staff_id: string
+          upi_sales?: number | null
         }
         Update: {
+          card_sales?: number | null
+          cash_given?: number | null
+          cash_remaining?: number | null
+          cash_sales?: number | null
           closing_reading?: number | null
           created_at?: string | null
           date?: string
@@ -326,6 +388,7 @@ export type Database = {
           pump_id?: string
           shift_id?: string
           staff_id?: string
+          upi_sales?: number | null
         }
         Relationships: [
           {
