@@ -1,14 +1,23 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, CreditCard, Truck, Camera, FileText } from 'lucide-react';
+import { Search, CreditCard, Truck, FileText } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import TransactionForm from '@/components/fuel/TransactionForm';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Vehicle {
   id: string;
@@ -52,6 +61,17 @@ interface Transaction {
   paymentMethod: 'cash' | 'card' | 'upi' | 'credit';
   timestamp: string;
   meterReading: string;
+}
+
+interface ProcessIndentFormData {
+  indentId: string;
+  date: string;
+  customerName: string;
+  vehicleNumber: string;
+  quantity: number;
+  price: number;
+  discount: number;
+  totalAmount: number;
 }
 
 const mockCustomers: Customer[] = [
@@ -167,66 +187,106 @@ const FuelingProcess = () => {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [selectedIndent, setSelectedIndent] = useState<Indent | null>(null);
   
-  const [vehicleNumber, setVehicleNumber] = useState('');
-  const [amount, setAmount] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [fuelType, setFuelType] = useState('Petrol');
-  const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [indentId, setIndentId] = useState('');
-  const [meterReading, setMeterReading] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-
-  const handleSelectCustomer = (customerId: string) => {
-    const customer = customers.find(c => c.id === customerId) || null;
-    setSelectedCustomer(customer);
-    setSelectedVehicle(null);
-    setSelectedIndent(null);
-  };
-
-  const handleSelectVehicle = (vehicleId: string) => {
-    if (!selectedCustomer) return;
-    
-    const vehicle = selectedCustomer.vehicles.find(v => v.id === vehicleId) || null;
-    setSelectedVehicle(vehicle);
-    
-    if (vehicle) {
-      setVehicleNumber(vehicle.number);
-      setFuelType(vehicle.fuelType);
-      
-      const indent = indents.find(i => 
-        i.customerId === selectedCustomer.id && 
-        i.vehicleId === vehicle.id && 
-        i.status === 'pending'
-      ) || null;
-      
-      setSelectedIndent(indent);
-      if (indent) {
-        setIndentId(indent.id);
-        setAmount(indent.amount.toString());
-        setQuantity(indent.quantity.toString());
-      }
-    }
-  };
+  const [processIndentDialogOpen, setProcessIndentDialogOpen] = useState(false);
+  const [customerNameSearch, setCustomerNameSearch] = useState('');
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+  
+  const [indentFormData, setIndentFormData] = useState<ProcessIndentFormData>({
+    indentId: '',
+    date: new Date().toISOString().split('T')[0],
+    customerName: '',
+    vehicleNumber: '',
+    quantity: 0,
+    price: 0,
+    discount: 0,
+    totalAmount: 0
+  });
 
   const handleSelectIndent = (id: string) => {
     const indent = indents.find(i => i.id === id) || null;
     setSelectedIndent(indent);
     
     if (indent) {
-      setIndentId(indent.id);
-      setVehicleNumber(indent.vehicleNumber);
-      setAmount(indent.amount.toString());
-      setQuantity(indent.quantity.toString());
-      setFuelType(indent.fuelType);
-      
       const customer = customers.find(c => c.id === indent.customerId) || null;
-      setSelectedCustomer(customer);
       
-      if (customer) {
-        const vehicle = customer.vehicles.find(v => v.id === indent.vehicleId) || null;
-        setSelectedVehicle(vehicle);
-      }
+      setIndentFormData({
+        indentId: indent.id,
+        date: new Date().toISOString().split('T')[0],
+        customerName: indent.customerName,
+        vehicleNumber: indent.vehicleNumber,
+        quantity: indent.quantity,
+        price: indent.amount / indent.quantity,
+        discount: 0,
+        totalAmount: indent.amount
+      });
+      
+      setSelectedCustomer(customer);
+      setProcessIndentDialogOpen(true);
     }
+  };
+
+  const handleProcessIndent = () => {
+    // Process the indent with the form data
+    console.log("Processing indent with data:", indentFormData);
+    
+    const newTransaction: Transaction = {
+      id: `T${transactions.length + 1}`.padStart(4, '0'),
+      indentId: indentFormData.indentId,
+      vehicleNumber: indentFormData.vehicleNumber,
+      customerName: indentFormData.customerName,
+      fuelType: selectedIndent?.fuelType || 'Petrol',
+      amount: indentFormData.totalAmount,
+      quantity: indentFormData.quantity,
+      paymentMethod: 'credit', // Default for indents is usually credit
+      timestamp: new Date().toISOString(),
+      meterReading: "0" // This should be entered by the user in a real implementation
+    };
+
+    setTransactions([newTransaction, ...transactions]);
+
+    toast({
+      title: "Indent processed",
+      description: "The indent has been successfully processed",
+    });
+    
+    setProcessIndentDialogOpen(false);
+    setSelectedIndent(null);
+  };
+
+  const handleCustomerNameChange = (value: string) => {
+    setCustomerNameSearch(value);
+    setIndentFormData({...indentFormData, customerName: value});
+    
+    // Filter customers based on name search
+    if (value.trim() !== '') {
+      const filtered = customers.filter(c => 
+        c.name.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredCustomers(filtered);
+    } else {
+      setFilteredCustomers([]);
+    }
+  };
+
+  const selectCustomerFromSearch = (customer: Customer) => {
+    setIndentFormData({...indentFormData, customerName: customer.name});
+    setCustomerNameSearch(customer.name);
+    setFilteredCustomers([]);
+    setSelectedCustomer(customer);
+  };
+
+  const handlePriceOrQuantityChange = (field: 'price' | 'quantity' | 'discount', value: number) => {
+    const updates = { ...indentFormData, [field]: value };
+    
+    // Calculate total amount
+    const totalBeforeDiscount = updates.price * updates.quantity;
+    const totalAfterDiscount = totalBeforeDiscount - updates.discount;
+    
+    setIndentFormData({
+      ...updates,
+      totalAmount: totalAfterDiscount
+    });
   };
 
   const filteredIndents = indents.filter(indent => 
@@ -236,245 +296,220 @@ const FuelingProcess = () => {
      indent.id.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleRecordTransaction = (transaction: any) => {
-    console.log("Recording transaction:", transaction);
-    
-    const newTransaction: Transaction = {
-      id: `T${transactions.length + 1}`.padStart(4, '0'),
-      indentId: selectedIndent ? selectedIndent.id : null,
-      vehicleNumber: transaction.vehicleNumber,
-      customerName: selectedCustomer ? selectedCustomer.name : transaction.customerName || null,
-      fuelType: transaction.fuelType,
-      amount: parseFloat(transaction.amount.toString()),
-      quantity: parseFloat(transaction.quantity.toString()),
-      paymentMethod: transaction.paymentMethod as 'cash' | 'card' | 'upi' | 'credit',
-      timestamp: transaction.timestamp || new Date().toISOString(),
-      meterReading: transaction.meterReading
-    };
-
-    setTransactions([newTransaction, ...transactions]);
-
-    toast({
-      title: "Transaction recorded",
-      description: "The fueling transaction has been successfully recorded",
-    });
-
-    if (!selectedCustomer) {
-      setVehicleNumber('');
-    }
-    setAmount('');
-    setQuantity('');
-    setSelectedIndent(null);
-    setIndentId('');
-  };
-
-  const handleTakePicture = () => {
-    toast({
-      title: "Camera access required",
-      description: "This would open the camera to take a picture of the meter",
-    });
-  };
-
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Fueling Process</h1>
 
-      <Tabs defaultValue="direct">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="direct">Direct Fueling</TabsTrigger>
-          <TabsTrigger value="indent">Indent Based</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="direct">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Record Fueling Transaction</CardTitle>
-                <CardDescription>Enter details to record a direct fueling transaction</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <TransactionForm onSubmit={handleRecordTransaction} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Transactions</CardTitle>
-                <CardDescription>Last 5 transactions recorded</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Vehicle</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead>Time</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transactions.slice(0, 5).map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell className="font-medium">{transaction.vehicleNumber}</TableCell>
-                        <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
-                        <TableCell>{transaction.quantity}L</TableCell>
-                        <TableCell className="capitalize">{transaction.paymentMethod}</TableCell>
-                        <TableCell>
-                          {new Date(transaction.timestamp).toLocaleTimeString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="indent">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Process Indent</CardTitle>
-                <CardDescription>Select a customer or indent to process</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="searchIndent">Search Indent/Customer/Vehicle</Label>
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="searchIndent"
-                      placeholder="Search by indent ID, customer or vehicle"
-                      className="pl-8"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="border rounded-md max-h-60 overflow-y-auto">
-                  {filteredIndents.length > 0 ? (
-                    <div className="divide-y">
-                      {filteredIndents.map((indent) => (
-                        <div 
-                          key={indent.id}
-                          className={`p-3 cursor-pointer ${selectedIndent?.id === indent.id ? 'bg-muted' : 'hover:bg-muted/50'}`}
-                          onClick={() => handleSelectIndent(indent.id)}
-                        >
-                          <div className="flex justify-between">
-                            <p className="font-medium">
-                              {indent.id} - {indent.customerName}
-                            </p>
-                            <p className="text-sm text-muted-foreground">₹{indent.amount.toLocaleString()}</p>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <p>Vehicle: {indent.vehicleNumber}</p>
-                            <p>Quantity: {indent.quantity}L</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-6 text-center text-muted-foreground">
-                      No pending indents found matching your search
-                    </div>
-                  )}
-                </div>
-                
-                {selectedIndent && (
-                  <TransactionForm 
-                    onSubmit={handleRecordTransaction}
-                    vehicleNumber={vehicleNumber}
-                    amount={amount}
-                    quantity={quantity}
-                    fuelType={fuelType}
-                    customerId={selectedIndent.customerId}
-                    customerName={selectedIndent.customerName}
-                  />
-                )}
-              </CardContent>
-            </Card>
-            
-            <div className="space-y-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div className="space-y-1">
-                    <CardTitle>Pending Indents</CardTitle>
-                    <CardDescription>Indents waiting to be processed</CardDescription>
-                  </div>
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">
-                    {indents.filter(i => i.status === 'pending').length}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {indents.filter(i => i.status === 'pending').reduce((sum, i) => sum + i.amount, 0).toLocaleString()} ₹ total value
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div className="space-y-1">
-                    <CardTitle>Today's Transactions</CardTitle>
-                    <CardDescription>Fuel dispensed today</CardDescription>
-                  </div>
-                  <Truck className="h-5 w-5 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">
-                    {transactions.filter(t => 
-                      new Date(t.timestamp).toDateString() === new Date().toDateString()
-                    ).length}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {transactions
-                      .filter(t => new Date(t.timestamp).toDateString() === new Date().toDateString())
-                      .reduce((sum, t) => sum + t.quantity, 0)} liters dispensed
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div className="space-y-1">
-                    <CardTitle>Card/UPI Sales</CardTitle>
-                    <CardDescription>Digital payments today</CardDescription>
-                  </div>
-                  <CreditCard className="h-5 w-5 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">
-                    ₹{transactions
-                      .filter(t => 
-                        new Date(t.timestamp).toDateString() === new Date().toDateString() &&
-                        (t.paymentMethod === 'card' || t.paymentMethod === 'upi')
-                      )
-                      .reduce((sum, t) => sum + t.amount, 0)
-                      .toLocaleString()}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {(transactions
-                      .filter(t => 
-                        new Date(t.timestamp).toDateString() === new Date().toDateString() &&
-                        (t.paymentMethod === 'card' || t.paymentMethod === 'upi')
-                      ).length / Math.max(1, transactions
-                      .filter(t => 
-                        new Date(t.timestamp).toDateString() === new Date().toDateString()
-                      ).length) * 100).toFixed(1)}% of all transactions
-                  </p>
-                </CardContent>
-              </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Indents</CardTitle>
+          <CardDescription>Process pending fuel indents</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="searchIndent">Search Indent/Customer/Vehicle</Label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="searchIndent"
+                placeholder="Search by indent ID, customer or vehicle"
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
-        </TabsContent>
-      </Tabs>
+          
+          <div className="border rounded-md max-h-60 overflow-y-auto">
+            {filteredIndents.length > 0 ? (
+              <div className="divide-y">
+                {filteredIndents.map((indent) => (
+                  <div 
+                    key={indent.id}
+                    className={`p-3 cursor-pointer ${selectedIndent?.id === indent.id ? 'bg-muted' : 'hover:bg-muted/50'}`}
+                  >
+                    <div className="flex justify-between">
+                      <p className="font-medium">
+                        {indent.id} - {indent.customerName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">₹{indent.amount.toLocaleString()}</p>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <p>Vehicle: {indent.vehicleNumber}</p>
+                      <p>Quantity: {indent.quantity}L</p>
+                    </div>
+                    <div className="mt-2 flex justify-end">
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleSelectIndent(indent.id)}
+                      >
+                        Process Indent
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-6 text-center text-muted-foreground">
+                No pending indents found matching your search
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Transactions</CardTitle>
+          <CardDescription>Last 5 transactions recorded</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Vehicle</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead>Payment</TableHead>
+                <TableHead>Time</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {transactions.slice(0, 5).map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell className="font-medium">{transaction.vehicleNumber}</TableCell>
+                  <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
+                  <TableCell>{transaction.quantity}L</TableCell>
+                  <TableCell className="capitalize">{transaction.paymentMethod}</TableCell>
+                  <TableCell>
+                    {new Date(transaction.timestamp).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      
+      <Dialog open={processIndentDialogOpen} onOpenChange={setProcessIndentDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Process Indent</DialogTitle>
+            <DialogDescription>
+              Complete the details to process the selected indent
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="indentId">Indent Number</Label>
+                <Input
+                  id="indentId"
+                  value={indentFormData.indentId}
+                  readOnly
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="date">Date</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={indentFormData.date}
+                  onChange={(e) => setIndentFormData({...indentFormData, date: e.target.value})}
+                />
+              </div>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="customerName">Customer Name</Label>
+              <div className="relative">
+                <Input
+                  id="customerName"
+                  value={customerNameSearch}
+                  onChange={(e) => handleCustomerNameChange(e.target.value)}
+                  placeholder="Start typing to search customers..."
+                />
+                {filteredCustomers.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+                    {filteredCustomers.map(customer => (
+                      <div 
+                        key={customer.id}
+                        className="p-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => selectCustomerFromSearch(customer)}
+                      >
+                        {customer.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="vehicleNumber">Vehicle Number</Label>
+              <Input
+                id="vehicleNumber"
+                value={indentFormData.vehicleNumber}
+                onChange={(e) => setIndentFormData({...indentFormData, vehicleNumber: e.target.value})}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="quantity">Quantity</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  value={indentFormData.quantity.toString()}
+                  onChange={(e) => handlePriceOrQuantityChange('quantity', parseFloat(e.target.value))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="price">Price per unit</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  value={indentFormData.price.toString()}
+                  onChange={(e) => handlePriceOrQuantityChange('price', parseFloat(e.target.value))}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="discount">Discount (Optional)</Label>
+                <Input
+                  id="discount"
+                  type="number"
+                  value={indentFormData.discount.toString()}
+                  onChange={(e) => handlePriceOrQuantityChange('discount', parseFloat(e.target.value))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="totalAmount">Total Amount</Label>
+                <Input
+                  id="totalAmount"
+                  type="number"
+                  value={indentFormData.totalAmount.toString()}
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProcessIndentDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleProcessIndent}>
+              Process Indent
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -21,6 +21,7 @@ import DailyReadings from "./pages/DailyReadings";
 import FuelPumpSettings from "./pages/FuelPumpSettings";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import DashboardLayout from "./components/layout/DashboardLayout";
 
 const queryClient = new QueryClient();
 
@@ -35,18 +36,18 @@ const App = () => (
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
             <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/home" element={<Home />} />
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/customer/:id" element={<CustomerDetails />} />
-              <Route path="/staff" element={<StaffManagement />} />
-              <Route path="/consumables" element={<Consumables />} />
-              <Route path="/shift" element={<ShiftManagement />} />
-              <Route path="/daily-readings" element={<DailyReadings />} />
-              <Route path="/fueling" element={<FuelingProcess />} />
-              <Route path="/inventory" element={<StockLevels />} />
-              <Route path="/testing" element={<TestingDetails />} />
-              <Route path="/settings" element={<FuelPumpSettings />} />
+              <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
+              <Route path="/home" element={<DashboardLayout><Home /></DashboardLayout>} />
+              <Route path="/customers" element={<DashboardLayout><Customers /></DashboardLayout>} />
+              <Route path="/customer/:id" element={<DashboardLayout><CustomerDetails /></DashboardLayout>} />
+              <Route path="/staff" element={<DashboardLayout><StaffManagement /></DashboardLayout>} />
+              <Route path="/consumables" element={<DashboardLayout><Consumables /></DashboardLayout>} />
+              <Route path="/shift" element={<DashboardLayout><ShiftManagement /></DashboardLayout>} />
+              <Route path="/daily-readings" element={<DashboardLayout><DailyReadings /></DashboardLayout>} />
+              <Route path="/fueling" element={<DashboardLayout><FuelingProcess /></DashboardLayout>} />
+              <Route path="/inventory" element={<DashboardLayout><StockLevels /></DashboardLayout>} />
+              <Route path="/testing" element={<DashboardLayout><TestingDetails /></DashboardLayout>} />
+              <Route path="/settings" element={<DashboardLayout><FuelPumpSettings /></DashboardLayout>} />
             </Route>
             <Route path="/landing" element={<Index />} />
             <Route path="*" element={<NotFound />} />

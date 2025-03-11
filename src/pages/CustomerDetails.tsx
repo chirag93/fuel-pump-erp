@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -148,10 +147,10 @@ const CustomerDetails = () => {
 
   const handleAddVehicle = async () => {
     try {
-      if (!newVehicle.number || !newVehicle.capacity) {
+      if (!newVehicle.number) {
         toast({
           title: "Missing information",
-          description: "Please fill all required fields",
+          description: "Please enter a vehicle number",
           variant: "destructive"
         });
         return;
@@ -162,8 +161,8 @@ const CustomerDetails = () => {
         .insert([{
           customer_id: id,
           number: newVehicle.number,
-          type: newVehicle.type,
-          capacity: newVehicle.capacity
+          type: newVehicle.type || 'Not Specified',
+          capacity: newVehicle.capacity || 'Not Specified'
         }])
         .select();
 
@@ -261,18 +260,18 @@ const CustomerDetails = () => {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
+      
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <span className="ml-2 text-muted-foreground">Loading customer data...</span>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   if (!customer) {
     return (
-      <DashboardLayout>
+      
         <div className="flex flex-col items-center justify-center h-64">
           <p className="text-muted-foreground mb-4">Customer not found</p>
           <Button asChild>
@@ -282,12 +281,12 @@ const CustomerDetails = () => {
             </Link>
           </Button>
         </div>
-      </DashboardLayout>
+      
     );
   }
 
   return (
-    <DashboardLayout>
+    
       <div className="space-y-6">
         <div className="flex items-center">
           <Link to="/customers">
@@ -663,7 +662,7 @@ const CustomerDetails = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
+    
   );
 };
 
