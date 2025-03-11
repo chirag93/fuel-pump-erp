@@ -221,38 +221,98 @@ export type Database = {
           },
         ]
       }
+      indent_booklets: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          end_number: string
+          id: string
+          issued_date: string
+          start_number: string
+          status: string
+          total_indents: number
+          used_indents: number
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          end_number: string
+          id?: string
+          issued_date: string
+          start_number: string
+          status?: string
+          total_indents: number
+          used_indents?: number
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          end_number?: string
+          id?: string
+          issued_date?: string
+          start_number?: string
+          status?: string
+          total_indents?: number
+          used_indents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indent_booklets_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       indents: {
         Row: {
           amount: number
+          booklet_id: string | null
           created_at: string | null
           customer_id: string
+          date: string | null
           fuel_type: string
           id: string
+          indent_number: string | null
           quantity: number
           status: string | null
           vehicle_id: string
         }
         Insert: {
           amount: number
+          booklet_id?: string | null
           created_at?: string | null
           customer_id: string
+          date?: string | null
           fuel_type: string
           id: string
+          indent_number?: string | null
           quantity: number
           status?: string | null
           vehicle_id: string
         }
         Update: {
           amount?: number
+          booklet_id?: string | null
           created_at?: string | null
           customer_id?: string
+          date?: string | null
           fuel_type?: string
           id?: string
+          indent_number?: string | null
           quantity?: number
           status?: string | null
           vehicle_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "indents_booklet_id_fkey"
+            columns: ["booklet_id"]
+            isOneToOne: false
+            referencedRelation: "indent_booklets"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "indents_customer_id_fkey"
             columns: ["customer_id"]

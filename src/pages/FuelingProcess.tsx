@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Search, AlignJustify, FileText, Plus } from 'lucide-react';
+import { Search, FileText } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { supabase, Customer, Vehicle, Indent, Transaction, IndentBooklet } from '@/integrations/supabase/client';
 
@@ -46,7 +45,6 @@ const FuelingProcess = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   
   const [processIndentDialogOpen, setProcessIndentDialogOpen] = useState(false);
-  const [createIndentDialogOpen, setCreateIndentDialogOpen] = useState(false);
   
   // Default form data
   const [indentFormData, setIndentFormData] = useState<ProcessIndentFormData>({
@@ -86,8 +84,8 @@ const FuelingProcess = () => {
         .from('transactions')
         .select(`
           *,
-          customer:customers(name),
-          vehicle:vehicles(number)
+          customers(name),
+          vehicles(number)
         `)
         .order('created_at', { ascending: false })
         .limit(5);
@@ -97,8 +95,8 @@ const FuelingProcess = () => {
       if (data) {
         const formattedTransactions = data.map(item => ({
           ...item,
-          customer_name: item.customer?.name,
-          vehicle_number: item.vehicle?.number
+          customer_name: item.customers?.name,
+          vehicle_number: item.vehicles?.number
         }));
         setTransactions(formattedTransactions);
       }

@@ -9,79 +9,8 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-
-interface Customer {
-  id: string;
-  name: string;
-  contact: string;
-  phone: string;
-  email: string;
-  gst: string;
-  balance: number;
-  created_at?: string;
-}
-
-interface Vehicle {
-  id: string;
-  customer_id: string;
-  number: string;
-  type: string;
-  capacity: string;
-  created_at?: string;
-}
-
-interface Indent {
-  id: string;
-  customer_id: string;
-  vehicle_id: string;
-  fuel_type: string;
-  quantity: number;
-  amount: number;
-  status?: string;
-  created_at?: string;
-  vehicle_number?: string;
-  indent_number: string;
-  date: string;
-}
-
-interface IndentBooklet {
-  id: string;
-  customer_id: string;
-  start_number: string;
-  end_number: string;
-  issued_date: string;
-  total_indents: number;
-  used_indents: number;
-  status: 'Active' | 'Completed' | 'Cancelled';
-  created_at?: string;
-}
-
-interface Transaction {
-  id: string;
-  customer_id: string;
-  vehicle_id: string;
-  staff_id: string;
-  date: string;
-  fuel_type: string;
-  amount: number;
-  quantity: number;
-  payment_method: string;
-  indent_id: string | null;
-  created_at?: string;
-  vehicle_number?: string;
-}
-
-interface NewIndentData {
-  start_number: string;
-  end_number: string;
-  customer_id: string;
-  vehicle_id: string;
-  fuel_type: string;
-  quantity: number;
-  amount: number;
-}
+import { toast } from '@/hooks/use-toast';
+import { supabase, Customer, Vehicle, Indent, Transaction, IndentBooklet } from '@/integrations/supabase/client';
 
 interface NewBookletData {
   start_number: string;
@@ -113,18 +42,7 @@ const CustomerDetails = () => {
     issued_date: new Date().toISOString().split('T')[0]
   });
 
-  const [newIndent, setNewIndent] = useState<Partial<NewIndentData>>({
-    start_number: '',
-    end_number: '',
-    customer_id: id,
-    vehicle_id: '',
-    fuel_type: 'Petrol',
-    quantity: 0,
-    amount: 0
-  });
-
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
-  const [indentDialogOpen, setIndentDialogOpen] = useState(false);
   const [bookletDialogOpen, setBookletDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -179,7 +97,7 @@ const CustomerDetails = () => {
     try {
       const { data, error } = await supabase
         .from('indents')
-        .select('*, vehicles(number)')
+        .select(`*, vehicles(number)`)
         .eq('customer_id', customerId);
 
       if (error) throw error;
@@ -190,7 +108,7 @@ const CustomerDetails = () => {
         vehicle_number: indent.vehicles ? indent.vehicles.number : 'Unknown',
       }));
       
-      setIndents(processedIndents as Indent[]);
+      setIndents(processedIndents as unknown as Indent[]);
     } catch (error) {
       console.error('Error fetching indents:', error);
     }
@@ -205,7 +123,7 @@ const CustomerDetails = () => {
 
       if (error) throw error;
       
-      setIndentBooklets(data || []);
+      setIndentBooklets(data as IndentBooklet[]);
     } catch (error) {
       console.error('Error fetching indent booklets:', error);
     }
@@ -215,7 +133,7 @@ const CustomerDetails = () => {
     try {
       const { data, error } = await supabase
         .from('transactions')
-        .select('*, vehicles(number)')
+        .select(`*, vehicles(number)`)
         .eq('customer_id', customerId)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -228,7 +146,7 @@ const CustomerDetails = () => {
         vehicle_number: transaction.vehicles ? transaction.vehicles.number : 'Unknown',
       }));
       
-      setTransactions(processedTransactions as Transaction[]);
+      setTransactions(processedTransactions as unknown as Transaction[]);
     } catch (error) {
       console.error('Error fetching transactions:', error);
     }
@@ -342,71 +260,6 @@ const CustomerDetails = () => {
       toast({
         title: "Error",
         description: "Failed to issue indent booklet. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleAddIndent = async () => {
-    try {
-      if (!newIndent.vehicle_id || !newIndent.fuel_type || !newIndent.quantity || !newIndent.amount || 
-          !newIndent.start_number || !newIndent.end_number) {
-        toast({
-          title: "Missing information",
-          description: "Please fill all required fields",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Create a unique indent ID using the start and end numbers
-      const indentId = `IND-${newIndent.start_number}-${newIndent.end_number}`;
-
-      const { data, error } = await supabase
-        .from('indents')
-        .insert([{
-          id: indentId,
-          customer_id: id,
-          vehicle_id: newIndent.vehicle_id,
-          fuel_type: newIndent.fuel_type,
-          quantity: newIndent.quantity,
-          amount: newIndent.amount,
-          status: 'Pending'
-        }])
-        .select();
-
-      if (error) throw error;
-      
-      if (data) {
-        // Get the vehicle info for the newly added indent
-        const vehicle = vehicles.find(v => v.id === newIndent.vehicle_id);
-        const newIndentWithVehicle = {
-          ...data[0],
-          vehicle_number: vehicle ? vehicle.number : 'Unknown'
-        } as Indent;
-        
-        setIndents([...indents, newIndentWithVehicle]);
-        setIndentDialogOpen(false);
-        setNewIndent({
-          start_number: '',
-          end_number: '',
-          customer_id: id,
-          vehicle_id: '',
-          fuel_type: 'Petrol',
-          quantity: 0,
-          amount: 0
-        });
-        
-        toast({
-          title: "Success",
-          description: "Fuel indent created successfully"
-        });
-      }
-    } catch (error) {
-      console.error('Error adding indent:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create indent. Please try again.",
         variant: "destructive"
       });
     }
