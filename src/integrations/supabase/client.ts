@@ -129,6 +129,7 @@ export interface Indent {
   booklet_id: string | null;
   date: string;
   created_at?: string;
+  vehicle_number?: string; // Add this for join queries
 }
 
 export interface Transaction {
