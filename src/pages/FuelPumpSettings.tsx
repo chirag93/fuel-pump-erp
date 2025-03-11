@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,7 +26,6 @@ import {
   Trash2
 } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
-import DashboardLayout from '@/components/layout/DashboardLayout';
 
 interface FuelSettings {
   id: string;
@@ -83,7 +81,6 @@ const FuelPumpSettings = () => {
   const fetchSettings = async () => {
     setIsLoading(true);
     try {
-      // Fetch fuel settings
       const { data: fuelData, error: fuelError } = await supabase
         .from('fuel_settings')
         .select('*');
@@ -94,7 +91,6 @@ const FuelPumpSettings = () => {
         setFuelSettings(fuelData as FuelSettings[]);
       }
       
-      // Fetch pump settings
       const { data: pumpData, error: pumpError } = await supabase
         .from('pump_settings')
         .select('*');
@@ -105,7 +101,6 @@ const FuelPumpSettings = () => {
         setPumpSettings(pumpData as PumpSettings[]);
       }
       
-      // Fetch business settings
       const { data: businessData, error: businessError } = await supabase
         .from('business_settings')
         .select('*')
@@ -232,7 +227,6 @@ const FuelPumpSettings = () => {
         return;
       }
       
-      // Check if there's an existing record
       const { data: existingData, error: existingError } = await supabase
         .from('business_settings')
         .select('*');
@@ -240,7 +234,6 @@ const FuelPumpSettings = () => {
       if (existingError) throw existingError;
       
       if (existingData && existingData.length > 0) {
-        // Update existing record
         const { error } = await supabase
           .from('business_settings')
           .update({
@@ -252,7 +245,6 @@ const FuelPumpSettings = () => {
           
         if (error) throw error;
       } else {
-        // Insert new record
         const { error } = await supabase
           .from('business_settings')
           .insert([{
@@ -280,340 +272,336 @@ const FuelPumpSettings = () => {
   
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2 text-muted-foreground">Loading settings...</span>
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">Loading settings...</span>
+      </div>
     );
   }
   
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <Settings className="h-8 w-8 text-muted-foreground" />
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Settings</h1>
+        <Settings className="h-8 w-8 text-muted-foreground" />
+      </div>
+      
+      <Tabs defaultValue="fuel" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="fuel" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Droplet className="mr-2 h-4 w-4" />
+            Fuel Types
+          </TabsTrigger>
+          <TabsTrigger value="pumps" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Pump Configuration
+          </TabsTrigger>
+          <TabsTrigger value="business" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Settings className="mr-2 h-4 w-4" />
+            Business Settings
+          </TabsTrigger>
+        </TabsList>
         
-        <Tabs defaultValue="fuel" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="fuel" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Droplet className="mr-2 h-4 w-4" />
-              Fuel Types
-            </TabsTrigger>
-            <TabsTrigger value="pumps" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Pump Configuration
-            </TabsTrigger>
-            <TabsTrigger value="business" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Settings className="mr-2 h-4 w-4" />
-              Business Settings
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="fuel" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Fuel Types</h2>
-              <Dialog open={isAddFuelDialogOpen} onOpenChange={setIsAddFuelDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Fuel Type
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Fuel Type</DialogTitle>
-                    <DialogDescription>
-                      Configure new fuel type for your station
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="fuel_type">Fuel Type</Label>
-                      <Input 
-                        id="fuel_type" 
-                        placeholder="e.g. Petrol, Diesel, Premium"
-                        value={newFuelType.fuel_type}
-                        onChange={e => setNewFuelType({...newFuelType, fuel_type: e.target.value})}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="current_price">Current Price (per liter)</Label>
-                      <Input 
-                        id="current_price" 
-                        type="number"
-                        value={newFuelType.current_price?.toString()}
-                        onChange={e => setNewFuelType({...newFuelType, current_price: parseFloat(e.target.value)})}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="tank_capacity">Tank Capacity (liters)</Label>
-                      <Input 
-                        id="tank_capacity" 
-                        type="number"
-                        value={newFuelType.tank_capacity?.toString()}
-                        onChange={e => setNewFuelType({...newFuelType, tank_capacity: parseFloat(e.target.value)})}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="current_level">Current Stock Level (liters)</Label>
-                      <Input 
-                        id="current_level" 
-                        type="number"
-                        value={newFuelType.current_level?.toString()}
-                        onChange={e => setNewFuelType({...newFuelType, current_level: parseFloat(e.target.value)})}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsAddFuelDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={handleAddFuelType}>Add Fuel Type</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-            
-            <Card>
-              <CardContent className="pt-6">
-                {fuelSettings.length === 0 ? (
-                  <div className="py-8 text-center">
-                    <Droplet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No fuel types configured yet</p>
-                    <Button 
-                      variant="outline" 
-                      className="mt-4" 
-                      onClick={() => setIsAddFuelDialogOpen(true)}
-                    >
-                      Add First Fuel Type
-                    </Button>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Fuel Type</TableHead>
-                        <TableHead className="text-right">Price (₹/L)</TableHead>
-                        <TableHead className="text-right">Tank Capacity</TableHead>
-                        <TableHead className="text-right">Current Level</TableHead>
-                        <TableHead className="text-right">Last Updated</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {fuelSettings.map((fuel) => (
-                        <TableRow key={fuel.id}>
-                          <TableCell className="font-medium">{fuel.fuel_type}</TableCell>
-                          <TableCell className="text-right">₹{fuel.current_price.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{fuel.tank_capacity.toLocaleString()} L</TableCell>
-                          <TableCell className="text-right">{fuel.current_level.toLocaleString()} L</TableCell>
-                          <TableCell className="text-right">
-                            {fuel.updated_at 
-                              ? new Date(fuel.updated_at).toLocaleDateString()
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="ghost" size="icon">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="pumps" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Pump Configuration</h2>
-              <Dialog open={isAddPumpDialogOpen} onOpenChange={setIsAddPumpDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Pump
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Pump</DialogTitle>
-                    <DialogDescription>
-                      Configure a new fuel pump for your station
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="pump_number">Pump Number</Label>
-                      <Input 
-                        id="pump_number" 
-                        placeholder="e.g. P001, P002"
-                        value={newPump.pump_number}
-                        onChange={e => setNewPump({...newPump, pump_number: e.target.value})}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="nozzle_count">Number of Nozzles</Label>
-                      <Input 
-                        id="nozzle_count" 
-                        type="number"
-                        min="1"
-                        max="4"
-                        value={newPump.nozzle_count?.toString()}
-                        onChange={e => setNewPump({...newPump, nozzle_count: parseInt(e.target.value)})}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>Available Fuel Types</Label>
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        {fuelSettings.map(fuel => (
-                          <Button
-                            key={fuel.fuel_type}
-                            variant={newPump.fuel_types?.includes(fuel.fuel_type) ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => {
-                              const updatedFuelTypes = newPump.fuel_types || [];
-                              if (updatedFuelTypes.includes(fuel.fuel_type)) {
-                                setNewPump({
-                                  ...newPump, 
-                                  fuel_types: updatedFuelTypes.filter(f => f !== fuel.fuel_type)
-                                });
-                              } else {
-                                setNewPump({
-                                  ...newPump,
-                                  fuel_types: [...updatedFuelTypes, fuel.fuel_type]
-                                });
-                              }
-                            }}
-                          >
-                            {fuel.fuel_type}
-                          </Button>
-                        ))}
-                      </div>
-                      {fuelSettings.length === 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          No fuel types available. Add fuel types first.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsAddPumpDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={handleAddPump}>Add Pump</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-            
-            <Card>
-              <CardContent className="pt-6">
-                {pumpSettings.length === 0 ? (
-                  <div className="py-8 text-center">
-                    <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No pumps configured yet</p>
-                    <Button 
-                      variant="outline" 
-                      className="mt-4" 
-                      onClick={() => setIsAddPumpDialogOpen(true)}
-                    >
-                      Add First Pump
-                    </Button>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Pump Number</TableHead>
-                        <TableHead className="text-center">Nozzles</TableHead>
-                        <TableHead>Fuel Types</TableHead>
-                        <TableHead className="text-right">Created</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pumpSettings.map((pump) => (
-                        <TableRow key={pump.id}>
-                          <TableCell className="font-medium">{pump.pump_number}</TableCell>
-                          <TableCell className="text-center">{pump.nozzle_count}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {pump.fuel_types?.map((fuel, index) => (
-                                <span 
-                                  key={index}
-                                  className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary"
-                                >
-                                  {fuel}
-                                </span>
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {pump.created_at 
-                              ? new Date(pump.created_at).toLocaleDateString()
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="ghost" size="icon">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="business" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Business Information</CardTitle>
-                <CardDescription>Configure business details including GST information</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+        <TabsContent value="fuel" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Fuel Types</h2>
+            <Dialog open={isAddFuelDialogOpen} onOpenChange={setIsAddFuelDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Fuel Type
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Fuel Type</DialogTitle>
+                  <DialogDescription>
+                    Configure new fuel type for your station
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="business_name">Business Name</Label>
+                    <Label htmlFor="fuel_type">Fuel Type</Label>
                     <Input 
-                      id="business_name" 
-                      value={businessSettings.business_name} 
-                      onChange={e => setBusinessSettings({...businessSettings, business_name: e.target.value})}
+                      id="fuel_type" 
+                      placeholder="e.g. Petrol, Diesel, Premium"
+                      value={newFuelType.fuel_type}
+                      onChange={e => setNewFuelType({...newFuelType, fuel_type: e.target.value})}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="gst_number">GST Number</Label>
+                    <Label htmlFor="current_price">Current Price (per liter)</Label>
                     <Input 
-                      id="gst_number" 
-                      value={businessSettings.gst_number} 
-                      onChange={e => setBusinessSettings({...businessSettings, gst_number: e.target.value})}
+                      id="current_price" 
+                      type="number"
+                      value={newFuelType.current_price?.toString()}
+                      onChange={e => setNewFuelType({...newFuelType, current_price: parseFloat(e.target.value)})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="tank_capacity">Tank Capacity (liters)</Label>
+                    <Input 
+                      id="tank_capacity" 
+                      type="number"
+                      value={newFuelType.tank_capacity?.toString()}
+                      onChange={e => setNewFuelType({...newFuelType, tank_capacity: parseFloat(e.target.value)})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="current_level">Current Stock Level (liters)</Label>
+                    <Input 
+                      id="current_level" 
+                      type="number"
+                      value={newFuelType.current_level?.toString()}
+                      onChange={e => setNewFuelType({...newFuelType, current_level: parseFloat(e.target.value)})}
                     />
                   </div>
                 </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddFuelDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleAddFuelType}>Add Fuel Type</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          
+          <Card>
+            <CardContent className="pt-6">
+              {fuelSettings.length === 0 ? (
+                <div className="py-8 text-center">
+                  <Droplet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No fuel types configured yet</p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4" 
+                    onClick={() => setIsAddFuelDialogOpen(true)}
+                  >
+                    Add First Fuel Type
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fuel Type</TableHead>
+                      <TableHead className="text-right">Price (₹/L)</TableHead>
+                      <TableHead className="text-right">Tank Capacity</TableHead>
+                      <TableHead className="text-right">Current Level</TableHead>
+                      <TableHead className="text-right">Last Updated</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {fuelSettings.map((fuel) => (
+                      <TableRow key={fuel.id}>
+                        <TableCell className="font-medium">{fuel.fuel_type}</TableCell>
+                        <TableCell className="text-right">₹{fuel.current_price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{fuel.tank_capacity.toLocaleString()} L</TableCell>
+                        <TableCell className="text-right">{fuel.current_level.toLocaleString()} L</TableCell>
+                        <TableCell className="text-right">
+                          {fuel.updated_at 
+                            ? new Date(fuel.updated_at).toLocaleDateString()
+                            : 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="pumps" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Pump Configuration</h2>
+            <Dialog open={isAddPumpDialogOpen} onOpenChange={setIsAddPumpDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Pump
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Pump</DialogTitle>
+                  <DialogDescription>
+                    Configure a new fuel pump for your station
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="pump_number">Pump Number</Label>
+                    <Input 
+                      id="pump_number" 
+                      placeholder="e.g. P001, P002"
+                      value={newPump.pump_number}
+                      onChange={e => setNewPump({...newPump, pump_number: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="nozzle_count">Number of Nozzles</Label>
+                    <Input 
+                      id="nozzle_count" 
+                      type="number"
+                      min="1"
+                      max="4"
+                      value={newPump.nozzle_count?.toString()}
+                      onChange={e => setNewPump({...newPump, nozzle_count: parseInt(e.target.value)})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Available Fuel Types</Label>
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {fuelSettings.map(fuel => (
+                        <Button
+                          key={fuel.fuel_type}
+                          variant={newPump.fuel_types?.includes(fuel.fuel_type) ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            const updatedFuelTypes = newPump.fuel_types || [];
+                            if (updatedFuelTypes.includes(fuel.fuel_type)) {
+                              setNewPump({
+                                ...newPump, 
+                                fuel_types: updatedFuelTypes.filter(f => f !== fuel.fuel_type)
+                              });
+                            } else {
+                              setNewPump({
+                                ...newPump,
+                                fuel_types: [...updatedFuelTypes, fuel.fuel_type]
+                              });
+                            }
+                          }}
+                        >
+                          {fuel.fuel_type}
+                        </Button>
+                      ))}
+                    </div>
+                    {fuelSettings.length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        No fuel types available. Add fuel types first.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddPumpDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleAddPump}>Add Pump</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          
+          <Card>
+            <CardContent className="pt-6">
+              {pumpSettings.length === 0 ? (
+                <div className="py-8 text-center">
+                  <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No pumps configured yet</p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4" 
+                    onClick={() => setIsAddPumpDialogOpen(true)}
+                  >
+                    Add First Pump
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Pump Number</TableHead>
+                      <TableHead className="text-center">Nozzles</TableHead>
+                      <TableHead>Fuel Types</TableHead>
+                      <TableHead className="text-right">Created</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pumpSettings.map((pump) => (
+                      <TableRow key={pump.id}>
+                        <TableCell className="font-medium">{pump.pump_number}</TableCell>
+                        <TableCell className="text-center">{pump.nozzle_count}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {pump.fuel_types?.map((fuel, index) => (
+                              <span 
+                                key={index}
+                                className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary"
+                              >
+                                {fuel}
+                              </span>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {pump.created_at 
+                            ? new Date(pump.created_at).toLocaleDateString()
+                            : 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="business" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Business Information</CardTitle>
+              <CardDescription>Configure business details including GST information</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="address">Business Address</Label>
+                  <Label htmlFor="business_name">Business Name</Label>
                   <Input 
-                    id="address" 
-                    value={businessSettings.address} 
-                    onChange={e => setBusinessSettings({...businessSettings, address: e.target.value})}
+                    id="business_name" 
+                    value={businessSettings.business_name} 
+                    onChange={e => setBusinessSettings({...businessSettings, business_name: e.target.value})}
                   />
                 </div>
-                <div className="flex justify-end">
-                  <Button onClick={handleUpdateBusinessSettings}>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Business Settings
-                  </Button>
+                <div className="grid gap-2">
+                  <Label htmlFor="gst_number">GST Number</Label>
+                  <Input 
+                    id="gst_number" 
+                    value={businessSettings.gst_number} 
+                    onChange={e => setBusinessSettings({...businessSettings, gst_number: e.target.value})}
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </DashboardLayout>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="address">Business Address</Label>
+                <Input 
+                  id="address" 
+                  value={businessSettings.address} 
+                  onChange={e => setBusinessSettings({...businessSettings, address: e.target.value})}
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={handleUpdateBusinessSettings}>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Business Settings
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 
