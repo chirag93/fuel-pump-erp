@@ -124,7 +124,8 @@ const DailyReadings = () => {
           newReading.opening_stock === undefined || 
           newReading.receipt_quantity === undefined || 
           newReading.closing_stock === undefined || 
-          newReading.actual_meter_sales === undefined) {
+          newReading.actual_meter_sales === undefined ||
+          !newReading.date) {
         toast({
           title: "Missing information",
           description: "Please fill all required fields",
@@ -134,9 +135,18 @@ const DailyReadings = () => {
       }
 
       const calculatedValues = calculateVariation(newReading);
+      
+      // Create a complete reading object with all required fields
       const readingData = {
-        ...newReading,
-        ...calculatedValues
+        date: newReading.date,
+        fuel_type: newReading.fuel_type,
+        dip_reading: newReading.dip_reading,
+        opening_stock: newReading.opening_stock,
+        receipt_quantity: newReading.receipt_quantity,
+        closing_stock: newReading.closing_stock,
+        actual_meter_sales: newReading.actual_meter_sales,
+        sales_per_tank_stock: calculatedValues.sales_per_tank_stock,
+        stock_variation: calculatedValues.stock_variation
       };
 
       const { data, error } = await supabase
