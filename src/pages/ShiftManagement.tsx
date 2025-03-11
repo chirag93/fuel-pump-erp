@@ -34,7 +34,6 @@ interface Shift {
   pump_id: string;
   opening_reading: number;
   closing_reading: number | null;
-  testing_amount: number;
   starting_cash_balance: number;
   ending_cash_balance: number | null;
   card_sales: number | null;
@@ -59,7 +58,6 @@ const ShiftManagement = () => {
     staff_id: '',
     pump_id: '',
     opening_reading: 0,
-    testing_amount: 0,
     starting_cash_balance: 0,
     status: 'active',
     shift_type: 'day'
@@ -156,7 +154,6 @@ const ShiftManagement = () => {
               pump_id: readingsData?.pump_id || 'Unknown',
               opening_reading: readingsData?.opening_reading || 0,
               closing_reading: readingsData?.closing_reading || null,
-              testing_amount: readingsData?.testing_amount || 0,
               starting_cash_balance: readingsData?.cash_given || 0,
               ending_cash_balance: readingsData?.cash_remaining || null,
               card_sales: readingsData?.card_sales || null,
@@ -231,7 +228,6 @@ const ShiftManagement = () => {
           date: newShift.date,
           opening_reading: newShift.opening_reading,
           closing_reading: null,
-          testing_amount: newShift.testing_amount || 0,
           cash_given: newShift.starting_cash_balance || 0
         }]);
         
@@ -247,7 +243,6 @@ const ShiftManagement = () => {
         pump_id: newShift.pump_id || '',
         opening_reading: newShift.opening_reading || 0,
         closing_reading: null,
-        testing_amount: newShift.testing_amount || 0,
         starting_cash_balance: newShift.starting_cash_balance || 0,
         ending_cash_balance: null,
         card_sales: null,
@@ -269,7 +264,6 @@ const ShiftManagement = () => {
         pump_id: '',
         starting_cash_balance: 0,
         opening_reading: 0,
-        testing_amount: 0,
         status: 'active',
         shift_type: 'day'
       });
@@ -345,7 +339,6 @@ const ShiftManagement = () => {
               pump_id: readingsData?.pump_id || 'Unknown',
               opening_reading: readingsData?.opening_reading || 0,
               closing_reading: readingsData?.closing_reading || null,
-              testing_amount: readingsData?.testing_amount || 0,
               starting_cash_balance: readingsData?.cash_given || 0,
               ending_cash_balance: readingsData?.cash_remaining || null,
               card_sales: readingsData?.card_sales || null,
@@ -454,15 +447,6 @@ const ShiftManagement = () => {
                       onChange={(e) => setNewShift({...newShift, opening_reading: parseFloat(e.target.value)})}
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="testingAmount">Testing Amount</Label>
-                    <Input
-                      id="testingAmount"
-                      type="number"
-                      value={newShift.testing_amount?.toString()}
-                      onChange={(e) => setNewShift({...newShift, testing_amount: parseFloat(e.target.value)})}
-                    />
-                  </div>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="cashGiven">Starting Cash Balance</Label>
@@ -563,7 +547,6 @@ const ShiftManagement = () => {
                             <TableHead>Date</TableHead>
                             <TableHead>Start Time</TableHead>
                             <TableHead>Opening Reading</TableHead>
-                            <TableHead>Testing Amount</TableHead>
                             <TableHead>Starting Cash</TableHead>
                             <TableHead>Actions</TableHead>
                           </TableRow>
@@ -576,7 +559,6 @@ const ShiftManagement = () => {
                               <TableCell>{shift.date}</TableCell>
                               <TableCell>{formatTime(shift.start_time)}</TableCell>
                               <TableCell>{shift.opening_reading.toLocaleString()}</TableCell>
-                              <TableCell>{shift.testing_amount ? shift.testing_amount.toLocaleString() : '0'}</TableCell>
                               <TableCell>₹{shift.starting_cash_balance.toLocaleString()}</TableCell>
                               <TableCell>
                                 <Button 
