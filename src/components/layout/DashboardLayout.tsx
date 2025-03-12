@@ -67,7 +67,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: <Package size={20} />, label: 'Consumables', to: '/consumables' },
     { icon: <CalendarClock size={20} />, label: 'Daily Readings', to: '/daily-readings' },
     { icon: <ClipboardList size={20} />, label: 'Shift Management', to: '/shift' },
-    { icon: <FileText size={20} />, label: 'Record Indent', to: '/fueling' },
+    { icon: <FileText size={20} />, label: 'Record Indent', to: '/record-indent' },
   ];
 
   return (

@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -158,7 +159,7 @@ const Home = () => {
             title="Tank Unload"
             description="Record incoming fuel unloads and payments"
             icon={<Truck size={20} />}
-            href="/fueling"
+            href="/record-indent"
           />
           
           <QuickAction
@@ -179,7 +180,7 @@ const Home = () => {
             title="Record Transaction"
             description="Record sales via QR, card, or cash"
             icon={<CreditCard size={20} />}
-            href="/fueling"
+            href="/record-indent"
           />
           
           <QuickAction
