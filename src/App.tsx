@@ -1,3 +1,4 @@
+
 import {
   BrowserRouter as Router,
   Route,
@@ -10,15 +11,14 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import CustomerDetails from "./pages/CustomerDetails";
-import Staff from "./pages/Staff";
-import Inventory from "./pages/Inventory";
-import Settings from "./pages/Settings";
-import Shifts from "./pages/Shifts";
-import Readings from "./pages/Readings";
-import FuelTests from "./pages/FuelTests";
+import StaffManagement from "./pages/StaffManagement";
+import StockLevels from "./pages/StockLevels";
+import FuelPumpSettings from "./pages/FuelPumpSettings";
+import ShiftManagement from "./pages/ShiftManagement";
+import DailyReadings from "./pages/DailyReadings";
+import TestingDetails from "./pages/TestingDetails";
 import RecordIndent from "./pages/RecordIndent";
 import NotFound from "./pages/NotFound";
-import DashboardLayout from "./layouts/DashboardLayout";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -49,9 +49,7 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <Dashboard />
-              </DashboardLayout>
+              <Dashboard />
             </ProtectedRoute>
           }
         />
@@ -59,9 +57,7 @@ function App() {
           path="/customers"
           element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <Customers />
-              </DashboardLayout>
+              <Customers />
             </ProtectedRoute>
           }
         />
@@ -69,9 +65,7 @@ function App() {
           path="/customers/:id"
           element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <CustomerDetails />
-              </DashboardLayout>
+              <CustomerDetails />
             </ProtectedRoute>
           }
         />
@@ -79,9 +73,7 @@ function App() {
           path="/staff"
           element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <Staff />
-              </DashboardLayout>
+              <StaffManagement />
             </ProtectedRoute>
           }
         />
@@ -89,9 +81,7 @@ function App() {
           path="/inventory"
           element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <Inventory />
-              </DashboardLayout>
+              <StockLevels />
             </ProtectedRoute>
           }
         />
@@ -99,9 +89,7 @@ function App() {
           path="/settings"
           element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <Settings />
-              </DashboardLayout>
+              <FuelPumpSettings />
             </ProtectedRoute>
           }
         />
@@ -109,9 +97,7 @@ function App() {
           path="/shifts"
           element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <Shifts />
-              </DashboardLayout>
+              <ShiftManagement />
             </ProtectedRoute>
           }
         />
@@ -119,9 +105,7 @@ function App() {
           path="/readings"
           element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <Readings />
-              </DashboardLayout>
+              <DailyReadings />
             </ProtectedRoute>
           }
         />
@@ -129,9 +113,7 @@ function App() {
           path="/fuel-tests"
           element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <FuelTests />
-              </DashboardLayout>
+              <TestingDetails />
             </ProtectedRoute>
           }
         />
@@ -139,9 +121,7 @@ function App() {
           path="/record-indent"
           element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <RecordIndent />
-              </DashboardLayout>
+              <RecordIndent />
             </ProtectedRoute>
           }
         />
