@@ -1,9 +1,8 @@
 
-import { useLocation, Routes, Route, Outlet } from 'react-router-dom';
+import { useLocation, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 
 // Pages
 import Home from '@/pages/Home';
@@ -31,16 +30,8 @@ const App = () => {
         <Routes>
           <Route index element={<Home />} />
           <Route path="/login" element={<Login />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <Outlet />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          >
+          
+          <Route path="/" element={<ProtectedRoute />}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="customers" element={<Customers />} />
             <Route path="customers/:id" element={<CustomerDetails />} />
