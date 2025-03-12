@@ -4,6 +4,22 @@ import CustomerHeader from '@/components/customers/CustomerHeader';
 import CustomerTabs from '@/components/customers/CustomerTabs';
 import { useCustomerData } from '@/components/customers/hooks/useCustomerData';
 
+interface TransactionWithDetails {
+  id: string;
+  customer_id: string | null;
+  vehicle_id: string | null;
+  staff_id: string;
+  date: string;
+  fuel_type: string;
+  amount: number;
+  quantity: number;
+  payment_method: string;
+  indent_id: string | null;
+  created_at?: string;
+  vehicle_number?: string;
+  customer_name?: string;
+}
+
 const CustomerDetails = () => {
   const { id } = useParams<{ id: string }>();
   const customerId = id || '';
@@ -29,7 +45,7 @@ const CustomerDetails = () => {
           setVehicles={setVehicles}
           indentBooklets={indentBooklets}
           setIndentBooklets={setIndentBooklets}
-          transactions={transactions}
+          transactions={transactions as TransactionWithDetails[]}
           customerId={customerId}
         />
       )}

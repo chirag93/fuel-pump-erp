@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Search, FileText } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -32,7 +33,7 @@ interface ProcessIndentFormData {
   bookletId: string | null;
 }
 
-const FuelingProcess = () => {
+const RecordIndent = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [customerVehicles, setCustomerVehicles] = useState<Vehicle[]>([]);
@@ -42,6 +43,7 @@ const FuelingProcess = () => {
   const [customerIndentBooklets, setCustomerIndentBooklets] = useState<IndentBooklet[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   
   const [processIndentDialogOpen, setProcessIndentDialogOpen] = useState(false);
   
@@ -74,8 +76,13 @@ const FuelingProcess = () => {
     if (selectedCustomerId) {
       fetchCustomerIndentBooklets(selectedCustomerId);
       fetchCustomerVehicles(selectedCustomerId);
+      
+      const customer = customers.find(c => c.id === selectedCustomerId);
+      if (customer) {
+        setSelectedCustomer(customer);
+      }
     }
-  }, [selectedCustomerId]);
+  }, [selectedCustomerId, customers]);
 
   const fetchTransactions = async () => {
     try {
@@ -380,6 +387,18 @@ const FuelingProcess = () => {
         if (bookletError) throw bookletError;
       }
       
+      // Update customer balance (increase credit balance by transaction amount)
+      if (selectedCustomer) {
+        const newBalance = (selectedCustomer.balance || 0) + indentFormData.totalAmount;
+        
+        const { error: customerError } = await supabase
+          .from('customers')
+          .update({ balance: newBalance })
+          .eq('id', indentFormData.customerId);
+        
+        if (customerError) throw customerError;
+      }
+      
       toast({
         title: "Success",
         description: "Indent processed successfully",
@@ -387,6 +406,7 @@ const FuelingProcess = () => {
       
       // Refresh data
       fetchTransactions();
+      fetchCustomers(); // Refresh to get updated balance
       if (selectedCustomerId) {
         fetchCustomerIndentBooklets(selectedCustomerId);
       }
@@ -408,6 +428,7 @@ const FuelingProcess = () => {
         bookletId: null
       });
       setSelectedCustomerId(null);
+      setSelectedCustomer(null);
     } catch (error) {
       console.error('Error processing indent:', error);
       toast({
@@ -440,7 +461,7 @@ const FuelingProcess = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Fueling Process</h1>
+      <h1 className="text-3xl font-bold">Record Indent</h1>
 
       <Card>
         <CardHeader>
@@ -480,12 +501,12 @@ const FuelingProcess = () => {
                           Contact: {customer.contact} | Phone: {customer.phone}
                         </p>
                       </div>
-                      {customer.balance !== null && (
-                        <div className="text-right">
-                          <p className="font-medium">₹{customer.balance.toLocaleString()}</p>
-                          <p className="text-sm text-muted-foreground">Current Balance</p>
-                        </div>
-                      )}
+                      <div className="text-right">
+                        <p className={`font-medium ${customer.balance > 0 ? 'text-orange-600' : customer.balance < 0 ? 'text-green-600' : ''}`}>
+                          ₹{customer.balance !== null ? customer.balance.toLocaleString() : 0}
+                        </p>
+                        <p className="text-sm text-muted-foreground">Current Balance</p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -514,7 +535,7 @@ const FuelingProcess = () => {
           <CardTitle>Recent Transactions</CardTitle>
           <CardDescription>Last 5 fuel transactions</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -551,7 +572,7 @@ const FuelingProcess = () => {
       </Card>
       
       <Dialog open={processIndentDialogOpen} onOpenChange={setProcessIndentDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
+        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Process Indent Transaction</DialogTitle>
             <DialogDescription>
@@ -568,6 +589,19 @@ const FuelingProcess = () => {
                 className="bg-muted"
               />
             </div>
+
+            {selectedCustomer && (
+              <div className="p-2 border rounded-md bg-muted/40">
+                <p className="text-sm font-medium">Current Balance: 
+                  <span className={`ml-1 ${selectedCustomer.balance > 0 ? 'text-orange-600' : selectedCustomer.balance < 0 ? 'text-green-600' : ''}`}>
+                    ₹{selectedCustomer.balance !== null ? selectedCustomer.balance.toLocaleString() : 0}
+                  </span>
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Positive balance means credit given. This transaction will increase the credit amount.
+                </p>
+              </div>
+            )}
 
             <div className="grid gap-2">
               <Label htmlFor="bookletId">Indent Booklet</Label>
@@ -710,4 +744,4 @@ const FuelingProcess = () => {
   );
 };
 
-export default FuelingProcess;
+export default RecordIndent;

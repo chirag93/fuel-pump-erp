@@ -6,9 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertCircle, Lock, Mail, Database } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { migrateAllData } from '@/utils/seedDatabase';
+import { AlertCircle, Lock, Mail } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const Login = () => {
@@ -16,7 +14,6 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isMigrating, setIsMigrating] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -44,34 +41,6 @@ const Login = () => {
       console.error(err);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleMigrateData = async () => {
-    if (isMigrating) return; // Prevent multiple clicks
-    
-    setIsMigrating(true);
-    
-    try {
-      console.log("Starting data migration...");
-      const success = await migrateAllData();
-      
-      if (success) {
-        toast({
-          title: "Migration successful",
-          description: "Sample data has been successfully migrated to the database.",
-        });
-      }
-      // Error toasts are handled inside migrateAllData
-    } catch (error) {
-      console.error("Migration error:", error);
-      toast({
-        title: "Migration error",
-        description: "An unexpected error occurred during data migration.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsMigrating(false);
     }
   };
 
@@ -139,21 +108,6 @@ const Login = () => {
         <CardFooter className="flex flex-col space-y-4 pt-0">
           <div className="text-sm text-center text-muted-foreground mt-2">
             Don't have an account? Contact your administrator.
-          </div>
-          <div className="w-full border-t pt-4">
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              onClick={handleMigrateData}
-              disabled={isMigrating}
-            >
-              <Database className="mr-2 h-4 w-4" />
-              {isMigrating ? 'Migrating Data...' : 'Migrate Sample Data (One-Time)'}
-            </Button>
-            <p className="text-xs text-center text-muted-foreground mt-2">
-              This will perform a one-time migration of sample data to your database.
-              Already migrated data will not be duplicated.
-            </p>
           </div>
         </CardFooter>
       </Card>

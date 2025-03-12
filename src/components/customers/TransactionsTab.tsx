@@ -27,32 +27,34 @@ const TransactionsTab = ({ transactions }: TransactionsTabProps) => {
             <p className="text-muted-foreground">No transactions yet</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Fuel Type</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Indent ID</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
-                  <TableCell>{transaction.vehicle_number || 'N/A'}</TableCell>
-                  <TableCell>{transaction.fuel_type}</TableCell>
-                  <TableCell>{transaction.quantity} L</TableCell>
-                  <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
-                  <TableCell className="capitalize">{transaction.payment_method}</TableCell>
-                  <TableCell>{transaction.indent_id || '-'}</TableCell>
+          <div className="overflow-x-auto -mx-6">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="hidden md:table-cell">Vehicle</TableHead>
+                  <TableHead>Fuel Type</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead className="hidden md:table-cell">Payment</TableHead>
+                  <TableHead className="hidden md:table-cell">Indent ID</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
+                    <TableCell className="hidden md:table-cell">{transaction.vehicle_number || 'N/A'}</TableCell>
+                    <TableCell>{transaction.fuel_type}</TableCell>
+                    <TableCell>{transaction.quantity} L</TableCell>
+                    <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
+                    <TableCell className="hidden md:table-cell capitalize">{transaction.payment_method}</TableCell>
+                    <TableCell className="hidden md:table-cell">{transaction.indent_id || '-'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

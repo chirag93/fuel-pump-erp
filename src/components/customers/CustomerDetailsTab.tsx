@@ -50,6 +50,22 @@ const CustomerDetailsTab = ({ customer }: CustomerDetailsTabProps) => {
                 : 'Unknown'}
             </p>
           </div>
+          <div>
+            <h3 className="font-medium text-sm text-muted-foreground mb-2">Credit Balance</h3>
+            <p className={`font-semibold ${customer.balance > 0 ? 'text-orange-600' : customer.balance < 0 ? 'text-green-600' : ''}`}>
+              ₹{customer.balance !== null ? customer.balance.toLocaleString() : 0}
+              <span className="text-xs font-normal ml-2 text-muted-foreground">
+                {customer.balance > 0 ? '(Outstanding)' : customer.balance < 0 ? '(Advance)' : ''}
+              </span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {customer.balance > 0 
+                ? 'Positive balance indicates credit given to customer' 
+                : customer.balance < 0 
+                  ? 'Negative balance indicates advance payment from customer'
+                  : 'No outstanding balance'}
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>
