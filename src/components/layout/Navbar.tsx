@@ -1,146 +1,105 @@
 
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useMediaQuery } from '@/hooks/use-mobile';
-import { LogOut, Menu, X, Home, Fuel, Gauge, Users, ShoppingBag, Clock, Settings, ClipboardEdit } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import { Menu, X } from "lucide-react";
 
 interface NavbarProps {
   className?: string;
 }
 
-const Navbar = ({ className }: NavbarProps) => {
-  const { logout } = useAuth();
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  const [open, setOpen] = useState(false);
-  const location = useLocation();
+export function Navbar({ className }: NavbarProps) {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'Stock Levels', href: '/stock-levels', icon: Gauge },
-    { name: 'Customers', href: '/customers', icon: Users },
-    { name: 'Staff', href: '/staff-management', icon: Users },
-    { name: 'Daily Readings', href: '/daily-readings', icon: ClipboardEdit },
-    { name: 'Record Indent', href: '/fueling-process', icon: Fuel },
-    { name: 'Shift Management', href: '/shift-management', icon: Clock },
-    { name: 'Consumables', href: '/consumables', icon: ShoppingBag },
-    { name: 'Testing Details', href: '/testing-details', icon: ClipboardEdit },
-    { name: 'Pump Settings', href: '/pump-settings', icon: Settings },
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const navLinks = [
+    { name: "Features", href: "#features" },
+    { name: "Modules", href: "#modules" },
+    { name: "Pricing", href: "#pricing" },
+    { name: "About", href: "#about" },
   ];
 
-  const handleLogout = () => {
-    logout();
-    setOpen(false);
-  };
-
-  if (isMobile) {
-    return (
-      <header className={cn('fixed top-0 left-0 right-0 z-50 bg-white border-b h-14 flex items-center px-4', className)}>
-        <div className="flex items-center justify-between w-full">
-          <Link to="/" className="flex items-center">
-            <span className="font-bold text-lg">Fuel Station</span>
-          </Link>
-          
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-6 w-6" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0">
-              <div className="flex justify-between items-center px-6 h-14 border-b">
-                <span className="font-bold">Fuel Station</span>
-                <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-              <ScrollArea className="h-[calc(100vh-theme(spacing.14))]">
-                <nav className="flex flex-col gap-0.5 p-2">
-                  {navigation.map((item) => {
-                    const isActive = location.pathname === item.href;
-                    const Icon = item.icon;
-                    
-                    return (
-                      <Link
-                        key={item.name}
-                        to={item.href}
-                        onClick={() => setOpen(false)}
-                        className={cn(
-                          "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium",
-                          isActive
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-accent hover:text-accent-foreground"
-                        )}
-                      >
-                        <Icon className="h-5 w-5" />
-                        {item.name}
-                      </Link>
-                    );
-                  })}
-                </nav>
-                <Separator className="my-2" />
-                <div className="p-2">
-                  <Button 
-                    variant="outline" 
-                    className="w-full flex items-center justify-center gap-2"
-                    onClick={handleLogout}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Logout
-                  </Button>
-                </div>
-              </ScrollArea>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </header>
-    );
-  }
-
   return (
-    <header className={cn('sticky top-0 z-50 flex h-14 items-center border-b bg-background px-4 lg:px-6', className)}>
-      <Link to="/" className="flex items-center">
-        <span className="font-bold hidden md:inline-block">Fuel Station Management</span>
-        <span className="font-bold md:hidden">Fuel Station</span>
-      </Link>
-      <nav className="ml-auto flex items-center gap-4">
-        {navigation.map((item) => {
-          const isActive = location.pathname === item.href;
-          const Icon = item.icon;
-          
-          return (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-accent hover:text-accent-foreground"
-              )}
+    <header
+      className={cn(
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        isScrolled ? "bg-white/80 backdrop-blur-md shadow-soft dark:bg-black/50" : "bg-transparent",
+        className
+      )}
+    >
+      <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center">
+          <a href="/" className="flex items-center gap-2">
+            <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
+              FlowERP
+            </span>
+          </a>
+        </div>
+
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-6">
+          {navLinks.map((link) => (
+            <a
+              key={link.name}
+              href={link.href}
+              className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
             >
-              <Icon className="h-4 w-4" />
-              <span className="hidden lg:inline-block">{item.name}</span>
-            </Link>
-          );
-        })}
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="flex items-center gap-2"
-          onClick={handleLogout}
+              {link.name}
+            </a>
+          ))}
+        </nav>
+
+        <div className="hidden md:flex items-center gap-4">
+          <Button variant="ghost" size="sm">
+            Sign In
+          </Button>
+          <Button size="sm">Get Started</Button>
+        </div>
+
+        {/* Mobile Menu Button */}
+        <button
+          className="md:hidden rounded-md p-2 text-foreground"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
-          <LogOut className="h-4 w-4" />
-          <span className="hidden lg:inline-block">Logout</span>
-        </Button>
-      </nav>
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </div>
+
+      {/* Mobile Menu */}
+      <div
+        className={cn(
+          "md:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-sm transition-all duration-300 flex flex-col pt-20",
+          isMobileMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10 pointer-events-none"
+        )}
+      >
+        <nav className="flex flex-col items-center gap-6 p-8">
+          {navLinks.map((link) => (
+            <a
+              key={link.name}
+              href={link.href}
+              className="text-lg font-medium text-foreground/80 hover:text-foreground"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              {link.name}
+            </a>
+          ))}
+          <div className="flex flex-col w-full gap-4 mt-4">
+            <Button variant="outline" className="w-full">
+              Sign In
+            </Button>
+            <Button className="w-full">Get Started</Button>
+          </div>
+        </nav>
+      </div>
     </header>
   );
-};
-
-export default Navbar;
+}

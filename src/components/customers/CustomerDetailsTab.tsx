@@ -16,12 +16,12 @@ const CustomerDetailsTab = ({ customer }: CustomerDetailsTabProps) => {
           <CardTitle>Customer Information</CardTitle>
           <Button variant="outline" size="sm" className="gap-1">
             <Edit className="h-4 w-4" />
-            <span className="hidden sm:inline">Edit</span>
+            Edit
           </Button>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           <div>
             <h3 className="font-medium text-sm text-muted-foreground mb-2">Business Name</h3>
             <p className="font-semibold">{customer.name}</p>
@@ -48,22 +48,6 @@ const CustomerDetailsTab = ({ customer }: CustomerDetailsTabProps) => {
               {customer.created_at 
                 ? new Date(customer.created_at).toLocaleDateString() 
                 : 'Unknown'}
-            </p>
-          </div>
-          <div className="md:col-span-2">
-            <h3 className="font-medium text-sm text-muted-foreground mb-2">Credit Balance</h3>
-            <p className={`font-semibold ${customer.balance > 0 ? 'text-orange-600' : customer.balance < 0 ? 'text-green-600' : ''}`}>
-              ₹{customer.balance !== null ? customer.balance.toLocaleString() : 0}
-              <span className="text-xs font-normal ml-2 text-muted-foreground">
-                {customer.balance > 0 ? '(Outstanding)' : customer.balance < 0 ? '(Advance)' : ''}
-              </span>
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {customer.balance > 0 
-                ? 'Positive balance indicates credit given to customer' 
-                : customer.balance < 0 
-                  ? 'Negative balance indicates advance payment from customer'
-                  : 'No outstanding balance'}
             </p>
           </div>
         </div>

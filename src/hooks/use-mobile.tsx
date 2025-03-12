@@ -1,32 +1,19 @@
+import * as React from "react"
 
-import { useState, useEffect } from 'react';
+const MOBILE_BREAKPOINT = 768
 
-// Simple hook to check if screen size matches a specific query
-export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false);
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
 
-  useEffect(() => {
-    const media = window.matchMedia(query);
-    if (media.matches !== matches) {
-      setMatches(media.matches);
+  React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+    const onChange = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
-    
-    const listener = () => setMatches(media.matches);
-    window.addEventListener('resize', listener);
-    
-    return () => window.removeEventListener('resize', listener);
-  }, [matches, query]);
+    mql.addEventListener("change", onChange)
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    return () => mql.removeEventListener("change", onChange)
+  }, [])
 
-  return matches;
+  return !!isMobile
 }
-
-// Hook to check if the current device is mobile
-export const useMobile = () => {
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  return isMobile;
-};
-
-// Aliasing useMobile as useIsMobile for backward compatibility
-export const useIsMobile = useMobile;
-
-export default useMobile;

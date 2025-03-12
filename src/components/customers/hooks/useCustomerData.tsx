@@ -110,12 +110,10 @@ export const useCustomerData = (customerId: string) => {
     try {
       const { data, error } = await supabase
         .from('transactions')
-        .select(`
-          *,
-          vehicles:vehicle_id(number)
-        `)
+        .select(`*, vehicles(number)`)
         .eq('customer_id', id)
-        .order('date', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10);
 
       if (error) throw error;
       
@@ -131,52 +129,6 @@ export const useCustomerData = (customerId: string) => {
     }
   };
 
-  // Function to update customer balance when a new transaction is added
-  const updateCustomerBalance = async (transaction: Transaction) => {
-    try {
-      if (customer) {
-        let balanceChange = 0;
-        
-        // If payment method is credit, add to balance
-        if (transaction.payment_method === 'credit') {
-          balanceChange = transaction.amount;
-        } 
-        // If payment method is cash or other, subtract from balance
-        else if (transaction.payment_method === 'cash') {
-          balanceChange = -transaction.amount;
-        }
-        
-        // Calculate new balance
-        const newBalance = (customer.balance || 0) + balanceChange;
-        
-        // Update customer record
-        const { error } = await supabase
-          .from('customers')
-          .update({ balance: newBalance })
-          .eq('id', customer.id);
-        
-        if (error) throw error;
-        
-        // Update local state
-        setCustomer({
-          ...customer,
-          balance: newBalance
-        });
-        
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error updating customer balance:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update customer balance",
-        variant: "destructive"
-      });
-      return false;
-    }
-  };
-
   return {
     customer,
     vehicles,
@@ -185,7 +137,6 @@ export const useCustomerData = (customerId: string) => {
     transactions,
     isLoading,
     setVehicles,
-    setIndentBooklets,
-    updateCustomerBalance
+    setIndentBooklets
   };
 };

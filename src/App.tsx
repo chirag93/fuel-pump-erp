@@ -1,67 +1,60 @@
 
-import { useLocation, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider } from '@/contexts/AuthContext';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { useAuth } from '@/contexts/AuthContext';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Home from "./pages/Home";
+import Customers from "./pages/Customers";
+import StaffManagement from "./pages/StaffManagement";
+import Consumables from "./pages/Consumables";
+import ShiftManagement from "./pages/ShiftManagement";
+import FuelingProcess from "./pages/FuelingProcess";
+import StockLevels from "./pages/StockLevels";
+import TestingDetails from "./pages/TestingDetails";
+import CustomerDetails from "./pages/CustomerDetails";
+import DailyReadings from "./pages/DailyReadings";
+import FuelPumpSettings from "./pages/FuelPumpSettings";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
-// Pages
-import Home from '@/pages/Home';
-import Login from '@/pages/Login';
-import Dashboard from '@/pages/Dashboard';
-import Customers from '@/pages/Customers';
-import CustomerDetails from '@/pages/CustomerDetails';
-import Consumables from '@/pages/Consumables';
-import StockLevels from '@/pages/StockLevels';
-import DailyReadings from '@/pages/DailyReadings';
-import RecordIndent from '@/pages/FuelingProcess';
-import StaffManagement from '@/pages/StaffManagement';
-import ShiftManagement from '@/pages/ShiftManagement';
-import TestingDetails from '@/pages/TestingDetails';
-import FuelPumpSettings from '@/pages/FuelPumpSettings';
-import NotFound from '@/pages/NotFound';
+const queryClient = new QueryClient();
 
-// Check if user is authenticated and redirect accordingly
-const RedirectBasedOnAuth = () => {
-  const { isAuthenticated, isLoading } = useAuth();
-  
-  if (isLoading) return <div>Loading...</div>;
-  
-  return isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />;
-};
-
-const App = () => {
-  const location = useLocation();
-  const isAuthPage = ["/login"].includes(location.pathname);
-
-  return (
-    <>
-      <AuthProvider>
-        <Routes>
-          {/* Redirect from root path based on authentication status */}
-          <Route path="/" element={<RedirectBasedOnAuth />} />
-          <Route path="/login" element={<Login />} />
-          
-          <Route path="/" element={<ProtectedRoute />}>
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="customers" element={<Customers />} />
-            <Route path="customers/:id" element={<CustomerDetails />} />
-            <Route path="consumables" element={<Consumables />} />
-            <Route path="stock-levels" element={<StockLevels />} />
-            <Route path="daily-readings" element={<DailyReadings />} />
-            <Route path="fueling-process" element={<RecordIndent />} />
-            <Route path="staff-management" element={<StaffManagement />} />
-            <Route path="shift-management" element={<ShiftManagement />} />
-            <Route path="testing-details" element={<TestingDetails />} />
-            <Route path="pump-settings" element={<FuelPumpSettings />} />
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<Login />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/home" element={<Home />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/customer/:id" element={<CustomerDetails />} />
+              <Route path="/staff" element={<StaffManagement />} />
+              <Route path="/consumables" element={<Consumables />} />
+              <Route path="/shift" element={<ShiftManagement />} />
+              <Route path="/daily-readings" element={<DailyReadings />} />
+              <Route path="/fueling" element={<FuelingProcess />} />
+              <Route path="/inventory" element={<StockLevels />} />
+              <Route path="/testing" element={<TestingDetails />} />
+              <Route path="/settings" element={<FuelPumpSettings />} />
+            </Route>
+            <Route path="/landing" element={<Index />} />
             <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
-      </AuthProvider>
-
-      {!isAuthPage && <Toaster />}
-    </>
-  );
-};
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
 
 export default App;
