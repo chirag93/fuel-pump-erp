@@ -1,5 +1,5 @@
 
-import { useLocation, Routes, Route } from 'react-router-dom';
+import { useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -19,16 +19,27 @@ import ShiftManagement from '@/pages/ShiftManagement';
 import TestingDetails from '@/pages/TestingDetails';
 import FuelPumpSettings from '@/pages/FuelPumpSettings';
 import NotFound from '@/pages/NotFound';
+import { useAuth } from '@/contexts/AuthContext';
+
+// Check if user is authenticated and redirect accordingly
+const RedirectBasedOnAuth = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) return <div>Loading...</div>;
+  
+  return isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />;
+};
 
 const App = () => {
   const location = useLocation();
-  const isAuthPage = ["/", "/login"].includes(location.pathname);
+  const isAuthPage = ["/login"].includes(location.pathname);
 
   return (
     <>
       <AuthProvider>
         <Routes>
-          <Route index element={<Home />} />
+          {/* Redirect from root path based on authentication status */}
+          <Route path="/" element={<RedirectBasedOnAuth />} />
           <Route path="/login" element={<Login />} />
           
           <Route path="/" element={<ProtectedRoute />}>

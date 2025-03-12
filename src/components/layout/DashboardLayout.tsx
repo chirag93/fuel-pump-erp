@@ -1,11 +1,10 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   BarChart4, 
-  Home, 
   Users, 
   Package, 
   ClipboardList, 
@@ -48,7 +47,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -58,30 +57,40 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     setSidebarOpen(!sidebarOpen);
   };
 
+  // Close sidebar on mobile when navigating
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
   const navItems = [
     { icon: <BarChart4 size={20} />, label: 'Dashboard', to: '/dashboard' },
-    { icon: <Home size={20} />, label: 'Home', to: '/home' },
     { icon: <Users size={20} />, label: 'Customers', to: '/customers' },
-    { icon: <UserCircle size={20} />, label: 'Staff', to: '/staff' },
+    { icon: <UserCircle size={20} />, label: 'Staff Management', to: '/staff-management' },
     { icon: <Package size={20} />, label: 'Consumables', to: '/consumables' },
     { icon: <CalendarClock size={20} />, label: 'Daily Readings', to: '/daily-readings' },
-    { icon: <ClipboardList size={20} />, label: 'Shift Management', to: '/shift' },
-    { icon: <Droplets size={20} />, label: 'Fueling Process', to: '/fueling' },
+    { icon: <ClipboardList size={20} />, label: 'Shift Management', to: '/shift-management' },
+    { icon: <Droplets size={20} />, label: 'Fueling Process', to: '/fueling-process' },
+    { icon: <Settings size={20} />, label: 'Pump Settings', to: '/pump-settings' },
   ];
 
   return (
     <div className="flex min-h-screen bg-background">
+      {/* Mobile menu toggle button */}
       <button
-        className="fixed left-4 top-4 z-50 md:hidden"
+        className="fixed left-4 top-4 z-50 rounded-md bg-background p-2 shadow-md md:hidden"
         onClick={toggleSidebar}
+        aria-label="Toggle menu"
       >
         {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
       
+      {/* Sidebar / Navigation */}
       <aside
-        className={`${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } fixed inset-y-0 z-30 w-64 border-r bg-card transition-transform duration-200 md:translate-x-0`}
+        className={`
+          fixed inset-y-0 z-30 w-64 transform border-r bg-card transition-transform duration-200 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
+          md:translate-x-0
+        `}
       >
         <div className="flex h-16 items-center border-b px-6">
           <h2 className="text-xl font-bold">Fuel Pump ERP</h2>
@@ -100,23 +109,17 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
         
         <div className="absolute bottom-0 w-full border-t p-4">
-          <div className="mb-2">
-            <SidebarItem
-              icon={<Settings size={20} />}
-              label="Settings"
-              to="/settings"
-              active={pathname === "/settings"}
-            />
-          </div>
-          <div className="mb-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-              <UserCircle />
+          {user && (
+            <div className="mb-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                <UserCircle />
+              </div>
+              <div>
+                <p className="font-medium">{user?.username}</p>
+                <p className="text-xs text-muted-foreground capitalize">{user?.role || 'User'}</p>
+              </div>
             </div>
-            <div>
-              <p className="font-medium">{user?.username}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
-            </div>
-          </div>
+          )}
           <Button 
             variant="outline" 
             className="w-full justify-start" 
@@ -128,7 +131,15 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
       </aside>
       
+      {/* Main content */}
       <main className="flex-1 md:ml-64">
+        {/* Backdrop for mobile sidebar */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 z-20 bg-black/50 md:hidden" 
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
         <div className="container py-6">
           {children}
         </div>
