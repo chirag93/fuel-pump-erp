@@ -25,7 +25,7 @@ const TransactionsTab = ({ transactions, customerName = 'Customer' }: Transactio
       transaction.vehicle_number || 'N/A',
       transaction.fuel_type,
       `${transaction.quantity} L`,
-      `${transaction.amount.toFixed(2)}`, // Fixed to 2 decimal places, removed rupee symbol
+      `₹${transaction.amount}`,
       transaction.indent_id || '-'
     ]);
     
