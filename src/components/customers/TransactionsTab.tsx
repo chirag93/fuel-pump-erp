@@ -35,7 +35,6 @@ const TransactionsTab = ({ transactions }: TransactionsTabProps) => {
                 <TableHead>Fuel Type</TableHead>
                 <TableHead>Quantity</TableHead>
                 <TableHead>Amount</TableHead>
-                <TableHead>Payment</TableHead>
                 <TableHead>Indent ID</TableHead>
               </TableRow>
             </TableHeader>
@@ -47,7 +46,6 @@ const TransactionsTab = ({ transactions }: TransactionsTabProps) => {
                   <TableCell>{transaction.fuel_type}</TableCell>
                   <TableCell>{transaction.quantity} L</TableCell>
                   <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
-                  <TableCell className="capitalize">{transaction.payment_method}</TableCell>
                   <TableCell>{transaction.indent_id || '-'}</TableCell>
                 </TableRow>
               ))}

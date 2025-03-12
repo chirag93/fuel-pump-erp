@@ -13,7 +13,7 @@ import Customers from "./pages/Customers";
 import StaffManagement from "./pages/StaffManagement";
 import Consumables from "./pages/Consumables";
 import ShiftManagement from "./pages/ShiftManagement";
-import FuelingProcess from "./pages/FuelingProcess";
+import RecordIndent from "./pages/RecordIndent";
 import StockLevels from "./pages/StockLevels";
 import TestingDetails from "./pages/TestingDetails";
 import CustomerDetails from "./pages/CustomerDetails";
@@ -43,7 +43,7 @@ const App = () => (
               <Route path="/consumables" element={<Consumables />} />
               <Route path="/shift" element={<ShiftManagement />} />
               <Route path="/daily-readings" element={<DailyReadings />} />
-              <Route path="/fueling" element={<FuelingProcess />} />
+              <Route path="/record-indent" element={<RecordIndent />} />
               <Route path="/inventory" element={<StockLevels />} />
               <Route path="/testing" element={<TestingDetails />} />
               <Route path="/settings" element={<FuelPumpSettings />} />

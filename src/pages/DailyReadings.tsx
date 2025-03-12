@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2 } from 'lucide-react';
 import { 
   Dialog,
   DialogContent,
@@ -12,6 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,9 +50,12 @@ const calculateVariation = (reading: Partial<DailyReading>) => {
 
 const DailyReadings = () => {
   const [readings, setReadings] = useState<DailyReading[]>([]);
-  const [newReadingDialogOpen, setNewReadingDialogOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [newReading, setNewReading] = useState<Partial<DailyReading>>({
+  const [isEditing, setIsEditing] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedReadingId, setSelectedReadingId] = useState<string | null>(null);
+  const [readingData, setReadingData] = useState<Partial<DailyReading>>({
     date: new Date().toISOString().split('T')[0],
     fuel_type: '',
     dip_reading: 0,
@@ -81,47 +94,21 @@ const DailyReadings = () => {
     }
   };
 
-  const handleAddReading = async () => {
-    try {
-      if (!newReading.fuel_type || 
-          newReading.dip_reading === undefined || 
-          newReading.opening_stock === undefined || 
-          newReading.receipt_quantity === undefined || 
-          newReading.closing_stock === undefined || 
-          newReading.actual_meter_sales === undefined ||
-          !newReading.date) {
-        toast({
-          title: "Missing information",
-          description: "Please fill all required fields",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const calculatedValues = calculateVariation(newReading);
-      
-      // Create a proper object with all required fields explicitly defined
-      const readingData = {
-        date: newReading.date,
-        fuel_type: newReading.fuel_type,
-        dip_reading: newReading.dip_reading,
-        opening_stock: newReading.opening_stock,
-        receipt_quantity: newReading.receipt_quantity,
-        closing_stock: newReading.closing_stock,
-        actual_meter_sales: newReading.actual_meter_sales,
-        sales_per_tank_stock: calculatedValues.sales_per_tank_stock,
-        stock_variation: calculatedValues.stock_variation
-      };
-
-      const { error } = await supabase
-        .from('daily_readings')
-        .insert([readingData]);
-        
-      if (error) throw error;
-      
-      fetchReadings();
-      setNewReadingDialogOpen(false);
-      setNewReading({
+  const handleOpenDialog = (reading?: DailyReading) => {
+    if (reading) {
+      setReadingData({
+        id: reading.id,
+        date: reading.date,
+        fuel_type: reading.fuel_type,
+        dip_reading: reading.dip_reading,
+        opening_stock: reading.opening_stock,
+        receipt_quantity: reading.receipt_quantity,
+        closing_stock: reading.closing_stock,
+        actual_meter_sales: reading.actual_meter_sales
+      });
+      setIsEditing(true);
+    } else {
+      setReadingData({
         date: new Date().toISOString().split('T')[0],
         fuel_type: '',
         dip_reading: 0,
@@ -130,16 +117,111 @@ const DailyReadings = () => {
         closing_stock: 0,
         actual_meter_sales: 0
       });
+      setIsEditing(false);
+    }
+    setDialogOpen(true);
+  };
+
+  const handleOpenDeleteDialog = (id: string) => {
+    setSelectedReadingId(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleSaveReading = async () => {
+    try {
+      if (!readingData.fuel_type || 
+          readingData.dip_reading === undefined || 
+          readingData.opening_stock === undefined || 
+          readingData.receipt_quantity === undefined || 
+          readingData.closing_stock === undefined || 
+          readingData.actual_meter_sales === undefined ||
+          !readingData.date) {
+        toast({
+          title: "Missing information",
+          description: "Please fill all required fields",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const calculatedValues = calculateVariation(readingData);
+      
+      // Create a proper object with all required fields explicitly defined
+      const readingFormData = {
+        date: readingData.date,
+        fuel_type: readingData.fuel_type,
+        dip_reading: readingData.dip_reading,
+        opening_stock: readingData.opening_stock,
+        receipt_quantity: readingData.receipt_quantity,
+        closing_stock: readingData.closing_stock,
+        actual_meter_sales: readingData.actual_meter_sales,
+        sales_per_tank_stock: calculatedValues.sales_per_tank_stock,
+        stock_variation: calculatedValues.stock_variation
+      };
+
+      if (isEditing && readingData.id) {
+        // Update existing reading
+        const { error } = await supabase
+          .from('daily_readings')
+          .update(readingFormData)
+          .eq('id', readingData.id);
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Reading updated successfully"
+        });
+      } else {
+        // Insert new reading
+        const { error } = await supabase
+          .from('daily_readings')
+          .insert([readingFormData]);
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Reading added successfully"
+        });
+      }
+      
+      fetchReadings();
+      setDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving reading:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save reading. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteReading = async () => {
+    try {
+      if (!selectedReadingId) return;
+      
+      const { error } = await supabase
+        .from('daily_readings')
+        .delete()
+        .eq('id', selectedReadingId);
+        
+      if (error) throw error;
       
       toast({
         title: "Success",
-        description: "Reading added successfully"
+        description: "Reading deleted successfully"
       });
+      
+      fetchReadings();
+      setDeleteDialogOpen(false);
+      setSelectedReadingId(null);
     } catch (error) {
-      console.error('Error adding reading:', error);
+      console.error('Error deleting reading:', error);
       toast({
         title: "Error",
-        description: "Failed to add reading. Please try again.",
+        description: "Failed to delete reading. Please try again.",
         variant: "destructive"
       });
     }
@@ -149,17 +231,14 @@ const DailyReadings = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Daily Readings</h1>
+        <Button onClick={() => handleOpenDialog()}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Reading
+        </Button>
       </div>
       
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Today's Readings</CardTitle>
-            <Button onClick={() => setNewReadingDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Reading
-            </Button>
-          </div>
           <CardDescription>
             Track daily fuel levels and sales
           </CardDescription>
@@ -186,6 +265,7 @@ const DailyReadings = () => {
                   <TableHead>Closing Stock</TableHead>
                   <TableHead>Meter Sales</TableHead>
                   <TableHead>Stock Variation</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -199,6 +279,16 @@ const DailyReadings = () => {
                     <TableCell>{reading.closing_stock}</TableCell>
                     <TableCell>{reading.actual_meter_sales}</TableCell>
                     <TableCell>{reading.stock_variation}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(reading)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleOpenDeleteDialog(reading.id)}>
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -207,10 +297,10 @@ const DailyReadings = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={newReadingDialogOpen} onOpenChange={setNewReadingDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Daily Reading</DialogTitle>
+            <DialogTitle>{isEditing ? 'Edit Reading' : 'Add New Daily Reading'}</DialogTitle>
             <DialogDescription>
               Enter the daily readings for each fuel type.
             </DialogDescription>
@@ -221,13 +311,16 @@ const DailyReadings = () => {
               <Input
                 type="date"
                 id="date"
-                value={newReading.date}
-                onChange={(e) => setNewReading({...newReading, date: e.target.value})}
+                value={readingData.date}
+                onChange={(e) => setReadingData({...readingData, date: e.target.value})}
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="fuel_type">Fuel Type</Label>
-              <Select onValueChange={(value) => setNewReading({...newReading, fuel_type: value})}>
+              <Select 
+                value={readingData.fuel_type} 
+                onValueChange={(value) => setReadingData({...readingData, fuel_type: value})}
+              >
                 <SelectTrigger id="fuel_type">
                   <SelectValue placeholder="Select fuel type" />
                 </SelectTrigger>
@@ -244,8 +337,8 @@ const DailyReadings = () => {
                 <Input
                   type="number"
                   id="dip_reading"
-                  value={newReading.dip_reading?.toString()}
-                  onChange={(e) => setNewReading({...newReading, dip_reading: parseFloat(e.target.value)})}
+                  value={readingData.dip_reading?.toString()}
+                  onChange={(e) => setReadingData({...readingData, dip_reading: parseFloat(e.target.value)})}
                 />
               </div>
               <div className="grid gap-2">
@@ -253,8 +346,8 @@ const DailyReadings = () => {
                 <Input
                   type="number"
                   id="opening_stock"
-                  value={newReading.opening_stock?.toString()}
-                  onChange={(e) => setNewReading({...newReading, opening_stock: parseFloat(e.target.value)})}
+                  value={readingData.opening_stock?.toString()}
+                  onChange={(e) => setReadingData({...readingData, opening_stock: parseFloat(e.target.value)})}
                 />
               </div>
             </div>
@@ -264,8 +357,8 @@ const DailyReadings = () => {
                 <Input
                   type="number"
                   id="receipt_quantity"
-                  value={newReading.receipt_quantity?.toString()}
-                  onChange={(e) => setNewReading({...newReading, receipt_quantity: parseFloat(e.target.value)})}
+                  value={readingData.receipt_quantity?.toString()}
+                  onChange={(e) => setReadingData({...readingData, receipt_quantity: parseFloat(e.target.value)})}
                 />
               </div>
               <div className="grid gap-2">
@@ -273,8 +366,8 @@ const DailyReadings = () => {
                 <Input
                   type="number"
                   id="closing_stock"
-                  value={newReading.closing_stock?.toString()}
-                  onChange={(e) => setNewReading({...newReading, closing_stock: parseFloat(e.target.value)})}
+                  value={readingData.closing_stock?.toString()}
+                  onChange={(e) => setReadingData({...readingData, closing_stock: parseFloat(e.target.value)})}
                 />
               </div>
             </div>
@@ -283,19 +376,41 @@ const DailyReadings = () => {
               <Input
                 type="number"
                 id="actual_meter_sales"
-                value={newReading.actual_meter_sales?.toString()}
-                onChange={(e) => setNewReading({...newReading, actual_meter_sales: parseFloat(e.target.value)})}
+                value={readingData.actual_meter_sales?.toString()}
+                onChange={(e) => setReadingData({...readingData, actual_meter_sales: parseFloat(e.target.value)})}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setNewReadingDialogOpen(false)}>
+            <Button variant="secondary" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddReading}>Add Reading</Button>
+            <Button onClick={handleSaveReading}>
+              {isEditing ? 'Update' : 'Add'} Reading
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the reading.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteReading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

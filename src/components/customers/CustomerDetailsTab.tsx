@@ -50,6 +50,12 @@ const CustomerDetailsTab = ({ customer }: CustomerDetailsTabProps) => {
                 : 'Unknown'}
             </p>
           </div>
+          <div>
+            <h3 className="font-medium text-sm text-muted-foreground mb-2">Current Balance</h3>
+            <p className={`font-semibold ${customer.balance && customer.balance < 0 ? 'text-red-500' : 'text-green-500'}`}>
+              ₹{customer.balance?.toLocaleString() || '0'}
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>
