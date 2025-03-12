@@ -37,13 +37,15 @@ function App() {
     if (!session) {
       return <Navigate to="/login" replace />;
     }
-
     return children;
   }
 
   return (
     <Router>
       <Routes>
+        {/* Add root route that redirects to dashboard */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        
         <Route path="/login" element={<Login />} />
         <Route
           path="/dashboard"
