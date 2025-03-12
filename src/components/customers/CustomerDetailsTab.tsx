@@ -16,12 +16,12 @@ const CustomerDetailsTab = ({ customer }: CustomerDetailsTabProps) => {
           <CardTitle>Customer Information</CardTitle>
           <Button variant="outline" size="sm" className="gap-1">
             <Edit className="h-4 w-4" />
-            Edit
+            <span className="hidden sm:inline">Edit</span>
           </Button>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2">
           <div>
             <h3 className="font-medium text-sm text-muted-foreground mb-2">Business Name</h3>
             <p className="font-semibold">{customer.name}</p>
@@ -50,7 +50,7 @@ const CustomerDetailsTab = ({ customer }: CustomerDetailsTabProps) => {
                 : 'Unknown'}
             </p>
           </div>
-          <div>
+          <div className="md:col-span-2">
             <h3 className="font-medium text-sm text-muted-foreground mb-2">Credit Balance</h3>
             <p className={`font-semibold ${customer.balance > 0 ? 'text-orange-600' : customer.balance < 0 ? 'text-green-600' : ''}`}>
               ₹{customer.balance !== null ? customer.balance.toLocaleString() : 0}
