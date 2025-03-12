@@ -3,6 +3,7 @@ import { useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Pages
 import Home from '@/pages/Home';
@@ -19,7 +20,6 @@ import ShiftManagement from '@/pages/ShiftManagement';
 import TestingDetails from '@/pages/TestingDetails';
 import FuelPumpSettings from '@/pages/FuelPumpSettings';
 import NotFound from '@/pages/NotFound';
-import { useAuth } from '@/contexts/AuthContext';
 
 // Check if user is authenticated and redirect accordingly
 const RedirectBasedOnAuth = () => {
