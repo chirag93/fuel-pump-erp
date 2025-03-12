@@ -72,7 +72,10 @@ const CustomerTabs = ({
       </TabsContent>
       
       <TabsContent value="transactions">
-        <TransactionsTab transactions={transactions} />
+        <TransactionsTab 
+          transactions={transactions} 
+          customerName={customer.name}
+        />
       </TabsContent>
     </Tabs>
   );

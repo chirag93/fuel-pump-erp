@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Edit, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Download } from 'lucide-react';
 import { 
   Dialog,
   DialogContent,
@@ -227,14 +226,64 @@ const DailyReadings = () => {
     }
   };
 
+  const exportReadings = () => {
+    // Define CSV headers
+    const headers = [
+      'Date', 
+      'Fuel Type', 
+      'Dip Reading', 
+      'Opening Stock', 
+      'Receipt Quantity', 
+      'Closing Stock', 
+      'Meter Sales', 
+      'Stock Variation'
+    ];
+    
+    // Convert readings to CSV rows
+    const rows = readings.map(reading => [
+      new Date(reading.date).toLocaleDateString(),
+      reading.fuel_type,
+      reading.dip_reading,
+      reading.opening_stock,
+      reading.receipt_quantity,
+      reading.closing_stock,
+      reading.actual_meter_sales,
+      reading.stock_variation
+    ]);
+    
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    // Create a blob and download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `daily_readings_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Daily Readings</h1>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Reading
-        </Button>
+        <div className="flex gap-2">
+          {readings.length > 0 && (
+            <Button variant="outline" onClick={exportReadings}>
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+          )}
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Reading
+          </Button>
+        </div>
       </div>
       
       <Card>

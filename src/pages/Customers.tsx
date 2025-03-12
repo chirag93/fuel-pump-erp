@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Users, FileText, Plus, Search } from 'lucide-react';
+import { Loader2, Users, FileText, Plus, Search, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Customer {
@@ -29,12 +29,24 @@ interface Customer {
   created_at?: string;
 }
 
+interface IndentBooklet {
+  id: string;
+  customer_id: string;
+  start_number: string;
+  end_number: string;
+  issued_date: string;
+  total_indents: number;
+  used_indents: number;
+  status: 'Active' | 'Completed' | 'Cancelled';
+}
+
 const Customers = () => {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [booklets, setBooklets] = useState<IndentBooklet[]>([]);
   
   const [newCustomer, setNewCustomer] = useState<Partial<Customer>>({
     name: '',
@@ -74,7 +86,26 @@ const Customers = () => {
       }
     };
     
+    const fetchBooklets = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('indent_booklets')
+          .select('*');
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          setBooklets(data as IndentBooklet[]);
+        }
+      } catch (error) {
+        console.error('Error fetching booklets:', error);
+      }
+    };
+    
     fetchCustomers();
+    fetchBooklets();
   }, []);
   
   const handleAddCustomer = async () => {
@@ -145,94 +176,157 @@ const Customers = () => {
     navigate(`/customer/${customerId}`);
   };
   
+  const exportCustomers = () => {
+    // Get booklet ranges for each customer
+    const customerBookletMap = new Map<string, string[]>();
+    
+    booklets.forEach(booklet => {
+      if (!customerBookletMap.has(booklet.customer_id)) {
+        customerBookletMap.set(booklet.customer_id, []);
+      }
+      
+      const range = `${booklet.start_number}-${booklet.end_number} (${booklet.status})`;
+      customerBookletMap.get(booklet.customer_id)?.push(range);
+    });
+    
+    // Define CSV headers
+    const headers = [
+      'Name', 
+      'Contact Person', 
+      'Phone', 
+      'Email', 
+      'GST', 
+      'Balance', 
+      'Indent Booklet Ranges'
+    ];
+    
+    // Convert customers to CSV rows
+    const rows = customers.map(customer => {
+      const bookletRanges = customerBookletMap.get(customer.id) || [];
+      return [
+        customer.name,
+        customer.contact,
+        customer.phone,
+        customer.email,
+        customer.gst,
+        customer.balance,
+        bookletRanges.join('; ')
+      ];
+    });
+    
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    // Create a blob and download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `customers_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Customers</h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus size={16} />
-              Add Customer
+        <div className="flex gap-2">
+          {customers.length > 0 && (
+            <Button variant="outline" onClick={exportCustomers} className="flex items-center gap-2">
+              <Download size={16} />
+              Export CSV
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add New Customer</DialogTitle>
-              <DialogDescription>
-                Enter the details of the new customer.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Business Name*</Label>
-                <Input
-                  id="name"
-                  value={newCustomer.name}
-                  onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})}
-                  placeholder="e.g. ABC Logistics"
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="gst">GST Number*</Label>
-                <Input
-                  id="gst"
-                  value={newCustomer.gst}
-                  onChange={(e) => setNewCustomer({...newCustomer, gst: e.target.value})}
-                  placeholder="e.g. 22AAAAA0000A1Z5"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
+          )}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus size={16} />
+                Add Customer
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add New Customer</DialogTitle>
+                <DialogDescription>
+                  Enter the details of the new customer.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="contact">Contact Person*</Label>
+                  <Label htmlFor="name">Business Name*</Label>
                   <Input
-                    id="contact"
-                    value={newCustomer.contact}
-                    onChange={(e) => setNewCustomer({...newCustomer, contact: e.target.value})}
-                    placeholder="e.g. Rajesh Kumar"
+                    id="name"
+                    value={newCustomer.name}
+                    onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})}
+                    placeholder="e.g. ABC Logistics"
                   />
                 </div>
+                
                 <div className="grid gap-2">
-                  <Label htmlFor="phone">Phone Number*</Label>
+                  <Label htmlFor="gst">GST Number*</Label>
                   <Input
-                    id="phone"
-                    value={newCustomer.phone}
-                    onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})}
-                    placeholder="e.g. 9876543210"
+                    id="gst"
+                    value={newCustomer.gst}
+                    onChange={(e) => setNewCustomer({...newCustomer, gst: e.target.value})}
+                    placeholder="e.g. 22AAAAA0000A1Z5"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="contact">Contact Person*</Label>
+                    <Input
+                      id="contact"
+                      value={newCustomer.contact}
+                      onChange={(e) => setNewCustomer({...newCustomer, contact: e.target.value})}
+                      placeholder="e.g. Rajesh Kumar"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone">Phone Number*</Label>
+                    <Input
+                      id="phone"
+                      value={newCustomer.phone}
+                      onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})}
+                      placeholder="e.g. 9876543210"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email*</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newCustomer.email}
+                    onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
+                    placeholder="e.g. info@abclogistics.com"
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="balance">Initial Balance</Label>
+                  <Input
+                    id="balance"
+                    type="number"
+                    value={newCustomer.balance?.toString()}
+                    onChange={(e) => setNewCustomer({...newCustomer, balance: parseFloat(e.target.value)})}
+                    placeholder="0.00"
                   />
                 </div>
               </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email*</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newCustomer.email}
-                  onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
-                  placeholder="e.g. info@abclogistics.com"
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="balance">Initial Balance</Label>
-                <Input
-                  id="balance"
-                  type="number"
-                  value={newCustomer.balance?.toString()}
-                  onChange={(e) => setNewCustomer({...newCustomer, balance: parseFloat(e.target.value)})}
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddCustomer}>Add Customer</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleAddCustomer}>Add Customer</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
       
       <div className="flex items-center space-x-2">
@@ -247,6 +341,7 @@ const Customers = () => {
           />
         </div>
       </div>
+      
       
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
