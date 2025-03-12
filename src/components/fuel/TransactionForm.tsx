@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,9 +5,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Camera, CreditCard, Banknote, Smartphone } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { Customer, Vehicle } from '@/integrations/supabase/client';
 
 interface TransactionFormProps {
   onSubmit: (transaction: any) => void;
+  isSubmitting?: boolean;
+  customers?: Customer[];
+  vehicles?: Vehicle[];
   vehicleNumber?: string;
   amount?: string;
   quantity?: string;
@@ -19,6 +22,9 @@ interface TransactionFormProps {
 
 const TransactionForm = ({
   onSubmit,
+  isSubmitting = false,
+  customers = [],
+  vehicles = [],
   vehicleNumber = '',
   amount = '',
   quantity = '',
@@ -259,7 +265,9 @@ const TransactionForm = ({
         />
       </div>
 
-      <Button type="submit" className="w-full">Record Transaction</Button>
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? "Processing..." : "Record Transaction"}
+      </Button>
     </form>
   );
 };

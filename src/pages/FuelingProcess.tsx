@@ -106,12 +106,29 @@ const RecordIndent = () => {
     }
   };
 
-  const handleTransactionSubmit = async (transactionData: Omit<Transaction, 'id' | 'created_at'>) => {
+  const handleTransactionSubmit = async (transactionData: any) => {
     setIsSubmitting(true);
     try {
+      // Generate a unique ID for the transaction
+      const transactionId = `TRX-${Date.now()}`;
+      
+      // Create the transaction object with all required fields
+      const newTransaction = {
+        id: transactionId,
+        date: new Date().toISOString().split('T')[0],
+        fuel_type: transactionData.fuelType,
+        amount: parseFloat(transactionData.amount),
+        quantity: parseFloat(transactionData.quantity),
+        payment_method: transactionData.paymentMethod,
+        staff_id: '1', // Default staff ID, should be replaced with actual staff ID
+        vehicle_id: null,
+        customer_id: null,
+        indent_id: null
+      };
+
       const { data: transaction, error } = await supabase
         .from('transactions')
-        .insert([transactionData])
+        .insert([newTransaction])
         .select(`*, customers(name), vehicles(number)`);
 
       if (error) throw error;
@@ -127,7 +144,7 @@ const RecordIndent = () => {
         toast({
           title: "Warning",
           description: "Transaction recorded, but there was an issue retrieving it.",
-          variant: "warning"
+          variant: "default" // Changed from "warning" to "default"
         });
       }
       fetchTransactions();
@@ -164,7 +181,7 @@ const RecordIndent = () => {
               </CardHeader>
               <CardContent>
                 <TransactionForm 
-                  onSubmitTransaction={handleTransactionSubmit} 
+                  onSubmit={handleTransactionSubmit} 
                   isSubmitting={isSubmitting}
                   customers={customers}
                   vehicles={vehicles}

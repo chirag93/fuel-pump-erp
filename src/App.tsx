@@ -1,5 +1,5 @@
 
-import { useLocation, Routes, Route } from 'react-router-dom';
+import { useLocation, Routes, Route, Outlet } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -35,7 +35,9 @@ const App = () => {
             path="/"
             element={
               <ProtectedRoute>
-                <DashboardLayout />
+                <DashboardLayout>
+                  <Outlet />
+                </DashboardLayout>
               </ProtectedRoute>
             }
           >
