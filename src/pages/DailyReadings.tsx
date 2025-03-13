@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -246,7 +247,7 @@ const DailyReadings = () => {
         ...prev.readings,
         [tankNumber]: {
           ...prev.readings[tankNumber],
-          [field]: parseFloat(value) || 0
+          [field]: value === '' ? '' : parseFloat(value) || 0
         }
       }
     }));
@@ -255,7 +256,7 @@ const DailyReadings = () => {
   const handleInputChange = (field: string, value: string) => {
     setReadingFormData(prev => ({
       ...prev,
-      [field]: field === 'date' || field === 'fuel_type' ? value : (parseFloat(value) || 0)
+      [field]: field === 'date' || field === 'fuel_type' ? value : (value === '' ? '' : parseFloat(value) || 0)
     }));
   };
 
@@ -516,15 +517,13 @@ const DailyReadings = () => {
                         <div className="flex flex-col gap-1">
                           {reading.tanks.map((tank: any) => (
                             <div key={tank.tank_number} className="text-xs">
-                              Tank {tank.tank_number}: 
-                              A{tank.tank_number}={tank.dip_reading}, 
-                              B{tank.tank_number}={tank.net_stock}
+                              Tank {tank.tank_number}
                             </div>
                           ))}
                         </div>
                       ) : (
                         <div className="text-xs">
-                          Tank 1: A1={reading.dip_reading}, B1={reading.opening_stock}
+                          Tank 1
                         </div>
                       )}
                     </TableCell>
@@ -533,7 +532,17 @@ const DailyReadings = () => {
                     <TableCell>{reading.closing_stock}</TableCell>
                     <TableCell>{reading.sales_per_tank_stock}</TableCell>
                     <TableCell>{reading.actual_meter_sales}</TableCell>
-                    <TableCell>{reading.stock_variation}</TableCell>
+                    <TableCell 
+                      className={
+                        reading.stock_variation > 0 
+                          ? "bg-[#F2FCE2] text-green-700" 
+                          : reading.stock_variation < 0 
+                            ? "bg-red-50 text-[#ea384c]" 
+                            : ""
+                      }
+                    >
+                      {reading.stock_variation}
+                    </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(reading)}>
@@ -612,8 +621,9 @@ const DailyReadings = () => {
                       <Input
                         type="number"
                         id={`dip_reading_${tankNumber}`}
-                        value={tank.dip_reading}
+                        value={tank.dip_reading === 0 && readingFormData.id ? '' : tank.dip_reading}
                         onChange={(e) => handleTankInputChange(tankNumber, 'dip_reading', e.target.value)}
+                        placeholder="Enter dip reading"
                       />
                     </div>
                     <div className="col-span-4">
@@ -621,8 +631,9 @@ const DailyReadings = () => {
                       <Input
                         type="number"
                         id={`net_stock_${tankNumber}`}
-                        value={tank.net_stock}
+                        value={tank.net_stock === 0 && readingFormData.id ? '' : tank.net_stock}
                         onChange={(e) => handleTankInputChange(tankNumber, 'net_stock', e.target.value)}
+                        placeholder="Enter net stock"
                       />
                     </div>
                     <div className="col-span-2">
@@ -656,8 +667,9 @@ const DailyReadings = () => {
                 <Input
                   type="number"
                   id="receipt_quantity"
-                  value={readingFormData.receipt_quantity}
+                  value={readingFormData.receipt_quantity === 0 && readingFormData.id ? '' : readingFormData.receipt_quantity}
                   onChange={(e) => handleInputChange('receipt_quantity', e.target.value)}
+                  placeholder="Enter receipt quantity"
                 />
               </div>
               <div className="grid gap-2">
@@ -665,8 +677,9 @@ const DailyReadings = () => {
                 <Input
                   type="number"
                   id="closing_stock"
-                  value={readingFormData.closing_stock}
+                  value={readingFormData.closing_stock === 0 && readingFormData.id ? '' : readingFormData.closing_stock}
                   onChange={(e) => handleInputChange('closing_stock', e.target.value)}
+                  placeholder="Enter closing stock"
                 />
               </div>
             </div>
@@ -684,15 +697,23 @@ const DailyReadings = () => {
               <Input
                 type="number"
                 id="actual_meter_sales"
-                value={readingFormData.actual_meter_sales}
+                value={readingFormData.actual_meter_sales === 0 && readingFormData.id ? '' : readingFormData.actual_meter_sales}
                 onChange={(e) => handleInputChange('actual_meter_sales', e.target.value)}
+                placeholder="Enter actual meter sales"
               />
             </div>
             
             <div className="p-3 bg-muted rounded-md">
               <div className="flex items-center">
                 <span className="font-medium mr-2">Stock Variation (M) =</span>
-                <span>{calculatedValues.stock_variation}</span>
+                <span className={calculatedValues.stock_variation > 0 
+                  ? "text-green-700" 
+                  : calculatedValues.stock_variation < 0 
+                    ? "text-[#ea384c]" 
+                    : ""}
+                >
+                  {calculatedValues.stock_variation}
+                </span>
                 <span className="ml-2 text-sm text-muted-foreground">(L - S)</span>
               </div>
             </div>
