@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -28,6 +27,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+interface TankReading {
+  tank_number: number;
+  dip_reading: number;
+  net_stock: number;
+}
+
 interface DailyReading {
   id: string;
   date: string;
@@ -42,6 +47,7 @@ interface DailyReading {
   stock_variation: number; // M (calculated)
   created_at?: string;
   tank_number: number;
+  tanks?: TankReading[]; // Added this property to fix build errors
 }
 
 interface ReadingFormData {
@@ -155,6 +161,7 @@ const DailyReadings = () => {
           actual_meter_sales: item.actual_meter_sales,
           stock_variation: item.stock_variation,
           created_at: item.created_at,
+          tank_number: item.tank_number,
           tanks: []
         });
       }
@@ -163,7 +170,7 @@ const DailyReadings = () => {
       groupedMap.get(key).tanks.push({
         tank_number: item.tank_number || 1,
         dip_reading: item.dip_reading,
-        net_stock: item.net_stock
+        net_stock: item.net_stock || item.opening_stock
       });
     });
     

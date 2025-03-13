@@ -111,10 +111,12 @@ export type Database = {
           dip_reading: number
           fuel_type: string
           id: string
+          net_stock: number | null
           opening_stock: number
           receipt_quantity: number
           sales_per_tank_stock: number | null
           stock_variation: number | null
+          tank_number: number | null
         }
         Insert: {
           actual_meter_sales: number
@@ -124,10 +126,12 @@ export type Database = {
           dip_reading: number
           fuel_type: string
           id?: string
+          net_stock?: number | null
           opening_stock: number
           receipt_quantity: number
           sales_per_tank_stock?: number | null
           stock_variation?: number | null
+          tank_number?: number | null
         }
         Update: {
           actual_meter_sales?: number
@@ -137,10 +141,12 @@ export type Database = {
           dip_reading?: number
           fuel_type?: string
           id?: string
+          net_stock?: number | null
           opening_stock?: number
           receipt_quantity?: number
           sales_per_tank_stock?: number | null
           stock_variation?: number | null
+          tank_number?: number | null
         }
         Relationships: []
       }
