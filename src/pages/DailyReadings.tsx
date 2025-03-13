@@ -328,9 +328,8 @@ const DailyReadings = () => {
         opening_stock: calculations.opening_stock,
         receipt_quantity: readingFormData.receipt_quantity,
         closing_stock: readingFormData.closing_stock,
-        sales_per_tank_stock: calculations.sales_per_tank_stock,
-        actual_meter_sales: readingFormData.actual_meter_sales,
-        stock_variation: calculations.stock_variation
+        actual_meter_sales: readingFormData.actual_meter_sales
+        // We no longer send sales_per_tank_stock and stock_variation as they're computed columns
       }));
       
       // Insert entries
@@ -412,14 +411,14 @@ const DailyReadings = () => {
             new Date(reading.date).toLocaleDateString(),
             reading.fuel_type,
             tank.tank_number,
-            tank.dip_reading,
-            tank.net_stock,
-            reading.opening_stock,
-            reading.receipt_quantity,
-            reading.closing_stock,
-            reading.sales_per_tank_stock,
-            reading.actual_meter_sales,
-            reading.stock_variation
+            tank.dip_reading.toFixed(2),
+            tank.net_stock.toFixed(2),
+            reading.opening_stock.toFixed(2),
+            reading.receipt_quantity.toFixed(2),
+            reading.closing_stock.toFixed(2),
+            reading.sales_per_tank_stock.toFixed(2),
+            reading.actual_meter_sales.toFixed(2),
+            reading.stock_variation.toFixed(2)
           ]);
         });
       } else {
@@ -428,14 +427,14 @@ const DailyReadings = () => {
           new Date(reading.date).toLocaleDateString(),
           reading.fuel_type,
           1,
-          reading.dip_reading,
-          reading.opening_stock,
-          reading.opening_stock,
-          reading.receipt_quantity,
-          reading.closing_stock,
-          reading.sales_per_tank_stock,
-          reading.actual_meter_sales,
-          reading.stock_variation
+          reading.dip_reading.toFixed(2),
+          reading.opening_stock.toFixed(2),
+          reading.opening_stock.toFixed(2),
+          reading.receipt_quantity.toFixed(2),
+          reading.closing_stock.toFixed(2),
+          reading.sales_per_tank_stock.toFixed(2),
+          reading.actual_meter_sales.toFixed(2),
+          reading.stock_variation.toFixed(2)
         ]);
       }
     });
@@ -592,7 +591,7 @@ const DailyReadings = () => {
             
             <div className="border p-4 rounded-md">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-medium">Tank Measurements</h3>
+                <h3 className="font-medium">Tank Readings</h3>
                 <Button type="button" variant="outline" size="sm" onClick={addTank}>
                   Add Tank
                 </Button>
@@ -647,7 +646,6 @@ const DailyReadings = () => {
                 <div className="flex items-center">
                   <span className="font-medium mr-2">Total Opening Stock (C) =</span>
                   <span>{calculatedValues.opening_stock}</span>
-                  <span className="ml-2 text-sm text-muted-foreground">(Sum of B1 + B2 + ...)</span>
                 </div>
               </div>
             </div>
