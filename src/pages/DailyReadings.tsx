@@ -38,17 +38,17 @@ interface DailyReading {
   id: string;
   date: string;
   fuel_type: string;
-  dip_reading: number;  // A1, A2, etc.
-  net_stock: number;    // B1, B2, etc.
-  opening_stock: number; // C (calculated)
-  receipt_quantity: number; // D
-  closing_stock: number; // E
-  sales_per_tank_stock: number; // S (calculated)
-  actual_meter_sales: number; // L
-  stock_variation: number; // M (calculated)
+  dip_reading: number;
+  net_stock: number;
+  opening_stock: number;
+  receipt_quantity: number;
+  closing_stock: number;
+  sales_per_tank_stock: number;
+  actual_meter_sales: number;
+  stock_variation: number;
   created_at?: string;
   tank_number: number;
-  tanks?: TankReading[]; // Added this property to fix build errors
+  tanks?: TankReading[];
 }
 
 interface ReadingFormData {
@@ -57,29 +57,29 @@ interface ReadingFormData {
   fuel_type: string;
   readings: {
     [key: number]: {
-      dip_reading: number; // A
-      net_stock: number;   // B
+      dip_reading: number;
+      net_stock: number;
       tank_number: number;
     }
   };
-  receipt_quantity: number; // D
-  closing_stock: number;    // E
-  actual_meter_sales: number; // L
+  receipt_quantity: number;
+  closing_stock: number;
+  actual_meter_sales: number;
 }
 
 // Calculate dependent values
 const calculateValues = (data: ReadingFormData) => {
   // Calculate total opening stock (C) - sum of all net stocks
   const totalOpeningStock = Object.values(data.readings).reduce(
-    (sum, tank) => sum + (tank.net_stock || 0), 
+    (sum, tank) => sum + (typeof tank.net_stock === 'number' ? tank.net_stock : 0), 
     0
   );
   
   // Calculate sales per tank stock (S=C+D-E)
-  const salesPerTankStock = totalOpeningStock + (data.receipt_quantity || 0) - (data.closing_stock || 0);
+  const salesPerTankStock = totalOpeningStock + (typeof data.receipt_quantity === 'number' ? data.receipt_quantity : 0) - (typeof data.closing_stock === 'number' ? data.closing_stock : 0);
   
   // Calculate stock variation (M=L-S)
-  const stockVariation = (data.actual_meter_sales || 0) - salesPerTankStock;
+  const stockVariation = (typeof data.actual_meter_sales === 'number' ? data.actual_meter_sales : 0) - salesPerTankStock;
   
   return {
     opening_stock: totalOpeningStock,
@@ -95,7 +95,10 @@ const DailyReadings = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedReadingId, setSelectedReadingId] = useState<string | null>(null);
+  const [selectedReadingDate, setSelectedReadingDate] = useState<string | null>(null);
+  const [selectedReadingFuelType, setSelectedReadingFuelType] = useState<string | null>(null);
   const [tankCount, setTankCount] = useState<number>(1);
+  const [fuelTypes, setFuelTypes] = useState<string[]>([]);
   
   const [readingFormData, setReadingFormData] = useState<ReadingFormData>({
     date: new Date().toISOString().split('T')[0],
@@ -113,7 +116,32 @@ const DailyReadings = () => {
 
   useEffect(() => {
     fetchReadings();
+    fetchFuelTypes();
   }, []);
+
+  const fetchFuelTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('fuel_settings')
+        .select('fuel_type');
+        
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const types = data.map(item => item.fuel_type);
+        setFuelTypes(types);
+        // Set default fuel type if none is selected
+        if (!readingFormData.fuel_type && types.length > 0) {
+          setReadingFormData(prev => ({
+            ...prev,
+            fuel_type: types[0]
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching fuel types:', error);
+    }
+  };
 
   const fetchReadings = async () => {
     setIsLoading(true);
@@ -222,7 +250,7 @@ const DailyReadings = () => {
       // Setup form for new reading
       setReadingFormData({
         date: new Date().toISOString().split('T')[0],
-        fuel_type: '',
+        fuel_type: fuelTypes.length > 0 ? fuelTypes[0] : '',
         readings: { 1: { dip_reading: 0, net_stock: 0, tank_number: 1 } },
         receipt_quantity: 0,
         closing_stock: 0,
@@ -235,8 +263,10 @@ const DailyReadings = () => {
     setDialogOpen(true);
   };
 
-  const handleOpenDeleteDialog = (id: string) => {
-    setSelectedReadingId(id);
+  const handleOpenDeleteDialog = (reading: DailyReading) => {
+    setSelectedReadingId(reading.id);
+    setSelectedReadingDate(reading.date);
+    setSelectedReadingFuelType(reading.fuel_type);
     setDeleteDialogOpen(true);
   };
 
@@ -359,12 +389,13 @@ const DailyReadings = () => {
 
   const handleDeleteReading = async () => {
     try {
-      if (!selectedReadingId) return;
+      if (!selectedReadingDate || !selectedReadingFuelType) return;
       
       const { error } = await supabase
         .from('daily_readings')
         .delete()
-        .eq('id', selectedReadingId);
+        .eq('date', selectedReadingDate)
+        .eq('fuel_type', selectedReadingFuelType);
         
       if (error) throw error;
       
@@ -376,6 +407,8 @@ const DailyReadings = () => {
       fetchReadings();
       setDeleteDialogOpen(false);
       setSelectedReadingId(null);
+      setSelectedReadingDate(null);
+      setSelectedReadingFuelType(null);
     } catch (error) {
       console.error('Error deleting reading:', error);
       toast({
@@ -392,14 +425,14 @@ const DailyReadings = () => {
       'Date', 
       'Fuel Type',
       'Tank Number',
-      'Dip Reading (A)', 
-      'Net Stock (B)',
-      'Opening Stock (C)', 
-      'Receipt Quantity (D)', 
-      'Closing Stock (E)', 
-      'Sales per Tank Stock (S)',
-      'Actual Meter Sales (L)',
-      'Stock Variation (M)'
+      'Dip Reading', 
+      'Net Stock',
+      'Opening Stock', 
+      'Receipt Quantity', 
+      'Closing Stock', 
+      'Sales per Tank Stock',
+      'Actual Meter Sales',
+      'Stock Variation'
     ];
     
     // Convert readings to CSV rows
@@ -498,12 +531,12 @@ const DailyReadings = () => {
                   <TableHead>Date</TableHead>
                   <TableHead>Fuel Type</TableHead>
                   <TableHead>Tanks</TableHead>
-                  <TableHead>Opening Stock (C)</TableHead>
-                  <TableHead>Receipt Quantity (D)</TableHead>
-                  <TableHead>Closing Stock (E)</TableHead>
-                  <TableHead>Sales per Tank (S)</TableHead>
-                  <TableHead>Actual Meter Sales (L)</TableHead>
-                  <TableHead>Stock Variation (M)</TableHead>
+                  <TableHead>Opening Stock</TableHead>
+                  <TableHead>Receipt Quantity</TableHead>
+                  <TableHead>Closing Stock</TableHead>
+                  <TableHead>Sales per Tank</TableHead>
+                  <TableHead>Actual Meter Sales</TableHead>
+                  <TableHead>Stock Variation</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -548,7 +581,7 @@ const DailyReadings = () => {
                         <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(reading)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenDeleteDialog(reading.id)}>
+                        <Button variant="ghost" size="sm" onClick={() => handleOpenDeleteDialog(reading)}>
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>
@@ -590,9 +623,9 @@ const DailyReadings = () => {
                     <SelectValue placeholder="Select fuel type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Petrol">Petrol</SelectItem>
-                    <SelectItem value="Diesel">Diesel</SelectItem>
-                    <SelectItem value="Premium">Premium</SelectItem>
+                    {fuelTypes.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -617,21 +650,21 @@ const DailyReadings = () => {
                       <Label>Tank {tankNumber}</Label>
                     </div>
                     <div className="col-span-4">
-                      <Label htmlFor={`dip_reading_${tankNumber}`}>Dip Reading (A{tankNumber})</Label>
+                      <Label htmlFor={`dip_reading_${tankNumber}`}>Dip Reading</Label>
                       <Input
                         type="number"
                         id={`dip_reading_${tankNumber}`}
-                        value={tank.dip_reading === 0 && readingFormData.id ? '' : tank.dip_reading}
+                        value={tank.dip_reading === 0 && readingFormData.id ? '' : tank.dip_reading || ''}
                         onChange={(e) => handleTankInputChange(tankNumber, 'dip_reading', e.target.value)}
                         placeholder="Enter dip reading"
                       />
                     </div>
                     <div className="col-span-4">
-                      <Label htmlFor={`net_stock_${tankNumber}`}>Net Stock (B{tankNumber})</Label>
+                      <Label htmlFor={`net_stock_${tankNumber}`}>Net Stock</Label>
                       <Input
                         type="number"
                         id={`net_stock_${tankNumber}`}
-                        value={tank.net_stock === 0 && readingFormData.id ? '' : tank.net_stock}
+                        value={tank.net_stock === 0 && readingFormData.id ? '' : tank.net_stock || ''}
                         onChange={(e) => handleTankInputChange(tankNumber, 'net_stock', e.target.value)}
                         placeholder="Enter net stock"
                       />
@@ -655,7 +688,7 @@ const DailyReadings = () => {
               
               <div className="mt-4 p-3 bg-muted rounded-md">
                 <div className="flex items-center">
-                  <span className="font-medium mr-2">Total Opening Stock (C) =</span>
+                  <span className="font-medium mr-2">Total Opening Stock =</span>
                   <span>{calculatedValues.opening_stock}</span>
                 </div>
               </div>
@@ -663,21 +696,21 @@ const DailyReadings = () => {
             
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="receipt_quantity">Receipt Quantity (D)</Label>
+                <Label htmlFor="receipt_quantity">Receipt Quantity</Label>
                 <Input
                   type="number"
                   id="receipt_quantity"
-                  value={readingFormData.receipt_quantity === 0 && readingFormData.id ? '' : readingFormData.receipt_quantity}
+                  value={readingFormData.receipt_quantity === 0 && readingFormData.id ? '' : readingFormData.receipt_quantity || ''}
                   onChange={(e) => handleInputChange('receipt_quantity', e.target.value)}
                   placeholder="Enter receipt quantity"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="closing_stock">Closing Stock (E)</Label>
+                <Label htmlFor="closing_stock">Closing Stock</Label>
                 <Input
                   type="number"
                   id="closing_stock"
-                  value={readingFormData.closing_stock === 0 && readingFormData.id ? '' : readingFormData.closing_stock}
+                  value={readingFormData.closing_stock === 0 && readingFormData.id ? '' : readingFormData.closing_stock || ''}
                   onChange={(e) => handleInputChange('closing_stock', e.target.value)}
                   placeholder="Enter closing stock"
                 />
@@ -686,18 +719,18 @@ const DailyReadings = () => {
             
             <div className="p-3 bg-muted rounded-md">
               <div className="flex items-center">
-                <span className="font-medium mr-2">Sales Per Tank Stock (S) =</span>
+                <span className="font-medium mr-2">Sales Per Tank Stock =</span>
                 <span>{calculatedValues.sales_per_tank_stock}</span>
-                <span className="ml-2 text-sm text-muted-foreground">(C + D - E)</span>
+                <span className="ml-2 text-sm text-muted-foreground">(Opening Stock + Receipt Quantity - Closing Stock)</span>
               </div>
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="actual_meter_sales">Actual Meter Sales (L)</Label>
+              <Label htmlFor="actual_meter_sales">Actual Meter Sales</Label>
               <Input
                 type="number"
                 id="actual_meter_sales"
-                value={readingFormData.actual_meter_sales === 0 && readingFormData.id ? '' : readingFormData.actual_meter_sales}
+                value={readingFormData.actual_meter_sales === 0 && readingFormData.id ? '' : readingFormData.actual_meter_sales || ''}
                 onChange={(e) => handleInputChange('actual_meter_sales', e.target.value)}
                 placeholder="Enter actual meter sales"
               />
@@ -705,7 +738,7 @@ const DailyReadings = () => {
             
             <div className="p-3 bg-muted rounded-md">
               <div className="flex items-center">
-                <span className="font-medium mr-2">Stock Variation (M) =</span>
+                <span className="font-medium mr-2">Stock Variation =</span>
                 <span className={calculatedValues.stock_variation > 0 
                   ? "text-green-700" 
                   : calculatedValues.stock_variation < 0 
@@ -714,7 +747,7 @@ const DailyReadings = () => {
                 >
                   {calculatedValues.stock_variation}
                 </span>
-                <span className="ml-2 text-sm text-muted-foreground">(L - S)</span>
+                <span className="ml-2 text-sm text-muted-foreground">(Actual Meter Sales - Sales Per Tank Stock)</span>
               </div>
             </div>
           </div>
@@ -734,7 +767,7 @@ const DailyReadings = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the reading.
+              This action cannot be undone. This will permanently delete the reading for {selectedReadingFuelType} on {selectedReadingDate && new Date(selectedReadingDate).toLocaleDateString()}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

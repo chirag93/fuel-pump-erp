@@ -24,8 +24,8 @@ const TransactionsTab = ({ transactions, customerName = 'Customer' }: Transactio
       new Date(transaction.date).toLocaleDateString(),
       transaction.vehicle_number || 'N/A',
       transaction.fuel_type,
-      `${transaction.quantity} L`,
-      `₹${transaction.amount}`,
+      `${transaction.quantity.toFixed(2)}`,
+      `${transaction.amount.toFixed(2)}`,
       transaction.indent_id || '-'
     ]);
     

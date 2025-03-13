@@ -6,7 +6,7 @@ import { Fuel, Droplets, Loader2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface FuelTankProps {
-  fuelType: 'Petrol' | 'Diesel';
+  fuelType: string;
   capacity?: number;
   lastUpdated?: string;
   showTankIcon?: boolean;
@@ -25,23 +25,39 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated, showTankIcon
         setIsLoading(true);
         setError(null);
         
-        // Get the latest inventory entry for this fuel type
-        const { data, error } = await supabase
-          .from('inventory')
-          .select('*')
+        // Try to get data from fuel_settings first
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('fuel_settings')
+          .select('current_level, current_price, tank_capacity')
           .eq('fuel_type', fuelType)
-          .order('date', { ascending: false })
-          .limit(1);
-          
-        if (error) {
-          throw error;
-        }
-        
-        if (data && data.length > 0) {
-          setCurrentLevel(Number(data[0].quantity));
-          setPricePerUnit(Number(data[0].price_per_unit));
+          .maybeSingle();
+
+        if (settingsData) {
+          setCurrentLevel(Number(settingsData.current_level));
+          setPricePerUnit(Number(settingsData.current_price));
+          // If capacity is not provided as a prop, use from settings
+          if (!capacity && settingsData.tank_capacity) {
+            capacity = Number(settingsData.tank_capacity);
+          }
         } else {
-          setError(`No data found for ${fuelType} tank`);
+          // Fallback to inventory table
+          const { data, error } = await supabase
+            .from('inventory')
+            .select('*')
+            .eq('fuel_type', fuelType)
+            .order('date', { ascending: false })
+            .limit(1);
+            
+          if (error) {
+            throw error;
+          }
+          
+          if (data && data.length > 0) {
+            setCurrentLevel(Number(data[0].quantity));
+            setPricePerUnit(Number(data[0].price_per_unit));
+          } else {
+            setError(`No data found for ${fuelType} tank`);
+          }
         }
       } catch (error) {
         console.error(`Error fetching ${fuelType} data:`, error);
@@ -52,19 +68,41 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated, showTankIcon
     };
     
     fetchFuelData();
-  }, [fuelType]);
+  }, [fuelType, capacity]);
   
   const fillPercentage = Math.round((currentLevel / capacity) * 100);
   const isLow = fillPercentage < 20;
   
-  let color = 'bg-blue-600';
-  let colorText = 'text-blue-600';
-  let colorBg = 'bg-blue-100';
+  // Define more vibrant colors based on fuel type
+  let color = '';
+  let colorText = '';
+  let colorBg = '';
+  let gradient = '';
   
-  if (fuelType === 'Petrol') {
-    color = 'bg-orange-500';
-    colorText = 'text-orange-500';
+  if (fuelType.toLowerCase().includes('petrol')) {
+    // Vibrant orange/red for petrol
+    color = 'bg-gradient-to-r from-orange-500 to-red-500';
+    colorText = 'text-orange-600';
     colorBg = 'bg-orange-100';
+    gradient = 'linear-gradient(90deg, hsla(24, 100%, 83%, 1) 0%, hsla(341, 91%, 68%, 1) 100%)';
+  } else if (fuelType.toLowerCase().includes('diesel')) {
+    // Rich blue/teal for diesel
+    color = 'bg-gradient-to-r from-blue-600 to-teal-500';
+    colorText = 'text-blue-600';
+    colorBg = 'bg-blue-100';
+    gradient = 'linear-gradient(90deg, hsla(221, 45%, 73%, 1) 0%, hsla(220, 78%, 29%, 1) 100%)';
+  } else if (fuelType.toLowerCase().includes('premium')) {
+    // Premium gets a gold/yellow gradient
+    color = 'bg-gradient-to-r from-amber-400 to-yellow-500';
+    colorText = 'text-amber-600';
+    colorBg = 'bg-amber-100';
+    gradient = 'linear-gradient(90deg, hsla(39, 100%, 77%, 1) 0%, hsla(22, 90%, 57%, 1) 100%)';
+  } else {
+    // Default to a green gradient
+    color = 'bg-gradient-to-r from-green-500 to-emerald-500';
+    colorText = 'text-green-600';
+    colorBg = 'bg-green-100';
+    gradient = 'linear-gradient(90deg, hsla(139, 70%, 75%, 1) 0%, hsla(63, 90%, 76%, 1) 100%)';
   }
   
   // Tank icon representation
@@ -80,10 +118,13 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated, showTankIcon
         {/* Tank cap */}
         <div className="w-8 h-3 bg-gray-400 absolute -top-3 left-1/2 transform -translate-x-1/2 rounded-t-md"></div>
         
-        {/* Tank level visualization */}
+        {/* Tank level visualization with gradient background */}
         <div 
-          className={`absolute bottom-0 left-0 right-0 ${color} transition-all duration-500`} 
-          style={{ height: `${fillPercentage}%` }}
+          className={`absolute bottom-0 left-0 right-0 transition-all duration-500`} 
+          style={{ 
+            height: `${fillPercentage}%`,
+            background: gradient
+          }}
         ></div>
         
         {/* Fix text color with proper contrast */}
@@ -99,8 +140,8 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated, showTankIcon
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <div className="flex gap-2 items-center">
-            <div className={`flex h-10 w-10 items-center justify-center rounded-full ${colorBg} ${colorText}`}>
-              {fuelType === 'Diesel' ? <Droplets size={20} /> : <Fuel size={20} />}
+            <div className={`flex h-10 w-10 items-center justify-center rounded-full ${color} text-white`}>
+              {fuelType.toLowerCase().includes('diesel') ? <Droplets size={20} /> : <Fuel size={20} />}
             </div>
             <CardTitle>{fuelType} Tank</CardTitle>
           </div>
@@ -128,7 +169,7 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated, showTankIcon
               <span className="font-medium">Storage Level</span>
               <span className="font-bold">{fillPercentage}%</span>
             </div>
-            <Progress value={fillPercentage} className="h-3" />
+            <Progress value={fillPercentage} className={`h-3 ${color}`} />
             
             {/* Tank visualization */}
             {renderTankIcon()}
