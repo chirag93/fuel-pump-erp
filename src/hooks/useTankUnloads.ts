@@ -11,7 +11,7 @@ export interface TankUnload {
   date: string;
 }
 
-export function useTankUnloads(refreshTrigger?: number, limit: number = 10) {
+export function useTankUnloads(refreshTrigger?: number, limit: number = 10, showAll: boolean = false) {
   const [recentUnloads, setRecentUnloads] = useState<TankUnload[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -21,11 +21,17 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10) {
     setError(null);
     
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('tank_unloads')
         .select('*')
-        .order('date', { ascending: false })
-        .limit(limit);
+        .order('date', { ascending: false });
+        
+      // Only apply limit if not showing all records
+      if (!showAll) {
+        query = query.limit(limit);
+      }
+      
+      const { data, error } = await query;
         
       if (error) {
         throw new Error(error.message);
@@ -40,7 +46,7 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10) {
     } finally {
       setIsLoading(false);
     }
-  }, [limit]);
+  }, [limit, showAll]);
   
   useEffect(() => {
     fetchRecentUnloads();

@@ -19,6 +19,7 @@ const RecordIndent = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [indentNumberError, setIndentNumberError] = useState<string>('');
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +65,19 @@ const RecordIndent = () => {
       // Using staff_id as a required field - setting a placeholder value
       const staffId = "00000000-0000-0000-0000-000000000000"; // Default staff ID
 
+      console.log("Submitting transaction with data:", {
+        id: transactionId,
+        customer_id: selectedCustomer,
+        vehicle_id: selectedVehicle,
+        staff_id: staffId,
+        date: date.toISOString(),
+        fuel_type: fuelType,
+        amount: amount,
+        quantity: quantity,
+        payment_method: 'Cash',
+        indent_id: selectedBooklet ? indentNumber : null
+      });
+
       // Create a transaction
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
@@ -82,13 +96,29 @@ const RecordIndent = () => {
         .select();
 
       if (transactionError) {
+        console.error("Transaction error:", transactionError);
         throw transactionError;
       }
+
+      console.log("Transaction created:", transaction);
 
       // If indent booklet is used, also create an indent record
       if (selectedBooklet && indentNumber) {
         const indentId = crypto.randomUUID();
         
+        console.log("Creating indent with data:", {
+          id: indentId,
+          customer_id: selectedCustomer,
+          vehicle_id: selectedVehicle,
+          fuel_type: fuelType,
+          amount: amount,
+          quantity: quantity,
+          indent_number: indentNumber,
+          booklet_id: selectedBooklet,
+          date: date.toISOString(),
+          status: 'Fulfilled'
+        });
+
         const { error: indentError } = await supabase
           .from('indents')
           .insert({
@@ -105,6 +135,7 @@ const RecordIndent = () => {
           });
 
         if (indentError) {
+          console.error("Indent error:", indentError);
           throw indentError;
         }
 
@@ -123,6 +154,11 @@ const RecordIndent = () => {
         // Now update the used_indents count with the new value
         const newUsedIndents = (bookletData?.used_indents || 0) + 1;
         
+        console.log("Updating booklet used_indents:", {
+          booklet_id: selectedBooklet,
+          newUsedIndents: newUsedIndents
+        });
+
         const { error: updateError } = await supabase
           .from('indent_booklets')
           .update({ used_indents: newUsedIndents })
@@ -149,6 +185,9 @@ const RecordIndent = () => {
       setQuantity(0);
       setDate(new Date());
       setIndentNumberError('');
+      
+      // Trigger a refresh of the transactions table
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error recording indent:', error);
       toast({
@@ -166,6 +205,7 @@ const RecordIndent = () => {
       <h1 className="text-3xl font-bold">Record Indent</h1>
       <Card>
         <CardHeader>
+          <CardTitle>Record New Indent</CardTitle>
           <CardDescription>
             Record fuel indents for customers and vehicles
           </CardDescription>
@@ -205,7 +245,7 @@ const RecordIndent = () => {
         </CardContent>
       </Card>
 
-      <RecentTransactionsTable />
+      <RecentTransactionsTable refreshTrigger={refreshTrigger} />
     </div>
   );
 };
