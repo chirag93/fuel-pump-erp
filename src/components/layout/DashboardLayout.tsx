@@ -16,7 +16,11 @@ import {
   UserCircle,
   Settings,
   CalendarClock,
-  FileText
+  FileText,
+  Fuel,
+  Truck,
+  CreditCard,
+  Camera
 } from 'lucide-react';
 
 interface SidebarItemProps {
@@ -64,6 +68,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: <CalendarClock size={20} />, label: 'Daily Readings', to: '/daily-readings' },
     { icon: <Droplets size={20} />, label: 'Stock Levels', to: '/stock-levels' },
     { icon: <FileText size={20} />, label: 'Transactions', to: '/all-transactions' },
+    { icon: <Users size={20} />, label: 'Customers', to: '/customers' },
+    { icon: <Users size={20} />, label: 'Staff', to: '/staff-management' },
+    { icon: <Truck size={20} />, label: 'Record Indent', to: '/record-indent' },
+    { icon: <ClipboardList size={20} />, label: 'Shift Management', to: '/shift-management' },
+    { icon: <Package size={20} />, label: 'Consumables', to: '/consumables' },
+    { icon: <Camera size={20} />, label: 'Testing', to: '/testing-details' },
+    { icon: <Settings size={20} />, label: 'Settings', to: '/settings' },
   ];
 
   return (
