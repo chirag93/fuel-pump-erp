@@ -173,7 +173,7 @@ const Customers = () => {
     : customers;
     
   const handleRowClick = (customerId: string) => {
-    navigate(`/customer/${customerId}`);
+    navigate(`/customers/${customerId}`);
   };
   
   const exportCustomers = () => {
