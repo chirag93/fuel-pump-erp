@@ -6,24 +6,23 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { Layout } from "@/components/layout/Layout"
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
-import Staff from './pages/Staff';
+import DailyReadings from './pages/DailyReadings';
 import Customers from './pages/Customers';
 import RecordIndent from './pages/RecordIndent';
-import FuelTests from './pages/FuelTests';
-import DailyReadings from './pages/DailyReadings';
-import FuelSettings from './pages/FuelSettings';
-import PumpSettings from './pages/PumpSettings';
-import BusinessSettings from './pages/BusinessSettings';
-import Shifts from './pages/Shifts';
 import StockLevels from './pages/StockLevels';
-import Vehicles from './pages/Vehicles';
-import IndentBooklets from './pages/IndentBooklets';
-import Transactions from './pages/Transactions';
-import { supabase } from './integrations/supabase/client';
 import AllTransactions from './pages/AllTransactions';
+import { supabase } from './integrations/supabase/client';
+
+// Create a Layout component since we can't import it
+const Layout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div className="container mx-auto px-4">
+      {children}
+    </div>
+  );
+};
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState(null);
@@ -68,16 +67,6 @@ function App() {
           }
         />
         <Route
-          path="/staff"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <Staff />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/customers"
           element={
             <ProtectedRoute>
@@ -98,16 +87,6 @@ function App() {
           }
         />
         <Route
-          path="/fuel-tests"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <FuelTests />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/daily-readings"
           element={
             <ProtectedRoute>
@@ -118,81 +97,11 @@ function App() {
           }
         />
         <Route
-          path="/fuel-settings"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <FuelSettings />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/pump-settings"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <PumpSettings />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/business-settings"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <BusinessSettings />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/shifts"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <Shifts />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/stock-levels"
           element={
             <ProtectedRoute>
               <Layout>
                 <StockLevels />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/vehicles"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <Vehicles />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/indent-booklets"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <IndentBooklets />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/transactions"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <Transactions />
               </Layout>
             </ProtectedRoute>
           }
