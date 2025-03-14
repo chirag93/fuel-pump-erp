@@ -2,7 +2,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { FileText, Download } from 'lucide-react';
+import { FileText, Download, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Transaction } from '@/integrations/supabase/client';
 
 interface TransactionWithDetails extends Transaction {
@@ -25,7 +26,7 @@ const TransactionsTab = ({ transactions, customerName = 'Customer' }: Transactio
       transaction.vehicle_number || 'N/A',
       transaction.fuel_type,
       `${transaction.quantity.toFixed(2)}`,
-      `${transaction.amount.toFixed(2)}`,
+      `${transaction.amount.toFixed(2).replace(/[₹,]/g, '')}`, // Remove special characters
       transaction.indent_id || '-'
     ]);
     
@@ -51,12 +52,20 @@ const TransactionsTab = ({ transactions, customerName = 'Customer' }: Transactio
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Fuel Transactions</CardTitle>
-          {transactions.length > 0 && (
-            <Button variant="outline" size="sm" onClick={exportTransactions} className="flex items-center gap-2">
-              <Download size={16} />
-              Export CSV
+          <div className="flex gap-2">
+            {transactions.length > 0 && (
+              <Button variant="outline" size="sm" onClick={exportTransactions} className="flex items-center gap-2">
+                <Download size={16} />
+                Export CSV
+              </Button>
+            )}
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/all-transactions" className="flex items-center gap-2">
+                <ArrowRight size={16} />
+                View All
+              </Link>
             </Button>
-          )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>

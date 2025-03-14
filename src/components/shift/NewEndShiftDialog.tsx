@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface EndShiftDialogProps {
   isOpen: boolean;
@@ -35,6 +36,20 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
   const [selectedStaff, setSelectedStaff] = useState<string>('');
   const [createNewShift, setCreateNewShift] = useState(true);
   const [newShiftType, setNewShiftType] = useState<string>('');
+  
+  // Add sales fields
+  const [cardSales, setCardSales] = useState<string>('');
+  const [upiSales, setUpiSales] = useState<string>('');
+  const [cashSales, setCashSales] = useState<string>('');
+  const [totalSales, setTotalSales] = useState<number>(0);
+
+  // Calculate total sales whenever sales input changes
+  useEffect(() => {
+    const card = Number(cardSales) || 0;
+    const upi = Number(upiSales) || 0;
+    const cash = Number(cashSales) || 0;
+    setTotalSales(card + upi + cash);
+  }, [cardSales, upiSales, cashSales]);
 
   // Determine next shift type based on current shift
   useEffect(() => {
@@ -135,11 +150,15 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
       
       if (updateShiftError) throw updateShiftError;
       
-      // 2. Update readings with closing reading
+      // 2. Update readings with closing reading and sales data
       const { error: updateReadingError } = await supabase
         .from('readings')
         .update({
-          closing_reading: Number(closingReading)
+          closing_reading: Number(closingReading),
+          card_sales: Number(cardSales) || 0,
+          upi_sales: Number(upiSales) || 0,
+          cash_sales: Number(cashSales) || 0,
+          cash_remaining: Number(cashRemaining)
         })
         .eq('shift_id', shiftData.id);
       
@@ -197,6 +216,11 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
     }
   };
 
+  // Calculate fuel quantity sold
+  const fuelLiters = Number(closingReading) - shiftData?.opening_reading > 0 
+    ? Number(closingReading) - shiftData?.opening_reading 
+    : 0;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
@@ -222,7 +246,78 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             <p className="text-xs text-muted-foreground">
               Opening reading: {shiftData?.opening_reading || 0}
             </p>
+            {Number(closingReading) > 0 && shiftData?.opening_reading > 0 && (
+              <p className="text-xs font-medium text-green-600">
+                Fuel sold: {fuelLiters.toFixed(2)} liters
+              </p>
+            )}
           </div>
+          
+          <div className="grid grid-cols-3 gap-3">
+            <div className="grid gap-1">
+              <Label htmlFor="cardSales">Card Sales (₹)</Label>
+              <Input
+                id="cardSales"
+                type="number"
+                value={cardSales}
+                onChange={(e) => setCardSales(e.target.value)}
+                placeholder="0.00"
+                step="0.01"
+              />
+            </div>
+            
+            <div className="grid gap-1">
+              <Label htmlFor="upiSales">UPI Sales (₹)</Label>
+              <Input
+                id="upiSales"
+                type="number"
+                value={upiSales}
+                onChange={(e) => setUpiSales(e.target.value)}
+                placeholder="0.00"
+                step="0.01"
+              />
+            </div>
+            
+            <div className="grid gap-1">
+              <Label htmlFor="cashSales">Cash Sales (₹)</Label>
+              <Input
+                id="cashSales"
+                type="number"
+                value={cashSales}
+                onChange={(e) => setCashSales(e.target.value)}
+                placeholder="0.00"
+                step="0.01"
+              />
+            </div>
+          </div>
+          
+          {/* Total Sales Summary Card */}
+          <Card className="mt-2 bg-muted/50">
+            <CardContent className="pt-4">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Total Sales:</span>
+                <span className="text-lg font-bold">₹{totalSales.toLocaleString()}</span>
+              </div>
+              <div className="mt-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Card:</span>
+                  <span>₹{Number(cardSales).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>UPI:</span>
+                  <span>₹{Number(upiSales).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Cash:</span>
+                  <span>₹{Number(cashSales).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between mt-1 pt-1 border-t">
+                  <span>Fuel Sold:</span>
+                  <span>{fuelLiters.toFixed(2)} L</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
           <div className="grid gap-2">
             <Label htmlFor="cashRemaining">Cash Remaining (₹)</Label>

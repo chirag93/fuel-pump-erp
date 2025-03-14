@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface EndShiftDialogProps {
   open: boolean;
@@ -45,6 +46,9 @@ const EndShiftDialog = ({
     cash_sales: 0
   });
   
+  // New state for calculated total
+  const [totalSales, setTotalSales] = useState(0);
+  
   // New shift data for when starting a new shift after ending current one
   const [newShiftData, setNewShiftData] = useState({
     staff_id: staffId,
@@ -55,11 +59,19 @@ const EndShiftDialog = ({
     shift_type: 'day'
   });
 
+  // Calculate total sales whenever sales input changes
+  useEffect(() => {
+    const cardSales = Number(formData.card_sales) || 0;
+    const upiSales = Number(formData.upi_sales) || 0;
+    const cashSales = Number(formData.cash_sales) || 0;
+    setTotalSales(cardSales + upiSales + cashSales);
+  }, [formData.card_sales, formData.upi_sales, formData.cash_sales]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: parseFloat(value) || 0
+      [name]: value === '' ? '' : parseFloat(value) || 0
     }));
   };
   
@@ -67,7 +79,7 @@ const EndShiftDialog = ({
     const { name, value } = e.target;
     setNewShiftData(prev => ({
       ...prev,
-      [name]: parseFloat(value) || 0
+      [name]: value === '' ? '' : parseFloat(value) || 0
     }));
   };
   
@@ -173,6 +185,11 @@ const EndShiftDialog = ({
     }
   };
   
+  // Calculate fuel quantity sold
+  const fuelLiters = formData.closing_reading - openingReading > 0 
+    ? formData.closing_reading - openingReading 
+    : 0;
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -196,12 +213,17 @@ const EndShiftDialog = ({
                 id="closing_reading"
                 name="closing_reading"
                 type="number"
-                value={formData.closing_reading}
+                value={formData.closing_reading === 0 ? '' : formData.closing_reading}
                 onChange={handleInputChange}
               />
               <p className="text-xs text-muted-foreground">
                 Current opening reading: {openingReading}
               </p>
+              {formData.closing_reading > 0 && openingReading > 0 && (
+                <p className="text-xs font-medium text-green-600">
+                  Fuel sold: {fuelLiters.toFixed(2)} liters
+                </p>
+              )}
             </div>
             
             <div className="grid gap-2">
@@ -210,7 +232,7 @@ const EndShiftDialog = ({
                 id="cash_remaining"
                 name="cash_remaining"
                 type="number"
-                value={formData.cash_remaining}
+                value={formData.cash_remaining === 0 ? '' : formData.cash_remaining}
                 onChange={handleInputChange}
               />
             </div>
@@ -222,7 +244,7 @@ const EndShiftDialog = ({
                   id="card_sales"
                   name="card_sales"
                   type="number"
-                  value={formData.card_sales}
+                  value={formData.card_sales === 0 ? '' : formData.card_sales}
                   onChange={handleInputChange}
                 />
               </div>
@@ -233,7 +255,7 @@ const EndShiftDialog = ({
                   id="upi_sales"
                   name="upi_sales"
                   type="number"
-                  value={formData.upi_sales}
+                  value={formData.upi_sales === 0 ? '' : formData.upi_sales}
                   onChange={handleInputChange}
                 />
               </div>
@@ -244,11 +266,39 @@ const EndShiftDialog = ({
                   id="cash_sales"
                   name="cash_sales"
                   type="number"
-                  value={formData.cash_sales}
+                  value={formData.cash_sales === 0 ? '' : formData.cash_sales}
                   onChange={handleInputChange}
                 />
               </div>
             </div>
+            
+            {/* Total Sales Summary Card */}
+            <Card className="mt-4 bg-muted/50">
+              <CardContent className="pt-4">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Total Sales:</span>
+                  <span className="text-lg font-bold">₹{totalSales.toLocaleString()}</span>
+                </div>
+                <div className="mt-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Card:</span>
+                    <span>₹{formData.card_sales.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>UPI:</span>
+                    <span>₹{formData.upi_sales.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Cash:</span>
+                    <span>₹{formData.cash_sales.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between mt-1 pt-1 border-t">
+                    <span>Fuel Sold:</span>
+                    <span>{fuelLiters.toFixed(2)} L</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
           
           <TabsContent value="end-and-start" className="space-y-4 mt-4 border-t pt-4">
@@ -275,7 +325,7 @@ const EndShiftDialog = ({
                 id="cash_given"
                 name="cash_given"
                 type="number"
-                value={newShiftData.cash_given}
+                value={newShiftData.cash_given === 0 ? '' : newShiftData.cash_given}
                 onChange={handleNewShiftInputChange}
               />
             </div>

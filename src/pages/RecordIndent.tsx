@@ -1,83 +1,117 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Search, FileText } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { toast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { toast } from "@/hooks/use-toast";
+import { Loader2, FileText } from 'lucide-react';
+import { supabase } from "@/integrations/supabase/client";
+import { Customer, Vehicle, Indent, Transaction } from '@/integrations/supabase/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { supabase, Customer, Vehicle, Indent, Transaction, IndentBooklet } from '@/integrations/supabase/client';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { format } from "date-fns"
+import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-interface ProcessIndentFormData {
-  indentNumber: string;
-  date: string;
-  customerId: string;
-  customerName: string;
-  vehicleId: string;
-  vehicleNumber: string;
-  quantity: number;
-  price: number;
-  totalAmount: number;
-  fuelType: string;
-  staffId: string;
-  bookletId: string | null;
+interface RecentTransaction extends Transaction {
+  customer_name?: string;
+  vehicle_number?: string;
 }
 
-const FuelingProcess = () => {
+const RecordIndent = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [customerVehicles, setCustomerVehicles] = useState<Vehicle[]>([]);
-  const [staffMembers, setStaffMembers] = useState<{id: string; name: string}[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  
-  const [customerIndentBooklets, setCustomerIndentBooklets] = useState<IndentBooklet[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  
-  const [processIndentDialogOpen, setProcessIndentDialogOpen] = useState(false);
-  
-  // Default form data
-  const [indentFormData, setIndentFormData] = useState<ProcessIndentFormData>({
-    indentNumber: '',
-    date: new Date().toISOString().split('T')[0],
-    customerId: '',
-    customerName: '',
-    vehicleId: '',
-    vehicleNumber: '',
-    quantity: 0,
-    price: 0,
-    totalAmount: 0,
-    fuelType: 'Petrol',
-    staffId: '',
-    bookletId: null
-  });
+  const [selectedCustomer, setSelectedCustomer] = useState<string>('');
+  const [selectedVehicle, setSelectedVehicle] = useState<string>('');
+  const [fuelType, setFuelType] = useState<string>('Petrol');
+  const [amount, setAmount] = useState<number>(0);
+  const [quantity, setQuantity] = useState<number>(0);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isCustomerLoading, setIsCustomerLoading] = useState<boolean>(true);
+  const [isVehicleLoading, setIsVehicleLoading] = useState<boolean>(true);
+  const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
+  const [isTransactionsLoading, setIsTransactionsLoading] = useState<boolean>(true);
+  const [date, setDate] = useState<Date | undefined>(new Date());
 
-  // Fetch data on component mount
   useEffect(() => {
-    fetchTransactions();
     fetchCustomers();
     fetchVehicles();
-    fetchStaffMembers();
+    fetchRecentTransactions();
   }, []);
 
-  // Fetch customer's indent booklets when a customer is selected
   useEffect(() => {
-    if (selectedCustomerId) {
-      fetchCustomerIndentBooklets(selectedCustomerId);
-      fetchCustomerVehicles(selectedCustomerId);
-    }
-  }, [selectedCustomerId]);
+    fetchVehicles(selectedCustomer);
+  }, [selectedCustomer]);
 
-  const fetchTransactions = async () => {
+  const fetchCustomers = async () => {
+    setIsCustomerLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setCustomers(data);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load customers. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCustomerLoading(false);
+    }
+  };
+
+  const fetchVehicles = async (customerId: string = '') => {
+    setIsVehicleLoading(true);
+    try {
+      let query = supabase
+        .from('vehicles')
+        .select('*')
+        .order('number', { ascending: true });
+
+      if (customerId) {
+        query = query.eq('customer_id', customerId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setVehicles(data);
+      }
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load vehicles. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsVehicleLoading(false);
+    }
+  };
+
+  const fetchRecentTransactions = async () => {
+    setIsTransactionsLoading(true);
     try {
       const { data, error } = await supabase
         .from('transactions')
@@ -88,626 +122,279 @@ const FuelingProcess = () => {
         `)
         .order('created_at', { ascending: false })
         .limit(5);
-      
-      if (error) throw error;
-      
+
+      if (error) {
+        throw error;
+      }
+
       if (data) {
         const formattedTransactions = data.map(item => ({
-          ...item,
-          customer_name: item.customers?.name,
-          vehicle_number: item.vehicles?.number
+          id: item.id,
+          date: item.date,
+          customer_name: item.customers?.name || 'Walk-in Customer',
+          vehicle_number: item.vehicles?.number || 'N/A',
+          fuel_type: item.fuel_type,
+          quantity: item.quantity,
+          amount: item.amount,
+          payment_method: item.payment_method,
+          indent_id: item.indent_id
         }));
-        setTransactions(formattedTransactions);
+        setRecentTransactions(formattedTransactions);
       }
     } catch (error) {
-      console.error('Error fetching transactions:', error);
+      console.error('Error fetching recent transactions:', error);
       toast({
         title: "Error",
-        description: "Failed to load transactions",
+        description: "Failed to load recent transactions. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsTransactionsLoading(false);
     }
   };
 
-  const fetchCustomers = async () => {
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
     try {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*');
-      
-      if (error) throw error;
-      
-      if (data) {
-        setCustomers(data);
-      }
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load customers",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const fetchVehicles = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('vehicles')
-        .select('*');
-      
-      if (error) throw error;
-      
-      if (data) {
-        setVehicles(data);
-      }
-    } catch (error) {
-      console.error('Error fetching vehicles:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load vehicles",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const fetchCustomerVehicles = async (customerId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('vehicles')
-        .select('*')
-        .eq('customer_id', customerId);
-      
-      if (error) throw error;
-      
-      if (data) {
-        setCustomerVehicles(data);
-      }
-    } catch (error) {
-      console.error('Error fetching customer vehicles:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load customer vehicles",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const fetchStaffMembers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('staff')
-        .select('id, name');
-      
-      if (error) throw error;
-      
-      if (data) {
-        setStaffMembers(data);
-      }
-    } catch (error) {
-      console.error('Error fetching staff members:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load staff members",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const fetchCustomerIndentBooklets = async (customerId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('indent_booklets')
-        .select('*')
-        .eq('customer_id', customerId)
-        .eq('status', 'Active');
-      
-      if (error) throw error;
-      
-      if (data) {
-        // Transform the data to ensure status is one of the allowed types
-        const typedBooklets: IndentBooklet[] = data.map(booklet => ({
-          ...booklet,
-          status: booklet.status as 'Active' | 'Completed' | 'Cancelled'
-        }));
-        setCustomerIndentBooklets(typedBooklets);
-      } else {
-        setCustomerIndentBooklets([]);
-      }
-    } catch (error) {
-      console.error('Error fetching indent booklets:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load indent booklets",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleCustomerSelect = (customerId: string) => {
-    setSelectedCustomerId(customerId);
-    
-    const customer = customers.find(c => c.id === customerId);
-    
-    if (customer) {
-      setIndentFormData({
-        ...indentFormData,
-        customerId: customer.id,
-        customerName: customer.name,
-        vehicleId: '',
-        vehicleNumber: ''
-      });
-    }
-  };
-
-  const handleVehicleSelect = (vehicleId: string) => {
-    const vehicle = vehicles.find(v => v.id === vehicleId);
-    
-    if (vehicle) {
-      setIndentFormData({
-        ...indentFormData,
-        vehicleId: vehicle.id,
-        vehicleNumber: vehicle.number
-      });
-    }
-  };
-
-  const validateIndentNumber = (indentNumber: string, bookletId: string): boolean => {
-    const booklet = customerIndentBooklets.find(b => b.id === bookletId);
-    
-    if (!booklet) return false;
-    
-    const startNum = parseInt(booklet.start_number);
-    const endNum = parseInt(booklet.end_number);
-    const indentNum = parseInt(indentNumber);
-    
-    return indentNum >= startNum && indentNum <= endNum;
-  };
-
-  const handleProcessIndent = async () => {
-    try {
-      if (!indentFormData.staffId) {
+      if (!selectedCustomer || !selectedVehicle || !fuelType || !amount || !quantity || !date) {
         toast({
-          title: "Error",
-          description: "Please select a staff member",
+          title: "Missing information",
+          description: "Please fill all required fields",
           variant: "destructive"
         });
         return;
       }
 
-      if (!indentFormData.indentNumber) {
-        toast({
-          title: "Error",
-          description: "Please enter an indent number",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (!indentFormData.bookletId) {
-        toast({
-          title: "Error",
-          description: "Please select an indent booklet",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Validate that the indent number is within the range of the selected booklet
-      if (!validateIndentNumber(indentFormData.indentNumber, indentFormData.bookletId)) {
-        toast({
-          title: "Error",
-          description: "The indent number is not valid for the selected booklet",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Check if this indent number has already been used
-      const { data: existingIndents, error: checkError } = await supabase
-        .from('indents')
-        .select('id')
-        .eq('indent_number', indentFormData.indentNumber)
-        .eq('booklet_id', indentFormData.bookletId);
-      
-      if (checkError) throw checkError;
-      
-      if (existingIndents && existingIndents.length > 0) {
-        toast({
-          title: "Error",
-          description: "This indent number has already been used",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Create a new indent record
-      const indentId = `IND-${indentFormData.indentNumber}`;
-      const indent = {
-        id: indentId,
-        customer_id: indentFormData.customerId,
-        vehicle_id: indentFormData.vehicleId,
-        fuel_type: indentFormData.fuelType,
-        amount: indentFormData.totalAmount,
-        quantity: indentFormData.quantity,
-        status: 'Completed',
-        indent_number: indentFormData.indentNumber,
-        booklet_id: indentFormData.bookletId,
-        date: indentFormData.date
-      };
-      
-      const { error: indentError } = await supabase
-        .from('indents')
-        .insert(indent);
-      
-      if (indentError) throw indentError;
-      
-      // Create transaction record with indent reference
-      const transactionId = `TRX${new Date().getTime()}`;
-      const transaction = {
-        id: transactionId,
-        indent_id: indentId,
-        customer_id: indentFormData.customerId,
-        vehicle_id: indentFormData.vehicleId,
-        staff_id: indentFormData.staffId,
-        date: indentFormData.date,
-        fuel_type: indentFormData.fuelType,
-        amount: indentFormData.totalAmount,
-        quantity: indentFormData.quantity,
-        payment_method: 'credit', // Indents are processed as credit transactions
-      };
-      
-      const { error: transactionError } = await supabase
+      const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
-        .insert(transaction);
-      
-      if (transactionError) throw transactionError;
+        .insert([{
+          customer_id: selectedCustomer,
+          vehicle_id: selectedVehicle,
+          date: date.toISOString(),
+          fuel_type: fuelType,
+          amount: amount,
+          quantity: quantity,
+          payment_method: 'Cash' // Default payment method
+        }])
+        .select();
 
-      // Update the used_indents count in the booklet
-      const booklet = customerIndentBooklets.find(b => b.id === indentFormData.bookletId);
-      if (booklet) {
-        const newUsedCount = booklet.used_indents + 1;
-        const newStatus = newUsedCount >= booklet.total_indents ? 'Completed' : 'Active';
-        
-        const { error: bookletError } = await supabase
-          .from('indent_booklets')
-          .update({ 
-            used_indents: newUsedCount,
-            status: newStatus as 'Active' | 'Completed' | 'Cancelled'
-          })
-          .eq('id', indentFormData.bookletId);
-        
-        if (bookletError) throw bookletError;
+      if (transactionError) {
+        throw transactionError;
       }
-      
-      toast({
-        title: "Success",
-        description: "Indent processed successfully",
-      });
-      
-      // Refresh data
-      fetchTransactions();
-      if (selectedCustomerId) {
-        fetchCustomerIndentBooklets(selectedCustomerId);
+
+      if (transaction) {
+        toast({
+          title: "Success",
+          description: "Transaction recorded successfully"
+        });
+        // Reset form fields
+        setSelectedCustomer('');
+        setSelectedVehicle('');
+        setFuelType('Petrol');
+        setAmount(0);
+        setQuantity(0);
+        setDate(new Date());
+        fetchRecentTransactions(); // Refresh recent transactions
       }
-      
-      setProcessIndentDialogOpen(false);
-      // Reset form data
-      setIndentFormData({
-        indentNumber: '',
-        date: new Date().toISOString().split('T')[0],
-        customerId: '',
-        customerName: '',
-        vehicleId: '',
-        vehicleNumber: '',
-        quantity: 0,
-        price: 0,
-        totalAmount: 0,
-        fuelType: 'Petrol',
-        staffId: '',
-        bookletId: null
-      });
-      setSelectedCustomerId(null);
     } catch (error) {
-      console.error('Error processing indent:', error);
+      console.error('Error recording indent:', error);
       toast({
         title: "Error",
-        description: "Failed to process indent",
+        description: "Failed to record indent. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  const handlePriceOrQuantityChange = (field: 'price' | 'quantity', value: number) => {
-    const updates = { ...indentFormData, [field]: value };
-    
-    // Calculate total amount
-    const totalAmount = updates.price * updates.quantity;
-    
-    setIndentFormData({
-      ...updates,
-      totalAmount: totalAmount
-    });
-  };
-
-  const filteredCustomers = searchTerm 
-    ? customers.filter(customer => 
-        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.phone.includes(searchTerm)
-      )
-    : customers;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Fueling Process</h1>
+      <h1 className="text-3xl font-bold">Record Indent</h1>
+      <Card>
+        <CardHeader>
+          <CardDescription>
+            Record fuel indents for customers and vehicles
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="customer">Customer</Label>
+                <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                  <SelectTrigger id="customer">
+                    <SelectValue placeholder="Select a customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isCustomerLoading ? (
+                      <SelectItem value="loading" disabled>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </SelectItem>
+                    ) : (
+                      customers.map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="vehicle">Vehicle</Label>
+                <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
+                  <SelectTrigger id="vehicle">
+                    <SelectValue placeholder="Select a vehicle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isVehicleLoading ? (
+                      <SelectItem value="loading" disabled>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </SelectItem>
+                    ) : (
+                      vehicles.map((vehicle) => (
+                        <SelectItem key={vehicle.id} value={vehicle.id}>{vehicle.number}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="date">Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-[240px] justify-start text-left font-normal",
+                        !date && "text-muted-foreground"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {date ? format(date, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="center" side="bottom">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label htmlFor="fuelType">Fuel Type</Label>
+                <Select value={fuelType} onValueChange={setFuelType}>
+                  <SelectTrigger id="fuelType">
+                    <SelectValue placeholder="Select fuel type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Petrol">Petrol</SelectItem>
+                    <SelectItem value="Diesel">Diesel</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="amount">Amount (₹)</Label>
+                <Input
+                  type="number"
+                  id="amount"
+                  value={amount === 0 ? '' : amount}
+                  onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                  placeholder="Enter amount"
+                />
+              </div>
+              <div>
+                <Label htmlFor="quantity">Quantity (L)</Label>
+                <Input
+                  type="number"
+                  id="quantity"
+                  value={quantity === 0 ? '' : quantity}
+                  onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
+                  placeholder="Enter quantity"
+                />
+              </div>
+            </div>
+            <Button disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Recording...
+                </>
+              ) : (
+                'Record Indent'
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Process Indent</CardTitle>
-          <CardDescription>Record fuel transactions based on customer indent slips</CardDescription>
+          <div className="flex items-center justify-between">
+            <CardTitle>Recent Transactions</CardTitle>
+          </div>
+          <CardDescription>
+            Last 5 transactions recorded
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="searchCustomer">Search Customer</Label>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="searchCustomer"
-                placeholder="Search by name, contact person or phone..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+        <CardContent>
+          {isTransactionsLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading transactions...
             </div>
-          </div>
-          
-          <div className="border rounded-md max-h-[300px] overflow-y-auto">
-            {filteredCustomers.length > 0 ? (
-              <div className="divide-y">
-                {filteredCustomers.map((customer) => (
-                  <div 
-                    key={customer.id}
-                    className={`p-3 hover:bg-muted/50 cursor-pointer ${selectedCustomerId === customer.id ? 'bg-muted' : ''}`}
-                    onClick={() => handleCustomerSelect(customer.id)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">
-                          {customer.name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Contact: {customer.contact} | Phone: {customer.phone}
-                        </p>
-                      </div>
-                      {customer.balance !== null && (
-                        <div className="text-right">
-                          <p className="font-medium">₹{customer.balance.toLocaleString()}</p>
-                          <p className="text-sm text-muted-foreground">Current Balance</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+          ) : recentTransactions.length === 0 ? (
+            <div className="flex items-center justify-center h-32 text-muted-foreground">
+              <FileText className="mr-2 h-4 w-4" />
+              No transactions found.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Fuel Type</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Quantity</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentTransactions.map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
+                    <TableCell>{transaction.customer_name}</TableCell>
+                    <TableCell>{transaction.vehicle_number}</TableCell>
+                    <TableCell>{transaction.fuel_type}</TableCell>
+                    <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
+                    <TableCell>{transaction.quantity} L</TableCell>
+                  </TableRow>
                 ))}
-              </div>
-            ) : (
-              <div className="p-6 text-center text-muted-foreground">
-                {searchTerm 
-                  ? "No customers found matching your search" 
-                  : "No customers available"}
-              </div>
-            )}
-          </div>
-
-          {selectedCustomerId && (
-            <div className="mt-4">
-              <Button onClick={() => setProcessIndentDialogOpen(true)}>
-                Process Indent
-              </Button>
-            </div>
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-          <CardDescription>Last 5 fuel transactions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Source</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactions.length > 0 ? (
-                transactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
-                    <TableCell className="font-medium">{transaction.customer_name || 'Walk-in'}</TableCell>
-                    <TableCell>{transaction.vehicle_number || 'N/A'}</TableCell>
-                    <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
-                    <TableCell>{transaction.quantity}L</TableCell>
-                    <TableCell className="capitalize">{transaction.payment_method}</TableCell>
-                    <TableCell>{transaction.indent_id ? 'Indent' : 'Direct'}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-4">No transactions found</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-      
-      <Dialog open={processIndentDialogOpen} onOpenChange={setProcessIndentDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle>Process Indent Transaction</DialogTitle>
-            <DialogDescription>
-              Complete this fuel transaction based on an indent slip
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="customerName">Customer</Label>
-              <Input
-                id="customerName"
-                value={indentFormData.customerName}
-                readOnly
-                className="bg-muted"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="bookletId">Indent Booklet</Label>
-              <Select 
-                value={indentFormData.bookletId || ""} 
-                onValueChange={(value) => setIndentFormData({...indentFormData, bookletId: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select indent booklet" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customerIndentBooklets.map(booklet => (
-                    <SelectItem key={booklet.id} value={booklet.id}>
-                      {booklet.start_number} - {booklet.end_number} ({booklet.used_indents}/{booklet.total_indents} used)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {customerIndentBooklets.length === 0 && (
-                <p className="text-sm text-destructive">No active indent booklets available for this customer</p>
-              )}
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="indentNumber">Indent Number</Label>
-              <Input
-                id="indentNumber"
-                value={indentFormData.indentNumber}
-                onChange={(e) => setIndentFormData({...indentFormData, indentNumber: e.target.value})}
-                placeholder="Enter the indent number from the slip"
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="date">Transaction Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={indentFormData.date}
-                onChange={(e) => setIndentFormData({...indentFormData, date: e.target.value})}
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="vehicleId">Vehicle</Label>
-              <Select 
-                value={indentFormData.vehicleId} 
-                onValueChange={handleVehicleSelect}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select vehicle" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customerVehicles.map(vehicle => (
-                    <SelectItem key={vehicle.id} value={vehicle.id}>
-                      {vehicle.number} ({vehicle.type})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="fuelType">Fuel Type</Label>
-              <Select 
-                value={indentFormData.fuelType} 
-                onValueChange={(value) => setIndentFormData({...indentFormData, fuelType: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select fuel type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Petrol">Petrol</SelectItem>
-                  <SelectItem value="Diesel">Diesel</SelectItem>
-                  <SelectItem value="Premium Petrol">Premium Petrol</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="quantity">Quantity (Liters)</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  value={indentFormData.quantity.toString()}
-                  onChange={(e) => handlePriceOrQuantityChange('quantity', parseFloat(e.target.value) || 0)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="price">Price per liter</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={indentFormData.price.toString()}
-                  onChange={(e) => handlePriceOrQuantityChange('price', parseFloat(e.target.value) || 0)}
-                />
-              </div>
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="totalAmount">Total Amount</Label>
-              <Input
-                id="totalAmount"
-                type="number"
-                value={indentFormData.totalAmount.toString()}
-                readOnly
-                className="bg-muted"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="staffId">Staff Member</Label>
-              <Select 
-                value={indentFormData.staffId} 
-                onValueChange={(value) => setIndentFormData({...indentFormData, staffId: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select staff member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {staffMembers.map(staff => (
-                    <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setProcessIndentDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleProcessIndent}>
-              Process Transaction
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <div className="flex justify-end mt-2">
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/all-transactions" className="flex items-center">
+            View all transactions 
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 };
 
-export default FuelingProcess;
+export default RecordIndent;

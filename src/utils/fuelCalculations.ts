@@ -113,5 +113,53 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
     };
   }
   
+  // Update tank levels based on the latest daily readings
+  await updateTankLevelsFromReadings(fuelLevels);
+  
   return fuelLevels;
+};
+
+// New function to update tank levels based on daily readings
+const updateTankLevelsFromReadings = async (fuelLevels: { [key: string]: { capacity: number, current: number, price: number } }) => {
+  try {
+    // For each fuel type, get the latest daily reading
+    for (const fuelType of Object.keys(fuelLevels)) {
+      const { data, error } = await supabase
+        .from('daily_readings')
+        .select('closing_stock, date, receipt_quantity, sales_per_tank_stock')
+        .eq('fuel_type', fuelType)
+        .order('date', { ascending: false })
+        .limit(1);
+        
+      if (error) {
+        console.error(`Error fetching latest readings for ${fuelType}:`, error);
+        continue;
+      }
+      
+      if (data && data.length > 0) {
+        const latestReading = data[0];
+        
+        // If we have a valid closing stock, use it as the current level
+        if (latestReading.closing_stock !== null && latestReading.closing_stock !== undefined) {
+          // Update the current level in the fuel_levels object
+          fuelLevels[fuelType].current = latestReading.closing_stock;
+          
+          // Also update the database with this value
+          const { error: updateError } = await supabase
+            .from('fuel_settings')
+            .update({
+              current_level: latestReading.closing_stock,
+              updated_at: new Date().toISOString()
+            })
+            .eq('fuel_type', fuelType);
+            
+          if (updateError) {
+            console.error(`Error updating fuel settings for ${fuelType}:`, updateError);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error updating tank levels from readings:", error);
+  }
 };

@@ -33,6 +33,11 @@ interface ReadingsTableProps {
 }
 
 const ReadingsTable = ({ readings, handleOpenDialog, handleOpenDeleteDialog }: ReadingsTableProps) => {
+  // Format the stock variation to include + sign if positive
+  const formatStockVariation = (value: number) => {
+    return value > 0 ? `+${value}` : value;
+  };
+  
   return (
     <Table>
       <TableHeader>
@@ -83,7 +88,7 @@ const ReadingsTable = ({ readings, handleOpenDialog, handleOpenDeleteDialog }: R
                     : ""
               }
             >
-              {reading.stock_variation}
+              {formatStockVariation(reading.stock_variation)}
             </TableCell>
             <TableCell>
               <div className="flex space-x-2">
