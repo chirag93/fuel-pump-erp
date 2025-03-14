@@ -14,15 +14,33 @@ import {
   Truck
 } from "lucide-react";
 import { migrateAllData } from "@/utils/seedDatabase";
+import { getFuelLevels } from "@/utils/fuelCalculations";
+import FuelTankDisplay from "@/components/fuel/FuelTankDisplay";
 
 export default function Home() {
   const navigate = useNavigate();
   const [hasSeededData, setHasSeededData] = useState(false);
+  const [fuelLevels, setFuelLevels] = useState<{ [key: string]: { capacity: number, current: number, price: number } }>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   // Check local storage if database has been seeded
   useEffect(() => {
     const seeded = localStorage.getItem("fuelPumpDbSeeded");
     setHasSeededData(seeded === "true");
+
+    // Fetch fuel levels
+    const fetchFuelLevels = async () => {
+      try {
+        const levels = await getFuelLevels();
+        setFuelLevels(levels);
+      } catch (error) {
+        console.error("Error fetching fuel levels:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFuelLevels();
   }, []);
 
   const handleSeedDatabase = async () => {
@@ -125,7 +143,17 @@ export default function Home() {
               </Card>
             )}
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"></div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {!isLoading && Object.entries(fuelLevels).map(([fuelType, data]) => (
+                <FuelTankDisplay 
+                  key={fuelType}
+                  fuelType={fuelType}
+                  capacity={data.capacity}
+                  lastUpdated={new Date().toLocaleDateString()}
+                  showTankIcon={true}
+                />
+              ))}
+            </div>
 
             <Card>
               <CardContent className="pt-6">
