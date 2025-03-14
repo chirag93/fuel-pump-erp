@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,8 +18,15 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // If user is already authenticated, redirect to dashboard
+  if (isAuthenticated) {
+    const from = location.state?.from?.pathname || '/dashboard';
+    navigate(from, { replace: true });
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +42,12 @@ const Login = () => {
     try {
       const success = await login(email, password, rememberMe);
       if (success) {
-        navigate('/dashboard');
+        const from = location.state?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
+        toast({
+          title: "Login successful",
+          description: "You have been logged in successfully.",
+        });
       } else {
         setError('Login failed. Please check your credentials.');
       }

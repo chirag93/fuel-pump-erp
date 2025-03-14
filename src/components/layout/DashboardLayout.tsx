@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,12 +46,19 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { pathname } = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -61,13 +68,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   const navItems = [
     { icon: <BarChart4 size={20} />, label: 'Dashboard', to: '/dashboard' },
-    { icon: <Home size={20} />, label: 'Home', to: '/home' },
-    { icon: <Users size={20} />, label: 'Customers', to: '/customers' },
-    { icon: <UserCircle size={20} />, label: 'Staff', to: '/staff' },
-    { icon: <Package size={20} />, label: 'Consumables', to: '/consumables' },
     { icon: <CalendarClock size={20} />, label: 'Daily Readings', to: '/daily-readings' },
-    { icon: <ClipboardList size={20} />, label: 'Shift Management', to: '/shift' },
-    { icon: <FileText size={20} />, label: 'Record Indent', to: '/record-indent' },
+    { icon: <Droplets size={20} />, label: 'Stock Levels', to: '/stock-levels' },
+    { icon: <FileText size={20} />, label: 'Transactions', to: '/all-transactions' },
   ];
 
   return (
@@ -101,21 +104,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
         
         <div className="absolute bottom-0 w-full border-t p-4">
-          <div className="mb-2">
-            <SidebarItem
-              icon={<Settings size={20} />}
-              label="Settings"
-              to="/settings"
-              active={pathname === "/settings"}
-            />
-          </div>
           <div className="mb-4 flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
               <UserCircle />
             </div>
             <div>
-              <p className="font-medium">{user?.username}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+              <p className="font-medium">{user?.username || 'User'}</p>
+              <p className="text-xs text-muted-foreground capitalize">{user?.role || 'User'}</p>
             </div>
           </div>
           <Button 
