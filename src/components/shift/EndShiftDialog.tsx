@@ -42,6 +42,7 @@ const EndShiftDialog = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fuelPrice, setFuelPrice] = useState<number>(0);
+  const [isEditingCompletedShift, setIsEditingCompletedShift] = useState(false);
   
   const [formData, setFormData] = useState({
     closing_reading: 0,
@@ -69,6 +70,53 @@ const EndShiftDialog = ({
   
   // Staff list for the new shift
   const [staffList, setStaffList] = useState<Array<{id: string, name: string}>>([]);
+
+  // Check if we're editing a completed shift when the dialog opens
+  useEffect(() => {
+    if (open && shiftId) {
+      const checkShiftStatus = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('shifts')
+            .select('status, end_time')
+            .eq('id', shiftId)
+            .single();
+            
+          if (error) throw error;
+          
+          // If shift has end_time and status is completed, we're editing a completed shift
+          if (data && data.end_time && data.status === 'completed') {
+            setIsEditingCompletedShift(true);
+            
+            // Load the existing data for this completed shift
+            const { data: readingData, error: readingError } = await supabase
+              .from('readings')
+              .select('*')
+              .eq('shift_id', shiftId)
+              .single();
+              
+            if (readingError) throw readingError;
+            
+            if (readingData) {
+              setFormData({
+                closing_reading: readingData.closing_reading || 0,
+                cash_remaining: readingData.cash_remaining || 0,
+                card_sales: readingData.card_sales || 0,
+                upi_sales: readingData.upi_sales || 0,
+                cash_sales: readingData.cash_sales || 0
+              });
+            }
+          } else {
+            setIsEditingCompletedShift(false);
+          }
+        } catch (err) {
+          console.error('Error checking shift status:', err);
+        }
+      };
+      
+      checkShiftStatus();
+    }
+  }, [open, shiftId]);
 
   // Fetch fuel price for calculations
   useEffect(() => {
@@ -111,10 +159,10 @@ const EndShiftDialog = ({
       }
     };
     
-    if (open && mode === 'end-and-start') {
+    if (open && mode === 'end-and-start' && !isEditingCompletedShift) {
       fetchStaff();
     }
-  }, [open, mode]);
+  }, [open, mode, isEditingCompletedShift]);
 
   // Calculate total sales whenever sales input changes
   useEffect(() => {
@@ -159,9 +207,16 @@ const EndShiftDialog = ({
   const validateForm = () => {
     setError(null);
     
-    if (!formData.closing_reading || formData.closing_reading <= openingReading) {
-      setError("Closing reading must be greater than opening reading");
-      return false;
+    if (!isEditingCompletedShift) {
+      if (!formData.closing_reading || formData.closing_reading <= openingReading) {
+        setError("Closing reading must be greater than opening reading");
+        return false;
+      }
+    } else {
+      if (!formData.closing_reading || formData.closing_reading <= 0) {
+        setError("Please enter a valid closing reading");
+        return false;
+      }
     }
     
     if (mode === 'end-and-start' && !newShiftData.staff_id) {
@@ -178,109 +233,132 @@ const EndShiftDialog = ({
     setLoading(true);
     
     try {
-      // First end the current shift
-      const now = new Date().toISOString();
-      
-      // Update the shift record
-      const { error: shiftError } = await supabase
-        .from('shifts')
-        .update({
-          end_time: now,
-          status: 'completed',
-          cash_remaining: formData.cash_remaining
-        })
-        .eq('id', shiftId);
-        
-      if (shiftError) {
-        throw shiftError;
-      }
-      
-      // Update the readings record
-      const { error: readingsError } = await supabase
-        .from('readings')
-        .update({
-          closing_reading: formData.closing_reading,
-          cash_remaining: formData.cash_remaining,
-          card_sales: formData.card_sales,
-          upi_sales: formData.upi_sales,
-          cash_sales: formData.cash_sales
-        })
-        .eq('shift_id', shiftId);
-        
-      if (readingsError) {
-        throw readingsError;
-      }
-      
-      // If we're also starting a new shift
-      if (mode === 'end-and-start' && newShiftData.staff_id) {
-        // Get current shift type to determine next shift type
-        const { data: currentShift, error: currentShiftError } = await supabase
-          .from('shifts')
-          .select('shift_type')
-          .eq('id', shiftId)
-          .single();
+      if (isEditingCompletedShift) {
+        // Just update the readings record for completed shifts
+        const { error: readingsError } = await supabase
+          .from('readings')
+          .update({
+            closing_reading: formData.closing_reading,
+            cash_remaining: formData.cash_remaining,
+            card_sales: formData.card_sales,
+            upi_sales: formData.upi_sales,
+            cash_sales: formData.cash_sales
+          })
+          .eq('shift_id', shiftId);
           
-        if (currentShiftError) {
-          throw currentShiftError;
+        if (readingsError) {
+          throw readingsError;
         }
         
-        let nextShiftType = 'day'; // Default
+        toast({
+          title: "Success",
+          description: "Shift details updated successfully."
+        });
+      } else {
+        // End the current shift
+        const now = new Date().toISOString();
         
-        // Determine next shift type based on current shift
-        if (currentShift) {
-          if (currentShift.shift_type === 'morning') {
-            nextShiftType = 'evening';
-          } else if (currentShift.shift_type === 'evening') {
-            nextShiftType = 'night';
-          } else if (currentShift.shift_type === 'night') {
-            nextShiftType = 'morning';
-          } else if (currentShift.shift_type === 'day') {
-            nextShiftType = 'night';
+        // Update the shift record
+        const { error: shiftError } = await supabase
+          .from('shifts')
+          .update({
+            end_time: now,
+            status: 'completed',
+            cash_remaining: formData.cash_remaining
+          })
+          .eq('id', shiftId);
+          
+        if (shiftError) {
+          throw shiftError;
+        }
+        
+        // Update the readings record
+        const { error: readingsError } = await supabase
+          .from('readings')
+          .update({
+            closing_reading: formData.closing_reading,
+            cash_remaining: formData.cash_remaining,
+            card_sales: formData.card_sales,
+            upi_sales: formData.upi_sales,
+            cash_sales: formData.cash_sales
+          })
+          .eq('shift_id', shiftId);
+          
+        if (readingsError) {
+          throw readingsError;
+        }
+        
+        // If we're also starting a new shift
+        if (mode === 'end-and-start' && newShiftData.staff_id) {
+          // Get current shift type to determine next shift type
+          const { data: currentShift, error: currentShiftError } = await supabase
+            .from('shifts')
+            .select('shift_type')
+            .eq('id', shiftId)
+            .single();
+            
+          if (currentShiftError) {
+            throw currentShiftError;
+          }
+          
+          let nextShiftType = 'day'; // Default
+          
+          // Determine next shift type based on current shift
+          if (currentShift) {
+            if (currentShift.shift_type === 'morning') {
+              nextShiftType = 'evening';
+            } else if (currentShift.shift_type === 'evening') {
+              nextShiftType = 'night';
+            } else if (currentShift.shift_type === 'night') {
+              nextShiftType = 'morning';
+            } else if (currentShift.shift_type === 'day') {
+              nextShiftType = 'night';
+            }
+          }
+          
+          // Create a new shift
+          const { data: newShift, error: newShiftError } = await supabase
+            .from('shifts')
+            .insert([{
+              staff_id: newShiftData.staff_id,
+              shift_type: nextShiftType,
+              start_time: now,
+              status: 'active'
+            }])
+            .select();
+            
+          if (newShiftError) {
+            throw newShiftError;
+          }
+          
+          if (!newShift || newShift.length === 0) {
+            throw new Error("Failed to create new shift");
+          }
+          
+          // Create associated reading record
+          const { error: newReadingError } = await supabase
+            .from('readings')
+            .insert([{
+              shift_id: newShift[0].id,
+              staff_id: newShiftData.staff_id,
+              pump_id: pumpId,
+              date: newShiftData.date,
+              opening_reading: formData.closing_reading, // Use closing reading as opening reading
+              cash_given: newShiftData.cash_given
+            }]);
+            
+          if (newReadingError) {
+            throw newReadingError;
           }
         }
         
-        // Create a new shift
-        const { data: newShift, error: newShiftError } = await supabase
-          .from('shifts')
-          .insert([{
-            staff_id: newShiftData.staff_id,
-            shift_type: nextShiftType,
-            start_time: now,
-            status: 'active'
-          }])
-          .select();
-          
-        if (newShiftError) {
-          throw newShiftError;
-        }
-        
-        if (!newShift || newShift.length === 0) {
-          throw new Error("Failed to create new shift");
-        }
-        
-        // Create associated reading record
-        const { error: newReadingError } = await supabase
-          .from('readings')
-          .insert([{
-            shift_id: newShift[0].id,
-            staff_id: newShiftData.staff_id,
-            pump_id: pumpId,
-            date: newShiftData.date,
-            opening_reading: formData.closing_reading, // Use closing reading as opening reading
-            cash_given: newShiftData.cash_given
-          }]);
-          
-        if (newReadingError) {
-          throw newReadingError;
-        }
+        toast({
+          title: "Success",
+          description: mode === 'end-only' 
+            ? "Shift ended successfully." 
+            : "Shift ended and new shift started successfully."
+        });
       }
-      
-      toast({
-        title: "Success",
-        description: mode === 'end-only' 
-          ? "Shift ended successfully." 
-          : "Shift ended and new shift started successfully."
-      });
       
       onOpenChange(false);
       onComplete();
@@ -309,147 +387,161 @@ const EndShiftDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>End Shift</DialogTitle>
+          <DialogTitle>
+            {isEditingCompletedShift ? "Edit Completed Shift" : "End Shift"}
+          </DialogTitle>
           <DialogDescription>
-            Enter the closing information to end the current shift.
+            {isEditingCompletedShift 
+              ? "Update the details of this completed shift."
+              : "Enter the closing information to end the current shift."}
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs value={mode} onValueChange={(value) => setMode(value as 'end-only' | 'end-and-start')}>
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="end-only">End Shift Only</TabsTrigger>
-            <TabsTrigger value="end-and-start">End & Start New</TabsTrigger>
-          </TabsList>
+        {!isEditingCompletedShift && (
+          <Tabs value={mode} onValueChange={(value) => setMode(value as 'end-only' | 'end-and-start')}>
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="end-only">End Shift Only</TabsTrigger>
+              <TabsTrigger value="end-and-start">End & Start New</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
           
-          <div className="space-y-4 py-2">
-            <div className="grid gap-2">
-              <Label htmlFor="closing_reading">Closing Reading</Label>
-              <Input
-                id="closing_reading"
-                name="closing_reading"
-                type="number"
-                value={formData.closing_reading === 0 ? '' : formData.closing_reading}
-                onChange={handleInputChange}
-              />
+        <div className="space-y-4 py-2">
+          <div className="grid gap-2">
+            <Label htmlFor="closing_reading">Closing Reading</Label>
+            <Input
+              id="closing_reading"
+              name="closing_reading"
+              type="number"
+              value={formData.closing_reading === 0 ? '' : formData.closing_reading}
+              onChange={handleInputChange}
+            />
+            {!isEditingCompletedShift && (
               <p className="text-xs text-muted-foreground">
                 Current opening reading: {openingReading}
               </p>
-              {formData.closing_reading > 0 && openingReading > 0 && (
-                <p className="text-xs font-medium text-green-600">
-                  Fuel sold: {fuelLiters.toFixed(2)} liters 
-                  {fuelPrice > 0 && ` (₹${expectedSalesAmount.toFixed(2)})`}
-                </p>
-              )}
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="cash_remaining">Cash Remaining</Label>
+            )}
+            {formData.closing_reading > 0 && openingReading > 0 && !isEditingCompletedShift && (
+              <p className="text-xs font-medium text-green-600">
+                Fuel sold: {fuelLiters.toFixed(2)} liters 
+                {fuelPrice > 0 && ` (₹${expectedSalesAmount.toFixed(2)})`}
+              </p>
+            )}
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="cash_remaining">Cash Remaining</Label>
+            <Input
+              id="cash_remaining"
+              name="cash_remaining"
+              type="number"
+              value={formData.cash_remaining === 0 ? '' : formData.cash_remaining}
+              onChange={handleInputChange}
+            />
+          </div>
+          
+          <div className="grid grid-cols-3 gap-3">
+            <div className="grid gap-1">
+              <Label htmlFor="card_sales">Card Sales</Label>
               <Input
-                id="cash_remaining"
-                name="cash_remaining"
+                id="card_sales"
+                name="card_sales"
                 type="number"
-                value={formData.cash_remaining === 0 ? '' : formData.cash_remaining}
+                value={formData.card_sales === 0 ? '' : formData.card_sales}
                 onChange={handleInputChange}
               />
             </div>
             
-            <div className="grid grid-cols-3 gap-3">
-              <div className="grid gap-1">
-                <Label htmlFor="card_sales">Card Sales</Label>
-                <Input
-                  id="card_sales"
-                  name="card_sales"
-                  type="number"
-                  value={formData.card_sales === 0 ? '' : formData.card_sales}
-                  onChange={handleInputChange}
-                />
-              </div>
-              
-              <div className="grid gap-1">
-                <Label htmlFor="upi_sales">UPI Sales</Label>
-                <Input
-                  id="upi_sales"
-                  name="upi_sales"
-                  type="number"
-                  value={formData.upi_sales === 0 ? '' : formData.upi_sales}
-                  onChange={handleInputChange}
-                />
-              </div>
-              
-              <div className="grid gap-1">
-                <Label htmlFor="cash_sales">Cash Sales</Label>
-                <Input
-                  id="cash_sales"
-                  name="cash_sales"
-                  type="number"
-                  value={formData.cash_sales === 0 ? '' : formData.cash_sales}
-                  onChange={handleInputChange}
-                />
-              </div>
+            <div className="grid gap-1">
+              <Label htmlFor="upi_sales">UPI Sales</Label>
+              <Input
+                id="upi_sales"
+                name="upi_sales"
+                type="number"
+                value={formData.upi_sales === 0 ? '' : formData.upi_sales}
+                onChange={handleInputChange}
+              />
             </div>
             
-            {/* Total Sales Summary Card */}
-            <Card className="mt-4 bg-muted/50">
+            <div className="grid gap-1">
+              <Label htmlFor="cash_sales">Cash Sales</Label>
+              <Input
+                id="cash_sales"
+                name="cash_sales"
+                type="number"
+                value={formData.cash_sales === 0 ? '' : formData.cash_sales}
+                onChange={handleInputChange}
+              />
+            </div>
+          </div>
+          
+          {/* Total Sales Summary Card */}
+          <Card className="mt-4 bg-muted/50">
+            <CardContent className="pt-4">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Total Sales:</span>
+                <span className="text-lg font-bold">₹{totalSales.toLocaleString()}</span>
+              </div>
+              <div className="mt-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Card:</span>
+                  <span>₹{formData.card_sales.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>UPI:</span>
+                  <span>₹{formData.upi_sales.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Cash:</span>
+                  <span>₹{formData.cash_sales.toLocaleString()}</span>
+                </div>
+                {!isEditingCompletedShift && (
+                  <>
+                    <div className="flex justify-between mt-1 pt-1 border-t">
+                      <span>Fuel Sold:</span>
+                      <span>{fuelLiters.toFixed(2)} L</span>
+                    </div>
+                    {fuelPrice > 0 && (
+                      <div className="flex justify-between">
+                        <span>Expected Amount:</span>
+                        <span>₹{expectedSalesAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Cash Reconciliation */}
+          {formData.cash_sales > 0 && formData.cash_remaining > 0 && (
+            <Card className={`mt-1 ${Math.abs(cashReconciliation.difference) > 10 ? 'bg-red-50' : 'bg-green-50'}`}>
               <CardContent className="pt-4">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium">Total Sales:</span>
-                  <span className="text-lg font-bold">₹{totalSales.toLocaleString()}</span>
+                  <span className="font-medium">Cash Reconciliation</span>
                 </div>
                 <div className="mt-2 text-sm">
                   <div className="flex justify-between">
-                    <span>Card:</span>
-                    <span>₹{formData.card_sales.toLocaleString()}</span>
+                    <span>Expected Cash:</span>
+                    <span>₹{cashReconciliation.expected.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>UPI:</span>
-                    <span>₹{formData.upi_sales.toLocaleString()}</span>
+                    <span>Actual Cash:</span>
+                    <span>₹{formData.cash_remaining.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Cash:</span>
-                    <span>₹{formData.cash_sales.toLocaleString()}</span>
+                  <div className="flex justify-between font-medium">
+                    <span>Difference:</span>
+                    <span className={cashReconciliation.difference < 0 ? 'text-red-600' : 'text-green-600'}>
+                      ₹{cashReconciliation.difference.toFixed(2)}
+                    </span>
                   </div>
-                  <div className="flex justify-between mt-1 pt-1 border-t">
-                    <span>Fuel Sold:</span>
-                    <span>{fuelLiters.toFixed(2)} L</span>
-                  </div>
-                  {fuelPrice > 0 && (
-                    <div className="flex justify-between">
-                      <span>Expected Amount:</span>
-                      <span>₹{expectedSalesAmount.toFixed(2)}</span>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
-            
-            {/* Cash Reconciliation */}
-            {formData.cash_sales > 0 && formData.cash_remaining > 0 && (
-              <Card className={`mt-1 ${Math.abs(cashReconciliation.difference) > 10 ? 'bg-red-50' : 'bg-green-50'}`}>
-                <CardContent className="pt-4">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Cash Reconciliation</span>
-                  </div>
-                  <div className="mt-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Expected Cash:</span>
-                      <span>₹{cashReconciliation.expected.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Actual Cash:</span>
-                      <span>₹{formData.cash_remaining.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between font-medium">
-                      <span>Difference:</span>
-                      <span className={cashReconciliation.difference < 0 ? 'text-red-600' : 'text-green-600'}>
-                        ₹{cashReconciliation.difference.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-          
+          )}
+        </div>
+        
+        {!isEditingCompletedShift && mode === 'end-and-start' && (
           <TabsContent value="end-and-start" className="space-y-4 mt-4 border-t pt-4">
             <div className="grid gap-2">
               <Label htmlFor="staff_id">Select Staff for Next Shift</Label>
@@ -479,7 +571,7 @@ const EndShiftDialog = ({
               />
             </div>
           </TabsContent>
-        </Tabs>
+        )}
         
         {error && (
           <Alert variant="destructive">
@@ -491,7 +583,8 @@ const EndShiftDialog = ({
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Processing...' : mode === 'end-only' ? 'End Shift' : 'End & Start New'}
+            {loading ? 'Processing...' : isEditingCompletedShift ? 'Update Shift' : 
+              mode === 'end-only' ? 'End Shift' : 'End & Start New'}
           </Button>
         </DialogFooter>
       </DialogContent>
