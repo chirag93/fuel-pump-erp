@@ -2,7 +2,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from './pages/Dashboard';
-import Home from './pages/Home'; // Import from the correct location
+import Home from './pages/Home';
 import Login from './pages/Login';
 import DailyReadings from './pages/DailyReadings';
 import StockLevels from './pages/StockLevels';
