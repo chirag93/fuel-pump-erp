@@ -9,9 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface EndShiftDialogProps {
   isOpen: boolean;
@@ -35,13 +36,17 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
   const [staff, setStaff] = useState<any[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<string>('');
   const [createNewShift, setCreateNewShift] = useState(true);
-  const [newShiftType, setNewShiftType] = useState<string>('');
+  const [fuelPrice, setFuelPrice] = useState<number>(0);
   
   // Add sales fields
   const [cardSales, setCardSales] = useState<string>('');
   const [upiSales, setUpiSales] = useState<string>('');
   const [cashSales, setCashSales] = useState<string>('');
   const [totalSales, setTotalSales] = useState<number>(0);
+  const [cashReconciliation, setCashReconciliation] = useState({
+    expected: 0,
+    difference: 0
+  });
 
   // Calculate total sales whenever sales input changes
   useEffect(() => {
@@ -50,17 +55,43 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
     const cash = Number(cashSales) || 0;
     setTotalSales(card + upi + cash);
   }, [cardSales, upiSales, cashSales]);
-
-  // Determine next shift type based on current shift
+  
+  // Fetch fuel price for calculations
   useEffect(() => {
-    if (shiftData?.shift_type === 'morning') {
-      setNewShiftType('evening');
-    } else if (shiftData?.shift_type === 'evening') {
-      setNewShiftType('night');
-    } else if (shiftData?.shift_type === 'night') {
-      setNewShiftType('morning');
+    const fetchFuelPrice = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('fuel_settings')
+          .select('current_price')
+          .limit(1);
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setFuelPrice(data[0].current_price);
+        }
+      } catch (err) {
+        console.error('Error fetching fuel price:', err);
+      }
+    };
+    
+    fetchFuelPrice();
+  }, []);
+  
+  // Calculate cash reconciliation
+  useEffect(() => {
+    if (Number(closingReading) > 0 && shiftData?.opening_reading > 0 && fuelPrice > 0) {
+      const fuelSold = Number(closingReading) - shiftData.opening_reading;
+      const expectedCash = Number(cashSales) || 0;
+      const actualCash = Number(cashRemaining) || 0;
+      const difference = actualCash - expectedCash;
+      
+      setCashReconciliation({
+        expected: expectedCash,
+        difference: difference
+      });
     }
-  }, [shiftData]);
+  }, [closingReading, cashSales, cashRemaining, shiftData?.opening_reading, fuelPrice]);
 
   // Load staff list
   useEffect(() => {
@@ -80,8 +111,8 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             if (Array.isArray(s.assigned_pumps)) {
               return s.assigned_pumps.includes(shiftData.pump_id);
             }
-            // For backward compatibility, if it's a string (shouldn't happen)
-            if (typeof s.assigned_pumps === 'string') {
+            // For backward compatibility, check if it's JSON
+            if (typeof s.assigned_pumps === 'object') {
               return s.assigned_pumps.includes(shiftData.pump_id);
             }
             return false;
@@ -102,7 +133,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
     if (isOpen) {
       fetchStaff();
     }
-  }, [isOpen, shiftData.pump_id]);
+  }, [isOpen, shiftData?.pump_id]);
 
   const validateForm = () => {
     setError(null);
@@ -112,7 +143,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
       return false;
     }
     
-    if (Number(closingReading) <= shiftData.opening_reading) {
+    if (Number(closingReading) <= shiftData?.opening_reading) {
       setError('Closing reading must be greater than opening reading');
       return false;
     }
@@ -166,12 +197,25 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
       
       // 3. Create new shift if required
       if (createNewShift && selectedStaff) {
+        // Determine next shift type based on current shift
+        let nextShiftType = 'day'; // Default
+        
+        if (shiftData.shift_type === 'morning') {
+          nextShiftType = 'evening';
+        } else if (shiftData.shift_type === 'evening') {
+          nextShiftType = 'night';
+        } else if (shiftData.shift_type === 'night') {
+          nextShiftType = 'morning';
+        } else if (shiftData.shift_type === 'day') {
+          nextShiftType = 'night';
+        }
+        
         // Create new shift
         const { data: newShiftData, error: newShiftError } = await supabase
           .from('shifts')
           .insert([{
             staff_id: selectedStaff,
-            shift_type: newShiftType,
+            shift_type: nextShiftType,
             start_time: now.toISOString(),
             status: 'active'
           }])
@@ -211,6 +255,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
         description: error.message || "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
+      setError(error.message || "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -220,6 +265,9 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
   const fuelLiters = Number(closingReading) - shiftData?.opening_reading > 0 
     ? Number(closingReading) - shiftData?.opening_reading 
     : 0;
+
+  // Calculate expected sales amount
+  const expectedSalesAmount = fuelLiters * fuelPrice;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -249,6 +297,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             {Number(closingReading) > 0 && shiftData?.opening_reading > 0 && (
               <p className="text-xs font-medium text-green-600">
                 Fuel sold: {fuelLiters.toFixed(2)} liters
+                {fuelPrice > 0 && ` (₹${expectedSalesAmount.toFixed(2)})`}
               </p>
             )}
           </div>
@@ -315,6 +364,12 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
                   <span>Fuel Sold:</span>
                   <span>{fuelLiters.toFixed(2)} L</span>
                 </div>
+                {fuelPrice > 0 && (
+                  <div className="flex justify-between">
+                    <span>Expected Amount:</span>
+                    <span>₹{expectedSalesAmount.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -332,6 +387,33 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             />
           </div>
           
+          {/* Cash Reconciliation */}
+          {Number(cashSales) > 0 && Number(cashRemaining) > 0 && (
+            <Card className={`mt-1 ${Math.abs(cashReconciliation.difference) > 10 ? 'bg-red-50' : 'bg-green-50'}`}>
+              <CardContent className="pt-4">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Cash Reconciliation</span>
+                </div>
+                <div className="mt-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Expected Cash:</span>
+                    <span>₹{cashReconciliation.expected.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Actual Cash:</span>
+                    <span>₹{Number(cashRemaining).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-medium">
+                    <span>Difference:</span>
+                    <span className={cashReconciliation.difference < 0 ? 'text-red-600' : 'text-green-600'}>
+                      ₹{cashReconciliation.difference.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
           <div className="flex items-center space-x-2 pt-2">
             <Checkbox 
               id="createNewShift" 
@@ -347,7 +429,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
           
           {createNewShift && (
             <div className="grid gap-2">
-              <Label htmlFor="newStaff">Assign Staff for Next Shift ({newShiftType})</Label>
+              <Label htmlFor="newStaff">Assign Staff for Next Shift</Label>
               <Select value={selectedStaff} onValueChange={setSelectedStaff}>
                 <SelectTrigger id="newStaff">
                   <SelectValue placeholder="Select staff member" />
@@ -361,7 +443,12 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             </div>
           )}
           
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
         </div>
         
         <DialogFooter>

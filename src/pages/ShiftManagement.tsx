@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import EndShiftDialog from '@/components/shift/EndShiftDialog';
 
@@ -224,7 +224,7 @@ const ShiftManagement = () => {
         throw readingError;
       }
       
-      const newShiftWithName: Shift = {
+      const newShiftWithName = {
         ...shiftData[0],
         staff_name: staffName,
         date: newShift.date || new Date().toISOString().split('T')[0],
@@ -260,7 +260,7 @@ const ShiftManagement = () => {
       console.error('Error adding shift:', error);
       toast({
         title: "Error",
-        description: "Failed to start new shift. Please try again.",
+        description: error.message || "Failed to start new shift. Please try again.",
         variant: "destructive"
       });
     }

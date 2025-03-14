@@ -16,6 +16,8 @@ import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface EndShiftDialogProps {
   open: boolean;
@@ -38,6 +40,9 @@ const EndShiftDialog = ({
 }: EndShiftDialogProps) => {
   const [mode, setMode] = useState<'end-only' | 'end-and-start'>('end-only');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fuelPrice, setFuelPrice] = useState<number>(0);
+  
   const [formData, setFormData] = useState({
     closing_reading: 0,
     cash_remaining: 0,
@@ -48,16 +53,68 @@ const EndShiftDialog = ({
   
   // New state for calculated total
   const [totalSales, setTotalSales] = useState(0);
+  const [cashReconciliation, setCashReconciliation] = useState({
+    expected: 0,
+    difference: 0
+  });
   
   // New shift data for when starting a new shift after ending current one
   const [newShiftData, setNewShiftData] = useState({
-    staff_id: staffId,
+    staff_id: '',
     pump_id: pumpId,
     opening_reading: 0, // Will be set to the closing reading of the ending shift
     cash_given: 0,
-    date: new Date().toISOString().split('T')[0],
-    shift_type: 'day'
+    date: new Date().toISOString().split('T')[0]
   });
+  
+  // Staff list for the new shift
+  const [staffList, setStaffList] = useState<Array<{id: string, name: string}>>([]);
+
+  // Fetch fuel price for calculations
+  useEffect(() => {
+    const fetchFuelPrice = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('fuel_settings')
+          .select('current_price')
+          .limit(1);
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setFuelPrice(data[0].current_price);
+        }
+      } catch (err) {
+        console.error('Error fetching fuel price:', err);
+      }
+    };
+    
+    fetchFuelPrice();
+  }, []);
+  
+  // Fetch staff list for new shift assignment
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('staff')
+          .select('id, name')
+          .order('name');
+          
+        if (error) throw error;
+        
+        if (data) {
+          setStaffList(data);
+        }
+      } catch (err) {
+        console.error('Error fetching staff:', err);
+      }
+    };
+    
+    if (open && mode === 'end-and-start') {
+      fetchStaff();
+    }
+  }, [open, mode]);
 
   // Calculate total sales whenever sales input changes
   useEffect(() => {
@@ -66,6 +123,22 @@ const EndShiftDialog = ({
     const cashSales = Number(formData.cash_sales) || 0;
     setTotalSales(cardSales + upiSales + cashSales);
   }, [formData.card_sales, formData.upi_sales, formData.cash_sales]);
+  
+  // Calculate cash reconciliation
+  useEffect(() => {
+    if (formData.closing_reading > 0 && openingReading > 0 && fuelPrice > 0) {
+      const fuelSold = formData.closing_reading - openingReading;
+      const expectedSales = fuelSold * fuelPrice;
+      const expectedCash = formData.cash_sales;
+      const actualCash = formData.cash_remaining;
+      const difference = actualCash - expectedCash;
+      
+      setCashReconciliation({
+        expected: expectedCash,
+        difference: difference
+      });
+    }
+  }, [formData.closing_reading, formData.cash_sales, formData.cash_remaining, openingReading, fuelPrice]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -83,14 +156,25 @@ const EndShiftDialog = ({
     }));
   };
   
-  const handleShiftTypeChange = (value: string) => {
-    setNewShiftData(prev => ({
-      ...prev,
-      shift_type: value
-    }));
+  const validateForm = () => {
+    setError(null);
+    
+    if (!formData.closing_reading || formData.closing_reading <= openingReading) {
+      setError("Closing reading must be greater than opening reading");
+      return false;
+    }
+    
+    if (mode === 'end-and-start' && !newShiftData.staff_id) {
+      setError("Please select a staff member for the new shift");
+      return false;
+    }
+    
+    return true;
   };
 
   const handleSubmit = async () => {
+    if (!validateForm()) return;
+    
     setLoading(true);
     
     try {
@@ -103,6 +187,7 @@ const EndShiftDialog = ({
         .update({
           end_time: now,
           status: 'completed',
+          cash_remaining: formData.cash_remaining
         })
         .eq('id', shiftId);
         
@@ -127,13 +212,39 @@ const EndShiftDialog = ({
       }
       
       // If we're also starting a new shift
-      if (mode === 'end-and-start') {
+      if (mode === 'end-and-start' && newShiftData.staff_id) {
+        // Get current shift type to determine next shift type
+        const { data: currentShift, error: currentShiftError } = await supabase
+          .from('shifts')
+          .select('shift_type')
+          .eq('id', shiftId)
+          .single();
+          
+        if (currentShiftError) {
+          throw currentShiftError;
+        }
+        
+        let nextShiftType = 'day'; // Default
+        
+        // Determine next shift type based on current shift
+        if (currentShift) {
+          if (currentShift.shift_type === 'morning') {
+            nextShiftType = 'evening';
+          } else if (currentShift.shift_type === 'evening') {
+            nextShiftType = 'night';
+          } else if (currentShift.shift_type === 'night') {
+            nextShiftType = 'morning';
+          } else if (currentShift.shift_type === 'day') {
+            nextShiftType = 'night';
+          }
+        }
+        
         // Create a new shift
         const { data: newShift, error: newShiftError } = await supabase
           .from('shifts')
           .insert([{
             staff_id: newShiftData.staff_id,
-            shift_type: newShiftData.shift_type,
+            shift_type: nextShiftType,
             start_time: now,
             status: 'active'
           }])
@@ -153,7 +264,7 @@ const EndShiftDialog = ({
           .insert([{
             shift_id: newShift[0].id,
             staff_id: newShiftData.staff_id,
-            pump_id: newShiftData.pump_id,
+            pump_id: pumpId,
             date: newShiftData.date,
             opening_reading: formData.closing_reading, // Use closing reading as opening reading
             cash_given: newShiftData.cash_given
@@ -175,6 +286,7 @@ const EndShiftDialog = ({
       onComplete();
     } catch (error) {
       console.error('Error processing shift:', error);
+      setError(error.message || "Failed to process shift. Please try again.");
       toast({
         title: "Error",
         description: "Failed to process shift. Please try again.",
@@ -189,6 +301,9 @@ const EndShiftDialog = ({
   const fuelLiters = formData.closing_reading - openingReading > 0 
     ? formData.closing_reading - openingReading 
     : 0;
+  
+  // Calculate expected sales amount
+  const expectedSalesAmount = fuelLiters * fuelPrice;
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -221,7 +336,8 @@ const EndShiftDialog = ({
               </p>
               {formData.closing_reading > 0 && openingReading > 0 && (
                 <p className="text-xs font-medium text-green-600">
-                  Fuel sold: {fuelLiters.toFixed(2)} liters
+                  Fuel sold: {fuelLiters.toFixed(2)} liters 
+                  {fuelPrice > 0 && ` (₹${expectedSalesAmount.toFixed(2)})`}
                 </p>
               )}
             </div>
@@ -296,25 +412,58 @@ const EndShiftDialog = ({
                     <span>Fuel Sold:</span>
                     <span>{fuelLiters.toFixed(2)} L</span>
                   </div>
+                  {fuelPrice > 0 && (
+                    <div className="flex justify-between">
+                      <span>Expected Amount:</span>
+                      <span>₹{expectedSalesAmount.toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
+            
+            {/* Cash Reconciliation */}
+            {formData.cash_sales > 0 && formData.cash_remaining > 0 && (
+              <Card className={`mt-1 ${Math.abs(cashReconciliation.difference) > 10 ? 'bg-red-50' : 'bg-green-50'}`}>
+                <CardContent className="pt-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Cash Reconciliation</span>
+                  </div>
+                  <div className="mt-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Expected Cash:</span>
+                      <span>₹{cashReconciliation.expected.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Actual Cash:</span>
+                      <span>₹{formData.cash_remaining.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-medium">
+                      <span>Difference:</span>
+                      <span className={cashReconciliation.difference < 0 ? 'text-red-600' : 'text-green-600'}>
+                        ₹{cashReconciliation.difference.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
           
           <TabsContent value="end-and-start" className="space-y-4 mt-4 border-t pt-4">
             <div className="grid gap-2">
-              <Label htmlFor="shift_type">New Shift Type</Label>
+              <Label htmlFor="staff_id">Select Staff for Next Shift</Label>
               <Select 
-                value={newShiftData.shift_type}
-                onValueChange={handleShiftTypeChange}
+                value={newShiftData.staff_id}
+                onValueChange={(value) => setNewShiftData(prev => ({ ...prev, staff_id: value }))}
               >
-                <SelectTrigger id="shift_type">
-                  <SelectValue placeholder="Select shift type" />
+                <SelectTrigger id="staff_id">
+                  <SelectValue placeholder="Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="morning">Morning (6AM-2PM)</SelectItem>
-                  <SelectItem value="day">Day (2PM-10PM)</SelectItem>
-                  <SelectItem value="night">Night (10PM-6AM)</SelectItem>
+                  {staffList.map(staff => (
+                    <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -331,6 +480,13 @@ const EndShiftDialog = ({
             </div>
           </TabsContent>
         </Tabs>
+        
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
