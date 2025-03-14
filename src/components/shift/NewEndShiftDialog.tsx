@@ -113,7 +113,9 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             }
             // For backward compatibility, check if it's JSON
             if (typeof s.assigned_pumps === 'object') {
-              return s.assigned_pumps.includes(shiftData.pump_id);
+              // Fix: Using proper JSON handling instead of calling it
+              const pumpArray = s.assigned_pumps as string[];
+              return pumpArray.includes(shiftData.pump_id);
             }
             return false;
           });

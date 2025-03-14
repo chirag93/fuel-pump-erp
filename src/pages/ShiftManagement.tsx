@@ -224,7 +224,8 @@ const ShiftManagement = () => {
         throw readingError;
       }
       
-      const newShiftWithName = {
+      // Fix: Explicitly type the status as 'active' to match the Shift interface
+      const newShiftWithName: Shift = {
         ...shiftData[0],
         staff_name: staffName,
         date: newShift.date || new Date().toISOString().split('T')[0],
