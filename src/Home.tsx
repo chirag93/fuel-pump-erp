@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -13,11 +12,11 @@ import {
   FileText,
   Package,
   Truck,
-  CreditCard,
   ClipboardList,
   Wrench,
   BarChart,
   TestTube,
+  Users,
 } from 'lucide-react';
 import FuelTankDisplay from '@/components/fuel/FuelTankDisplay';
 import { useEffect, useState } from 'react';
@@ -156,42 +155,28 @@ const Home = () => {
             title="Daily Readings"
             description="Add shift-wise opening and closing readings"
             icon={<Droplets size={20} />}
-            href="/shift"
+            href="/daily-readings"
           />
           
           <QuickAction
             title="Tank Unload"
             description="Record incoming fuel unloads and payments"
             icon={<Truck size={20} />}
-            href="/fueling"
-          />
-          
-          <QuickAction
-            title="Stock Levels"
-            description="Record end-of-day stock levels"
-            icon={<Package size={20} />}
-            href="/inventory"
+            href="/tank-unload"
           />
           
           <QuickAction
             title="Testing Details"
             description="Record fuel testing information"
             icon={<TestTube size={20} />}
-            href="/testing"
+            href="/testing-details"
           />
           
           <QuickAction
-            title="Record Transaction"
-            description="Record sales via QR, card, or cash"
-            icon={<CreditCard size={20} />}
-            href="/fueling"
-          />
-          
-          <QuickAction
-            title="Staff Cash"
-            description="Record cash provided to staff at shift start"
-            icon={<BarChart size={20} />}
-            href="/staff"
+            title="Staff Management"
+            description="Manage staff and shift assignments"
+            icon={<Users size={20} />}
+            href="/staff-management"
           />
           
           <QuickAction

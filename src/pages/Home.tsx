@@ -13,11 +13,11 @@ import {
   FileText,
   Package,
   Truck,
-  CreditCard,
   ClipboardList,
-  Camera,
-  BarChart,
   Wrench,
+  BarChart,
+  TestTube,
+  Users,
 } from 'lucide-react';
 import FuelTankDisplay from '@/components/fuel/FuelTankDisplay';
 import { useEffect, useState } from 'react';
@@ -70,7 +70,7 @@ const QuickAction = ({
 const Home = () => {
   const [fuelLevels, setFuelLevels] = useState<FuelLevel[]>([
     { fuelType: 'Petrol', capacity: 10000, lastUpdated: 'Loading...' },
-    { fuelType: 'Diesel', capacity: 10000, lastUpdated: 'Loading...' }
+    { fuelType: 'Diesel', capacity: 12000, lastUpdated: 'Loading...' }
   ]);
 
   // Fetch fuel levels from the database
@@ -90,15 +90,17 @@ const Home = () => {
           // Group the latest entries by fuel type
           const latestByFuelType: Record<string, any> = {};
           data.forEach(item => {
-            if (!latestByFuelType[item.fuel_type] || new Date(item.date) > new Date(latestByFuelType[item.fuel_type].date)) {
+            // Only process Petrol and Diesel fuel types (no CNG)
+            if ((item.fuel_type === 'Petrol' || item.fuel_type === 'Diesel') && 
+                (!latestByFuelType[item.fuel_type] || new Date(item.date) > new Date(latestByFuelType[item.fuel_type].date))) {
               latestByFuelType[item.fuel_type] = item;
             }
           });
           
           // Format the data for our component
-          const fuelData = Object.values(latestByFuelType)
-            .filter(item => item.fuel_type === 'Petrol' || item.fuel_type === 'Diesel')
-            .map(item => {
+          const fuelData = Object.values(latestByFuelType).map(item => {
+            // Ensure we have a valid fuel_type before using it
+            if (item && typeof item.fuel_type === 'string') {
               return {
                 fuelType: item.fuel_type as 'Petrol' | 'Diesel',
                 capacity: item.fuel_type === 'Petrol' ? 10000 : 12000, // Default capacities
@@ -108,7 +110,9 @@ const Home = () => {
                   day: 'numeric'
                 }) : 'Unknown'
               }
-            });
+            }
+            return null;
+          }).filter(Boolean) as FuelLevel[];
           
           if (fuelData.length > 0) {
             setFuelLevels(fuelData);
@@ -152,42 +156,28 @@ const Home = () => {
             title="Daily Readings"
             description="Add shift-wise opening and closing readings"
             icon={<Droplets size={20} />}
-            href="/shift"
+            href="/daily-readings"
           />
           
           <QuickAction
             title="Tank Unload"
             description="Record incoming fuel unloads and payments"
             icon={<Truck size={20} />}
-            href="/record-indent"
-          />
-          
-          <QuickAction
-            title="Stock Levels"
-            description="Record end-of-day stock levels"
-            icon={<Package size={20} />}
-            href="/inventory"
+            href="/tank-unload"
           />
           
           <QuickAction
             title="Testing Details"
             description="Record fuel testing information"
-            icon={<ClipboardList size={20} />}
-            href="/testing"
+            icon={<TestTube size={20} />}
+            href="/testing-details"
           />
           
           <QuickAction
-            title="Record Transaction"
-            description="Record sales via QR, card, or cash"
-            icon={<CreditCard size={20} />}
-            href="/record-indent"
-          />
-          
-          <QuickAction
-            title="Staff Cash"
-            description="Record cash provided to staff at shift start"
-            icon={<BarChart size={20} />}
-            href="/staff"
+            title="Staff Management"
+            description="Manage staff and shift assignments"
+            icon={<Users size={20} />}
+            href="/staff-management"
           />
           
           <QuickAction
