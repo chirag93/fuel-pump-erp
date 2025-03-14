@@ -108,14 +108,29 @@ const RecordIndent = () => {
           throw indentError;
         }
 
-        // Update the used_indents count in the booklet
+        // First get the current booklet information to retrieve used_indents
+        const { data: bookletData, error: bookletFetchError } = await supabase
+          .from('indent_booklets')
+          .select('used_indents')
+          .eq('id', selectedBooklet)
+          .single();
+          
+        if (bookletFetchError) {
+          console.error('Error fetching booklet data:', bookletFetchError);
+          throw bookletFetchError;
+        }
+        
+        // Now update the used_indents count with the new value
+        const newUsedIndents = (bookletData?.used_indents || 0) + 1;
+        
         const { error: updateError } = await supabase
           .from('indent_booklets')
-          .update({ used_indents: (prevUsedIndents) => prevUsedIndents + 1 })
+          .update({ used_indents: newUsedIndents })
           .eq('id', selectedBooklet);
 
         if (updateError) {
           console.error('Error updating booklet:', updateError);
+          throw updateError;
         }
       }
 
