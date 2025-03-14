@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Truck } from "lucide-react";
+import { Truck, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 
 interface TankUnloadFormProps {
   onSuccess: () => void;
@@ -80,16 +80,16 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="bg-muted/50">
         <CardTitle className="flex items-center gap-2">
-          <Truck className="h-5 w-5" />
+          <Truck className="h-5 w-5 text-primary" />
           <span>Record Tank Unload</span>
         </CardTitle>
         <CardDescription>
           Enter the details of the fuel delivery
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="vehicleNumber">Tanker Vehicle Number</Label>
@@ -98,6 +98,7 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
               placeholder="e.g., MH01AB1234"
               value={vehicleNumber}
               onChange={(e) => setVehicleNumber(e.target.value)}
+              className="bg-background"
             />
           </div>
           
@@ -116,30 +117,41 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
             </Select>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="quantity">Quantity (in Liters)</Label>
-            <Input
-              id="quantity"
-              type="number"
-              placeholder="e.g., 5000"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Quantity (in Liters)</Label>
+              <Input
+                id="quantity"
+                type="number"
+                placeholder="e.g., 5000"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className="bg-background"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount (in ₹)</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="e.g., 450000"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="bg-background"
+              />
+            </div>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="amount">Amount (in ₹)</Label>
-            <Input
-              id="amount"
-              type="number"
-              placeholder="e.g., 450000"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
-          
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Recording..." : "Record Unload"}
+          <Button type="submit" className="w-full mt-2" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Recording...
+              </>
+            ) : (
+              "Record Unload"
+            )}
           </Button>
         </form>
       </CardContent>

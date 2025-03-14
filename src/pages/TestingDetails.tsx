@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,16 +17,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, TestTube, Calendar, Clipboard, Plus } from 'lucide-react';
+import { Loader2, TestTube, Calendar, Clipboard, Plus, Edit, Trash2 } from 'lucide-react';
 import { supabase, FuelTest } from '@/integrations/supabase/client';
 
 const TestingDetails = () => {
   const [tests, setTests] = useState<FuelTest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [staffList, setStaffList] = useState<{id: string, name: string}[]>([]);
   
-  const [newTest, setNewTest] = useState<Partial<FuelTest>>({
+  const emptyTest: Partial<FuelTest> = {
     fuel_type: 'Petrol',
     test_date: new Date().toISOString().split('T')[0],
     test_time: new Date().toTimeString().split(' ')[0].substring(0, 5),
@@ -35,7 +37,9 @@ const TestingDetails = () => {
     litres_tested: 1,
     notes: '',
     tested_by: ''
-  });
+  };
+  
+  const [newTest, setNewTest] = useState<Partial<FuelTest>>(emptyTest);
   
   useEffect(() => {
     const fetchStaff = async () => {
@@ -60,52 +64,52 @@ const TestingDetails = () => {
   }, []);
   
   useEffect(() => {
-    const fetchTestData = async () => {
-      try {
-        setIsLoading(true);
-        
-        const { data, error } = await supabase
-          .from('fuel_tests')
-          .select('*')
-          .order('test_date', { ascending: false });
-          
-        if (error) {
-          throw error;
-        }
-        
-        if (data) {
-          const testsWithStaffNames = await Promise.all(
-            data.map(async (test) => {
-              const { data: staffData } = await supabase
-                .from('staff')
-                .select('name')
-                .eq('id', test.tested_by)
-                .single();
-                
-              return {
-                ...test,
-                tested_by_name: staffData?.name || 'Unknown Staff',
-                litres_tested: test.litres_tested || 1
-              } as FuelTest;
-            })
-          );
-          
-          setTests(testsWithStaffNames);
-        }
-      } catch (error) {
-        console.error('Error fetching test data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load fuel test data. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     fetchTestData();
   }, []);
+
+  const fetchTestData = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('fuel_tests')
+        .select('*')
+        .order('test_date', { ascending: false });
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const testsWithStaffNames = await Promise.all(
+          data.map(async (test) => {
+            const { data: staffData } = await supabase
+              .from('staff')
+              .select('name')
+              .eq('id', test.tested_by)
+              .single();
+              
+            return {
+              ...test,
+              tested_by_name: staffData?.name || 'Unknown Staff',
+              litres_tested: test.litres_tested || 1
+            } as FuelTest;
+          })
+        );
+        
+        setTests(testsWithStaffNames);
+      }
+    } catch (error) {
+      console.error('Error fetching test data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load fuel test data. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const handleAddTest = async () => {
     try {
@@ -118,59 +122,132 @@ const TestingDetails = () => {
         return;
       }
       
-      const { data, error } = await supabase
+      if (isEditMode && newTest.id) {
+        // Update existing test
+        const { data, error } = await supabase
+          .from('fuel_tests')
+          .update({
+            fuel_type: newTest.fuel_type,
+            test_date: newTest.test_date,
+            test_time: newTest.test_time,
+            temperature: newTest.temperature,
+            density: newTest.density,
+            appearance: newTest.appearance,
+            litres_tested: newTest.litres_tested,
+            notes: newTest.notes,
+            tested_by: newTest.tested_by
+          })
+          .eq('id', newTest.id)
+          .select();
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          const staffName = staffList.find(s => s.id === newTest.tested_by)?.name || 'Unknown Staff';
+          
+          const updatedTestWithStaffName = {
+            ...data[0],
+            tested_by_name: staffName
+          } as FuelTest;
+          
+          // Update the test in the local array
+          setTests(tests.map(t => t.id === newTest.id ? updatedTestWithStaffName : t));
+          toast({
+            title: "Success",
+            description: "Fuel test record updated successfully"
+          });
+        }
+      } else {
+        // Add new test
+        const { data, error } = await supabase
+          .from('fuel_tests')
+          .insert([{
+            fuel_type: newTest.fuel_type,
+            test_date: newTest.test_date,
+            test_time: newTest.test_time,
+            temperature: newTest.temperature,
+            density: newTest.density,
+            appearance: newTest.appearance,
+            litres_tested: newTest.litres_tested,
+            notes: newTest.notes,
+            tested_by: newTest.tested_by
+          }])
+          .select();
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          const staffName = staffList.find(s => s.id === newTest.tested_by)?.name || 'Unknown Staff';
+          
+          const newTestWithStaffName = {
+            ...data[0],
+            tested_by_name: staffName
+          } as FuelTest;
+          
+          setTests([newTestWithStaffName, ...tests]);
+          toast({
+            title: "Success",
+            description: "Fuel test record added successfully"
+          });
+        }
+      }
+      
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error adding/updating fuel test:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save fuel test record. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleEditTest = (test: FuelTest) => {
+    setNewTest(test);
+    setIsEditMode(true);
+    setIsDialogOpen(true);
+  };
+  
+  const handleDeleteTest = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this test record?')) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
         .from('fuel_tests')
-        .insert([{
-          fuel_type: newTest.fuel_type,
-          test_date: newTest.test_date,
-          test_time: newTest.test_time,
-          temperature: newTest.temperature,
-          density: newTest.density,
-          appearance: newTest.appearance,
-          litres_tested: newTest.litres_tested,
-          notes: newTest.notes,
-          tested_by: newTest.tested_by
-        }])
-        .select();
+        .delete()
+        .eq('id', id);
         
       if (error) {
         throw error;
       }
       
-      if (data) {
-        const staffName = staffList.find(s => s.id === newTest.tested_by)?.name || 'Unknown Staff';
-        
-        const newTestWithStaffName = {
-          ...data[0],
-          tested_by_name: staffName
-        } as FuelTest;
-        
-        setTests([newTestWithStaffName, ...tests]);
-        toast({
-          title: "Success",
-          description: "Fuel test record added successfully"
-        });
-        setIsDialogOpen(false);
-        setNewTest({
-          fuel_type: 'Petrol',
-          test_date: new Date().toISOString().split('T')[0],
-          test_time: new Date().toTimeString().split(' ')[0].substring(0, 5),
-          temperature: 25,
-          density: 0.75,
-          appearance: 'Clear',
-          litres_tested: 1,
-          notes: '',
-          tested_by: ''
-        });
-      }
+      // Remove the test from the local array
+      setTests(tests.filter(t => t.id !== id));
+      toast({
+        title: "Success",
+        description: "Fuel test record deleted successfully"
+      });
     } catch (error) {
-      console.error('Error adding fuel test:', error);
+      console.error('Error deleting fuel test:', error);
       toast({
         title: "Error",
-        description: "Failed to add fuel test record. Please try again.",
+        description: "Failed to delete fuel test record. Please try again.",
         variant: "destructive"
       });
     }
+  };
+  
+  const resetForm = () => {
+    setNewTest(emptyTest);
+    setIsEditMode(false);
   };
   
   const todayTests = tests.filter(test => test.test_date === new Date().toISOString().split('T')[0]);
@@ -179,7 +256,10 @@ const TestingDetails = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Fuel Testing Details</h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) resetForm();
+        }}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus size={16} />
@@ -188,7 +268,7 @@ const TestingDetails = () => {
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Record Fuel Test</DialogTitle>
+              <DialogTitle>{isEditMode ? "Edit Fuel Test" : "Record Fuel Test"}</DialogTitle>
               <DialogDescription>
                 Enter the details of the fuel quality test.
               </DialogDescription>
@@ -286,6 +366,7 @@ const TestingDetails = () => {
                       <SelectItem value="Slightly Cloudy">Slightly Cloudy</SelectItem>
                       <SelectItem value="Cloudy">Cloudy</SelectItem>
                       <SelectItem value="Contaminated">Contaminated</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -316,7 +397,7 @@ const TestingDetails = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddTest}>Save Test Record</Button>
+              <Button onClick={handleAddTest}>{isEditMode ? "Update" : "Save"} Test Record</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -392,6 +473,7 @@ const TestingDetails = () => {
                         <TableHead>Appearance</TableHead>
                         <TableHead>Tested By</TableHead>
                         <TableHead>Notes</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -415,7 +497,8 @@ const TestingDetails = () => {
                               test.appearance === 'Clear' ? 'bg-green-100 text-green-800' :
                               test.appearance === 'Slightly Cloudy' ? 'bg-yellow-100 text-yellow-800' :
                               test.appearance === 'Cloudy' ? 'bg-orange-100 text-orange-800' :
-                              'bg-red-100 text-red-800'
+                              test.appearance === 'Contaminated' ? 'bg-red-100 text-red-800' :
+                              'bg-blue-100 text-blue-800'
                             }`}>
                               {test.appearance}
                             </span>
@@ -423,6 +506,16 @@ const TestingDetails = () => {
                           <TableCell>{test.tested_by_name}</TableCell>
                           <TableCell className="max-w-xs truncate">
                             {test.notes || <span className="text-muted-foreground">No notes</span>}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="icon" onClick={() => handleEditTest(test)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteTest(test.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
@@ -42,10 +43,10 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
   const [upiSales, setUpiSales] = useState<string>('');
   const [cashSales, setCashSales] = useState<string>('');
   const [totalSales, setTotalSales] = useState<number>(0);
-  const [cashReconciliation, setCashReconciliation] = {
+  const [cashReconciliation, setCashReconciliation] = useState({
     expected: 0,
     difference: 0
-  };
+  });
 
   // Calculate total sales whenever sales input changes
   useEffect(() => {
