@@ -547,36 +547,6 @@ export type Database = {
         }
         Relationships: []
       }
-      tank_unloads: {
-        Row: {
-          amount: number
-          created_at: string
-          date: string
-          fuel_type: string
-          id: string
-          quantity: number
-          vehicle_number: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          date?: string
-          fuel_type: string
-          id?: string
-          quantity: number
-          vehicle_number: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          date?: string
-          fuel_type?: string
-          id?: string
-          quantity?: number
-          vehicle_number?: string
-        }
-        Relationships: []
-      }
       transactions: {
         Row: {
           amount: number
