@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -162,15 +161,19 @@ const RecordIndent = () => {
         return;
       }
 
+      // Generate a UUID for the transaction
+      const transactionId = crypto.randomUUID();
+      
       // Using staff_id as a required field - setting a placeholder value
       const staffId = "00000000-0000-0000-0000-000000000000"; // Default staff ID
 
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
         .insert({
+          id: transactionId, // Add the required id field
           customer_id: selectedCustomer,
           vehicle_id: selectedVehicle,
-          staff_id: staffId, // Required field
+          staff_id: staffId,
           date: date.toISOString(),
           fuel_type: fuelType,
           amount: amount,
@@ -209,6 +212,7 @@ const RecordIndent = () => {
     }
   };
 
+  
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Record Indent</h1>
