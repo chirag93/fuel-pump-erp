@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { FileText, Download, ArrowRight } from 'lucide-react';
+import { FileText, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Transaction } from '@/integrations/supabase/client';
 
@@ -61,7 +61,6 @@ const TransactionsTab = ({ transactions, customerName = 'Customer' }: Transactio
             )}
             <Button variant="outline" size="sm" asChild>
               <Link to="/all-transactions" className="flex items-center gap-2">
-                <ArrowRight size={16} />
                 View All
               </Link>
             </Button>
