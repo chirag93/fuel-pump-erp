@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   BrowserRouter as Router,
@@ -176,7 +177,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-         <Route
+        <Route
           path="/indent-booklets"
           element={
             <ProtectedRoute>
@@ -186,7 +187,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-         <Route
+        <Route
           path="/transactions"
           element={
             <ProtectedRoute>
@@ -196,14 +197,16 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {
-          path: "/all-transactions",
-          element: (
+        <Route
+          path="/all-transactions"
+          element={
             <ProtectedRoute>
-              <AllTransactions />
+              <Layout>
+                <AllTransactions />
+              </Layout>
             </ProtectedRoute>
-          ),
-        }
+          }
+        />
       </Routes>
     </Router>
   );
