@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
@@ -43,10 +42,10 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
   const [upiSales, setUpiSales] = useState<string>('');
   const [cashSales, setCashSales] = useState<string>('');
   const [totalSales, setTotalSales] = useState<number>(0);
-  const [cashReconciliation, setCashReconciliation] = useState({
+  const [cashReconciliation, setCashReconciliation] = {
     expected: 0,
     difference: 0
-  });
+  };
 
   // Calculate total sales whenever sales input changes
   useEffect(() => {
@@ -113,9 +112,12 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             }
             // For backward compatibility, check if it's JSON
             if (typeof s.assigned_pumps === 'object') {
-              // Fix: Using proper JSON handling instead of calling it
-              const pumpArray = s.assigned_pumps as string[];
-              return pumpArray.includes(shiftData.pump_id);
+              // Fix: Proper JSON handling - first convert to unknown then to string[]
+              const pumpArray = Array.isArray(s.assigned_pumps) 
+                ? s.assigned_pumps 
+                : (s.assigned_pumps ? JSON.parse(JSON.stringify(s.assigned_pumps)) : []);
+              
+              return Array.isArray(pumpArray) && pumpArray.includes(shiftData.pump_id);
             }
             return false;
           });
