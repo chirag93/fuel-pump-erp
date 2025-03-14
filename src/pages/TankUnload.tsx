@@ -1,12 +1,11 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, Truck } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -23,7 +22,6 @@ interface TankUnload {
 }
 
 const TankUnload = () => {
-  const navigate = useNavigate();
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [fuelType, setFuelType] = useState("Petrol");
   const [quantity, setQuantity] = useState("");
@@ -31,11 +29,7 @@ const TankUnload = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recentUnloads, setRecentUnloads] = useState<TankUnload[]>([]);
   
-  // Fetch recent unloads on component mount
-  useState(() => {
-    fetchRecentUnloads();
-  });
-  
+  // Define fetchRecentUnloads before using it
   const fetchRecentUnloads = async () => {
     try {
       const { data, error } = await supabase
@@ -55,6 +49,11 @@ const TankUnload = () => {
       console.error('Error fetching unloads:', error);
     }
   };
+  
+  // Use useEffect to fetch data on component mount
+  useEffect(() => {
+    fetchRecentUnloads();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
