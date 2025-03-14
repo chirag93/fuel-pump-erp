@@ -1,6 +1,5 @@
 
 import { useState } from 'react';
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import TankUnloadForm from "@/components/tank-unload/TankUnloadForm";
 import RecentUnloadsTable from "@/components/tank-unload/RecentUnloadsTable";
 
@@ -13,19 +12,17 @@ const TankUnload = () => {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Tank Unload</h2>
-          <p className="text-muted-foreground">Record fuel delivery details when a tanker unloads at your station</p>
-        </div>
-        
-        <div className="grid gap-6 md:grid-cols-2">
-          <TankUnloadForm onSuccess={handleUnloadSuccess} />
-          <RecentUnloadsTable refreshTrigger={refreshCounter} />
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Tank Unload</h2>
+        <p className="text-muted-foreground">Record fuel delivery details when a tanker unloads at your station</p>
       </div>
-    </DashboardLayout>
+      
+      <div className="grid gap-6 md:grid-cols-2">
+        <TankUnloadForm onSuccess={handleUnloadSuccess} />
+        <RecentUnloadsTable refreshTrigger={refreshCounter} />
+      </div>
+    </div>
   );
 };
 
