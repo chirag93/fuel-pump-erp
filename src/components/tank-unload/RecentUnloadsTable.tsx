@@ -6,17 +6,21 @@ import { useTankUnloads } from "@/hooks/useTankUnloads";
 
 interface RecentUnloadsTableProps {
   refreshTrigger?: number;
+  showAll?: boolean;
 }
 
-const RecentUnloadsTable = ({ refreshTrigger }: RecentUnloadsTableProps) => {
+const RecentUnloadsTable = ({ refreshTrigger, showAll = false }: RecentUnloadsTableProps) => {
   const { recentUnloads, isLoading } = useTankUnloads(refreshTrigger);
+
+  // If showAll is true, display all records, otherwise only show the first 5
+  const displayedUnloads = showAll ? recentUnloads : recentUnloads.slice(0, 5);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent Unloads</CardTitle>
+        <CardTitle>{showAll ? "All Unloads" : "Recent Unloads"}</CardTitle>
         <CardDescription>
-          Recently recorded fuel deliveries
+          {showAll ? "Complete history of fuel deliveries" : "Recently recorded fuel deliveries"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -38,14 +42,14 @@ const RecentUnloadsTable = ({ refreshTrigger }: RecentUnloadsTableProps) => {
                     Loading...
                   </TableCell>
                 </TableRow>
-              ) : recentUnloads.length === 0 ? (
+              ) : displayedUnloads.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
                     No recent unloads found
                   </TableCell>
                 </TableRow>
               ) : (
-                recentUnloads.map((unload) => (
+                displayedUnloads.map((unload) => (
                   <TableRow key={unload.id}>
                     <TableCell className="font-medium">
                       {format(new Date(unload.date), 'dd MMM yyyy')}

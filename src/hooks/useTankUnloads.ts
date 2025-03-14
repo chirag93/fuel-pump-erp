@@ -11,7 +11,7 @@ export interface TankUnload {
   date: string;
 }
 
-export function useTankUnloads(refreshTrigger?: number) {
+export function useTankUnloads(refreshTrigger?: number, limit: number = 10) {
   const [recentUnloads, setRecentUnloads] = useState<TankUnload[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -25,7 +25,7 @@ export function useTankUnloads(refreshTrigger?: number) {
         .from('tank_unloads')
         .select('*')
         .order('date', { ascending: false })
-        .limit(10);
+        .limit(limit);
         
       if (error) {
         throw new Error(error.message);
@@ -40,7 +40,7 @@ export function useTankUnloads(refreshTrigger?: number) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [limit]);
   
   useEffect(() => {
     fetchRecentUnloads();
