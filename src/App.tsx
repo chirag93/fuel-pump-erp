@@ -25,7 +25,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 };
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

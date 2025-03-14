@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from "@/hooks/use-toast";
 import { Loader2, FileText } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
-import { Customer, Vehicle, Indent, Transaction } from '@/integrations/supabase/client';
+import { Customer, Vehicle, Transaction } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -128,16 +129,10 @@ const RecordIndent = () => {
       }
 
       if (data) {
-        const formattedTransactions = data.map(item => ({
-          id: item.id,
-          date: item.date,
+        const formattedTransactions: RecentTransaction[] = data.map(item => ({
+          ...item,
           customer_name: item.customers?.name || 'Walk-in Customer',
-          vehicle_number: item.vehicles?.number || 'N/A',
-          fuel_type: item.fuel_type,
-          quantity: item.quantity,
-          amount: item.amount,
-          payment_method: item.payment_method,
-          indent_id: item.indent_id
+          vehicle_number: item.vehicles?.number || 'N/A'
         }));
         setRecentTransactions(formattedTransactions);
       }
@@ -167,17 +162,21 @@ const RecordIndent = () => {
         return;
       }
 
+      // Using staff_id as a required field - setting a placeholder value
+      const staffId = "00000000-0000-0000-0000-000000000000"; // Default staff ID
+
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
-        .insert([{
+        .insert({
           customer_id: selectedCustomer,
           vehicle_id: selectedVehicle,
+          staff_id: staffId, // Required field
           date: date.toISOString(),
           fuel_type: fuelType,
           amount: amount,
           quantity: quantity,
           payment_method: 'Cash' // Default payment method
-        }])
+        })
         .select();
 
       if (transactionError) {
