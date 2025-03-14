@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from "@/hooks/use-toast";
 import { Loader2, FileText, Calendar as CalendarIcon } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
-import { Customer, Vehicle, Transaction } from '@/integrations/supabase/client';
+import { Customer, Vehicle, Transaction, IndentBooklet } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -29,17 +29,22 @@ interface RecentTransaction extends Transaction {
 const RecordIndent = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [indentBooklets, setIndentBooklets] = useState<IndentBooklet[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [selectedVehicle, setSelectedVehicle] = useState<string>('');
+  const [selectedBooklet, setSelectedBooklet] = useState<string>('');
+  const [indentNumber, setIndentNumber] = useState<string>('');
   const [fuelType, setFuelType] = useState<string>('Petrol');
   const [amount, setAmount] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isCustomerLoading, setIsCustomerLoading] = useState<boolean>(true);
   const [isVehicleLoading, setIsVehicleLoading] = useState<boolean>(true);
+  const [isBookletLoading, setIsBookletLoading] = useState<boolean>(true);
   const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
   const [isTransactionsLoading, setIsTransactionsLoading] = useState<boolean>(true);
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [indentNumberError, setIndentNumberError] = useState<string>('');
 
   useEffect(() => {
     fetchCustomers();
@@ -48,7 +53,13 @@ const RecordIndent = () => {
   }, []);
 
   useEffect(() => {
-    fetchVehicles(selectedCustomer);
+    if (selectedCustomer) {
+      fetchVehicles(selectedCustomer);
+      fetchIndentBooklets(selectedCustomer);
+    } else {
+      setVehicles([]);
+      setIndentBooklets([]);
+    }
   }, [selectedCustomer]);
 
   const fetchCustomers = async () => {
@@ -111,6 +122,35 @@ const RecordIndent = () => {
     }
   };
 
+  const fetchIndentBooklets = async (customerId: string) => {
+    setIsBookletLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('indent_booklets')
+        .select('*')
+        .eq('customer_id', customerId)
+        .eq('status', 'Active')
+        .order('issued_date', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setIndentBooklets(data);
+      }
+    } catch (error) {
+      console.error('Error fetching indent booklets:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load indent booklets. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsBookletLoading(false);
+    }
+  };
+
   const fetchRecentTransactions = async () => {
     setIsTransactionsLoading(true);
     try {
@@ -148,6 +188,59 @@ const RecordIndent = () => {
     }
   };
 
+  const validateIndentNumber = (bookletId: string, indentNum: string) => {
+    if (!bookletId || !indentNum) {
+      setIndentNumberError('');
+      return false;
+    }
+
+    const selectedBookletData = indentBooklets.find(booklet => booklet.id === bookletId);
+    
+    if (!selectedBookletData) {
+      setIndentNumberError('Selected booklet not found');
+      return false;
+    }
+
+    const startNum = parseInt(selectedBookletData.start_number);
+    const endNum = parseInt(selectedBookletData.end_number);
+    const currentNum = parseInt(indentNum);
+
+    if (isNaN(currentNum)) {
+      setIndentNumberError('Please enter a valid number');
+      return false;
+    }
+
+    if (currentNum < startNum || currentNum > endNum) {
+      setIndentNumberError(`Indent number must be between ${startNum} and ${endNum}`);
+      return false;
+    }
+
+    // Check if this indent number has already been used
+    supabase
+      .from('indents')
+      .select('id')
+      .eq('indent_number', indentNum)
+      .eq('booklet_id', bookletId)
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Error checking indent number:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          setIndentNumberError('This indent number has already been used');
+          return false;
+        } else {
+          setIndentNumberError('');
+          return true;
+        }
+      });
+
+    // Initial validation passed
+    setIndentNumberError('');
+    return true;
+  };
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -159,7 +252,32 @@ const RecordIndent = () => {
           description: "Please fill all required fields",
           variant: "destructive"
         });
+        setIsSubmitting(false);
         return;
+      }
+
+      // Additional validation for the indent number if a booklet is selected
+      if (selectedBooklet) {
+        if (!indentNumber) {
+          toast({
+            title: "Missing indent number",
+            description: "Please enter an indent number from the selected booklet",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        const isValid = validateIndentNumber(selectedBooklet, indentNumber);
+        if (!isValid || indentNumberError) {
+          toast({
+            title: "Invalid indent number",
+            description: indentNumberError || "Please check the indent number",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       // Generate a UUID for the transaction
@@ -168,10 +286,11 @@ const RecordIndent = () => {
       // Using staff_id as a required field - setting a placeholder value
       const staffId = "00000000-0000-0000-0000-000000000000"; // Default staff ID
 
+      // Create a transaction
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
         .insert({
-          id: transactionId, // Add the required id field
+          id: transactionId,
           customer_id: selectedCustomer,
           vehicle_id: selectedVehicle,
           staff_id: staffId,
@@ -179,7 +298,8 @@ const RecordIndent = () => {
           fuel_type: fuelType,
           amount: amount,
           quantity: quantity,
-          payment_method: 'Cash' // Default payment method
+          payment_method: 'Cash', // Default payment method
+          indent_id: selectedBooklet ? indentNumber : null
         })
         .select();
 
@@ -187,20 +307,59 @@ const RecordIndent = () => {
         throw transactionError;
       }
 
-      if (transaction) {
-        toast({
-          title: "Success",
-          description: "Transaction recorded successfully"
-        });
-        // Reset form fields
-        setSelectedCustomer('');
-        setSelectedVehicle('');
-        setFuelType('Petrol');
-        setAmount(0);
-        setQuantity(0);
-        setDate(new Date());
-        fetchRecentTransactions(); // Refresh recent transactions
+      // If indent booklet is used, also create an indent record
+      if (selectedBooklet && indentNumber) {
+        const indentId = crypto.randomUUID();
+        
+        const { error: indentError } = await supabase
+          .from('indents')
+          .insert({
+            id: indentId,
+            customer_id: selectedCustomer,
+            vehicle_id: selectedVehicle,
+            fuel_type: fuelType,
+            amount: amount,
+            quantity: quantity,
+            indent_number: indentNumber,
+            booklet_id: selectedBooklet,
+            date: date.toISOString(),
+            status: 'Fulfilled'
+          });
+
+        if (indentError) {
+          throw indentError;
+        }
+
+        // Update the used_indents count in the booklet
+        const booklet = indentBooklets.find(b => b.id === selectedBooklet);
+        if (booklet) {
+          const { error: updateError } = await supabase
+            .from('indent_booklets')
+            .update({ used_indents: booklet.used_indents + 1 })
+            .eq('id', selectedBooklet);
+
+          if (updateError) {
+            console.error('Error updating booklet:', updateError);
+          }
+        }
       }
+
+      toast({
+        title: "Success",
+        description: "Transaction recorded successfully"
+      });
+      
+      // Reset form fields
+      setSelectedCustomer('');
+      setSelectedVehicle('');
+      setSelectedBooklet('');
+      setIndentNumber('');
+      setFuelType('Petrol');
+      setAmount(0);
+      setQuantity(0);
+      setDate(new Date());
+      setIndentNumberError('');
+      fetchRecentTransactions(); // Refresh recent transactions
     } catch (error) {
       console.error('Error recording indent:', error);
       toast({
@@ -258,6 +417,10 @@ const RecordIndent = () => {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Loading...
                       </SelectItem>
+                    ) : vehicles.length === 0 ? (
+                      <SelectItem value="no-vehicles" disabled>
+                        No vehicles found
+                      </SelectItem>
                     ) : (
                       vehicles.map((vehicle) => (
                         <SelectItem key={vehicle.id} value={vehicle.id}>{vehicle.number}</SelectItem>
@@ -267,6 +430,53 @@ const RecordIndent = () => {
                 </Select>
               </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="booklet">Indent Booklet (Optional)</Label>
+                <Select value={selectedBooklet} onValueChange={setSelectedBooklet}>
+                  <SelectTrigger id="booklet">
+                    <SelectValue placeholder="Select a booklet" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isBookletLoading ? (
+                      <SelectItem value="loading" disabled>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </SelectItem>
+                    ) : indentBooklets.length === 0 ? (
+                      <SelectItem value="no-booklets" disabled>
+                        No active booklets found
+                      </SelectItem>
+                    ) : (
+                      indentBooklets.map((booklet) => (
+                        <SelectItem key={booklet.id} value={booklet.id}>
+                          {booklet.start_number} - {booklet.end_number} (Used: {booklet.used_indents}/{booklet.total_indents})
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="indentNumber">Indent Number</Label>
+                <Input
+                  id="indentNumber"
+                  value={indentNumber}
+                  onChange={(e) => {
+                    setIndentNumber(e.target.value);
+                    if (selectedBooklet) validateIndentNumber(selectedBooklet, e.target.value);
+                  }}
+                  placeholder={selectedBooklet ? "Enter indent number" : "Select a booklet first"}
+                  disabled={!selectedBooklet}
+                  className={indentNumberError ? "border-red-500" : ""}
+                />
+                {indentNumberError && (
+                  <p className="text-red-500 text-sm mt-1">{indentNumberError}</p>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="z-10">
                 <Label htmlFor="date">Date</Label>
