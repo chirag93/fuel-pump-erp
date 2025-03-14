@@ -14,13 +14,17 @@ interface RecentTransaction extends Transaction {
   vehicle_number?: string;
 }
 
-export const RecentTransactionsTable = () => {
+interface RecentTransactionsTableProps {
+  refreshTrigger?: number;
+}
+
+export const RecentTransactionsTable = ({ refreshTrigger = 0 }: RecentTransactionsTableProps) => {
   const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
   const [isTransactionsLoading, setIsTransactionsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     fetchRecentTransactions();
-  }, []);
+  }, [refreshTrigger]); // Add refreshTrigger to dependency array
 
   const fetchRecentTransactions = async () => {
     setIsTransactionsLoading(true);
