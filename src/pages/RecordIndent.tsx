@@ -137,7 +137,12 @@ const RecordIndent = () => {
       }
 
       if (data) {
-        setIndentBooklets(data);
+        // Transform the data to ensure status is one of the allowed types
+        const typedBooklets: IndentBooklet[] = data.map(booklet => ({
+          ...booklet,
+          status: booklet.status as 'Active' | 'Completed' | 'Cancelled'
+        }));
+        setIndentBooklets(typedBooklets);
       }
     } catch (error) {
       console.error('Error fetching indent booklets:', error);
