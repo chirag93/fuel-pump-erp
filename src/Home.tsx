@@ -156,42 +156,42 @@ const Home = () => {
             title="Daily Readings"
             description="Add shift-wise opening and closing readings"
             icon={<Droplets size={20} />}
-            href="/shift"
+            href="/daily-readings"
           />
           
           <QuickAction
             title="Tank Unload"
             description="Record incoming fuel unloads and payments"
             icon={<Truck size={20} />}
-            href="/fueling"
+            href="/tank-unload"  // Update the link to the new Tank Unload page
           />
           
           <QuickAction
             title="Stock Levels"
             description="Record end-of-day stock levels"
             icon={<Package size={20} />}
-            href="/inventory"
+            href="/stock-levels"
           />
           
           <QuickAction
             title="Testing Details"
             description="Record fuel testing information"
             icon={<TestTube size={20} />}
-            href="/testing"
+            href="/testing-details"
           />
           
           <QuickAction
             title="Record Transaction"
             description="Record sales via QR, card, or cash"
             icon={<CreditCard size={20} />}
-            href="/fueling"
+            href="/record-indent"
           />
           
           <QuickAction
-            title="Staff Cash"
+            title="Staff Management"
             description="Record cash provided to staff at shift start"
             icon={<BarChart size={20} />}
-            href="/staff"
+            href="/staff-management"
           />
           
           <QuickAction
@@ -205,7 +205,7 @@ const Home = () => {
             title="Reports"
             description="View daily and periodic reports"
             icon={<FileText size={20} />}
-            href="/reports"
+            href="/dashboard"
           />
         </div>
       </div>

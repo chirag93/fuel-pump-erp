@@ -15,6 +15,7 @@ import ShiftManagement from './pages/ShiftManagement';
 import Consumables from './pages/Consumables';
 import TestingDetails from './pages/TestingDetails';
 import FuelPumpSettings from './pages/FuelPumpSettings';
+import TankUnload from './pages/TankUnload'; // Import the new Tank Unload page
 import NotFound from './pages/NotFound';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -41,6 +42,7 @@ const App = () => {
             <Route path="/consumables" element={<Consumables />} />
             <Route path="/testing-details" element={<TestingDetails />} />
             <Route path="/settings" element={<FuelPumpSettings />} />
+            <Route path="/tank-unload" element={<TankUnload />} /> {/* Add the new route */}
           </Route>
           
           <Route path="*" element={<Navigate to="/" replace />} />
