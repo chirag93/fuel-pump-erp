@@ -73,36 +73,36 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated, showTankIcon
   const fillPercentage = Math.round((currentLevel / capacity) * 100);
   const isLow = fillPercentage < 20;
   
-  // Define more vibrant colors based on fuel type
+  // Define solid colors based on fuel type
   let color = '';
   let colorText = '';
   let colorBg = '';
-  let gradient = '';
+  let fillColor = '';
   
   if (fuelType.toLowerCase().includes('petrol')) {
-    // Vibrant orange/red for petrol
-    color = 'bg-gradient-to-r from-orange-500 to-red-500';
+    // Solid orange/red for petrol
+    color = 'bg-orange-500';
     colorText = 'text-orange-600';
     colorBg = 'bg-orange-100';
-    gradient = 'linear-gradient(90deg, hsla(24, 100%, 83%, 1) 0%, hsla(341, 91%, 68%, 1) 100%)';
+    fillColor = '#f97316'; // orange-500
   } else if (fuelType.toLowerCase().includes('diesel')) {
-    // Rich blue/teal for diesel
-    color = 'bg-gradient-to-r from-blue-600 to-teal-500';
+    // Solid blue for diesel
+    color = 'bg-blue-600';
     colorText = 'text-blue-600';
     colorBg = 'bg-blue-100';
-    gradient = 'linear-gradient(90deg, hsla(221, 45%, 73%, 1) 0%, hsla(220, 78%, 29%, 1) 100%)';
+    fillColor = '#2563eb'; // blue-600
   } else if (fuelType.toLowerCase().includes('premium')) {
-    // Premium gets a gold/yellow gradient
-    color = 'bg-gradient-to-r from-amber-400 to-yellow-500';
+    // Premium gets a gold/yellow
+    color = 'bg-amber-400';
     colorText = 'text-amber-600';
     colorBg = 'bg-amber-100';
-    gradient = 'linear-gradient(90deg, hsla(39, 100%, 77%, 1) 0%, hsla(22, 90%, 57%, 1) 100%)';
+    fillColor = '#f59e0b'; // amber-500
   } else {
-    // Default to a green gradient
-    color = 'bg-gradient-to-r from-green-500 to-emerald-500';
+    // Default to green
+    color = 'bg-green-500';
     colorText = 'text-green-600';
     colorBg = 'bg-green-100';
-    gradient = 'linear-gradient(90deg, hsla(139, 70%, 75%, 1) 0%, hsla(63, 90%, 76%, 1) 100%)';
+    fillColor = '#22c55e'; // green-500
   }
   
   // Tank icon representation
@@ -118,12 +118,12 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated, showTankIcon
         {/* Tank cap */}
         <div className="w-8 h-3 bg-gray-400 absolute -top-3 left-1/2 transform -translate-x-1/2 rounded-t-md"></div>
         
-        {/* Tank level visualization with gradient background */}
+        {/* Tank level visualization with solid background */}
         <div 
           className={`absolute bottom-0 left-0 right-0 transition-all duration-500`} 
           style={{ 
             height: `${fillPercentage}%`,
-            background: gradient
+            backgroundColor: fillColor
           }}
         ></div>
         

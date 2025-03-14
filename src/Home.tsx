@@ -133,22 +133,7 @@ const Home = () => {
         <p className="text-muted-foreground">Quick access to frequent operations</p>
       </div>
 
-      {/* Fuel Tank Status */}
-      <div>
-        <h3 className="mb-4 text-xl font-semibold">Fuel Storage Status</h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          {fuelLevels.map((fuel, index) => (
-            <FuelTankDisplay 
-              key={index}
-              fuelType={fuel.fuelType} 
-              capacity={fuel.capacity} 
-              lastUpdated={fuel.lastUpdated}
-              showTankIcon={true}
-            />
-          ))}
-        </div>
-      </div>
-
+      {/* Quick Actions Section - Moved to top */}
       <div>
         <h3 className="mb-4 text-xl font-semibold">Quick Actions</h3>
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -163,7 +148,7 @@ const Home = () => {
             title="Tank Unload"
             description="Record incoming fuel unloads and payments"
             icon={<Truck size={20} />}
-            href="/tank-unload"  // Update the link to the new Tank Unload page
+            href="/tank-unload"
           />
           
           <QuickAction
@@ -207,6 +192,22 @@ const Home = () => {
             icon={<FileText size={20} />}
             href="/dashboard"
           />
+        </div>
+      </div>
+
+      {/* Fuel Tank Status - Moved below Quick Actions */}
+      <div>
+        <h3 className="mb-4 text-xl font-semibold">Fuel Storage Status</h3>
+        <div className="grid gap-4 md:grid-cols-2">
+          {fuelLevels.map((fuel, index) => (
+            <FuelTankDisplay 
+              key={index}
+              fuelType={fuel.fuelType} 
+              capacity={fuel.capacity} 
+              lastUpdated={fuel.lastUpdated}
+              showTankIcon={true}
+            />
+          ))}
         </div>
       </div>
 

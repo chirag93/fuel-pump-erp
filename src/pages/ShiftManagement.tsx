@@ -277,6 +277,17 @@ const ShiftManagement = () => {
     setEndShiftDialogOpen(true);
   };
 
+  // Allow editing of completed shifts
+  const editCompletedShift = (shift: Shift) => {
+    setCurrentShiftId(shift.id);
+    setCurrentShiftData({
+      staffId: shift.staff_id,
+      pumpId: shift.pump_id,
+      openingReading: shift.opening_reading
+    });
+    setEndShiftDialogOpen(true);
+  };
+
   const refreshShifts = () => {
     const fetchShifts = async () => {
       setIsLoading(true);
@@ -590,6 +601,7 @@ const ShiftManagement = () => {
                           <TableHead>UPI Sales</TableHead>
                           <TableHead>Cash Sales</TableHead>
                           <TableHead>Total</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -609,6 +621,17 @@ const ShiftManagement = () => {
                               <TableCell>₹{(shift.upi_sales || 0).toLocaleString()}</TableCell>
                               <TableCell>₹{(shift.cash_sales || 0).toLocaleString()}</TableCell>
                               <TableCell className="font-bold">₹{totalSales.toLocaleString()}</TableCell>
+                              <TableCell>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="gap-1"
+                                  onClick={() => editCompletedShift(shift)}
+                                >
+                                  <ClipboardList size={14} />
+                                  Edit
+                                </Button>
+                              </TableCell>
                             </TableRow>
                           );
                         })}

@@ -3,11 +3,13 @@ import { useState } from 'react';
 import TankUnloadForm from "@/components/tank-unload/TankUnloadForm";
 import RecentUnloadsTable from "@/components/tank-unload/RecentUnloadsTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Truck, Calendar, TrendingUp } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Truck, Calendar, TrendingUp, Fuel, FileSpreadsheet } from 'lucide-react';
 import { useTankUnloads, TankUnload as TankUnloadType } from "@/hooks/useTankUnloads";
 
 const TankUnload = () => {
   const [refreshCounter, setRefreshCounter] = useState(0);
+  const [activeTab, setActiveTab] = useState('overview');
   const { recentUnloads, isLoading } = useTankUnloads(refreshCounter);
 
   const handleUnloadSuccess = () => {
@@ -32,45 +34,99 @@ const TankUnload = () => {
         <p className="text-muted-foreground">Record fuel delivery details when a tanker unloads at your station</p>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl">Today's Deliveries</CardTitle>
-            <CardDescription>Fuel deliveries recorded today</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold">{todaysUnloads.length}</div>
-            <p className="text-sm text-muted-foreground">deliveries</p>
-          </CardContent>
-        </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">
+            <Fuel className="mr-2 h-4 w-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="record">
+            <Truck className="mr-2 h-4 w-4" />
+            Record Unload
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Unload History
+          </TabsTrigger>
+        </TabsList>
         
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl">Total Quantity</CardTitle>
-            <CardDescription>Total fuel delivered</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold">{totalLiters.toLocaleString()}</div>
-            <p className="text-sm text-muted-foreground">liters</p>
-          </CardContent>
-        </Card>
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl">Today's Deliveries</CardTitle>
+                <CardDescription>Fuel deliveries recorded today</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">{todaysUnloads.length}</div>
+                <p className="text-sm text-muted-foreground">deliveries</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl">Total Quantity</CardTitle>
+                <CardDescription>Total fuel delivered</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">{totalLiters.toLocaleString()}</div>
+                <p className="text-sm text-muted-foreground">liters</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl">Total Value</CardTitle>
+                <CardDescription>Value of delivered fuel</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold">₹{totalAmount.toLocaleString()}</div>
+                <p className="text-sm text-muted-foreground">in deliveries</p>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Unloads</CardTitle>
+              <CardDescription>
+                Recent fuel deliveries received at your station
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RecentUnloadsTable refreshTrigger={refreshCounter} />
+            </CardContent>
+          </Card>
+        </TabsContent>
         
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl">Total Value</CardTitle>
-            <CardDescription>Value of delivered fuel</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold">₹{totalAmount.toLocaleString()}</div>
-            <p className="text-sm text-muted-foreground">in deliveries</p>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <div className="grid gap-6 md:grid-cols-2">
-        <TankUnloadForm onSuccess={handleUnloadSuccess} />
-        <RecentUnloadsTable refreshTrigger={refreshCounter} />
-      </div>
+        <TabsContent value="record">
+          <Card>
+            <CardHeader>
+              <CardTitle>Record New Tank Unload</CardTitle>
+              <CardDescription>
+                Enter details of a fuel delivery received at your station
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TankUnloadForm onSuccess={handleUnloadSuccess} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle>Unload History</CardTitle>
+              <CardDescription>
+                Complete history of fuel deliveries
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RecentUnloadsTable refreshTrigger={refreshCounter} showAll={true} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
