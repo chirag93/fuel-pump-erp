@@ -2,6 +2,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from './pages/Dashboard';
+import Home from './Home'; // Import from the correct location
 import Login from './pages/Login';
 import DailyReadings from './pages/DailyReadings';
 import StockLevels from './pages/StockLevels';
@@ -27,7 +28,7 @@ const App = () => {
           
           {/* Protected routes with sidebar layout */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Home />} /> {/* Now using the Home component */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/daily-readings" element={<DailyReadings />} />
             <Route path="/stock-levels" element={<StockLevels />} />
