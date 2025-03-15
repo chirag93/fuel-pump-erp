@@ -3,8 +3,6 @@ import { useParams } from 'react-router-dom';
 import CustomerHeader from '@/components/customers/CustomerHeader';
 import CustomerTabs from '@/components/customers/CustomerTabs';
 import { useCustomerData } from '@/components/customers/hooks/useCustomerData';
-import { Routes, Route } from 'react-router-dom';
-import BookletIndents from './BookletIndents';
 
 const CustomerDetails = () => {
   const { id } = useParams<{ id: string }>();

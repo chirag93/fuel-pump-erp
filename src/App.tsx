@@ -1,82 +1,55 @@
 
 import React from 'react';
-import {
-  createBrowserRouter,
-  RouterProvider,
-  Outlet,
-  Navigate
-} from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster"
-import { useAuth } from '@/hooks/use-auth';
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Dashboard from './pages/Dashboard';
+import Home from './Home'; // Import from the correct location
+import Login from './pages/Login';
+import DailyReadings from './pages/DailyReadings';
+import StockLevels from './pages/StockLevels';
+import AllTransactions from './pages/AllTransactions';
+import Customers from './pages/Customers';
+import CustomerDetails from './pages/CustomerDetails';
+import StaffManagement from './pages/StaffManagement';
+import RecordIndent from './pages/RecordIndent';
+import ShiftManagement from './pages/ShiftManagement';
+import Consumables from './pages/Consumables';
+import TestingDetails from './pages/TestingDetails';
+import FuelPumpSettings from './pages/FuelPumpSettings';
+import TankUnload from './pages/TankUnload';
+import NotFound from './pages/NotFound';
 import { AuthProvider } from './contexts/AuthContext';
-import Layout from '@/components/layout/Layout';
-import Index from '@/pages/Index';
-import Login from '@/pages/Login';
-import NotFound from '@/pages/NotFound';
-import Home from '@/pages/Home';
-import Dashboard from '@/pages/Dashboard';
-import DailyReadings from '@/pages/DailyReadings';
-import StockLevels from '@/pages/StockLevels';
-import TestingDetails from '@/pages/TestingDetails';
-import ShiftManagement from '@/pages/ShiftManagement';
-import StaffManagement from '@/pages/StaffManagement';
-import Customers from '@/pages/Customers';
-import CustomerDetails from '@/pages/CustomerDetails';
-import AllTransactions from '@/pages/AllTransactions';
-import Consumables from '@/pages/Consumables';
-import FuelPumpSettings from '@/pages/FuelPumpSettings';
-import TankUnload from '@/pages/TankUnload';
-import RecordIndent from '@/pages/RecordIndent';
-import BookletIndents from './pages/BookletIndents';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-}
-
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated } = useAuth();
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-};
-
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <Layout />,
-    children: [
-      { path: "/", element: <Index /> },
-      { path: "/home", element: <Home /> },
-      { path: "/dashboard", element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
-      { path: "/readings", element: <ProtectedRoute><DailyReadings /></ProtectedRoute> },
-      { path: "/stock", element: <ProtectedRoute><StockLevels /></ProtectedRoute> },
-      { path: "/testing", element: <ProtectedRoute><TestingDetails /></ProtectedRoute> },
-      { path: "/shifts", element: <ProtectedRoute><ShiftManagement /></ProtectedRoute> },
-      { path: "/staff", element: <ProtectedRoute><StaffManagement /></ProtectedRoute> },
-      { path: "/customers", element: <ProtectedRoute><Customers /></ProtectedRoute> },
-      { path: "/customer/:id", element: <ProtectedRoute><CustomerDetails /></ProtectedRoute> },
-      { path: "/customer/:customerId/booklet/:bookletId/indents", element: <ProtectedRoute><BookletIndents /></ProtectedRoute> },
-      { path: "/transactions", element: <ProtectedRoute><AllTransactions /></ProtectedRoute> },
-      { path: "/consumables", element: <ProtectedRoute><Consumables /></ProtectedRoute> },
-      { path: "/settings/pumps", element: <ProtectedRoute><FuelPumpSettings /></ProtectedRoute> },
-      { path: "/tank-unload", element: <ProtectedRoute><TankUnload /></ProtectedRoute> },
-      { path: "/indent", element: <ProtectedRoute><RecordIndent /></ProtectedRoute> },
-      { path: "/login", element: <Login /> },
-      { path: "*", element: <NotFound /> }
-    ]
-  }
-]);
-
-function App() {
+const App = () => {
   return (
     <AuthProvider>
-      <RouterProvider router={router} />
-      <Toaster />
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          
+          {/* Protected routes with sidebar layout */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/daily-readings" element={<DailyReadings />} />
+            <Route path="/stock-levels" element={<StockLevels />} />
+            <Route path="/all-transactions" element={<AllTransactions />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/customers/:id" element={<CustomerDetails />} />
+            <Route path="/staff-management" element={<StaffManagement />} />
+            <Route path="/record-indent" element={<RecordIndent />} />
+            <Route path="/shift-management" element={<ShiftManagement />} />
+            <Route path="/consumables" element={<Consumables />} />
+            <Route path="/testing-details" element={<TestingDetails />} />
+            <Route path="/settings" element={<FuelPumpSettings />} />
+            <Route path="/tank-unload" element={<TankUnload />} />
+          </Route>
+          
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
     </AuthProvider>
   );
-}
+};
 
 export default App;
