@@ -6,9 +6,10 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Book, Edit } from 'lucide-react';
+import { Book, Edit, FileText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase, IndentBooklet } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 interface NewBookletData {
   start_number: string;
@@ -24,7 +25,10 @@ interface BookletsTabProps {
 }
 
 const BookletsTab = ({ indentBooklets, setIndentBooklets, customerId }: BookletsTabProps) => {
+  const navigate = useNavigate();
   const [bookletDialogOpen, setBookletDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedBooklet, setSelectedBooklet] = useState<IndentBooklet | null>(null);
   const [newBooklet, setNewBooklet] = useState<Partial<NewBookletData>>({
     customer_id: customerId,
     start_number: '',
@@ -101,6 +105,50 @@ const BookletsTab = ({ indentBooklets, setIndentBooklets, customerId }: Booklets
         variant: "destructive"
       });
     }
+  };
+
+  const handleEditBooklet = (booklet: IndentBooklet) => {
+    setSelectedBooklet(booklet);
+    setEditDialogOpen(true);
+  };
+
+  const saveBookletChanges = async () => {
+    if (!selectedBooklet) return;
+
+    try {
+      const { error } = await supabase
+        .from('indent_booklets')
+        .update({
+          status: selectedBooklet.status
+        })
+        .eq('id', selectedBooklet.id);
+
+      if (error) throw error;
+
+      // Update the local state with the edited booklet
+      const updatedBooklets = indentBooklets.map(booklet => 
+        booklet.id === selectedBooklet.id ? selectedBooklet : booklet
+      );
+      
+      setIndentBooklets(updatedBooklets);
+      setEditDialogOpen(false);
+      
+      toast({
+        title: "Success",
+        description: "Booklet updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating booklet:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update booklet. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleViewIndents = (bookletId: string) => {
+    navigate(`/customer/${customerId}/booklet/${bookletId}/indents`);
   };
 
   return (
@@ -208,15 +256,73 @@ const BookletsTab = ({ indentBooklets, setIndentBooklets, customerId }: Booklets
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleEditBooklet(booklet)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleViewIndents(booklet.id)}
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         )}
+
+        {/* Edit Booklet Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Booklet</DialogTitle>
+              <DialogDescription>
+                Update the status of this indent booklet
+              </DialogDescription>
+            </DialogHeader>
+            {selectedBooklet && (
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="booklet_range">Booklet Range</Label>
+                  <Input 
+                    id="booklet_range" 
+                    value={`${selectedBooklet.start_number} - ${selectedBooklet.end_number}`}
+                    readOnly
+                    disabled
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="booklet_status">Status</Label>
+                  <select
+                    id="booklet_status"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={selectedBooklet.status}
+                    onChange={(e) => setSelectedBooklet({
+                      ...selectedBooklet,
+                      status: e.target.value as 'Active' | 'Completed' | 'Cancelled'
+                    })}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+              <Button onClick={saveBookletChanges}>Save Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
