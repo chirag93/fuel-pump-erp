@@ -93,6 +93,19 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
     }
   }, [closingReading, cashSales, cashRemaining, shiftData?.opening_reading, fuelPrice]);
 
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setClosingReading('');
+      setCashRemaining('');
+      setCardSales('');
+      setUpiSales('');
+      setCashSales('');
+      setSelectedStaff('');
+      setError(null);
+    }
+  }, [isOpen]);
+
   // Load staff list
   useEffect(() => {
     const fetchStaff = async () => {
@@ -251,7 +264,10 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
           "Shift ended successfully",
       });
       
+      // Call the callback to refresh the shifts list
       onShiftEnded();
+      
+      // Close the dialog
       onClose();
     } catch (error) {
       console.error('Error ending shift:', error);

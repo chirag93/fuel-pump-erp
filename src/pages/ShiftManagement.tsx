@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -19,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import EndShiftDialog from '@/components/shift/EndShiftDialog';
+import { NewEndShiftDialog } from '@/components/shift/NewEndShiftDialog';
 
 interface Shift {
   id: string;
@@ -61,7 +63,9 @@ const ShiftManagement = () => {
     shift_type: 'day'
   });
 
+  // Dialog states
   const [endShiftDialogOpen, setEndShiftDialogOpen] = useState(false);
+  const [newEndShiftDialogOpen, setNewEndShiftDialogOpen] = useState(false);
   const [currentShiftId, setCurrentShiftId] = useState<string>('');
   const [currentShiftData, setCurrentShiftData] = useState<{
     staffId: string;
@@ -72,6 +76,16 @@ const ShiftManagement = () => {
     pumpId: '',
     openingReading: 0
   });
+  
+  // For the NewEndShiftDialog
+  const [selectedShiftData, setSelectedShiftData] = useState<{
+    id: string;
+    staff_id: string;
+    staff_name: string;
+    pump_id: string;
+    opening_reading: number;
+    shift_type: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchStaff = async () => {
@@ -101,78 +115,78 @@ const ShiftManagement = () => {
   }, []);
 
   useEffect(() => {
-    const fetchShifts = async () => {
-      setIsLoading(true);
-      try {
-        const { data: shiftsData, error: shiftsError } = await supabase
-          .from('shifts')
-          .select(`
-            id,
-            staff_id,
-            shift_type,
-            start_time,
-            end_time,
-            status,
-            created_at
-          `);
-          
-        if (shiftsError) {
-          throw shiftsError;
-        }
-        
-        if (!shiftsData) {
-          setShifts([]);
-          setIsLoading(false);
-          return;
-        }
-        
-        const shiftsWithStaffNames = await Promise.all(
-          shiftsData.map(async (shift) => {
-            const { data: staffData } = await supabase
-              .from('staff')
-              .select('name')
-              .eq('id', shift.staff_id)
-              .single();
-              
-            const { data: readingsData } = await supabase
-              .from('readings')
-              .select('*')
-              .eq('shift_id', shift.id)
-              .single();
-              
-            return {
-              ...shift,
-              staff_name: staffData?.name || 'Unknown Staff',
-              date: readingsData?.date || new Date().toISOString().split('T')[0],
-              pump_id: readingsData?.pump_id || 'Unknown',
-              opening_reading: readingsData?.opening_reading || 0,
-              closing_reading: readingsData?.closing_reading || null,
-              starting_cash_balance: readingsData?.cash_given || 0,
-              ending_cash_balance: readingsData?.cash_remaining || null,
-              card_sales: readingsData?.card_sales || null,
-              upi_sales: readingsData?.upi_sales || null,
-              cash_sales: readingsData?.cash_sales || null
-            } as Shift;
-          })
-        );
-        
-        setShifts(shiftsWithStaffNames);
-      } catch (error) {
-        console.error('Error fetching shifts:', error);
-        toast({
-          title: "Error loading shifts",
-          description: "Failed to load shift data from the database.",
-          variant: "destructive"
-        });
-        
-        setShifts([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     fetchShifts();
   }, []);
+  
+  const fetchShifts = async () => {
+    setIsLoading(true);
+    try {
+      const { data: shiftsData, error: shiftsError } = await supabase
+        .from('shifts')
+        .select(`
+          id,
+          staff_id,
+          shift_type,
+          start_time,
+          end_time,
+          status,
+          created_at
+        `);
+        
+      if (shiftsError) {
+        throw shiftsError;
+      }
+      
+      if (!shiftsData) {
+        setShifts([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      const shiftsWithStaffNames = await Promise.all(
+        shiftsData.map(async (shift) => {
+          const { data: staffData } = await supabase
+            .from('staff')
+            .select('name')
+            .eq('id', shift.staff_id)
+            .single();
+            
+          const { data: readingsData } = await supabase
+            .from('readings')
+            .select('*')
+            .eq('shift_id', shift.id)
+            .single();
+            
+          return {
+            ...shift,
+            staff_name: staffData?.name || 'Unknown Staff',
+            date: readingsData?.date || new Date().toISOString().split('T')[0],
+            pump_id: readingsData?.pump_id || 'Unknown',
+            opening_reading: readingsData?.opening_reading || 0,
+            closing_reading: readingsData?.closing_reading || null,
+            starting_cash_balance: readingsData?.cash_given || 0,
+            ending_cash_balance: readingsData?.cash_remaining || null,
+            card_sales: readingsData?.card_sales || null,
+            upi_sales: readingsData?.upi_sales || null,
+            cash_sales: readingsData?.cash_sales || null
+          } as Shift;
+        })
+      );
+      
+      setShifts(shiftsWithStaffNames);
+    } catch (error) {
+      console.error('Error fetching shifts:', error);
+      toast({
+        title: "Error loading shifts",
+        description: "Failed to load shift data from the database.",
+        variant: "destructive"
+      });
+      
+      setShifts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const activeShifts = shifts.filter(shift => shift.status === 'active');
   const completedShifts = shifts.filter(shift => shift.status === 'completed');
@@ -268,13 +282,27 @@ const ShiftManagement = () => {
   };
 
   const openEndShiftDialog = (shift: Shift) => {
-    setCurrentShiftId(shift.id);
-    setCurrentShiftData({
-      staffId: shift.staff_id,
-      pumpId: shift.pump_id,
-      openingReading: shift.opening_reading
-    });
-    setEndShiftDialogOpen(true);
+    // Use the original EndShiftDialog for editing completed shifts
+    if (shift.status === 'completed') {
+      setCurrentShiftId(shift.id);
+      setCurrentShiftData({
+        staffId: shift.staff_id,
+        pumpId: shift.pump_id,
+        openingReading: shift.opening_reading
+      });
+      setEndShiftDialogOpen(true);
+    } else {
+      // Use the new dialog for active shifts
+      setSelectedShiftData({
+        id: shift.id,
+        staff_id: shift.staff_id,
+        staff_name: shift.staff_name,
+        pump_id: shift.pump_id,
+        opening_reading: shift.opening_reading,
+        shift_type: shift.shift_type
+      });
+      setNewEndShiftDialogOpen(true);
+    }
   };
 
   // Allow editing of completed shifts
@@ -286,80 +314,6 @@ const ShiftManagement = () => {
       openingReading: shift.opening_reading
     });
     setEndShiftDialogOpen(true);
-  };
-
-  const refreshShifts = () => {
-    const fetchShifts = async () => {
-      setIsLoading(true);
-      try {
-        const { data: shiftsData, error: shiftsError } = await supabase
-          .from('shifts')
-          .select(`
-            id,
-            staff_id,
-            shift_type,
-            start_time,
-            end_time,
-            status,
-            created_at
-          `);
-          
-        if (shiftsError) {
-          throw shiftsError;
-        }
-        
-        if (!shiftsData) {
-          setShifts([]);
-          setIsLoading(false);
-          return;
-        }
-        
-        const shiftsWithStaffNames = await Promise.all(
-          shiftsData.map(async (shift) => {
-            const { data: staffData } = await supabase
-              .from('staff')
-              .select('name')
-              .eq('id', shift.staff_id)
-              .single();
-              
-            const { data: readingsData } = await supabase
-              .from('readings')
-              .select('*')
-              .eq('shift_id', shift.id)
-              .single();
-              
-            return {
-              ...shift,
-              staff_name: staffData?.name || 'Unknown Staff',
-              date: readingsData?.date || new Date().toISOString().split('T')[0],
-              pump_id: readingsData?.pump_id || 'Unknown',
-              opening_reading: readingsData?.opening_reading || 0,
-              closing_reading: readingsData?.closing_reading || null,
-              starting_cash_balance: readingsData?.cash_given || 0,
-              ending_cash_balance: readingsData?.cash_remaining || null,
-              card_sales: readingsData?.card_sales || null,
-              upi_sales: readingsData?.upi_sales || null,
-              cash_sales: readingsData?.cash_sales || null
-            } as Shift;
-          })
-        );
-        
-        setShifts(shiftsWithStaffNames);
-      } catch (error) {
-        console.error('Error fetching shifts:', error);
-        toast({
-          title: "Error loading shifts",
-          description: "Failed to load shift data from the database.",
-          variant: "destructive"
-        });
-        
-        setShifts([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchShifts();
   };
 
   const formatTime = (timeString?: string | null) => {
@@ -645,6 +599,7 @@ const ShiftManagement = () => {
         </>
       )}
       
+      {/* EndShiftDialog for editing completed shifts */}
       <EndShiftDialog
         open={endShiftDialogOpen}
         onOpenChange={setEndShiftDialogOpen}
@@ -652,8 +607,18 @@ const ShiftManagement = () => {
         staffId={currentShiftData.staffId}
         pumpId={currentShiftData.pumpId}
         openingReading={currentShiftData.openingReading}
-        onComplete={refreshShifts}
+        onComplete={fetchShifts}
       />
+      
+      {/* NewEndShiftDialog for ending active shifts */}
+      {selectedShiftData && (
+        <NewEndShiftDialog
+          isOpen={newEndShiftDialogOpen}
+          onClose={() => setNewEndShiftDialogOpen(false)}
+          shiftData={selectedShiftData}
+          onShiftEnded={fetchShifts}
+        />
+      )}
     </div>
   );
 };

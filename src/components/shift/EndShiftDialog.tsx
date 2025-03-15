@@ -16,7 +16,7 @@ import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface EndShiftDialogProps {
@@ -71,6 +71,32 @@ const EndShiftDialog = ({
   // Staff list for the new shift
   const [staffList, setStaffList] = useState<Array<{id: string, name: string}>>([]);
 
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      // Reset form to default values when dialog opens
+      if (!isEditingCompletedShift) {
+        setFormData({
+          closing_reading: 0,
+          cash_remaining: 0,
+          card_sales: 0,
+          upi_sales: 0,
+          cash_sales: 0
+        });
+        
+        setNewShiftData({
+          staff_id: '',
+          pump_id: pumpId,
+          opening_reading: 0,
+          cash_given: 0,
+          date: new Date().toISOString().split('T')[0]
+        });
+      }
+      
+      setError(null);
+    }
+  }, [open, isEditingCompletedShift, pumpId]);
+
   // Check if we're editing a completed shift when the dialog opens
   useEffect(() => {
     if (open && shiftId) {
@@ -108,9 +134,16 @@ const EndShiftDialog = ({
             }
           } else {
             setIsEditingCompletedShift(false);
+            // Reset to end-only mode for active shifts by default
+            setMode('end-only');
           }
         } catch (err) {
           console.error('Error checking shift status:', err);
+          toast({
+            title: "Error",
+            description: "Failed to check shift status. Please try again.",
+            variant: "destructive"
+          });
         }
       };
       
@@ -360,8 +393,8 @@ const EndShiftDialog = ({
         });
       }
       
-      onOpenChange(false);
       onComplete();
+      onOpenChange(false);
     } catch (error) {
       console.error('Error processing shift:', error);
       setError(error.message || "Failed to process shift. Please try again.");
@@ -583,7 +616,12 @@ const EndShiftDialog = ({
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Processing...' : isEditingCompletedShift ? 'Update Shift' : 
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : isEditingCompletedShift ? 'Update Shift' : 
               mode === 'end-only' ? 'End Shift' : 'End & Start New'}
           </Button>
         </DialogFooter>
