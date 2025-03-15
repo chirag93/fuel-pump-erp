@@ -50,62 +50,20 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: <Index /> },
       { path: "/home", element: <Home /> },
-      { 
-        path: "/dashboard", 
-        element: <ProtectedRoute><Dashboard /></ProtectedRoute> 
-      },
-      { 
-        path: "/readings", 
-        element: <ProtectedRoute><DailyReadings /></ProtectedRoute> 
-      },
-      { 
-        path: "/stock", 
-        element: <ProtectedRoute><StockLevels /></ProtectedRoute> 
-      },
-      { 
-        path: "/testing", 
-        element: <ProtectedRoute><TestingDetails /></ProtectedRoute> 
-      },
-      { 
-        path: "/shifts", 
-        element: <ProtectedRoute><ShiftManagement /></ProtectedRoute> 
-      },
-      { 
-        path: "/staff", 
-        element: <ProtectedRoute><StaffManagement /></ProtectedRoute> 
-      },
-      { 
-        path: "/customers", 
-        element: <ProtectedRoute><Customers /></ProtectedRoute> 
-      },
-      { 
-        path: "/customer/:id", 
-        element: <ProtectedRoute><CustomerDetails /></ProtectedRoute> 
-      },
-      { 
-        path: "/customer/:customerId/booklet/:bookletId/indents", 
-        element: <ProtectedRoute><BookletIndents /></ProtectedRoute> 
-      },
-      { 
-        path: "/transactions", 
-        element: <ProtectedRoute><AllTransactions /></ProtectedRoute> 
-      },
-      { 
-        path: "/consumables", 
-        element: <ProtectedRoute><Consumables /></ProtectedRoute> 
-      },
-      { 
-        path: "/settings/pumps", 
-        element: <ProtectedRoute><FuelPumpSettings /></ProtectedRoute> 
-      },
-      { 
-        path: "/tank-unload", 
-        element: <ProtectedRoute><TankUnload /></ProtectedRoute> 
-      },
-      { 
-        path: "/indent", 
-        element: <ProtectedRoute><RecordIndent /></ProtectedRoute> 
-      },
+      { path: "/dashboard", element: <ProtectedRoute children={<Dashboard />} /> },
+      { path: "/readings", element: <ProtectedRoute children={<DailyReadings />} /> },
+      { path: "/stock", element: <ProtectedRoute children={<StockLevels />} /> },
+      { path: "/testing", element: <ProtectedRoute children={<TestingDetails />} /> },
+      { path: "/shifts", element: <ProtectedRoute children={<ShiftManagement />} /> },
+      { path: "/staff", element: <ProtectedRoute children={<StaffManagement />} /> },
+      { path: "/customers", element: <ProtectedRoute children={<Customers />} /> },
+      { path: "/customer/:id", element: <ProtectedRoute children={<CustomerDetails />} /> },
+      { path: "/customer/:customerId/booklet/:bookletId/indents", element: <ProtectedRoute children={<BookletIndents />} /> },
+      { path: "/transactions", element: <ProtectedRoute children={<AllTransactions />} /> },
+      { path: "/consumables", element: <ProtectedRoute children={<Consumables />} /> },
+      { path: "/settings/pumps", element: <ProtectedRoute children={<FuelPumpSettings />} /> },
+      { path: "/tank-unload", element: <ProtectedRoute children={<TankUnload />} /> },
+      { path: "/indent", element: <ProtectedRoute children={<RecordIndent />} /> },
       { path: "/login", element: <Login /> },
       { path: "*", element: <NotFound /> }
     ]
