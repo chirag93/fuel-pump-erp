@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   createBrowserRouter,
@@ -6,7 +7,7 @@ import {
   Navigate
 } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster"
-import { useAuth } from './hooks/use-auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from '@/components/layout/Layout';
 import Index from '@/pages/Index';
@@ -35,7 +36,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" replace />;
   }
 
-  return children;
+  return <>{children}</>;
 };
 
 const router = createBrowserRouter([
