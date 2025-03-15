@@ -1,113 +1,82 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Dashboard from './pages/Dashboard';
-import Home from './Home'; // Import from the correct location
-import Login from './pages/Login';
-import DailyReadings from './pages/DailyReadings';
-import StockLevels from './pages/StockLevels';
-import AllTransactions from './pages/AllTransactions';
-import Customers from './pages/Customers';
-import CustomerDetails from './pages/CustomerDetails';
-import StaffManagement from './pages/StaffManagement';
-import RecordIndent from './pages/RecordIndent';
-import ShiftManagement from './pages/ShiftManagement';
-import Consumables from './pages/Consumables';
-import TestingDetails from './pages/TestingDetails';
-import FuelPumpSettings from './pages/FuelPumpSettings';
-import TankUnload from './pages/TankUnload';
-import NotFound from './pages/NotFound';
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Outlet,
+  Navigate
+} from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster"
+import { useAuth } from '@/hooks/use-auth';
 import { AuthProvider } from './contexts/AuthContext';
-import ProtectedRoute from './components/auth/ProtectedRoute';
+import Layout from '@/components/layout/Layout';
+import Index from '@/pages/Index';
+import Login from '@/pages/Login';
+import NotFound from '@/pages/NotFound';
+import Home from '@/pages/Home';
+import Dashboard from '@/pages/Dashboard';
+import DailyReadings from '@/pages/DailyReadings';
+import StockLevels from '@/pages/StockLevels';
+import TestingDetails from '@/pages/TestingDetails';
+import ShiftManagement from '@/pages/ShiftManagement';
+import StaffManagement from '@/pages/StaffManagement';
+import Customers from '@/pages/Customers';
+import CustomerDetails from '@/pages/CustomerDetails';
+import AllTransactions from '@/pages/AllTransactions';
+import Consumables from '@/pages/Consumables';
+import FuelPumpSettings from '@/pages/FuelPumpSettings';
+import TankUnload from '@/pages/TankUnload';
+import RecordIndent from '@/pages/RecordIndent';
+import BookletIndents from './pages/BookletIndents';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-const App = () => {
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+  const { isAuthenticated } = useAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    children: [
+      { path: "/", element: <Index /> },
+      { path: "/home", element: <Home /> },
+      { path: "/dashboard", element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
+      { path: "/readings", element: <ProtectedRoute><DailyReadings /></ProtectedRoute> },
+      { path: "/stock", element: <ProtectedRoute><StockLevels /></ProtectedRoute> },
+      { path: "/testing", element: <ProtectedRoute><TestingDetails /></ProtectedRoute> },
+      { path: "/shifts", element: <ProtectedRoute><ShiftManagement /></ProtectedRoute> },
+      { path: "/staff", element: <ProtectedRoute><StaffManagement /></ProtectedRoute> },
+      { path: "/customers", element: <ProtectedRoute><Customers /></ProtectedRoute> },
+      { path: "/customer/:id", element: <ProtectedRoute><CustomerDetails /></ProtectedRoute> },
+      { path: "/customer/:customerId/booklet/:bookletId/indents", element: <ProtectedRoute><BookletIndents /></ProtectedRoute> },
+      { path: "/transactions", element: <ProtectedRoute><AllTransactions /></ProtectedRoute> },
+      { path: "/consumables", element: <ProtectedRoute><Consumables /></ProtectedRoute> },
+      { path: "/settings/pumps", element: <ProtectedRoute><FuelPumpSettings /></ProtectedRoute> },
+      { path: "/tank-unload", element: <ProtectedRoute><TankUnload /></ProtectedRoute> },
+      { path: "/indent", element: <ProtectedRoute><RecordIndent /></ProtectedRoute> },
+      { path: "/login", element: <Login /> },
+      { path: "*", element: <NotFound /> }
+    ]
+  }
+]);
+
+function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          
-          {/* Protected routes with sidebar layout */}
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Home />
-            </ProtectedRoute>
-          } />
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/daily-readings" element={
-            <ProtectedRoute>
-              <DailyReadings />
-            </ProtectedRoute>
-          } />
-          <Route path="/stock-levels" element={
-            <ProtectedRoute>
-              <StockLevels />
-            </ProtectedRoute>
-          } />
-          <Route path="/all-transactions" element={
-            <ProtectedRoute>
-              <AllTransactions />
-            </ProtectedRoute>
-          } />
-          <Route path="/customers" element={
-            <ProtectedRoute>
-              <Customers />
-            </ProtectedRoute>
-          } />
-          <Route path="/customers/:id" element={
-            <ProtectedRoute>
-              <CustomerDetails />
-            </ProtectedRoute>
-          } />
-          <Route path="/staff-management" element={
-            <ProtectedRoute>
-              <StaffManagement />
-            </ProtectedRoute>
-          } />
-          <Route path="/record-indent" element={
-            <ProtectedRoute>
-              <RecordIndent />
-            </ProtectedRoute>
-          } />
-          <Route path="/shift-management" element={
-            <ProtectedRoute>
-              <ShiftManagement />
-            </ProtectedRoute>
-          } />
-          <Route path="/consumables" element={
-            <ProtectedRoute>
-              <Consumables />
-            </ProtectedRoute>
-          } />
-          <Route path="/testing-details" element={
-            <ProtectedRoute>
-              <TestingDetails />
-            </ProtectedRoute>
-          } />
-          <Route path="/settings" element={
-            <ProtectedRoute>
-              <FuelPumpSettings />
-            </ProtectedRoute>
-          } />
-          <Route path="/tank-unload" element={
-            <ProtectedRoute>
-              <TankUnload />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
+      <RouterProvider router={router} />
+      <Toaster />
     </AuthProvider>
   );
-};
+}
 
 export default App;

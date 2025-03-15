@@ -118,13 +118,25 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
         if (error) throw error;
         
         if (data) {
-          // Fix: Simplify the staff filtering to make sure we get results
-          // Just load all staff for now, we can filter better later
-          setStaff(data);
+          // Filter to only show staff who are assigned to this pump
+          const filteredStaff = data.filter(s => {
+            // If assigned_pumps is an array, check if it includes the current pump
+            if (Array.isArray(s.assigned_pumps)) {
+              return s.assigned_pumps.includes(shiftData.pump_id);
+            }
+            // For backward compatibility, check if it's JSON
+            if (typeof s.assigned_pumps === 'object') {
+              // Fix: Proper JSON handling - first convert to unknown then to string[]
+              const pumpArray = Array.isArray(s.assigned_pumps) 
+                ? s.assigned_pumps 
+                : (s.assigned_pumps ? JSON.parse(JSON.stringify(s.assigned_pumps)) : []);
+              
+              return Array.isArray(pumpArray) && pumpArray.includes(shiftData.pump_id);
+            }
+            return false;
+          });
           
-          // Log for debugging
-          console.log('Current pump ID:', shiftData.pump_id);
-          console.log('Staff data:', data);
+          setStaff(filteredStaff);
         }
       } catch (error) {
         console.error('Error fetching staff:', error);
