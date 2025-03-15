@@ -7,7 +7,7 @@ import {
   Navigate
 } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster"
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from '@/components/layout/Layout';
 import Index from '@/pages/Index';
