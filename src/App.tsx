@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   createBrowserRouter,
@@ -6,7 +7,7 @@ import {
   Navigate
 } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster"
-import { useAuth } from './hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from '@/components/layout/Layout';
 import Index from '@/pages/Index';
@@ -28,14 +29,18 @@ import TankUnload from '@/pages/TankUnload';
 import RecordIndent from '@/pages/RecordIndent';
 import BookletIndents from './pages/BookletIndents';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isAuthenticated } = useAuth();
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  return children;
+  return <>{children}</>;
 };
 
 const router = createBrowserRouter([
