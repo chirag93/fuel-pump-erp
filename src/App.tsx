@@ -29,7 +29,11 @@ import TankUnload from '@/pages/TankUnload';
 import RecordIndent from '@/pages/RecordIndent';
 import BookletIndents from './pages/BookletIndents';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated } = useAuth();
   
   if (!isAuthenticated) {
