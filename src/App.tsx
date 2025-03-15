@@ -20,6 +20,10 @@ import NotFound from './pages/NotFound';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
 const App = () => {
   return (
     <AuthProvider>
@@ -28,22 +32,76 @@ const App = () => {
           <Route path="/login" element={<Login />} />
           
           {/* Protected routes with sidebar layout */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/daily-readings" element={<DailyReadings />} />
-            <Route path="/stock-levels" element={<StockLevels />} />
-            <Route path="/all-transactions" element={<AllTransactions />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/customers/:id" element={<CustomerDetails />} />
-            <Route path="/staff-management" element={<StaffManagement />} />
-            <Route path="/record-indent" element={<RecordIndent />} />
-            <Route path="/shift-management" element={<ShiftManagement />} />
-            <Route path="/consumables" element={<Consumables />} />
-            <Route path="/testing-details" element={<TestingDetails />} />
-            <Route path="/settings" element={<FuelPumpSettings />} />
-            <Route path="/tank-unload" element={<TankUnload />} />
-          </Route>
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/daily-readings" element={
+            <ProtectedRoute>
+              <DailyReadings />
+            </ProtectedRoute>
+          } />
+          <Route path="/stock-levels" element={
+            <ProtectedRoute>
+              <StockLevels />
+            </ProtectedRoute>
+          } />
+          <Route path="/all-transactions" element={
+            <ProtectedRoute>
+              <AllTransactions />
+            </ProtectedRoute>
+          } />
+          <Route path="/customers" element={
+            <ProtectedRoute>
+              <Customers />
+            </ProtectedRoute>
+          } />
+          <Route path="/customers/:id" element={
+            <ProtectedRoute>
+              <CustomerDetails />
+            </ProtectedRoute>
+          } />
+          <Route path="/staff-management" element={
+            <ProtectedRoute>
+              <StaffManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/record-indent" element={
+            <ProtectedRoute>
+              <RecordIndent />
+            </ProtectedRoute>
+          } />
+          <Route path="/shift-management" element={
+            <ProtectedRoute>
+              <ShiftManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/consumables" element={
+            <ProtectedRoute>
+              <Consumables />
+            </ProtectedRoute>
+          } />
+          <Route path="/testing-details" element={
+            <ProtectedRoute>
+              <TestingDetails />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <FuelPumpSettings />
+            </ProtectedRoute>
+          } />
+          <Route path="/tank-unload" element={
+            <ProtectedRoute>
+              <TankUnload />
+            </ProtectedRoute>
+          } />
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
