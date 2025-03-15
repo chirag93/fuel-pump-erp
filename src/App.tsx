@@ -50,20 +50,62 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: <Index /> },
       { path: "/home", element: <Home /> },
-      { path: "/dashboard", element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
-      { path: "/readings", element: <ProtectedRoute><DailyReadings /></ProtectedRoute> },
-      { path: "/stock", element: <ProtectedRoute><StockLevels /></ProtectedRoute> },
-      { path: "/testing", element: <ProtectedRoute><TestingDetails /></ProtectedRoute> },
-      { path: "/shifts", element: <ProtectedRoute><ShiftManagement /></ProtectedRoute> },
-      { path: "/staff", element: <ProtectedRoute><StaffManagement /></ProtectedRoute> },
-      { path: "/customers", element: <ProtectedRoute><Customers /></ProtectedRoute> },
-      { path: "/customer/:id", element: <ProtectedRoute><CustomerDetails /></ProtectedRoute> },
-      { path: "/customer/:customerId/booklet/:bookletId/indents", element: <ProtectedRoute><BookletIndents /></ProtectedRoute> },
-      { path: "/transactions", element: <ProtectedRoute><AllTransactions /></ProtectedRoute> },
-      { path: "/consumables", element: <ProtectedRoute><Consumables /></ProtectedRoute> },
-      { path: "/settings/pumps", element: <ProtectedRoute><FuelPumpSettings /></ProtectedRoute> },
-      { path: "/tank-unload", element: <ProtectedRoute><TankUnload /></ProtectedRoute> },
-      { path: "/indent", element: <ProtectedRoute><RecordIndent /></ProtectedRoute> },
+      { 
+        path: "/dashboard", 
+        element: <ProtectedRoute><Dashboard /></ProtectedRoute> 
+      },
+      { 
+        path: "/readings", 
+        element: <ProtectedRoute><DailyReadings /></ProtectedRoute> 
+      },
+      { 
+        path: "/stock", 
+        element: <ProtectedRoute><StockLevels /></ProtectedRoute> 
+      },
+      { 
+        path: "/testing", 
+        element: <ProtectedRoute><TestingDetails /></ProtectedRoute> 
+      },
+      { 
+        path: "/shifts", 
+        element: <ProtectedRoute><ShiftManagement /></ProtectedRoute> 
+      },
+      { 
+        path: "/staff", 
+        element: <ProtectedRoute><StaffManagement /></ProtectedRoute> 
+      },
+      { 
+        path: "/customers", 
+        element: <ProtectedRoute><Customers /></ProtectedRoute> 
+      },
+      { 
+        path: "/customer/:id", 
+        element: <ProtectedRoute><CustomerDetails /></ProtectedRoute> 
+      },
+      { 
+        path: "/customer/:customerId/booklet/:bookletId/indents", 
+        element: <ProtectedRoute><BookletIndents /></ProtectedRoute> 
+      },
+      { 
+        path: "/transactions", 
+        element: <ProtectedRoute><AllTransactions /></ProtectedRoute> 
+      },
+      { 
+        path: "/consumables", 
+        element: <ProtectedRoute><Consumables /></ProtectedRoute> 
+      },
+      { 
+        path: "/settings/pumps", 
+        element: <ProtectedRoute><FuelPumpSettings /></ProtectedRoute> 
+      },
+      { 
+        path: "/tank-unload", 
+        element: <ProtectedRoute><TankUnload /></ProtectedRoute> 
+      },
+      { 
+        path: "/indent", 
+        element: <ProtectedRoute><RecordIndent /></ProtectedRoute> 
+      },
       { path: "/login", element: <Login /> },
       { path: "*", element: <NotFound /> }
     ]
