@@ -67,6 +67,7 @@ export interface Reading {
   card_sales: number | null;
   upi_sales: number | null;
   cash_sales: number | null;
+  expenses?: number; // Add expenses field as optional
   created_at?: string;
 }
 
