@@ -4,9 +4,10 @@ import { useParams, Link } from 'react-router-dom';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText, AlertCircle } from 'lucide-react';
+import { ArrowLeft, FileText, AlertCircle, Edit } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase, Indent, IndentBooklet, Transaction } from '@/integrations/supabase/client';
+import { IndentEditDialog } from '@/components/indent/IndentEditDialog';
 
 interface IndentWithTransaction extends Indent {
   transaction?: Transaction;
@@ -18,91 +19,96 @@ const BookletIndents = () => {
   const [indents, setIndents] = useState<IndentWithTransaction[]>([]);
   const [booklet, setBooklet] = useState<IndentBooklet | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [editingIndent, setEditingIndent] = useState<IndentWithTransaction | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+
+  const fetchData = async () => {
+    if (!bookletId) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Fetch booklet details
+      const { data: bookletData, error: bookletError } = await supabase
+        .from('indent_booklets')
+        .select('*')
+        .eq('id', bookletId)
+        .single();
+
+      if (bookletError) throw bookletError;
+      
+      if (bookletData) {
+        setBooklet(bookletData as IndentBooklet);
+      }
+      
+      // Fetch indents for this booklet
+      const { data: indentsData, error: indentsError } = await supabase
+        .from('indents')
+        .select(`
+          *,
+          vehicles(number)
+        `)
+        .eq('booklet_id', bookletId)
+        .order('created_at', { ascending: false });
+
+      if (indentsError) throw indentsError;
+      
+      // If we have indents, fetch their related transactions
+      if (indentsData && indentsData.length > 0) {
+        const indentIds = indentsData.map(indent => indent.id);
+        
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('transactions')
+          .select('*')
+          .in('indent_id', indentIds);
+          
+        if (transactionsError) throw transactionsError;
+        
+        // Map transactions to indents
+        const indentsWithTransactions = indentsData.map(indent => {
+          const transaction = transactionsData?.find(t => t.indent_id === indent.id);
+          return {
+            ...indent,
+            transaction: transaction,
+            vehicle_number: indent.vehicles?.number,
+            status: indent.status || 'Pending'  // Default to 'Pending' if status is null
+          };
+        });
+        
+        setIndents(indentsWithTransactions as IndentWithTransaction[]);
+      } else {
+        setIndents([]);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load indent information",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchBooklet = async () => {
-      if (!bookletId) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('indent_booklets')
-          .select('*')
-          .eq('id', bookletId)
-          .single();
-
-        if (error) throw error;
-        
-        if (data) {
-          setBooklet(data as IndentBooklet);
-        }
-      } catch (error) {
-        console.error('Error fetching booklet:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load booklet details",
-          variant: "destructive"
-        });
-      }
-    };
-
-    const fetchIndents = async () => {
-      if (!bookletId) return;
-      
-      try {
-        setIsLoading(true);
-        
-        // Fetch indents for this booklet
-        const { data: indentsData, error: indentsError } = await supabase
-          .from('indents')
-          .select(`
-            *,
-            vehicles(number)
-          `)
-          .eq('booklet_id', bookletId)
-          .order('created_at', { ascending: false });
-
-        if (indentsError) throw indentsError;
-        
-        // If we have indents, fetch their related transactions
-        if (indentsData && indentsData.length > 0) {
-          const indentIds = indentsData.map(indent => indent.id);
-          
-          const { data: transactionsData, error: transactionsError } = await supabase
-            .from('transactions')
-            .select('*')
-            .in('indent_id', indentIds);
-            
-          if (transactionsError) throw transactionsError;
-          
-          // Map transactions to indents
-          const indentsWithTransactions = indentsData.map(indent => {
-            const transaction = transactionsData?.find(t => t.indent_id === indent.id);
-            return {
-              ...indent,
-              transaction: transaction,
-              vehicle_number: indent.vehicles?.number
-            };
-          });
-          
-          setIndents(indentsWithTransactions as IndentWithTransaction[]);
-        } else {
-          setIndents([]);
-        }
-      } catch (error) {
-        console.error('Error fetching indents:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load indent information",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchBooklet();
-    fetchIndents();
+    fetchData();
   }, [bookletId]);
+
+  const handleEditIndent = (indent: IndentWithTransaction) => {
+    setEditingIndent(indent);
+    setShowEditDialog(true);
+  };
+
+  const handleIndentUpdated = async () => {
+    setShowEditDialog(false);
+    setEditingIndent(null);
+    await fetchData(); // Refresh data after update
+    toast({
+      title: "Success",
+      description: "Indent has been updated"
+    });
+  };
 
   if (isLoading) {
     return (
@@ -158,6 +164,7 @@ const BookletIndents = () => {
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Transaction</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -194,6 +201,16 @@ const BookletIndents = () => {
                           </div>
                         )}
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditIndent(indent)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -201,6 +218,16 @@ const BookletIndents = () => {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Edit Dialog */}
+      {editingIndent && (
+        <IndentEditDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          indent={editingIndent}
+          onUpdate={handleIndentUpdated}
+        />
       )}
     </div>
   );
