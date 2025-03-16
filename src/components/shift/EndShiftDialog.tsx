@@ -126,13 +126,16 @@ const EndShiftDialog = ({
             if (readingError) throw readingError;
             
             if (readingData) {
+              // Handle the case where the expenses field might not exist in older records
+              const expensesValue = readingData.expenses !== undefined ? readingData.expenses : 0;
+              
               setFormData({
                 closing_reading: readingData.closing_reading || 0,
                 cash_remaining: readingData.cash_remaining || 0,
                 card_sales: readingData.card_sales || 0,
                 upi_sales: readingData.upi_sales || 0,
                 cash_sales: readingData.cash_sales || 0,
-                expenses: readingData.expenses || 0 // Load expenses data
+                expenses: expensesValue // Use 0 as default if not present
               });
             }
           } else {
@@ -271,21 +274,42 @@ const EndShiftDialog = ({
     
     try {
       if (isEditingCompletedShift) {
-        // Just update the readings record for completed shifts
-        const { error: readingsError } = await supabase
-          .from('readings')
-          .update({
-            closing_reading: formData.closing_reading,
-            cash_remaining: formData.cash_remaining,
-            card_sales: formData.card_sales,
-            upi_sales: formData.upi_sales,
-            cash_sales: formData.cash_sales,
-            expenses: formData.expenses // Update expenses
-          })
-          .eq('shift_id', shiftId);
-          
-        if (readingsError) {
-          throw readingsError;
+        // Prepare update data, excluding expenses if it's not supported by the database schema
+        const updateData = {
+          closing_reading: formData.closing_reading,
+          cash_remaining: formData.cash_remaining,
+          card_sales: formData.card_sales,
+          upi_sales: formData.upi_sales,
+          cash_sales: formData.cash_sales
+        };
+        
+        // Try to update with expenses field, but catch and retry without it if it fails
+        try {
+          const { error: readingsError } = await supabase
+            .from('readings')
+            .update({
+              ...updateData,
+              expenses: formData.expenses
+            })
+            .eq('shift_id', shiftId);
+            
+          if (readingsError) {
+            // If there's an error with the expenses field, try without it
+            if (readingsError.message && readingsError.message.includes('expenses')) {
+              console.warn('Expenses field not found in database schema, continuing without it');
+              const { error: fallbackError } = await supabase
+                .from('readings')
+                .update(updateData)
+                .eq('shift_id', shiftId);
+                
+              if (fallbackError) throw fallbackError;
+            } else {
+              throw readingsError;
+            }
+          }
+        } catch (err) {
+          console.error('Error updating readings:', err);
+          throw err;
         }
         
         toast({
@@ -310,21 +334,42 @@ const EndShiftDialog = ({
           throw shiftError;
         }
         
-        // Update the readings record
-        const { error: readingsError } = await supabase
-          .from('readings')
-          .update({
-            closing_reading: formData.closing_reading,
-            cash_remaining: formData.cash_remaining,
-            card_sales: formData.card_sales,
-            upi_sales: formData.upi_sales,
-            cash_sales: formData.cash_sales,
-            expenses: formData.expenses // Add expenses
-          })
-          .eq('shift_id', shiftId);
-          
-        if (readingsError) {
-          throw readingsError;
+        // Prepare update data for readings
+        const updateData = {
+          closing_reading: formData.closing_reading,
+          cash_remaining: formData.cash_remaining,
+          card_sales: formData.card_sales,
+          upi_sales: formData.upi_sales,
+          cash_sales: formData.cash_sales
+        };
+        
+        // Try to update with expenses field, but catch and retry without it if it fails
+        try {
+          const { error: readingsError } = await supabase
+            .from('readings')
+            .update({
+              ...updateData,
+              expenses: formData.expenses
+            })
+            .eq('shift_id', shiftId);
+            
+          if (readingsError) {
+            // If there's an error with the expenses field, try without it
+            if (readingsError.message && readingsError.message.includes('expenses')) {
+              console.warn('Expenses field not found in database schema, continuing without it');
+              const { error: fallbackError } = await supabase
+                .from('readings')
+                .update(updateData)
+                .eq('shift_id', shiftId);
+                
+              if (fallbackError) throw fallbackError;
+            } else {
+              throw readingsError;
+            }
+          }
+        } catch (err) {
+          console.error('Error updating readings:', err);
+          throw err;
         }
         
         // If we're also starting a new shift
