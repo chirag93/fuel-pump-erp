@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from './pages/Dashboard';
-import Home from './Home'; // Import from the correct location
+import Home from './Home'; 
 import Login from './pages/Login';
 import DailyReadings from './pages/DailyReadings';
 import StockLevels from './pages/StockLevels';
@@ -16,9 +16,15 @@ import Consumables from './pages/Consumables';
 import TestingDetails from './pages/TestingDetails';
 import FuelPumpSettings from './pages/FuelPumpSettings';
 import TankUnload from './pages/TankUnload';
+import BookletIndents from './pages/BookletIndents';
 import NotFound from './pages/NotFound';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+
+// Define props interface for ProtectedRoute
+interface ProtectedRouteProps {
+  children: ReactNode;
+}
 
 const App = () => {
   return (
@@ -36,6 +42,7 @@ const App = () => {
             <Route path="/all-transactions" element={<AllTransactions />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/customers/:id" element={<CustomerDetails />} />
+            <Route path="/customers/:customerId/booklets/:bookletId/indents" element={<BookletIndents />} />
             <Route path="/staff-management" element={<StaffManagement />} />
             <Route path="/record-indent" element={<RecordIndent />} />
             <Route path="/shift-management" element={<ShiftManagement />} />

@@ -6,9 +6,10 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Book, Edit } from 'lucide-react';
+import { Book, Edit, FileText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase, IndentBooklet } from '@/integrations/supabase/client';
+import { Link } from 'react-router-dom';
 
 interface NewBookletData {
   start_number: string;
@@ -208,9 +209,17 @@ const BookletsTab = ({ indentBooklets, setIndentBooklets, customerId }: Booklets
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="ghost" size="sm">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Link to={`/customers/${customerId}/booklets/${booklet.id}/indents`}>
+                        <Button variant="outline" size="sm" className="flex items-center gap-1">
+                          <FileText className="h-4 w-4" />
+                          View Indents
+                        </Button>
+                      </Link>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
