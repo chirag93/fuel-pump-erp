@@ -11,6 +11,7 @@ import { IndentBooklet, Customer } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface IndentBookletSelectionProps {
   selectedCustomer: string;
@@ -45,6 +46,7 @@ export const IndentBookletSelection = ({
   const [searchCustomer, setSearchCustomer] = useState<string>('');
   const [openCustomerSearch, setOpenCustomerSearch] = useState(false);
   const [selectedCustomerName, setSelectedCustomerName] = useState<string>('');
+  const [searchError, setSearchError] = useState<string>('');
 
   useEffect(() => {
     fetchCustomers();
@@ -180,12 +182,11 @@ export const IndentBookletSelection = ({
   };
 
   const searchByIndentNumber = async () => {
+    // Clear previous error
+    setSearchError('');
+    
     if (!searchIndentNumber) {
-      toast({
-        title: "Enter indent number",
-        description: "Please enter an indent number to search",
-        variant: "destructive"
-      });
+      setSearchError('Please enter an indent number to search');
       return;
     }
 
@@ -201,11 +202,7 @@ export const IndentBookletSelection = ({
       if (bookletError) throw bookletError;
 
       if (!bookletData || bookletData.length === 0) {
-        toast({
-          title: "Not found",
-          description: "No indent booklet contains this number",
-          variant: "destructive"
-        });
+        setSearchError('No indent booklet contains this number');
         setIsSearching(false);
         return;
       }
@@ -217,11 +214,7 @@ export const IndentBookletSelection = ({
       );
 
       if (!matchingBooklet) {
-        toast({
-          title: "Not in range",
-          description: "The indent number is not in any active booklet range",
-          variant: "destructive"
-        });
+        setSearchError('The indent number is not in any active booklet range');
         setIsSearching(false);
         return;
       }
@@ -235,11 +228,7 @@ export const IndentBookletSelection = ({
       if (indentError) throw indentError;
 
       if (indentData && indentData.length > 0) {
-        toast({
-          title: "Already used",
-          description: "This indent number has already been used",
-          variant: "destructive"
-        });
+        setSearchError('This indent number has already been used');
         setIsSearching(false);
         return;
       }
@@ -253,7 +242,12 @@ export const IndentBookletSelection = ({
         
       if (customerError) {
         console.error('Error fetching customer name:', customerError);
-      } else if (customerData) {
+        setSearchError('Error fetching customer details');
+        setIsSearching(false);
+        return;
+      } 
+      
+      if (customerData) {
         setSelectedCustomerName(customerData.name);
       }
 
@@ -285,15 +279,11 @@ export const IndentBookletSelection = ({
       // Toast success
       toast({
         title: "Found",
-        description: "Indent booklet found. Customer details loaded."
+        description: `Indent booklet found for customer: ${customerData?.name}. Customer details loaded.`
       });
     } catch (error) {
       console.error('Error searching by indent number:', error);
-      toast({
-        title: "Error",
-        description: "Failed to search by indent number",
-        variant: "destructive"
-      });
+      setSearchError('Failed to search by indent number');
     } finally {
       setIsSearching(false);
     }
@@ -343,6 +333,18 @@ export const IndentBookletSelection = ({
               <p className="text-sm text-muted-foreground mt-1">
                 This will search for the indent number and load customer details automatically
               </p>
+              
+              {searchError && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertDescription>{searchError}</AlertDescription>
+                </Alert>
+              )}
+              
+              {selectedCustomerName && searchMode === 'number' && (
+                <div className="mt-2 p-2 bg-slate-100 rounded">
+                  <p className="font-medium">Customer: {selectedCustomerName}</p>
+                </div>
+              )}
             </div>
           </div>
         </TabsContent>
