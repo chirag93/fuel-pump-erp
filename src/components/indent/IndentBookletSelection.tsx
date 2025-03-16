@@ -7,8 +7,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Loader2, Search } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
-import { IndentBooklet } from '@/integrations/supabase/client';
+import { IndentBooklet, Customer } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface IndentBookletSelectionProps {
   selectedCustomer: string;
@@ -35,10 +37,18 @@ export const IndentBookletSelection = ({
 }: IndentBookletSelectionProps) => {
   const [indentBooklets, setIndentBooklets] = useState<IndentBooklet[]>([]);
   const [isBookletLoading, setIsBookletLoading] = useState<boolean>(true);
-  // Changed default search mode to 'number' instead of 'customer'
   const [searchMode, setSearchMode] = useState<'customer' | 'number'>('number');
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [searchIndentNumber, setSearchIndentNumber] = useState<string>('');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isCustomerLoading, setIsCustomerLoading] = useState<boolean>(true);
+  const [searchCustomer, setSearchCustomer] = useState<string>('');
+  const [openCustomerSearch, setOpenCustomerSearch] = useState(false);
+  const [selectedCustomerName, setSelectedCustomerName] = useState<string>('');
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
 
   useEffect(() => {
     if (selectedCustomer && searchMode === 'customer') {
@@ -54,6 +64,33 @@ export const IndentBookletSelection = ({
       setSelectedBooklet(indentBooklets[0].id);
     }
   }, [indentBooklets, selectedBooklet, setSelectedBooklet, searchMode]);
+
+  const fetchCustomers = async () => {
+    setIsCustomerLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setCustomers(data);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load customers. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCustomerLoading(false);
+    }
+  };
 
   const fetchIndentBooklets = async (customerId: string) => {
     setIsBookletLoading(true);
@@ -207,6 +244,19 @@ export const IndentBookletSelection = ({
         return;
       }
 
+      // Fetch customer name for display
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('name')
+        .eq('id', matchingBooklet.customer_id)
+        .single();
+        
+      if (customerError) {
+        console.error('Error fetching customer name:', customerError);
+      } else if (customerData) {
+        setSelectedCustomerName(customerData.name);
+      }
+
       // Fetch vehicles for this customer to help populate the form
       const { data: vehicleData, error: vehicleError } = await supabase
         .from('vehicles')
@@ -249,6 +299,22 @@ export const IndentBookletSelection = ({
     }
   };
 
+  const handleCustomerSelect = (customerId: string, customerName: string) => {
+    setSelectedCustomer(customerId);
+    setSelectedCustomerName(customerName);
+    setOpenCustomerSearch(false);
+    
+    // Reset booklet selection when customer changes
+    setSelectedBooklet('');
+    setIndentNumber('');
+    setIndentNumberError('');
+  };
+
+  const filteredCustomers = searchCustomer 
+    ? customers.filter(customer => 
+        customer.name.toLowerCase().includes(searchCustomer.toLowerCase()))
+    : customers;
+
   return (
     <div className="space-y-4">
       <Tabs defaultValue="number" value={searchMode} onValueChange={(value) => setSearchMode(value as 'customer' | 'number')}>
@@ -282,38 +348,92 @@ export const IndentBookletSelection = ({
         </TabsContent>
         
         <TabsContent value="customer" className="mt-4">
-          <div>
-            <Label htmlFor="booklet">Indent Booklet</Label>
-            <Select 
-              value={selectedBooklet} 
-              onValueChange={setSelectedBooklet}
-              disabled={isBookletLoading || indentBooklets.length === 0}
-            >
-              <SelectTrigger id="booklet">
-                <SelectValue placeholder="Select a booklet" />
-              </SelectTrigger>
-              <SelectContent>
-                {isBookletLoading ? (
-                  <SelectItem value="loading" disabled>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Loading...
-                  </SelectItem>
-                ) : indentBooklets.length === 0 ? (
-                  <SelectItem value="no-booklets" disabled>
-                    No active booklets found
-                  </SelectItem>
-                ) : (
-                  indentBooklets.map((booklet) => (
-                    <SelectItem key={booklet.id} value={booklet.id}>
-                      {booklet.start_number} - {booklet.end_number} (Used: {booklet.used_indents}/{booklet.total_indents})
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="customer">Search Customer</Label>
+              <Popover open={openCustomerSearch} onOpenChange={setOpenCustomerSearch}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openCustomerSearch}
+                    className="w-full justify-between text-left"
+                  >
+                    {selectedCustomerName || "Select a customer..."}
+                    <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Search customers..." 
+                      value={searchCustomer}
+                      onValueChange={setSearchCustomer}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No customers found.</CommandEmpty>
+                      <CommandGroup>
+                        {isCustomerLoading ? (
+                          <CommandItem disabled>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Loading customers...
+                          </CommandItem>
+                        ) : (
+                          filteredCustomers.map(customer => (
+                            <CommandItem
+                              key={customer.id}
+                              value={customer.id}
+                              onSelect={() => handleCustomerSelect(customer.id, customer.name)}
+                            >
+                              {customer.name}
+                            </CommandItem>
+                          ))
+                        )}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-sm text-muted-foreground mt-1">
+                You must select a customer first to view available indent booklets
+              </p>
+            </div>
+            
+            {selectedCustomer && (
+              <div>
+                <Label htmlFor="booklet">Indent Booklet</Label>
+                <Select 
+                  value={selectedBooklet} 
+                  onValueChange={setSelectedBooklet}
+                  disabled={isBookletLoading || indentBooklets.length === 0}
+                >
+                  <SelectTrigger id="booklet">
+                    <SelectValue placeholder="Select a booklet" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isBookletLoading ? (
+                      <SelectItem value="loading" disabled>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </SelectItem>
+                    ) : indentBooklets.length === 0 ? (
+                      <SelectItem value="no-booklets" disabled>
+                        No active booklets found
+                      </SelectItem>
+                    ) : (
+                      indentBooklets.map((booklet) => (
+                        <SelectItem key={booklet.id} value={booklet.id}>
+                          {booklet.start_number} - {booklet.end_number} (Used: {booklet.used_indents}/{booklet.total_indents})
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             
             {selectedBooklet && (
-              <div className="mt-4">
+              <div>
                 <Label htmlFor="indentNumber">Indent Number</Label>
                 <Input
                   id="indentNumber"

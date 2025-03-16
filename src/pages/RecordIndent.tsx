@@ -212,7 +212,7 @@ const RecordIndent = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Search by indent number or customer selection first */}
+            {/* Search by indent number or customer first */}
             <IndentBookletSelection
               selectedCustomer={selectedCustomer}
               selectedBooklet={selectedBooklet}
@@ -225,25 +225,28 @@ const RecordIndent = () => {
               setSelectedVehicle={setSelectedVehicle}
             />
 
+            {/* Vehicle selection (only shows if customer is selected) */}
             <CustomerVehicleSelection
               selectedCustomer={selectedCustomer}
-              setSelectedCustomer={setSelectedCustomer}
               selectedVehicle={selectedVehicle}
               setSelectedVehicle={setSelectedVehicle}
             />
 
-            <FuelTransactionForm
-              fuelType={fuelType}
-              setFuelType={setFuelType}
-              amount={amount}
-              setAmount={setAmount}
-              quantity={quantity}
-              setQuantity={setQuantity}
-              date={date}
-              setDate={setDate}
-              isSubmitting={isSubmitting}
-              onSubmit={handleSubmit}
-            />
+            {/* Only show the fuel transaction form if we have a customer */}
+            {selectedCustomer && (
+              <FuelTransactionForm
+                fuelType={fuelType}
+                setFuelType={setFuelType}
+                amount={amount}
+                setAmount={setAmount}
+                quantity={quantity}
+                setQuantity={setQuantity}
+                date={date}
+                setDate={setDate}
+                isSubmitting={isSubmitting}
+                onSubmit={handleSubmit}
+              />
+            )}
           </div>
         </CardContent>
       </Card>
