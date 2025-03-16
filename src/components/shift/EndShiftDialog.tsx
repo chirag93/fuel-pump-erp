@@ -49,7 +49,8 @@ const EndShiftDialog = ({
     cash_remaining: 0,
     card_sales: 0,
     upi_sales: 0,
-    cash_sales: 0
+    cash_sales: 0,
+    expenses: 0 // Add expenses field
   });
   
   // New state for calculated total
@@ -81,7 +82,8 @@ const EndShiftDialog = ({
           cash_remaining: 0,
           card_sales: 0,
           upi_sales: 0,
-          cash_sales: 0
+          cash_sales: 0,
+          expenses: 0
         });
         
         setNewShiftData({
@@ -129,7 +131,8 @@ const EndShiftDialog = ({
                 cash_remaining: readingData.cash_remaining || 0,
                 card_sales: readingData.card_sales || 0,
                 upi_sales: readingData.upi_sales || 0,
-                cash_sales: readingData.cash_sales || 0
+                cash_sales: readingData.cash_sales || 0,
+                expenses: readingData.expenses || 0 // Load expenses data
               });
             }
           } else {
@@ -212,14 +215,15 @@ const EndShiftDialog = ({
       const expectedSales = fuelSold * fuelPrice;
       const expectedCash = formData.cash_sales;
       const actualCash = formData.cash_remaining;
-      const difference = actualCash - expectedCash;
+      const expenses = formData.expenses || 0; // Include expenses in calculation
+      const difference = actualCash - expectedCash + expenses; // Adjust difference calculation
       
       setCashReconciliation({
         expected: expectedCash,
         difference: difference
       });
     }
-  }, [formData.closing_reading, formData.cash_sales, formData.cash_remaining, openingReading, fuelPrice]);
+  }, [formData.closing_reading, formData.cash_sales, formData.cash_remaining, formData.expenses, openingReading, fuelPrice]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -275,7 +279,8 @@ const EndShiftDialog = ({
             cash_remaining: formData.cash_remaining,
             card_sales: formData.card_sales,
             upi_sales: formData.upi_sales,
-            cash_sales: formData.cash_sales
+            cash_sales: formData.cash_sales,
+            expenses: formData.expenses // Update expenses
           })
           .eq('shift_id', shiftId);
           
@@ -313,7 +318,8 @@ const EndShiftDialog = ({
             cash_remaining: formData.cash_remaining,
             card_sales: formData.card_sales,
             upi_sales: formData.upi_sales,
-            cash_sales: formData.cash_sales
+            cash_sales: formData.cash_sales,
+            expenses: formData.expenses // Add expenses
           })
           .eq('shift_id', shiftId);
           
@@ -462,17 +468,6 @@ const EndShiftDialog = ({
             )}
           </div>
           
-          <div className="grid gap-2">
-            <Label htmlFor="cash_remaining">Cash Remaining</Label>
-            <Input
-              id="cash_remaining"
-              name="cash_remaining"
-              type="number"
-              value={formData.cash_remaining === 0 ? '' : formData.cash_remaining}
-              onChange={handleInputChange}
-            />
-          </div>
-          
           <div className="grid grid-cols-3 gap-3">
             <div className="grid gap-1">
               <Label htmlFor="card_sales">Card Sales</Label>
@@ -546,6 +541,33 @@ const EndShiftDialog = ({
             </CardContent>
           </Card>
           
+          {/* Add Expenses field */}
+          <div className="grid gap-2">
+            <Label htmlFor="expenses">Expenses</Label>
+            <Input
+              id="expenses"
+              name="expenses"
+              type="number"
+              value={formData.expenses === 0 ? '' : formData.expenses}
+              onChange={handleInputChange}
+              placeholder="Enter expenses amount"
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter any cash expenses that occurred during this shift
+            </p>
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="cash_remaining">Cash Remaining</Label>
+            <Input
+              id="cash_remaining"
+              name="cash_remaining"
+              type="number"
+              value={formData.cash_remaining === 0 ? '' : formData.cash_remaining}
+              onChange={handleInputChange}
+            />
+          </div>
+          
           {/* Cash Reconciliation */}
           {formData.cash_sales > 0 && formData.cash_remaining > 0 && (
             <Card className={`mt-1 ${Math.abs(cashReconciliation.difference) > 10 ? 'bg-red-50' : 'bg-green-50'}`}>
@@ -558,6 +580,12 @@ const EndShiftDialog = ({
                     <span>Expected Cash:</span>
                     <span>₹{cashReconciliation.expected.toFixed(2)}</span>
                   </div>
+                  {formData.expenses > 0 && (
+                    <div className="flex justify-between">
+                      <span>Expenses:</span>
+                      <span>₹{formData.expenses.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span>Actual Cash:</span>
                     <span>₹{formData.cash_remaining.toFixed(2)}</span>

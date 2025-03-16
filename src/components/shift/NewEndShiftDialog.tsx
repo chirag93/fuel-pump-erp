@@ -31,6 +31,7 @@ interface EndShiftDialogProps {
 export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: EndShiftDialogProps) {
   const [closingReading, setClosingReading] = useState<string>('');
   const [cashRemaining, setCashRemaining] = useState<string>('');
+  const [expenses, setExpenses] = useState<string>(''); // New expenses field
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [staff, setStaff] = useState<any[]>([]);
@@ -84,20 +85,22 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
       const fuelSold = Number(closingReading) - shiftData.opening_reading;
       const expectedCash = Number(cashSales) || 0;
       const actualCash = Number(cashRemaining) || 0;
-      const difference = actualCash - expectedCash;
+      const expensesAmount = Number(expenses) || 0; // Include expenses in the calculation
+      const difference = actualCash - expectedCash + expensesAmount; // Adjust difference calculation to account for expenses
       
       setCashReconciliation({
         expected: expectedCash,
         difference: difference
       });
     }
-  }, [closingReading, cashSales, cashRemaining, shiftData?.opening_reading, fuelPrice]);
+  }, [closingReading, cashSales, cashRemaining, expenses, shiftData?.opening_reading, fuelPrice]);
 
   // Reset form when dialog opens
   useEffect(() => {
     if (isOpen) {
       setClosingReading('');
       setCashRemaining('');
+      setExpenses(''); // Reset expenses field
       setCardSales('');
       setUpiSales('');
       setCashSales('');
@@ -118,25 +121,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
         if (error) throw error;
         
         if (data) {
-          // Filter to only show staff who are assigned to this pump
-          const filteredStaff = data.filter(s => {
-            // If assigned_pumps is an array, check if it includes the current pump
-            if (Array.isArray(s.assigned_pumps)) {
-              return s.assigned_pumps.includes(shiftData.pump_id);
-            }
-            // For backward compatibility, check if it's JSON
-            if (typeof s.assigned_pumps === 'object') {
-              // Fix: Proper JSON handling - first convert to unknown then to string[]
-              const pumpArray = Array.isArray(s.assigned_pumps) 
-                ? s.assigned_pumps 
-                : (s.assigned_pumps ? JSON.parse(JSON.stringify(s.assigned_pumps)) : []);
-              
-              return Array.isArray(pumpArray) && pumpArray.includes(shiftData.pump_id);
-            }
-            return false;
-          });
-          
-          setStaff(filteredStaff);
+          setStaff(data);
         }
       } catch (error) {
         console.error('Error fetching staff:', error);
@@ -207,7 +192,8 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
           card_sales: Number(cardSales) || 0,
           upi_sales: Number(upiSales) || 0,
           cash_sales: Number(cashSales) || 0,
-          cash_remaining: Number(cashRemaining)
+          cash_remaining: Number(cashRemaining),
+          expenses: Number(expenses) || 0 // Save the expenses value to the database
         })
         .eq('shift_id', shiftData.id);
       
@@ -395,6 +381,23 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             </CardContent>
           </Card>
           
+          {/* New Expenses field */}
+          <div className="grid gap-2">
+            <Label htmlFor="expenses">Expenses (₹)</Label>
+            <Input
+              id="expenses"
+              type="number"
+              value={expenses}
+              onChange={(e) => setExpenses(e.target.value)}
+              placeholder="Enter expenses amount"
+              min="0"
+              step="0.01"
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter any cash expenses that occurred during this shift
+            </p>
+          </div>
+          
           <div className="grid gap-2">
             <Label htmlFor="cashRemaining">Cash Remaining (₹)</Label>
             <Input
@@ -420,6 +423,12 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
                     <span>Expected Cash:</span>
                     <span>₹{cashReconciliation.expected.toFixed(2)}</span>
                   </div>
+                  {Number(expenses) > 0 && (
+                    <div className="flex justify-between">
+                      <span>Expenses:</span>
+                      <span>₹{Number(expenses).toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span>Actual Cash:</span>
                     <span>₹{Number(cashRemaining).toFixed(2)}</span>
