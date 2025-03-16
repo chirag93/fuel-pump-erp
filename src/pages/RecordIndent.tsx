@@ -227,6 +227,8 @@ const RecordIndent = () => {
               setIndentNumber={setIndentNumber}
               indentNumberError={indentNumberError}
               setIndentNumberError={setIndentNumberError}
+              setSelectedCustomer={setSelectedCustomer}
+              setSelectedVehicle={setSelectedVehicle}
             />
 
             <FuelTransactionForm
