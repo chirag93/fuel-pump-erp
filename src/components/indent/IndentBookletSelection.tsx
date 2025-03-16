@@ -232,7 +232,7 @@ export const IndentBookletSelection = ({
     <div className="space-y-4">
       <Tabs value={searchMode} onValueChange={(value) => setSearchMode(value as 'booklet' | 'number')}>
         <TabsList className="grid grid-cols-2 w-full">
-          <TabsTrigger value="booklet">Search by Booklet</TabsTrigger>
+          <TabsTrigger value="booklet">Select Customer & Booklet</TabsTrigger>
           <TabsTrigger value="number">Search by Indent Number</TabsTrigger>
         </TabsList>
         
