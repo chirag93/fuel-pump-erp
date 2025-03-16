@@ -207,12 +207,12 @@ const RecordIndent = () => {
         <CardHeader>
           <CardTitle>Record New Indent</CardTitle>
           <CardDescription>
-            Record fuel indents for customers and vehicles
+            Search by indent number or customer to record a fuel indent
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Changed the order: first search by indent number, then customer selection */}
+            {/* Search by indent number or customer selection first */}
             <IndentBookletSelection
               selectedCustomer={selectedCustomer}
               selectedBooklet={selectedBooklet}

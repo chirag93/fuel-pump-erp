@@ -35,7 +35,8 @@ export const IndentBookletSelection = ({
 }: IndentBookletSelectionProps) => {
   const [indentBooklets, setIndentBooklets] = useState<IndentBooklet[]>([]);
   const [isBookletLoading, setIsBookletLoading] = useState<boolean>(true);
-  const [searchMode, setSearchMode] = useState<'customer' | 'number'>('customer');
+  // Changed default search mode to 'number' instead of 'customer'
+  const [searchMode, setSearchMode] = useState<'customer' | 'number'>('number');
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [searchIndentNumber, setSearchIndentNumber] = useState<string>('');
 
@@ -46,6 +47,13 @@ export const IndentBookletSelection = ({
       setIndentBooklets([]);
     }
   }, [selectedCustomer, searchMode]);
+
+  // Auto-select the first booklet when they're loaded
+  useEffect(() => {
+    if (indentBooklets.length > 0 && !selectedBooklet && searchMode === 'customer') {
+      setSelectedBooklet(indentBooklets[0].id);
+    }
+  }, [indentBooklets, selectedBooklet, setSelectedBooklet, searchMode]);
 
   const fetchIndentBooklets = async (customerId: string) => {
     setIsBookletLoading(true);
@@ -243,59 +251,11 @@ export const IndentBookletSelection = ({
 
   return (
     <div className="space-y-4">
-      <Tabs value={searchMode} onValueChange={(value) => setSearchMode(value as 'customer' | 'number')}>
+      <Tabs defaultValue="number" value={searchMode} onValueChange={(value) => setSearchMode(value as 'customer' | 'number')}>
         <TabsList className="grid grid-cols-2 w-full">
-          <TabsTrigger value="customer">Select Customer & Booklet</TabsTrigger>
           <TabsTrigger value="number">Search by Indent Number</TabsTrigger>
+          <TabsTrigger value="customer">Search by Customer</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="customer" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="booklet">Indent Booklet (Optional)</Label>
-              <Select value={selectedBooklet} onValueChange={setSelectedBooklet}>
-                <SelectTrigger id="booklet">
-                  <SelectValue placeholder="Select a booklet" />
-                </SelectTrigger>
-                <SelectContent>
-                  {isBookletLoading ? (
-                    <SelectItem value="loading" disabled>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Loading...
-                    </SelectItem>
-                  ) : indentBooklets.length === 0 ? (
-                    <SelectItem value="no-booklets" disabled>
-                      No active booklets found
-                    </SelectItem>
-                  ) : (
-                    indentBooklets.map((booklet) => (
-                      <SelectItem key={booklet.id} value={booklet.id}>
-                        {booklet.start_number} - {booklet.end_number} (Used: {booklet.used_indents}/{booklet.total_indents})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="indentNumber">Indent Number</Label>
-              <Input
-                id="indentNumber"
-                value={indentNumber}
-                onChange={(e) => {
-                  setIndentNumber(e.target.value);
-                  if (selectedBooklet) validateIndentNumber(selectedBooklet, e.target.value);
-                }}
-                placeholder={selectedBooklet ? "Enter indent number" : "Select a booklet first"}
-                disabled={!selectedBooklet}
-                className={indentNumberError ? "border-red-500" : ""}
-              />
-              {indentNumberError && (
-                <p className="text-red-500 text-sm mt-1">{indentNumberError}</p>
-              )}
-            </div>
-          </div>
-        </TabsContent>
         
         <TabsContent value="number" className="mt-4">
           <div className="space-y-4">
@@ -318,6 +278,58 @@ export const IndentBookletSelection = ({
                 This will search for the indent number and load customer details automatically
               </p>
             </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="customer" className="mt-4">
+          <div>
+            <Label htmlFor="booklet">Indent Booklet</Label>
+            <Select 
+              value={selectedBooklet} 
+              onValueChange={setSelectedBooklet}
+              disabled={isBookletLoading || indentBooklets.length === 0}
+            >
+              <SelectTrigger id="booklet">
+                <SelectValue placeholder="Select a booklet" />
+              </SelectTrigger>
+              <SelectContent>
+                {isBookletLoading ? (
+                  <SelectItem value="loading" disabled>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </SelectItem>
+                ) : indentBooklets.length === 0 ? (
+                  <SelectItem value="no-booklets" disabled>
+                    No active booklets found
+                  </SelectItem>
+                ) : (
+                  indentBooklets.map((booklet) => (
+                    <SelectItem key={booklet.id} value={booklet.id}>
+                      {booklet.start_number} - {booklet.end_number} (Used: {booklet.used_indents}/{booklet.total_indents})
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            
+            {selectedBooklet && (
+              <div className="mt-4">
+                <Label htmlFor="indentNumber">Indent Number</Label>
+                <Input
+                  id="indentNumber"
+                  value={indentNumber}
+                  onChange={(e) => {
+                    setIndentNumber(e.target.value);
+                    if (selectedBooklet) validateIndentNumber(selectedBooklet, e.target.value);
+                  }}
+                  placeholder="Enter indent number"
+                  className={indentNumberError ? "border-red-500" : ""}
+                />
+                {indentNumberError && (
+                  <p className="text-red-500 text-sm mt-1">{indentNumberError}</p>
+                )}
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>
