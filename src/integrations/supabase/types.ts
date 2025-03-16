@@ -419,6 +419,7 @@ export type Database = {
           closing_reading: number | null
           created_at: string | null
           date: string
+          expenses: number | null
           id: string
           opening_reading: number
           pump_id: string
@@ -434,6 +435,7 @@ export type Database = {
           closing_reading?: number | null
           created_at?: string | null
           date: string
+          expenses?: number | null
           id?: string
           opening_reading: number
           pump_id: string
@@ -449,6 +451,7 @@ export type Database = {
           closing_reading?: number | null
           created_at?: string | null
           date?: string
+          expenses?: number | null
           id?: string
           opening_reading?: number
           pump_id?: string
