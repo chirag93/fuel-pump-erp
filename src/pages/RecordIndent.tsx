@@ -212,13 +212,7 @@ const RecordIndent = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <CustomerVehicleSelection
-              selectedCustomer={selectedCustomer}
-              setSelectedCustomer={setSelectedCustomer}
-              selectedVehicle={selectedVehicle}
-              setSelectedVehicle={setSelectedVehicle}
-            />
-
+            {/* Changed the order: first search by indent number, then customer selection */}
             <IndentBookletSelection
               selectedCustomer={selectedCustomer}
               selectedBooklet={selectedBooklet}
@@ -228,6 +222,13 @@ const RecordIndent = () => {
               indentNumberError={indentNumberError}
               setIndentNumberError={setIndentNumberError}
               setSelectedCustomer={setSelectedCustomer}
+              setSelectedVehicle={setSelectedVehicle}
+            />
+
+            <CustomerVehicleSelection
+              selectedCustomer={selectedCustomer}
+              setSelectedCustomer={setSelectedCustomer}
+              selectedVehicle={selectedVehicle}
               setSelectedVehicle={setSelectedVehicle}
             />
 

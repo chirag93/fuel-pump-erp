@@ -35,12 +35,12 @@ export const IndentBookletSelection = ({
 }: IndentBookletSelectionProps) => {
   const [indentBooklets, setIndentBooklets] = useState<IndentBooklet[]>([]);
   const [isBookletLoading, setIsBookletLoading] = useState<boolean>(true);
-  const [searchMode, setSearchMode] = useState<'booklet' | 'number'>('booklet');
+  const [searchMode, setSearchMode] = useState<'customer' | 'number'>('customer');
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [searchIndentNumber, setSearchIndentNumber] = useState<string>('');
 
   useEffect(() => {
-    if (selectedCustomer && searchMode === 'booklet') {
+    if (selectedCustomer && searchMode === 'customer') {
       fetchIndentBooklets(selectedCustomer);
     } else {
       setIndentBooklets([]);
@@ -199,6 +199,17 @@ export const IndentBookletSelection = ({
         return;
       }
 
+      // Fetch vehicles for this customer to help populate the form
+      const { data: vehicleData, error: vehicleError } = await supabase
+        .from('vehicles')
+        .select('id')
+        .eq('customer_id', matchingBooklet.customer_id)
+        .limit(1);
+
+      if (vehicleError) {
+        console.error('Error fetching vehicle:', vehicleError);
+      }
+
       // Set the selected customer from the booklet
       setSelectedCustomer(matchingBooklet.customer_id);
       
@@ -208,14 +219,16 @@ export const IndentBookletSelection = ({
       // Set the indent number
       setIndentNumber(searchIndentNumber);
       
+      // Set a vehicle if available
+      if (vehicleData && vehicleData.length > 0) {
+        setSelectedVehicle(vehicleData[0].id);
+      }
+      
       // Toast success
       toast({
         title: "Found",
         description: "Indent booklet found. Customer details loaded."
       });
-
-      // Reset search mode to booklet to show the selection
-      setSearchMode('booklet');
     } catch (error) {
       console.error('Error searching by indent number:', error);
       toast({
@@ -230,13 +243,13 @@ export const IndentBookletSelection = ({
 
   return (
     <div className="space-y-4">
-      <Tabs value={searchMode} onValueChange={(value) => setSearchMode(value as 'booklet' | 'number')}>
+      <Tabs value={searchMode} onValueChange={(value) => setSearchMode(value as 'customer' | 'number')}>
         <TabsList className="grid grid-cols-2 w-full">
-          <TabsTrigger value="booklet">Select Customer & Booklet</TabsTrigger>
+          <TabsTrigger value="customer">Select Customer & Booklet</TabsTrigger>
           <TabsTrigger value="number">Search by Indent Number</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="booklet" className="mt-4">
+        <TabsContent value="customer" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="booklet">Indent Booklet (Optional)</Label>
