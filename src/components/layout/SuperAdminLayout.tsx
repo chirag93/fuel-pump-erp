@@ -13,7 +13,7 @@ import {
   UserCircle,
   Settings,
   PlusCircle,
-  GasPump,
+  Fuel,
   List
 } from 'lucide-react';
 
@@ -60,7 +60,7 @@ const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
   const navItems = [
     { icon: <Home size={20} />, label: 'Dashboard', to: '/super-admin/dashboard' },
     { icon: <PlusCircle size={20} />, label: 'Provision Pump', to: '/super-admin/provision' },
-    { icon: <GasPump size={20} />, label: 'Fuel Pumps', to: '/super-admin/pumps' },
+    { icon: <Fuel size={20} />, label: 'Fuel Pumps', to: '/super-admin/pumps' },
     { icon: <BarChart4 size={20} />, label: 'Analytics', to: '/super-admin/analytics' },
     { icon: <Settings size={20} />, label: 'Settings', to: '/super-admin/settings' },
   ];

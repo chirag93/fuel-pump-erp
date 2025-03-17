@@ -18,4 +18,5 @@ export const ModuleIcons = {
   Home: Home,
   Staff: User,
   Customer: UserCircle,
+  GasPump: Fuel, // Add this line to provide a replacement for GasPump
 };

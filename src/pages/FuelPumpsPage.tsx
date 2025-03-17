@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
-  GasPump, 
+  Fuel, 
   Search, 
   Plus, 
   RefreshCcw, 
@@ -145,7 +144,7 @@ const FuelPumpsPage = () => {
         </div>
       ) : filteredPumps.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
-          <GasPump className="h-12 w-12 text-muted-foreground mb-4" />
+          <Fuel className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-1">No fuel pumps found</h3>
           <p className="text-muted-foreground mb-4">
             {searchQuery.trim() !== '' 
