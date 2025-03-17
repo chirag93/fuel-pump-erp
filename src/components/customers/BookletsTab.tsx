@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,9 +21,10 @@ interface BookletsTabProps {
   indentBooklets: IndentBooklet[];
   setIndentBooklets: React.Dispatch<React.SetStateAction<IndentBooklet[]>>;
   customerId: string;
+  customerName: string;
 }
 
-const BookletsTab = ({ indentBooklets, setIndentBooklets, customerId }: BookletsTabProps) => {
+const BookletsTab = ({ indentBooklets, setIndentBooklets, customerId, customerName }: BookletsTabProps) => {
   const [bookletDialogOpen, setBookletDialogOpen] = useState(false);
   const [newBooklet, setNewBooklet] = useState<Partial<NewBookletData>>({
     customer_id: customerId,

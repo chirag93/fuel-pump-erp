@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,9 +13,10 @@ interface VehiclesTabProps {
   vehicles: Vehicle[];
   setVehicles: React.Dispatch<React.SetStateAction<Vehicle[]>>;
   customerId: string;
+  customerName: string; // Added the missing customerName prop
 }
 
-const VehiclesTab = ({ vehicles, setVehicles, customerId }: VehiclesTabProps) => {
+const VehiclesTab = ({ vehicles, setVehicles, customerId, customerName }: VehiclesTabProps) => {
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [newVehicle, setNewVehicle] = useState<Partial<Vehicle>>({
     customer_id: customerId,

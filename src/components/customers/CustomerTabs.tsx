@@ -52,7 +52,7 @@ const CustomerTabs = ({
       </TabsContent>
       <TabsContent value="booklets" className="space-y-4">
         <BookletsTab 
-          booklets={indentBooklets} 
+          indentBooklets={indentBooklets} 
           customerId={customer.id}
           customerName={customer.name}
           setIndentBooklets={setIndentBooklets}
