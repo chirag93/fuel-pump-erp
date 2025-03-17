@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -82,9 +83,9 @@ const RecordPaymentDialog = ({
           quantity: 0, // Not applicable for payment
           fuel_type: 'PAYMENT', // Use a special type to mark as payment
           payment_method: values.paymentMethod,
-          // Remove the hardcoded "system" value for staff_id since it needs to be a UUID
-          // For payments, we'll make this field null
-          staff_id: null,
+          // The transactions table requires a valid UUID for staff_id and doesn't allow null
+          // For now, use a placeholder UUID (this should be replaced with actual logged-in user ID in production)
+          staff_id: '00000000-0000-0000-0000-000000000000',
         });
 
       if (transactionError) throw transactionError;
@@ -121,6 +122,9 @@ const RecordPaymentDialog = ({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Record Payment for {customer.name}</DialogTitle>
+          <DialogDescription>
+            Record a payment from the customer to reduce their balance.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
