@@ -82,7 +82,9 @@ const RecordPaymentDialog = ({
           quantity: 0, // Not applicable for payment
           fuel_type: 'PAYMENT', // Use a special type to mark as payment
           payment_method: values.paymentMethod,
-          staff_id: 'system', // Ideally this would be the logged-in user's ID
+          // Remove the hardcoded "system" value for staff_id since it needs to be a UUID
+          // For payments, we'll make this field null
+          staff_id: null,
         });
 
       if (transactionError) throw transactionError;
