@@ -16,6 +16,7 @@ const RecordIndent = () => {
   const [fuelType, setFuelType] = useState<string>('Petrol');
   const [amount, setAmount] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(0);
+  const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [indentNumberError, setIndentNumberError] = useState<string>('');
@@ -74,6 +75,7 @@ const RecordIndent = () => {
         fuel_type: fuelType,
         amount: amount,
         quantity: quantity,
+        discount_amount: discountAmount,
         payment_method: 'Cash',
         indent_id: selectedBooklet ? indentNumber : null
       });
@@ -90,6 +92,7 @@ const RecordIndent = () => {
           fuel_type: fuelType,
           amount: amount,
           quantity: quantity,
+          discount_amount: discountAmount,
           payment_method: 'Cash', // Default payment method
           indent_id: selectedBooklet ? indentNumber : null
         })
@@ -113,6 +116,7 @@ const RecordIndent = () => {
           fuel_type: fuelType,
           amount: amount,
           quantity: quantity,
+          discount_amount: discountAmount,
           indent_number: indentNumber,
           booklet_id: selectedBooklet,
           date: date.toISOString(),
@@ -128,6 +132,7 @@ const RecordIndent = () => {
             fuel_type: fuelType,
             amount: amount,
             quantity: quantity,
+            discount_amount: discountAmount,
             indent_number: indentNumber,
             booklet_id: selectedBooklet,
             date: date.toISOString(),
@@ -183,6 +188,7 @@ const RecordIndent = () => {
       setFuelType('Petrol');
       setAmount(0);
       setQuantity(0);
+      setDiscountAmount(0);
       setDate(new Date());
       setIndentNumberError('');
       
@@ -241,6 +247,8 @@ const RecordIndent = () => {
                 setAmount={setAmount}
                 quantity={quantity}
                 setQuantity={setQuantity}
+                discountAmount={discountAmount}
+                setDiscountAmount={setDiscountAmount}
                 date={date}
                 setDate={setDate}
                 isSubmitting={isSubmitting}

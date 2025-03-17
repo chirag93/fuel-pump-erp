@@ -2,126 +2,95 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Loader2, FileText, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { supabase } from "@/integrations/supabase/client";
-import { Transaction } from '@/integrations/supabase/client';
-import { toast } from "@/hooks/use-toast";
-
-interface RecentTransaction extends Transaction {
-  customer_name?: string;
-  vehicle_number?: string;
-}
+import { supabase, Transaction } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 interface RecentTransactionsTableProps {
   refreshTrigger?: number;
 }
 
 export const RecentTransactionsTable = ({ refreshTrigger = 0 }: RecentTransactionsTableProps) => {
-  const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
-  const [isTransactionsLoading, setIsTransactionsLoading] = useState<boolean>(true);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchRecentTransactions();
-  }, [refreshTrigger]); // Add refreshTrigger to dependency array
+    const fetchTransactions = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select(`
+            *,
+            customers(name),
+            vehicles(number)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(10);
 
-  const fetchRecentTransactions = async () => {
-    setIsTransactionsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select(`
-          *,
-          customers(name),
-          vehicles(number)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5);
+        if (error) throw error;
 
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        const formattedTransactions: RecentTransaction[] = data.map(item => ({
-          ...item,
-          customer_name: item.customers?.name || 'Walk-in Customer',
-          vehicle_number: item.vehicles?.number || 'N/A'
+        // Process the data to include customer_name and vehicle_number
+        const processedData = data.map(transaction => ({
+          ...transaction,
+          customer_name: transaction.customers?.name || 'Unknown',
+          vehicle_number: transaction.vehicles?.number || 'Unknown'
         }));
-        setRecentTransactions(formattedTransactions);
+
+        setTransactions(processedData as Transaction[]);
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching recent transactions:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load recent transactions. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsTransactionsLoading(false);
-    }
-  };
+    };
+
+    fetchTransactions();
+  }, [refreshTrigger]);
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Recent Transactions</CardTitle>
-          </div>
-          <CardDescription>
-            Last 5 transactions recorded
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isTransactionsLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading transactions...
-            </div>
-          ) : recentTransactions.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-muted-foreground">
-              <FileText className="mr-2 h-4 w-4" />
-              No transactions found.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>Fuel Type</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Quantity</TableHead>
+    <Card>
+      <CardHeader>
+        <CardTitle>Recent Transactions</CardTitle>
+        <CardDescription>
+          The most recent 10 fuel transactions
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <p>Loading transactions...</p>
+        ) : transactions.length === 0 ? (
+          <p>No recent transactions found.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Vehicle</TableHead>
+                <TableHead>Fuel Type</TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Discount</TableHead>
+                <TableHead>Final Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {transactions.map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell>{transaction.date ? format(new Date(transaction.date), 'dd/MM/yyyy') : 'Unknown'}</TableCell>
+                  <TableCell>{transaction.customer_name || 'Unknown'}</TableCell>
+                  <TableCell>{transaction.vehicle_number || 'Unknown'}</TableCell>
+                  <TableCell>{transaction.fuel_type}</TableCell>
+                  <TableCell>{transaction.quantity} L</TableCell>
+                  <TableCell>₹{transaction.amount.toFixed(2)}</TableCell>
+                  <TableCell>₹{(transaction.discount_amount || 0).toFixed(2)}</TableCell>
+                  <TableCell>₹{(transaction.amount - (transaction.discount_amount || 0)).toFixed(2)}</TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentTransactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
-                    <TableCell>{transaction.customer_name}</TableCell>
-                    <TableCell>{transaction.vehicle_number}</TableCell>
-                    <TableCell>{transaction.fuel_type}</TableCell>
-                    <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
-                    <TableCell>{transaction.quantity} L</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-      
-      <div className="flex justify-end mt-2">
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/all-transactions" className="flex items-center">
-            View all transactions 
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
-      </div>
-    </>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   );
 };

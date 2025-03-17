@@ -17,6 +17,8 @@ interface FuelTransactionFormProps {
   setAmount: (amount: number) => void;
   quantity: number;
   setQuantity: (quantity: number) => void;
+  discountAmount: number;
+  setDiscountAmount: (discountAmount: number) => void;
   date: Date | undefined;
   setDate: (date: Date | undefined) => void;
   isSubmitting: boolean;
@@ -30,6 +32,8 @@ export const FuelTransactionForm = ({
   setAmount,
   quantity,
   setQuantity,
+  discountAmount,
+  setDiscountAmount,
   date,
   setDate,
   isSubmitting,
@@ -94,6 +98,16 @@ export const FuelTransactionForm = ({
             value={quantity === 0 ? '' : quantity}
             onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
             placeholder="Enter quantity"
+          />
+        </div>
+        <div>
+          <Label htmlFor="discountAmount">Discount Amount (₹)</Label>
+          <Input
+            type="number"
+            id="discountAmount"
+            value={discountAmount === 0 ? '' : discountAmount}
+            onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
+            placeholder="Enter discount amount"
           />
         </div>
       </div>

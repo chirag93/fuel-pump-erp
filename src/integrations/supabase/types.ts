@@ -278,6 +278,7 @@ export type Database = {
           created_at: string | null
           customer_id: string
           date: string | null
+          discount_amount: number | null
           fuel_type: string
           id: string
           indent_number: string | null
@@ -291,6 +292,7 @@ export type Database = {
           created_at?: string | null
           customer_id: string
           date?: string | null
+          discount_amount?: number | null
           fuel_type: string
           id: string
           indent_number?: string | null
@@ -304,6 +306,7 @@ export type Database = {
           created_at?: string | null
           customer_id?: string
           date?: string | null
+          discount_amount?: number | null
           fuel_type?: string
           id?: string
           indent_number?: string | null
@@ -586,6 +589,7 @@ export type Database = {
           created_at: string | null
           customer_id: string | null
           date: string
+          discount_amount: number | null
           fuel_type: string
           id: string
           indent_id: string | null
@@ -599,6 +603,7 @@ export type Database = {
           created_at?: string | null
           customer_id?: string | null
           date: string
+          discount_amount?: number | null
           fuel_type: string
           id: string
           indent_id?: string | null
@@ -612,6 +617,7 @@ export type Database = {
           created_at?: string | null
           customer_id?: string | null
           date?: string
+          discount_amount?: number | null
           fuel_type?: string
           id?: string
           indent_id?: string | null
