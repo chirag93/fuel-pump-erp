@@ -75,6 +75,7 @@ const CustomerTabs = ({
         <TransactionsTab 
           transactions={transactions} 
           customerName={customer.name}
+          customer={customer}
         />
       </TabsContent>
     </Tabs>

@@ -1,10 +1,12 @@
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { FileText, Download } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Transaction } from '@/integrations/supabase/client';
+import { Plus } from 'lucide-react';
+import { format } from 'date-fns';
+import { Customer, Transaction } from '@/integrations/supabase/client';
+import RecordPaymentDialog from './RecordPaymentDialog';
 
 interface TransactionWithDetails extends Transaction {
   vehicle_number?: string;
@@ -12,95 +14,101 @@ interface TransactionWithDetails extends Transaction {
 
 interface TransactionsTabProps {
   transactions: TransactionWithDetails[];
-  customerName?: string;
+  customerName: string;
+  customer: Customer;
 }
 
-const TransactionsTab = ({ transactions, customerName = 'Customer' }: TransactionsTabProps) => {
-  const exportTransactions = () => {
-    // Define CSV headers
-    const headers = ['Date', 'Vehicle', 'Fuel Type', 'Quantity', 'Amount', 'Indent ID'];
-    
-    // Convert transactions to CSV rows
-    const rows = transactions.map(transaction => [
-      new Date(transaction.date).toLocaleDateString(),
-      transaction.vehicle_number || 'N/A',
-      transaction.fuel_type,
-      `${transaction.quantity.toFixed(2)}`,
-      `${transaction.amount.toFixed(2).replace(/[₹,]/g, '')}`, // Remove special characters
-      transaction.indent_id || '-'
-    ]);
-    
-    // Combine headers and rows
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
-    
-    // Create a blob and download link
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${customerName}_transactions_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+const TransactionsTab = ({ transactions, customerName, customer }: TransactionsTabProps) => {
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handlePaymentRecorded = () => {
+    // Trigger a refresh of the component
+    setRefreshKey(prev => prev + 1);
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Fuel Transactions</CardTitle>
-          <div className="flex gap-2">
-            {transactions.length > 0 && (
-              <Button variant="outline" size="sm" onClick={exportTransactions} className="flex items-center gap-2">
-                <Download size={16} />
-                Export CSV
-              </Button>
-            )}
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/all-transactions" className="flex items-center gap-2">
-                View All
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {transactions.length === 0 ? (
-          <div className="py-8 text-center">
-            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No transactions yet</p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Fuel Type</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Indent ID</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
-                  <TableCell>{transaction.vehicle_number || 'N/A'}</TableCell>
-                  <TableCell>{transaction.fuel_type}</TableCell>
-                  <TableCell>{transaction.quantity} L</TableCell>
-                  <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
-                  <TableCell>{transaction.indent_id || '-'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold tracking-tight">Transactions</h2>
+        <Button 
+          onClick={() => setIsPaymentDialogOpen(true)}
+          className="gap-1"
+        >
+          <Plus className="h-4 w-4" />
+          Record Payment
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Transactions for {customerName}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {transactions.length === 0 ? (
+            <p className="text-muted-foreground text-center py-4">
+              No transactions found for this customer.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>Fuel Type</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Payment Method</TableHead>
+                    {customer.balance !== null && <TableHead>Status</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell>
+                        {transaction.date ? format(new Date(transaction.date), 'dd/MM/yyyy') : 'Unknown'}
+                      </TableCell>
+                      <TableCell>{transaction.vehicle_number || 'N/A'}</TableCell>
+                      <TableCell>{transaction.fuel_type}</TableCell>
+                      <TableCell>
+                        {transaction.fuel_type === 'PAYMENT' 
+                          ? 'N/A' 
+                          : `${transaction.quantity || 0} L`
+                        }
+                      </TableCell>
+                      <TableCell className={transaction.fuel_type === 'PAYMENT' ? 'text-green-600 font-medium' : ''}>
+                        {transaction.fuel_type === 'PAYMENT'
+                          ? `-₹${transaction.amount}`
+                          : `₹${transaction.amount}`
+                        }
+                      </TableCell>
+                      <TableCell>{transaction.payment_method}</TableCell>
+                      {customer.balance !== null && (
+                        <TableCell>
+                          {transaction.fuel_type === 'PAYMENT' ? (
+                            <span className="text-green-600 font-medium">Payment</span>
+                          ) : (
+                            <span className="text-amber-600 font-medium">Credit</span>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <RecordPaymentDialog 
+        open={isPaymentDialogOpen}
+        onOpenChange={setIsPaymentDialogOpen}
+        customer={customer}
+        onPaymentRecorded={handlePaymentRecorded}
+      />
+    </div>
   );
 };
 

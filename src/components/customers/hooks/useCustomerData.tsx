@@ -14,6 +14,7 @@ export const useCustomerData = (customerId: string) => {
   const [indentBooklets, setIndentBooklets] = useState<IndentBooklet[]>([]);
   const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     if (customerId) {
@@ -23,7 +24,7 @@ export const useCustomerData = (customerId: string) => {
       fetchIndentBooklets(customerId);
       fetchTransactions(customerId);
     }
-  }, [customerId]);
+  }, [customerId, refreshTrigger]);
 
   const fetchCustomerData = async (id: string) => {
     try {
@@ -129,6 +130,10 @@ export const useCustomerData = (customerId: string) => {
     }
   };
 
+  const refreshData = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   return {
     customer,
     vehicles,
@@ -137,6 +142,7 @@ export const useCustomerData = (customerId: string) => {
     transactions,
     isLoading,
     setVehicles,
-    setIndentBooklets
+    setIndentBooklets,
+    refreshData
   };
 };
