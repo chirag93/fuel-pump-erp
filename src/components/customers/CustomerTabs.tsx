@@ -1,6 +1,5 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building, Truck, Book, FileText } from 'lucide-react';
 import CustomerDetailsTab from './CustomerDetailsTab';
 import VehiclesTab from './VehiclesTab';
 import BookletsTab from './BookletsTab';
@@ -14,68 +13,57 @@ interface TransactionWithDetails extends Transaction {
 interface CustomerTabsProps {
   customer: Customer;
   vehicles: Vehicle[];
-  setVehicles: React.Dispatch<React.SetStateAction<Vehicle[]>>;
   indentBooklets: IndentBooklet[];
-  setIndentBooklets: React.Dispatch<React.SetStateAction<IndentBooklet[]>>;
   transactions: TransactionWithDetails[];
+  setVehicles: React.Dispatch<React.SetStateAction<Vehicle[]>>;
+  setIndentBooklets: React.Dispatch<React.SetStateAction<IndentBooklet[]>>;
   customerId: string;
+  refreshData?: () => void;
 }
 
 const CustomerTabs = ({ 
   customer, 
   vehicles, 
-  setVehicles, 
   indentBooklets, 
-  setIndentBooklets, 
-  transactions,
-  customerId
+  transactions, 
+  setVehicles, 
+  setIndentBooklets,
+  customerId,
+  refreshData
 }: CustomerTabsProps) => {
   return (
-    <Tabs defaultValue="details" className="w-full">
-      <TabsList className="grid w-full grid-cols-4 mb-6">
-        <TabsTrigger value="details" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-          <Building className="mr-2 h-4 w-4" />
-          Customer Details
-        </TabsTrigger>
-        <TabsTrigger value="vehicles" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-          <Truck className="mr-2 h-4 w-4" />
-          Vehicles
-        </TabsTrigger>
-        <TabsTrigger value="booklets" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-          <Book className="mr-2 h-4 w-4" />
-          Indent Booklets
-        </TabsTrigger>
-        <TabsTrigger value="transactions" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-          <FileText className="mr-2 h-4 w-4" />
-          Transactions
-        </TabsTrigger>
+    <Tabs defaultValue="details" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="details">Details</TabsTrigger>
+        <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
+        <TabsTrigger value="booklets">Indent Booklets</TabsTrigger>
+        <TabsTrigger value="transactions">Transactions</TabsTrigger>
       </TabsList>
-      
-      <TabsContent value="details">
+      <TabsContent value="details" className="space-y-4">
         <CustomerDetailsTab customer={customer} />
       </TabsContent>
-      
-      <TabsContent value="vehicles">
+      <TabsContent value="vehicles" className="space-y-4">
         <VehiclesTab 
           vehicles={vehicles} 
-          setVehicles={setVehicles} 
-          customerId={customerId} 
+          customerId={customer.id} 
+          customerName={customer.name}
+          setVehicles={setVehicles}
         />
       </TabsContent>
-      
-      <TabsContent value="booklets">
+      <TabsContent value="booklets" className="space-y-4">
         <BookletsTab 
-          indentBooklets={indentBooklets} 
-          setIndentBooklets={setIndentBooklets} 
-          customerId={customerId} 
+          booklets={indentBooklets} 
+          customerId={customer.id}
+          customerName={customer.name}
+          setIndentBooklets={setIndentBooklets}
         />
       </TabsContent>
-      
-      <TabsContent value="transactions">
+      <TabsContent value="transactions" className="space-y-4">
         <TransactionsTab 
           transactions={transactions} 
           customerName={customer.name}
           customer={customer}
+          customerId={customerId}
         />
       </TabsContent>
     </Tabs>

@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Customer, Transaction } from '@/integrations/supabase/client';
 import RecordPaymentDialog from './RecordPaymentDialog';
+import { useCustomerData } from './hooks/useCustomerData';
 
 interface TransactionWithDetails extends Transaction {
   vehicle_number?: string;
@@ -16,16 +17,20 @@ interface TransactionsTabProps {
   transactions: TransactionWithDetails[];
   customerName: string;
   customer: Customer;
+  customerId: string;
 }
 
-const TransactionsTab = ({ transactions, customerName, customer }: TransactionsTabProps) => {
+const TransactionsTab = ({ transactions: initialTransactions, customerName, customer, customerId }: TransactionsTabProps) => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-
+  const { transactions, refreshData } = useCustomerData(customerId);
+  
   const handlePaymentRecorded = () => {
-    // Trigger a refresh of the component
-    setRefreshKey(prev => prev + 1);
+    // Refresh the data after payment is recorded
+    refreshData();
   };
+
+  // Use the latest transactions from the hook, falling back to initial transactions if needed
+  const displayTransactions = transactions.length > 0 ? transactions : initialTransactions;
 
   return (
     <div>
@@ -45,7 +50,7 @@ const TransactionsTab = ({ transactions, customerName, customer }: TransactionsT
           <CardTitle>Recent Transactions for {customerName}</CardTitle>
         </CardHeader>
         <CardContent>
-          {transactions.length === 0 ? (
+          {displayTransactions.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">
               No transactions found for this customer.
             </p>
@@ -64,7 +69,7 @@ const TransactionsTab = ({ transactions, customerName, customer }: TransactionsT
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((transaction) => (
+                  {displayTransactions.map((transaction) => (
                     <TableRow key={transaction.id}>
                       <TableCell>
                         {transaction.date ? format(new Date(transaction.date), 'dd/MM/yyyy') : 'Unknown'}

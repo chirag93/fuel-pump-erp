@@ -69,6 +69,17 @@ const RecordPaymentDialog = ({
     },
   });
 
+  // Reset the form when the dialog opens
+  React.useEffect(() => {
+    if (open) {
+      form.reset({
+        amount: '',
+        paymentMethod: '',
+        date: new Date(),
+      });
+    }
+  }, [open, form]);
+
   const onSubmit = async (values: FormValues) => {
     try {
       // First, create a transaction record for the payment

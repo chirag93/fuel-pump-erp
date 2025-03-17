@@ -15,7 +15,8 @@ const CustomerDetails = () => {
     transactions,
     isLoading,
     setVehicles,
-    setIndentBooklets
+    setIndentBooklets,
+    refreshData
   } = useCustomerData(customerId);
 
   return (
@@ -31,6 +32,7 @@ const CustomerDetails = () => {
           setIndentBooklets={setIndentBooklets}
           transactions={transactions}
           customerId={customerId}
+          refreshData={refreshData}
         />
       )}
     </div>
