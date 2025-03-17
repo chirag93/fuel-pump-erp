@@ -78,7 +78,7 @@ const RecordPaymentDialog = ({
           id: transactionId,
           customer_id: customer.id,
           date: format(values.date, 'yyyy-MM-dd'),
-          amount: values.amount,
+          amount: values.amount, // This will now be a number thanks to the transform in zod schema
           quantity: 0, // Not applicable for payment
           fuel_type: 'PAYMENT', // Use a special type to mark as payment
           payment_method: values.paymentMethod,
