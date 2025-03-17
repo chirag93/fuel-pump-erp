@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/ui/custom/FadeIn";
+import { Droplets } from "lucide-react";
 
 export function Hero() {
   return (
@@ -12,19 +13,24 @@ export function Hero() {
       <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 max-w-[1400px]">
         <div className="mx-auto max-w-4xl text-center">
           <FadeIn>
-            <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
-              <span className="block text-balance">
-                Streamline Your Business With{" "}
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
-                  FlowERP
+            <div className="flex justify-center mb-6">
+              <div className="flex items-center gap-3">
+                <Droplets className="h-12 w-12 text-primary" />
+                <span className="text-4xl sm:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
+                  Fuel Master
                 </span>
+              </div>
+            </div>
+            <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+              <span className="block text-balance">
+                Streamline Your Fuel Pump Management
               </span>
             </h1>
           </FadeIn>
           
           <FadeIn delay="100ms">
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl text-balance">
-              A beautiful, intuitive enterprise resource planning system designed with simplicity and elegance in mind. Transform how you manage your business operations.
+              A beautiful, intuitive system designed with simplicity and elegance in mind. Transform how you manage your fuel station operations.
             </p>
           </FadeIn>
           
@@ -45,8 +51,8 @@ export function Hero() {
             <div className="absolute inset-0 bg-gradient-to-tr from-background/80 to-card opacity-50" />
             
             <img
-              src="https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80"
-              alt="FlowERP Dashboard"
+              src="https://images.unsplash.com/photo-1611288875785-9ef0f98d45c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+              alt="Fuel Master Dashboard"
               className="w-full h-auto object-cover opacity-90"
             />
             

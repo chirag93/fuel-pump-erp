@@ -6,9 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertCircle, Lock, Mail, Database } from 'lucide-react';
+import { AlertCircle, Lock, Mail, Droplets } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { migrateAllData } from '@/utils/seedDatabase';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const Login = () => {
@@ -16,7 +15,6 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isMigrating, setIsMigrating] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -59,39 +57,20 @@ const Login = () => {
     }
   };
 
-  const handleMigrateData = async () => {
-    if (isMigrating) return; // Prevent multiple clicks
-    
-    setIsMigrating(true);
-    
-    try {
-      console.log("Starting data migration...");
-      const success = await migrateAllData();
-      
-      if (success) {
-        toast({
-          title: "Migration successful",
-          description: "Sample data has been successfully migrated to the database.",
-        });
-      }
-      // Error toasts are handled inside migrateAllData
-    } catch (error) {
-      console.error("Migration error:", error);
-      toast({
-        title: "Migration error",
-        description: "An unexpected error occurred during data migration.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsMigrating(false);
-    }
-  };
-
   return (
-    <div className="h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md shadow-lg">
+    <div className="h-screen flex items-center justify-center bg-gradient-to-b from-background to-secondary/30 p-4">
+      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
+      <Card className="w-full max-w-md shadow-lg relative z-10">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Pump Management</CardTitle>
+          <div className="flex justify-center mb-2">
+            <div className="flex items-center gap-2">
+              <Droplets className="h-8 w-8 text-primary" />
+              <span className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
+                Fuel Master
+              </span>
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access your account
           </CardDescription>
@@ -151,21 +130,6 @@ const Login = () => {
         <CardFooter className="flex flex-col space-y-4 pt-0">
           <div className="text-sm text-center text-muted-foreground mt-2">
             Don't have an account? Contact your administrator.
-          </div>
-          <div className="w-full border-t pt-4">
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              onClick={handleMigrateData}
-              disabled={isMigrating}
-            >
-              <Database className="mr-2 h-4 w-4" />
-              {isMigrating ? 'Migrating Data...' : 'Migrate Sample Data (One-Time)'}
-            </Button>
-            <p className="text-xs text-center text-muted-foreground mt-2">
-              This will perform a one-time migration of sample data to your database.
-              Already migrated data will not be duplicated.
-            </p>
           </div>
         </CardFooter>
       </Card>

@@ -66,7 +66,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: <BarChart4 size={20} />, label: 'Dashboard', to: '/dashboard' },
     { icon: <CalendarClock size={20} />, label: 'Daily Readings', to: '/daily-readings' },
     { icon: <Droplets size={20} />, label: 'Stock Levels', to: '/stock-levels' },
-    { icon: <Truck size={20} />, label: 'Tank Unload', to: '/tank-unload' }, // Add Tank Unload to sidebar
+    { icon: <Truck size={20} />, label: 'Tank Unload', to: '/tank-unload' },
     { icon: <Users size={20} />, label: 'Customers', to: '/customers' },
     { icon: <Users size={20} />, label: 'Staff', to: '/staff-management' },
     { icon: <Fuel size={20} />, label: 'Record Indent', to: '/record-indent' },
@@ -91,7 +91,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         } fixed inset-y-0 z-30 w-64 border-r bg-card transition-transform duration-200 md:translate-x-0`}
       >
         <div className="flex h-16 items-center border-b px-6">
-          <h2 className="text-xl font-bold">Fuel Pump ERP</h2>
+          <div className="flex items-center gap-2">
+            <Droplets className="h-6 w-6 text-primary" />
+            <h2 className="text-xl font-bold">Fuel Master</h2>
+          </div>
         </div>
         
         <div className="flex flex-col gap-1 p-4 h-[calc(100vh-64px-80px)] overflow-y-auto">

@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Droplets } from "lucide-react";
 
 interface NavbarProps {
   className?: string;
@@ -39,8 +39,9 @@ export function Navbar({ className }: NavbarProps) {
       <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           <a href="/" className="flex items-center gap-2">
+            <Droplets className="h-6 w-6 text-primary" />
             <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
-              FlowERP
+              Fuel Master
             </span>
           </a>
         </div>

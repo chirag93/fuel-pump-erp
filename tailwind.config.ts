@@ -66,6 +66,15 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Fuel Master brand colors
+				fuelmaster: {
+					blue: '#0EA5E9',
+					darkblue: '#0C4A6E',
+					teal: '#0D9488',
+					green: '#16A34A',
+					yellow: '#EAB308',
+					orange: '#F97316',
 				}
 			},
 			borderRadius: {
