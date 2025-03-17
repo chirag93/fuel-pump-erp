@@ -151,3 +151,22 @@ export interface Transaction {
   customer_name?: string;
   vehicle_number?: string;
 }
+
+// New interfaces for Super Admin functionality
+export interface SuperAdmin {
+  id: string;
+  name: string;
+  email: string;
+  created_at: string;
+}
+
+export interface FuelPump {
+  id: string;
+  name: string;
+  email: string;
+  address: string | null;
+  contact_number: string | null;
+  status: string;
+  created_by: string | null;
+  created_at: string;
+}

@@ -150,6 +150,47 @@ export type Database = {
         }
         Relationships: []
       }
+      fuel_pumps: {
+        Row: {
+          address: string | null
+          contact_number: string | null
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+          name: string
+          status: string
+        }
+        Insert: {
+          address?: string | null
+          contact_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          email: string
+          id?: string
+          name: string
+          status?: string
+        }
+        Update: {
+          address?: string | null
+          contact_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          id?: string
+          name?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_pumps_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "super_admins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fuel_settings: {
         Row: {
           current_level: number
@@ -553,6 +594,27 @@ export type Database = {
         }
         Relationships: []
       }
+      super_admins: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       tank_unloads: {
         Row: {
           amount: number
@@ -697,7 +759,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_super_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

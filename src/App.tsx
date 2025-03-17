@@ -21,6 +21,15 @@ import NotFound from './pages/NotFound';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
+// Import Super Admin components
+import SuperAdminProtectedRoute from './components/auth/SuperAdminProtectedRoute';
+import SuperAdminLogin from './pages/SuperAdminLogin';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import ProvisionPump from './pages/ProvisionPump';
+import FuelPumpsPage from './pages/FuelPumpsPage';
+import SuperAdminAnalytics from './pages/SuperAdminAnalytics';
+import SuperAdminSettings from './pages/SuperAdminSettings';
+
 // Define props interface for ProtectedRoute
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -32,6 +41,16 @@ const App = () => {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          
+          {/* Super Admin Routes */}
+          <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+          <Route element={<SuperAdminProtectedRoute />}>
+            <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+            <Route path="/super-admin/provision" element={<ProvisionPump />} />
+            <Route path="/super-admin/pumps" element={<FuelPumpsPage />} />
+            <Route path="/super-admin/analytics" element={<SuperAdminAnalytics />} />
+            <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
+          </Route>
           
           {/* Protected routes with sidebar layout */}
           <Route element={<ProtectedRoute />}>

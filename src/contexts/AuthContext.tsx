@@ -8,12 +8,13 @@ interface UserProfile {
   id: string;
   username: string;
   email: string;
-  role: 'admin' | 'staff';
+  role: 'admin' | 'staff' | 'super_admin';
 }
 
 interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
+  isSuperAdmin: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
@@ -34,12 +35,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session ? mapUserToProfile(session.user) : null);
+      
+      // Check if the user is a super admin
+      if (session) {
+        checkIsSuperAdmin(session.user.id);
+      }
+      
       setIsLoading(false);
     });
 
@@ -47,6 +55,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session ? mapUserToProfile(session.user) : null);
+      
+      // Check if the user is a super admin
+      if (session) {
+        checkIsSuperAdmin(session.user.id);
+      } else {
+        setIsSuperAdmin(false);
+      }
+      
       setIsLoading(false);
     });
 
@@ -55,6 +71,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // Check if a user is a super admin
+  const checkIsSuperAdmin = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('super_admins')
+        .select('id')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error checking super admin status:', error);
+        setIsSuperAdmin(false);
+        return;
+      }
+      
+      setIsSuperAdmin(data ? true : false);
+    } catch (error) {
+      console.error('Error checking super admin status:', error);
+      setIsSuperAdmin(false);
+    }
+  };
+
   // Helper function to map Supabase user to our UserProfile format
   const mapUserToProfile = (supabaseUser: User): UserProfile => {
     return {
@@ -62,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       username: supabaseUser.email?.split('@')[0] || 'user',
       email: supabaseUser.email || '',
       // Default to 'staff' role - this would ideally come from a profiles table
-      role: (supabaseUser.app_metadata.role as 'admin' | 'staff') || 'staff'
+      role: (supabaseUser.app_metadata.role as 'admin' | 'staff' | 'super_admin') || 'staff'
     };
   };
 
@@ -99,6 +137,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           title: "Login successful",
           description: `Welcome back, ${data.user.email?.split('@')[0] || 'user'}!`,
         });
+        
+        // Check if the user is a super admin
+        await checkIsSuperAdmin(data.user.id);
+        
         return true;
       }
       return false;
@@ -126,6 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } else {
       setUser(null);
+      setIsSuperAdmin(false);
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
@@ -134,7 +177,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, isLoading, session }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isAuthenticated: !!user, 
+      isSuperAdmin,
+      login, 
+      logout, 
+      isLoading, 
+      session 
+    }}>
       {children}
     </AuthContext.Provider>
   );
