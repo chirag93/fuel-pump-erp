@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -72,19 +73,32 @@ const RecordPaymentDialog = ({
     try {
       // First, create a transaction record for the payment
       const transactionId = `TRX${Date.now()}`;
+      
+      // Fetch the first staff record to use as a valid reference
+      // This is a workaround for development purposes
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff')
+        .select('id')
+        .limit(1)
+        .single();
+        
+      if (staffError) {
+        console.error('Error fetching staff:', staffError);
+        throw new Error('Could not find a valid staff reference');
+      }
+      
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
           id: transactionId,
           customer_id: customer.id,
           date: format(values.date, 'yyyy-MM-dd'),
-          amount: values.amount, // This will now be a number thanks to the transform in zod schema
+          amount: values.amount, // Now this will be a number thanks to the zod transform
           quantity: 0, // Not applicable for payment
           fuel_type: 'PAYMENT', // Use a special type to mark as payment
           payment_method: values.paymentMethod,
-          // The transactions table requires a valid UUID for staff_id and doesn't allow null
-          // For now, use a placeholder UUID (this should be replaced with actual logged-in user ID in production)
-          staff_id: '00000000-0000-0000-0000-000000000000',
+          // Use a valid staff ID from the database
+          staff_id: staffData.id,
         });
 
       if (transactionError) throw transactionError;
