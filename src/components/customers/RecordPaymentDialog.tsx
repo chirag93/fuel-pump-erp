@@ -1,226 +1,159 @@
+
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { useAuth } from '@/contexts/AuthContext';
-
-const formSchema = z.object({
-  amount: z.string()
-    .min(1, { message: 'Amount is required' })
-    .refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
-      message: 'Amount must be a positive number',
-    })
-    .transform(val => parseFloat(val)), // Convert string to number
-  paymentMethod: z.enum(['Cash', 'Card', 'UPI', 'Bank Transfer']),
-  notes: z.string().optional(),
-  date: z.string().min(1, { message: 'Date is required' }),
-});
-
-type FormValues = z.infer<typeof formSchema>;
 
 interface RecordPaymentDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   customerId: string;
-  onPaymentRecorded?: () => void;
+  customerName: string;
+  currentBalance: number | null;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  onPaymentRecorded: () => void;
 }
 
-export function RecordPaymentDialog({ open, onOpenChange, customerId, onPaymentRecorded }: RecordPaymentDialogProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const { user } = useAuth();
+export default function RecordPaymentDialog({
+  customerId,
+  customerName,
+  currentBalance,
+  isOpen,
+  setIsOpen,
+  onPaymentRecorded
+}: RecordPaymentDialogProps) {
+  const [amount, setAmount] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      amount: '',
-      paymentMethod: 'Cash',
-      notes: '',
-      date: today,
-    },
-  });
+  const handleSubmit = async () => {
+    if (amount <= 0) {
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid payment amount greater than zero",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  const onSubmit = async (values: FormValues) => {
+    setIsSubmitting(true);
     try {
-      setIsLoading(true);
-      
-      // First, fetch a valid staff ID from the staff table
-      const { data: staffData, error: staffError } = await supabase
-        .from('staff')
-        .select('id')
-        .limit(1);
-      
-      if (staffError) throw staffError;
-      
-      if (!staffData || staffData.length === 0) {
-        throw new Error('No staff members found. Please add at least one staff member.');
-      }
-      
-      // Use the first staff ID found
-      const staffId = staffData[0].id;
-      
-      // Create a transaction record
-      const transactionData = {
-        id: crypto.randomUUID(),
-        customer_id: customerId,
-        date: values.date,
-        amount: values.amount,
-        quantity: 0, // There's no fuel in this transaction, it's just a payment
-        payment_method: values.paymentMethod,
-        fuel_type: 'PAYMENT', // Mark it as a payment
-        staff_id: staffId, // Use a valid staff ID from the database
-      };
-      
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert(transactionData);
-      
-      if (transactionError) throw transactionError;
-      
-      // Call the RPC function properly and handle the returned data
-      const { data: updatedBalance, error: customerError } = await supabase
-        .rpc('decrement_balance', { 
-          customer_id: customerId, 
-          amount_value: values.amount 
+      // Create a new payment record
+      const { error: paymentError } = await supabase
+        .from('customer_payments')
+        .insert({
+          customer_id: customerId,
+          amount: amount,
+          payment_method: paymentMethod,
+          notes: notes,
+          date: new Date().toISOString()
         });
+
+      if (paymentError) throw paymentError;
+
+      // Update the customer balance
+      const newBalance = (currentBalance || 0) + amount;
       
-      if (customerError) throw customerError;
-      
-      // Update the customer balance with the returned value
       const { error: updateError } = await supabase
         .from('customers')
-        .update({ balance: updatedBalance })
+        .update({ balance: newBalance })
         .eq('id', customerId);
-        
+
       if (updateError) throw updateError;
-      
+
       toast({
-        title: 'Payment recorded',
-        description: `₹${values.amount} has been recorded for the customer.`,
+        title: "Payment recorded",
+        description: `Successfully recorded payment of ₹${amount} for ${customerName}`
       });
-      
-      if (onPaymentRecorded) {
-        onPaymentRecorded();
-      }
-      form.reset();
-      onOpenChange(false);
+
+      // Reset form and close dialog
+      setAmount(0);
+      setPaymentMethod('Cash');
+      setNotes('');
+      setIsOpen(false);
+      onPaymentRecorded();
     } catch (error) {
       console.error('Error recording payment:', error);
       toast({
-        title: 'Error',
-        description: 'An error occurred while recording the payment.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to record payment. Please try again.",
+        variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Record Payment</DialogTitle>
           <DialogDescription>
-            Record a payment received from the customer.
+            Record a new payment for {customerName}
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Amount (₹)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="amount">Amount</Label>
+            <Input
+              id="amount"
+              type="number"
+              value={amount || ''}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              placeholder="Enter payment amount"
             />
-            
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="payment-method">Payment Method</Label>
+            <Select
+              value={paymentMethod}
+              onValueChange={setPaymentMethod}
+            >
+              <SelectTrigger id="payment-method">
+                <SelectValue placeholder="Select payment method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Cash">Cash</SelectItem>
+                <SelectItem value="UPI">UPI</SelectItem>
+                <SelectItem value="Card">Card</SelectItem>
+                <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                <SelectItem value="Cheque">Cheque</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Input
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add any additional notes"
             />
-            
-            <FormField
-              control={form.control}
-              name="paymentMethod"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Payment Method</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select payment method" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Cash">Cash</SelectItem>
-                      <SelectItem value="Card">Card</SelectItem>
-                      <SelectItem value="UPI">UPI</SelectItem>
-                      <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Add any additional notes about the payment"
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <DialogFooter>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  'Record Payment'
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Recording...' : 'Record Payment'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

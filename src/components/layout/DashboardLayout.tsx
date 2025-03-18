@@ -64,7 +64,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navItems = [
     { icon: <Home size={20} />, label: 'Home', to: '/' },
     { icon: <BarChart4 size={20} />, label: 'Dashboard', to: '/dashboard' },
-    { icon: <CalendarClock size={20} />, label: 'Daily Readings', to: '/daily-readings' },
+    { icon: <CalendarClock size={20} />, label: 'Daily Sales Record (DSR)', to: '/daily-readings' },
     { icon: <Droplets size={20} />, label: 'Stock Levels', to: '/stock-levels' },
     { icon: <Truck size={20} />, label: 'Tank Unload', to: '/tank-unload' },
     { icon: <Users size={20} />, label: 'Customers', to: '/customers' },

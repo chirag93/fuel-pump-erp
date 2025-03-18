@@ -75,7 +75,7 @@ const ReadingsTable = ({ readings, handleOpenDialog, handleOpenDeleteDialog }: R
               )}
             </TableCell>
             <TableCell>{reading.opening_stock}</TableCell>
-            <TableCell>{reading.receipt_quantity}</TableCell>
+            <TableCell>{reading.receipt_quantity || '-'}</TableCell>
             <TableCell>{reading.closing_stock}</TableCell>
             <TableCell>{reading.sales_per_tank_stock}</TableCell>
             <TableCell>{reading.actual_meter_sales}</TableCell>

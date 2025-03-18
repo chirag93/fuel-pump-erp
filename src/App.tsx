@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Dashboard from './pages/Dashboard';
 import Home from './Home'; 
 import Login from './pages/Login';
-import DailyReadings from './pages/DailyReadings';
+import DailySalesRecord from './pages/DailySalesRecord';
 import StockLevels from './pages/StockLevels';
 import AllTransactions from './pages/AllTransactions';
 import Customers from './pages/Customers';
@@ -56,7 +56,7 @@ const App = () => {
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/daily-readings" element={<DailyReadings />} />
+            <Route path="/daily-readings" element={<DailySalesRecord />} />
             <Route path="/stock-levels" element={<StockLevels />} />
             <Route path="/all-transactions" element={<AllTransactions />} />
             <Route path="/customers" element={<Customers />} />

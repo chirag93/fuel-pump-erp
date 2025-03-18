@@ -52,9 +52,9 @@ const ReadingFormDialog = ({
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Reading' : 'Add New Daily Reading'}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Reading' : 'Add New Daily Sales Record'}</DialogTitle>
           <DialogDescription>
-            Enter the daily readings for each fuel type.
+            Enter the daily sales readings for each fuel type.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
@@ -97,13 +97,13 @@ const ReadingFormDialog = ({
           
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="receipt_quantity">Receipt Quantity</Label>
+              <Label htmlFor="receipt_quantity">Receipt Quantity (Optional)</Label>
               <Input
                 type="number"
                 id="receipt_quantity"
                 value={readingFormData.receipt_quantity === 0 && readingFormData.id ? '' : readingFormData.receipt_quantity}
                 onChange={(e) => handleInputChange('receipt_quantity', e.target.value)}
-                placeholder="Enter receipt quantity"
+                placeholder="Enter receipt quantity (optional)"
               />
             </div>
             <div className="grid gap-2">
