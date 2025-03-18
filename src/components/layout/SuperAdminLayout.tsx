@@ -1,8 +1,10 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { FuelPump } from '@/integrations/supabase/client';
 import { 
   BarChart4, 
   Home, 
@@ -14,8 +16,10 @@ import {
   Settings,
   PlusCircle,
   Fuel,
-  List
+  List,
+  LinkIcon
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -47,6 +51,31 @@ const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [linkedPumps, setLinkedPumps] = useState<FuelPump[]>([]);
+  const [pumpCount, setPumpCount] = useState<number>(0);
+
+  useEffect(() => {
+    // Fetch linked fuel pumps when the component mounts
+    const fetchLinkedPumps = async () => {
+      const { data, error, count } = await supabase
+        .from('fuel_pumps')
+        .select('*', { count: 'exact' })
+        .eq('created_by', user?.id || '')
+        .order('name', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching linked pumps:', error);
+        return;
+      }
+      
+      if (data) {
+        setLinkedPumps(data);
+        setPumpCount(count || 0);
+      }
+    };
+    
+    fetchLinkedPumps();
+  }, [user?.id]);
 
   const handleLogout = async () => {
     await logout();
@@ -86,7 +115,7 @@ const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
           </div>
         </div>
         
-        <div className="flex flex-col gap-1 p-4 h-[calc(100vh-64px-80px)] overflow-y-auto">
+        <div className="flex flex-col gap-1 p-4 h-[calc(100vh-64px-80px-100px)] overflow-y-auto">
           {navItems.map((item) => (
             <SidebarItem
               key={item.to}
@@ -96,6 +125,31 @@ const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
               active={pathname === item.to}
             />
           ))}
+        </div>
+        
+        {/* Linked Pumps Section */}
+        <div className="border-t border-b p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <LinkIcon size={16} className="text-muted-foreground" />
+              <span className="text-sm font-medium">Linked Fuel Pumps</span>
+            </div>
+            <Badge variant="outline">{pumpCount}</Badge>
+          </div>
+          <div className="max-h-24 overflow-y-auto">
+            {linkedPumps.length > 0 ? (
+              <ul className="text-xs space-y-1">
+                {linkedPumps.map((pump) => (
+                  <li key={pump.id} className="text-muted-foreground flex items-center gap-1 py-1">
+                    <Fuel size={12} />
+                    <span className="truncate">{pump.name}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">No linked pumps yet</p>
+            )}
+          </div>
         </div>
         
         <div className="absolute bottom-0 w-full border-t p-4">

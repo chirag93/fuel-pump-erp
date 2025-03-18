@@ -9,12 +9,16 @@ interface UserProfile {
   username: string;
   email: string;
   role: 'admin' | 'staff' | 'super_admin';
+  fuelPumpId?: string; // Associated fuel pump ID
+  fuelPumpName?: string; // Associated fuel pump name
 }
 
 interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
+  fuelPumpId: string | null;
+  fuelPumpName: string | null;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
@@ -36,16 +40,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
+  const [fuelPumpName, setFuelPumpName] = useState<string | null>(null);
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setUser(session ? mapUserToProfile(session.user) : null);
-      
-      // Check if the user is a super admin
       if (session) {
+        const userProfile = mapUserToProfile(session.user);
+        setUser(userProfile);
+        
+        // Check if the user is a super admin
         checkIsSuperAdmin(session.user.id);
+        
+        // If not a super admin, fetch associated fuel pump
+        if (!userProfile.role.includes('super_admin')) {
+          fetchAssociatedFuelPump(session.user.email);
+        }
+      } else {
+        setUser(null);
       }
       
       setIsLoading(false);
@@ -54,12 +68,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setUser(session ? mapUserToProfile(session.user) : null);
       
-      // Check if the user is a super admin
       if (session) {
+        const userProfile = mapUserToProfile(session.user);
+        setUser(userProfile);
+        
+        // Check if the user is a super admin
         checkIsSuperAdmin(session.user.id);
+        
+        // If not a super admin, fetch associated fuel pump
+        if (!userProfile.role.includes('super_admin')) {
+          fetchAssociatedFuelPump(session.user.email);
+        }
       } else {
+        setUser(null);
+        setFuelPumpId(null);
+        setFuelPumpName(null);
         setIsSuperAdmin(false);
       }
       
@@ -70,6 +94,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription?.unsubscribe();
     };
   }, []);
+
+  // Fetch the fuel pump associated with a user's email
+  const fetchAssociatedFuelPump = async (email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('fuel_pumps')
+        .select('id, name')
+        .eq('email', email)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching associated fuel pump:', error);
+        setFuelPumpId(null);
+        setFuelPumpName(null);
+        return;
+      }
+      
+      if (data) {
+        setFuelPumpId(data.id);
+        setFuelPumpName(data.name);
+      } else {
+        setFuelPumpId(null);
+        setFuelPumpName(null);
+      }
+    } catch (error) {
+      console.error('Error fetching associated fuel pump:', error);
+      setFuelPumpId(null);
+      setFuelPumpName(null);
+    }
+  };
 
   // Check if a user is a super admin
   const checkIsSuperAdmin = async (userId: string) => {
@@ -141,6 +195,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Check if the user is a super admin
         await checkIsSuperAdmin(data.user.id);
         
+        // If not a super admin, fetch associated fuel pump
+        const userProfile = mapUserToProfile(data.user);
+        if (!userProfile.role.includes('super_admin')) {
+          await fetchAssociatedFuelPump(data.user.email);
+        }
+        
         return true;
       }
       return false;
@@ -169,6 +229,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       setUser(null);
       setIsSuperAdmin(false);
+      setFuelPumpId(null);
+      setFuelPumpName(null);
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
@@ -181,6 +243,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user, 
       isAuthenticated: !!user, 
       isSuperAdmin,
+      fuelPumpId,
+      fuelPumpName,
       login, 
       logout, 
       isLoading, 

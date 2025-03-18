@@ -103,7 +103,7 @@ const ProvisionPump = () => {
           description: `${values.name} has been successfully created`,
         });
         
-        setSuccessMessage(`Fuel pump "${values.name}" has been provisioned successfully. The manager can now log in using the provided email and password.`);
+        setSuccessMessage(`Fuel pump "${values.name}" has been provisioned successfully. The manager can now log in using the provided email and password. They will be automatically directed to their specific ERP instance upon login.`);
         
         // Reset the form
         form.reset({
@@ -135,7 +135,7 @@ const ProvisionPump = () => {
         <CardHeader>
           <CardTitle>New Fuel Pump Details</CardTitle>
           <CardDescription>
-            Create a new fuel pump with manager account
+            Create a new fuel pump with manager account. Each fuel pump will have its own dedicated ERP system.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -260,7 +260,7 @@ const ProvisionPump = () => {
         </CardContent>
         <CardFooter className="flex justify-between">
           <p className="text-sm text-muted-foreground">
-            The fuel pump manager will be able to log in immediately after provisioning.
+            The fuel pump manager will be able to log in immediately and access their dedicated ERP system.
           </p>
         </CardFooter>
       </Card>

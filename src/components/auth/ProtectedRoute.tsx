@@ -3,10 +3,10 @@ import { Navigate, Outlet, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Shield } from 'lucide-react';
+import { Shield, Fuel } from 'lucide-react';
 
 const ProtectedRoute = () => {
-  const { isAuthenticated, isLoading, isSuperAdmin } = useAuth();
+  const { isAuthenticated, isLoading, isSuperAdmin, fuelPumpName } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -26,7 +26,7 @@ const ProtectedRoute = () => {
 
   return (
     <DashboardLayout>
-      {isSuperAdmin && (
+      {isSuperAdmin ? (
         <div className="mb-6 p-3 bg-muted rounded-md flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
@@ -36,7 +36,16 @@ const ProtectedRoute = () => {
             <Button variant="outline" size="sm">Go to Super Admin</Button>
           </Link>
         </div>
-      )}
+      ) : fuelPumpName ? (
+        <div className="mb-6 p-3 bg-muted rounded-md flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Fuel className="h-5 w-5 text-primary" />
+            <span className="font-medium">
+              You are logged into: <span className="text-primary">{fuelPumpName}</span> ERP System
+            </span>
+          </div>
+        </div>
+      ) : null}
       <Outlet />
     </DashboardLayout>
   );
