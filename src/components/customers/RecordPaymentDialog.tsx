@@ -63,7 +63,7 @@ export function RecordPaymentDialog({ open, onOpenChange, customerId, onPaymentR
         quantity: 0, // There's no fuel in this transaction, it's just a payment
         payment_method: values.paymentMethod,
         fuel_type: 'PAYMENT', // Mark it as a payment
-        staff_id: 'system', // Since this is done by admin
+        staff_id: crypto.randomUUID(), // Generate a valid UUID instead of using "system"
       };
       
       const { error: transactionError } = await supabase
@@ -72,12 +72,11 @@ export function RecordPaymentDialog({ open, onOpenChange, customerId, onPaymentR
       
       if (transactionError) throw transactionError;
       
-      // Update customer balance using a direct update
       // Call the RPC function properly and handle the returned data
       const { data: updatedBalance, error: customerError } = await supabase
         .rpc('decrement_balance', { 
           customer_id: customerId, 
-          amount_value: values.amount // This is now a number due to the transform
+          amount_value: values.amount 
         });
       
       if (customerError) throw customerError;
