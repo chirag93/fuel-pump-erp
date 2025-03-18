@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -38,7 +39,7 @@ interface Shift {
   card_sales: number | null;
   upi_sales: number | null;
   cash_sales: number | null;
-  testing_fuel: number | null;
+  testing_fuel: number | null; // Add testing_fuel property to Shift interface
   created_at?: string | null;
 }
 
