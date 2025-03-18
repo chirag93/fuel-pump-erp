@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -8,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { toast } from '@/hooks/use-toast';
 import { supabase, Customer } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 import {
   Dialog,
@@ -42,6 +44,7 @@ const formSchema = z.object({
   date: z.date({
     required_error: "Payment date is required",
   }),
+  notes: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -59,12 +62,15 @@ const RecordPaymentDialog = ({
   customer,
   onPaymentRecorded
 }: RecordPaymentDialogProps) => {
+  const { user, isSuperAdmin } = useAuth();
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       amount: '',
       paymentMethod: '',
       date: new Date(),
+      notes: '',
     },
   });
 
@@ -75,6 +81,7 @@ const RecordPaymentDialog = ({
         amount: '',
         paymentMethod: '',
         date: new Date(),
+        notes: '',
       });
     }
   }, [open, form]);
@@ -109,6 +116,13 @@ const RecordPaymentDialog = ({
           payment_method: values.paymentMethod,
           // Use a valid staff ID from the database
           staff_id: staffData.id,
+          notes: values.notes || null,
+          // If super admin, add a meta tag
+          meta: isSuperAdmin ? { 
+            created_by_super_admin: true,
+            super_admin_id: user?.id,
+            super_admin_email: user?.email 
+          } : null
         });
 
       if (transactionError) throw transactionError;
@@ -147,6 +161,7 @@ const RecordPaymentDialog = ({
           <DialogTitle>Record Payment for {customer.name}</DialogTitle>
           <DialogDescription>
             Record a payment from the customer to reduce their balance.
+            {isSuperAdmin && <span className="block mt-1 text-xs font-medium text-blue-500">Recording as Super Admin</span>}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -239,9 +254,26 @@ const RecordPaymentDialog = ({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Enter any additional notes" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <DialogFooter>
-              <Button type="submit">Record Payment</Button>
+              <Button type="submit">{isSuperAdmin ? "Record Payment as Super Admin" : "Record Payment"}</Button>
             </DialogFooter>
           </form>
         </Form>
