@@ -24,6 +24,7 @@ const formSchema = z.object({
     .transform(val => parseFloat(val)), // Convert string to number
   paymentMethod: z.enum(['Cash', 'Card', 'UPI', 'Bank Transfer']),
   notes: z.string().optional(),
+  date: z.string().min(1, { message: 'Date is required' }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -37,6 +38,7 @@ interface RecordPaymentDialogProps {
 
 export function RecordPaymentDialog({ open, onOpenChange, customerId, onPaymentRecorded }: RecordPaymentDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -44,6 +46,7 @@ export function RecordPaymentDialog({ open, onOpenChange, customerId, onPaymentR
       amount: '',
       paymentMethod: 'Cash',
       notes: '',
+      date: today,
     },
   });
 
@@ -55,7 +58,7 @@ export function RecordPaymentDialog({ open, onOpenChange, customerId, onPaymentR
       const transactionData = {
         id: crypto.randomUUID(),
         customer_id: customerId,
-        date: format(new Date(), 'yyyy-MM-dd'),
+        date: values.date, // Use date from form
         amount: values.amount, // This is now a number due to the transform
         quantity: 0, // There's no fuel in this transaction, it's just a payment
         payment_method: values.paymentMethod,
@@ -70,7 +73,7 @@ export function RecordPaymentDialog({ open, onOpenChange, customerId, onPaymentR
       if (transactionError) throw transactionError;
       
       // Update customer balance using a direct update
-      // Fix: Call the RPC function properly and handle the returned data
+      // Call the RPC function properly and handle the returned data
       const { data: updatedBalance, error: customerError } = await supabase
         .rpc('decrement_balance', { 
           customer_id: customerId, 
@@ -128,6 +131,20 @@ export function RecordPaymentDialog({ open, onOpenChange, customerId, onPaymentR
                   <FormLabel>Amount (₹)</FormLabel>
                   <FormControl>
                     <Input placeholder="0.00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
