@@ -115,25 +115,31 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
 
       if (!initialData && authId) {
         // After creating the staff record, add permissions
+        // Use maybeSingle() instead of single() to handle cases where no rows are returned
         const staffRecord = await supabase
           .from('staff')
           .select('id')
           .eq('auth_id', authId)
-          .single();
+          .maybeSingle();
 
         if (staffRecord.error) throw staffRecord.error;
+        
+        // Only proceed if a staff record was found
+        if (staffRecord.data) {
+          if (selectedFeatures.length > 0) {
+            const { error: permError } = await supabase
+              .from('staff_permissions')
+              .insert(
+                selectedFeatures.map(feature => ({
+                  staff_id: staffRecord.data.id,
+                  feature
+                }))
+              );
 
-        if (selectedFeatures.length > 0) {
-          const { error: permError } = await supabase
-            .from('staff_permissions')
-            .insert(
-              selectedFeatures.map(feature => ({
-                staff_id: staffRecord.data.id,
-                feature
-              }))
-            );
-
-          if (permError) throw permError;
+            if (permError) throw permError;
+          }
+        } else {
+          console.log('No staff record found for auth_id:', authId);
         }
       }
 

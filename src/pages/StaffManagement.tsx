@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Users, Plus, Search, UserCog } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import StaffForm from '@/components/staff/StaffForm';
 import { supabase } from '@/integrations/supabase/client';
 import { Json } from '@/integrations/supabase/types';
@@ -142,11 +142,11 @@ const StaffManagement = () => {
         }
       }
       setFormOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving staff:', error);
       toast({
         title: "Error",
-        description: "Failed to save staff data",
+        description: error.message || "Failed to save staff data",
         variant: "destructive"
       });
     }
