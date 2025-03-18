@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { FeatureSelection } from './FeatureSelection';
 
 interface StaffFormProps {
   onSubmit: (staff: any) => void;
@@ -21,8 +21,10 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     role: initialData?.role || '',
     salary: initialData?.salary || '',
     joining_date: initialData?.joining_date || new Date().toISOString().split('T')[0],
-    assigned_pumps: initialData?.assigned_pumps || []
+    assigned_pumps: initialData?.assigned_pumps || [],
+    password: '', // New field for password
   });
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPump, setSelectedPump] = useState<string>('');
@@ -66,6 +68,7 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     
     if (!staffData.role) newErrors.role = "Role is required";
     if (!staffData.salary) newErrors.salary = "Salary is required";
+    if (!initialData && !staffData.password) newErrors.password = "Password is required for new staff";
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -73,44 +76,76 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
     
+    setIsSubmitting(true);
+    
     try {
-      setIsSubmitting(true);
+      let authId;
       
-      // Check if phone number is already in use (only for new staff)
+      // Create auth user if this is a new staff member
       if (!initialData) {
-        const { data: existingStaff, error: checkError } = await supabase
-          .from('staff')
-          .select('id')
-          .eq('phone', staffData.phone);
-        
-        if (checkError) {
-          console.error('Error checking staff:', checkError);
-          throw new Error(checkError.message);
-        }
-        
-        if (existingStaff && existingStaff.length > 0) {
-          setErrors({ phone: "This phone number is already in use" });
-          setIsSubmitting(false);
-          return;
-        }
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: staffData.email,
+          password: staffData.password,
+          options: {
+            data: {
+              name: staffData.name,
+              role: staffData.role
+            }
+          }
+        });
+
+        if (authError) throw authError;
+        authId = authData.user?.id;
       }
-      
-      // Process the data before submission
-      const processedData = {
+
+      // Process and submit staff data
+      const staffPayload = {
         ...staffData,
-        salary: parseFloat(staffData.salary.toString()),
+        auth_id: authId,
+        salary: parseFloat(staffData.salary.toString())
       };
 
-      // Submit the form
-      onSubmit(processedData);
+      // Remove password from payload as it's handled by auth
+      delete staffPayload.password;
+
+      // Submit to parent handler
+      await onSubmit(staffPayload);
+
+      // If this is a new staff member, set their permissions
+      if (!initialData && authId) {
+        const staffRecord = await supabase
+          .from('staff')
+          .select('id')
+          .eq('auth_id', authId)
+          .single();
+
+        if (staffRecord.error) throw staffRecord.error;
+
+        // Insert permissions
+        const { error: permError } = await supabase
+          .from('staff_permissions')
+          .insert(
+            selectedFeatures.map(feature => ({
+              staff_id: staffRecord.data.id,
+              feature: feature
+            }))
+          );
+
+        if (permError) throw permError;
+      }
+
+      toast({
+        title: initialData ? "Staff Updated" : "Staff Created",
+        description: `${staffData.name} has been ${initialData ? 'updated' : 'added'} successfully.`
+      });
+
     } catch (error) {
-      console.error('Validation error:', error);
+      console.error('Error saving staff:', error);
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred. Please try again.",
+        description: error.message || "Failed to save staff data",
         variant: "destructive"
       });
     } finally {
@@ -234,8 +269,31 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
         </div>
       </div>
 
+      {!initialData && (
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            value={staffData.password}
+            onChange={(e) => handleChange('password', e.target.value)}
+            className={errors.password ? "border-red-500" : ""}
+            placeholder="Enter password for staff login"
+          />
+          {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+        </div>
+      )}
+
+      <FeatureSelection
+        staffId={initialData?.id}
+        onFeaturesChange={setSelectedFeatures}
+        initialFeatures={[]}
+      />
+
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+          Cancel
+        </Button>
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>

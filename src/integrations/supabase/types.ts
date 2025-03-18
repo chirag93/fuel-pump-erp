@@ -605,8 +605,10 @@ export type Database = {
       staff: {
         Row: {
           assigned_pumps: Json | null
+          auth_id: string | null
           email: string
           id: string
+          is_active: boolean | null
           joining_date: string
           name: string
           phone: string
@@ -615,8 +617,10 @@ export type Database = {
         }
         Insert: {
           assigned_pumps?: Json | null
+          auth_id?: string | null
           email: string
           id?: string
+          is_active?: boolean | null
           joining_date: string
           name: string
           phone: string
@@ -625,8 +629,10 @@ export type Database = {
         }
         Update: {
           assigned_pumps?: Json | null
+          auth_id?: string | null
           email?: string
           id?: string
+          is_active?: boolean | null
           joining_date?: string
           name?: string
           phone?: string
@@ -634,6 +640,35 @@ export type Database = {
           salary?: number
         }
         Relationships: []
+      }
+      staff_permissions: {
+        Row: {
+          created_at: string | null
+          feature: Database["public"]["Enums"]["staff_feature"]
+          id: string
+          staff_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          feature: Database["public"]["Enums"]["staff_feature"]
+          id?: string
+          staff_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          feature?: Database["public"]["Enums"]["staff_feature"]
+          id?: string
+          staff_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_permissions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       super_admins: {
         Row: {
@@ -807,13 +842,30 @@ export type Database = {
         }
         Returns: number
       }
+      get_staff_features: {
+        Args: {
+          p_auth_id: string
+        }
+        Returns: Database["public"]["Enums"]["staff_feature"][]
+      }
       is_super_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
     }
     Enums: {
-      [_ in never]: never
+      staff_feature:
+        | "dashboard"
+        | "daily_readings"
+        | "stock_levels"
+        | "tank_unload"
+        | "customers"
+        | "staff_management"
+        | "record_indent"
+        | "shift_management"
+        | "consumables"
+        | "testing"
+        | "settings"
     }
     CompositeTypes: {
       [_ in never]: never
