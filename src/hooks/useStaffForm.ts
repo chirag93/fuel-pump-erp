@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -99,8 +98,8 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
               role: 'staff' // Use 'staff' role instead of the staffData.role
             },
             emailRedirectTo: window.location.origin,
-            // Disable email confirmation requirement
-            emailConfirm: false
+            // No email verification - using correct property name
+            // Setting autoconfirm to true in Supabase dashboard is recommended
           }
         });
 
