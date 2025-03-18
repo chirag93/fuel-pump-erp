@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from "@/hooks/use-toast";
@@ -98,46 +99,11 @@ const RecordIndent = () => {
       // Generate a UUID for the transaction
       const transactionId = crypto.randomUUID();
 
-      console.log("Submitting transaction with data:", {
-        id: transactionId,
-        customer_id: selectedCustomer,
-        vehicle_id: selectedVehicle,
-        staff_id: selectedStaff,
-        date: date.toISOString(),
-        fuel_type: fuelType,
-        amount: amount,
-        quantity: quantity,
-        discount_amount: discountAmount,
-        payment_method: 'Cash',
-        indent_id: selectedBooklet ? indentNumber : null
-      });
-
-      // Create a transaction
-      const { data: transaction, error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          id: transactionId,
-          customer_id: selectedCustomer,
-          vehicle_id: selectedVehicle,
-          staff_id: selectedStaff,
-          date: date.toISOString(),
-          fuel_type: fuelType,
-          amount: amount,
-          quantity: quantity,
-          discount_amount: discountAmount,
-          payment_method: 'Cash', // Default payment method
-          indent_id: selectedBooklet ? indentNumber : null
-        })
-        .select();
-
-      if (transactionError) {
-        console.error("Transaction error:", transactionError);
-        throw transactionError;
-      }
-
-      console.log("Transaction created:", transaction);
-
-      // If indent booklet is used, also create an indent record
+      // Important: If using a booklet, we need to create the indent record FIRST
+      // before creating the transaction, since transactions has a foreign key to indents
+      let createdIndentNumber: string | null = null;
+      
+      // If indent booklet is used, create an indent record first
       if (selectedBooklet && indentNumber) {
         const indentId = crypto.randomUUID();
         
@@ -176,7 +142,9 @@ const RecordIndent = () => {
           throw indentError;
         }
 
-        // First get the current booklet information to retrieve used_indents
+        createdIndentNumber = indentNumber;
+
+        // Update the booklet used_indents count
         const { data: bookletData, error: bookletFetchError } = await supabase
           .from('indent_booklets')
           .select('used_indents')
@@ -188,7 +156,6 @@ const RecordIndent = () => {
           throw bookletFetchError;
         }
         
-        // Now update the used_indents count with the new value
         const newUsedIndents = (bookletData?.used_indents || 0) + 1;
         
         console.log("Updating booklet used_indents:", {
@@ -205,6 +172,42 @@ const RecordIndent = () => {
           console.error('Error updating booklet:', updateError);
           throw updateError;
         }
+      }
+
+      console.log("Submitting transaction with data:", {
+        id: transactionId,
+        customer_id: selectedCustomer,
+        vehicle_id: selectedVehicle,
+        staff_id: selectedStaff,
+        date: date.toISOString(),
+        fuel_type: fuelType,
+        amount: amount,
+        quantity: quantity,
+        discount_amount: discountAmount,
+        payment_method: 'Cash',
+        indent_id: createdIndentNumber // Using the indent number we just created
+      });
+
+      // Now create the transaction referencing the indent if it was created
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          id: transactionId,
+          customer_id: selectedCustomer,
+          vehicle_id: selectedVehicle,
+          staff_id: selectedStaff,
+          date: date.toISOString(),
+          fuel_type: fuelType,
+          amount: amount,
+          quantity: quantity,
+          discount_amount: discountAmount,
+          payment_method: 'Cash', // Default payment method
+          indent_id: createdIndentNumber // Using the indent number we just created
+        });
+
+      if (transactionError) {
+        console.error("Transaction error:", transactionError);
+        throw transactionError;
       }
 
       toast({
