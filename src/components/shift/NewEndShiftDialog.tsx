@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
@@ -31,7 +32,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
   const [closingReading, setClosingReading] = useState<string>('');
   const [cashRemaining, setCashRemaining] = useState<string>('');
   const [expenses, setExpenses] = useState<string>(''); 
-  const [testingFuel, setTestingFuel] = useState<string>(''); // New testing fuel field
+  const [testingFuel, setTestingFuel] = useState<string>('0'); // Default to 0
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [staff, setStaff] = useState<any[]>([]);
@@ -195,7 +196,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
           cash_sales: Number(cashSales) || 0,
           cash_remaining: Number(cashRemaining),
           expenses: Number(expenses) || 0,
-          testing_fuel: Number(testingFuel) || 0 // Save testing fuel to the database
+          testing_fuel: Number(testingFuel) || 0 
         })
         .eq('shift_id', shiftData.id);
       
@@ -281,7 +282,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>End Shift</DialogTitle>
           <DialogDescription>

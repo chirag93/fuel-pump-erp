@@ -469,6 +469,7 @@ export type Database = {
           pump_id: string
           shift_id: string
           staff_id: string
+          testing_fuel: number | null
           upi_sales: number | null
         }
         Insert: {
@@ -485,6 +486,7 @@ export type Database = {
           pump_id: string
           shift_id: string
           staff_id: string
+          testing_fuel?: number | null
           upi_sales?: number | null
         }
         Update: {
@@ -501,6 +503,7 @@ export type Database = {
           pump_id?: string
           shift_id?: string
           staff_id?: string
+          testing_fuel?: number | null
           upi_sales?: number | null
         }
         Relationships: [
