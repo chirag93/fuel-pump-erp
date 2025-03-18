@@ -848,13 +848,6 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["staff_feature"][]
       }
-      has_feature_access: {
-        Args: {
-          p_auth_id: string
-          p_feature: string
-        }
-        Returns: boolean
-      }
       is_super_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean

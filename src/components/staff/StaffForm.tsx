@@ -4,9 +4,6 @@ import { useStaffForm } from '@/hooks/useStaffForm';
 import { FeatureSelection } from './FeatureSelection';
 import { PumpSelection } from './PumpSelection';
 import { BasicInfoFields } from './BasicInfoFields';
-import type { Database } from '@/integrations/supabase/types';
-
-type StaffFeature = Database['public']['Enums']['staff_feature'];
 
 interface StaffFormProps {
   onSubmit: (staff: any) => void;
@@ -21,16 +18,12 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     errors,
     isSubmitting,
     selectedPump,
-    changePassword,
     handleChange,
     handleAddPump,
     handleRemovePump,
     handleSubmit,
     setSelectedFeatures,
-    setSelectedPump,
-    setChangePassword,
-    initialFeatures,
-    setInitialFeatures
+    setSelectedPump
   } = useStaffForm(initialData, onSubmit, onCancel);
 
   return (
@@ -40,8 +33,6 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
         errors={errors}
         isEditing={!!initialData}
         onChange={handleChange}
-        changePassword={changePassword}
-        setChangePassword={setChangePassword}
       />
 
       <PumpSelection
@@ -55,7 +46,7 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
       <FeatureSelection
         staffId={initialData?.id}
         onFeaturesChange={setSelectedFeatures}
-        initialFeatures={initialFeatures}
+        initialFeatures={[]}
       />
 
       <div className="flex justify-end gap-2 pt-4">
