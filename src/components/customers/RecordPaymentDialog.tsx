@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { Customer } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const formSchema = z.object({
   amount: z.string()
@@ -39,6 +40,7 @@ interface RecordPaymentDialogProps {
 export function RecordPaymentDialog({ open, onOpenChange, customerId, onPaymentRecorded }: RecordPaymentDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const today = format(new Date(), 'yyyy-MM-dd');
+  const { user } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -54,16 +56,31 @@ export function RecordPaymentDialog({ open, onOpenChange, customerId, onPaymentR
     try {
       setIsLoading(true);
       
+      // First, fetch a valid staff ID from the staff table
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff')
+        .select('id')
+        .limit(1);
+      
+      if (staffError) throw staffError;
+      
+      if (!staffData || staffData.length === 0) {
+        throw new Error('No staff members found. Please add at least one staff member.');
+      }
+      
+      // Use the first staff ID found
+      const staffId = staffData[0].id;
+      
       // Create a transaction record
       const transactionData = {
         id: crypto.randomUUID(),
         customer_id: customerId,
-        date: values.date, // Use date from form
-        amount: values.amount, // This is now a number due to the transform
+        date: values.date,
+        amount: values.amount,
         quantity: 0, // There's no fuel in this transaction, it's just a payment
         payment_method: values.paymentMethod,
         fuel_type: 'PAYMENT', // Mark it as a payment
-        staff_id: crypto.randomUUID(), // Generate a valid UUID instead of using "system"
+        staff_id: staffId, // Use a valid staff ID from the database
       };
       
       const { error: transactionError } = await supabase
