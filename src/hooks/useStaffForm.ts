@@ -15,7 +15,7 @@ interface StaffFormData {
   joining_date: string;
   assigned_pumps: string[];
   password: string;
-  confirmPassword: string; // Added confirm password field
+  confirmPassword: string;
 }
 
 export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void, onCancel?: () => void) => {
@@ -28,13 +28,13 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     joining_date: initialData?.joining_date || new Date().toISOString().split('T')[0],
     assigned_pumps: initialData?.assigned_pumps || [],
     password: '',
-    confirmPassword: '', // Initialize confirm password
+    confirmPassword: '',
   });
   const [selectedFeatures, setSelectedFeatures] = useState<StaffFeature[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPump, setSelectedPump] = useState<string>('');
-  const [changePassword, setChangePassword] = useState<boolean>(false); // Track whether to change password
+  const [changePassword, setChangePassword] = useState<boolean>(false);
 
   const handleChange = (field: string, value: string) => {
     setStaffData({ ...staffData, [field]: value });
@@ -104,44 +104,31 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       let authId;
       
       if (!initialData) {
-        // When creating a new staff member, use signUpWithPassword instead of signUp
-        // This prevents Supabase from sending verification emails
+        // When creating a new staff member, use signUp
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: staffData.email,
           password: staffData.password,
           options: {
             data: {
               name: staffData.name,
-              role: 'staff' // Use 'staff' role instead of the staffData.role
+              role: 'staff'
             },
             emailRedirectTo: window.location.origin,
-            // No email verification - using correct property name
-            // Setting autoconfirm to true in Supabase dashboard is recommended
           }
         });
 
         if (authError) throw authError;
         authId = authData.user?.id;
       } else if (changePassword && staffData.password) {
-        // Update password for existing staff if password change is enabled
-        // First, get the auth_id of the staff
-        const { data: staffUser, error: staffError } = await supabase
-          .from('staff')
-          .select('auth_id')
-          .eq('id', initialData.id)
-          .maybeSingle();
-          
-        if (staffError) throw staffError;
+        // For existing staff, we can't change their password through the admin API with the anon key
+        // Instead, inform the user that this operation requires admin privileges
+        toast({
+          title: "Password Change Not Supported",
+          description: "Changing staff passwords requires admin privileges. Please log in as the staff member to change their password or use Supabase dashboard.",
+          variant: "destructive"
+        });
         
-        if (staffUser?.auth_id) {
-          // Use admin API to update the user's password
-          const { error: updateError } = await supabase.auth.admin.updateUserById(
-            staffUser.auth_id,
-            { password: staffData.password }
-          );
-          
-          if (updateError) throw updateError;
-        }
+        // Continue with the update of other fields
       }
 
       const staffPayload = {
@@ -158,7 +145,6 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
 
       if (!initialData && authId) {
         // After creating the staff record, add permissions
-        // Use maybeSingle() instead of single() to handle cases where no rows are returned
         const staffRecord = await supabase
           .from('staff')
           .select('id')
@@ -167,7 +153,6 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
 
         if (staffRecord.error) throw staffRecord.error;
         
-        // Only proceed if a staff record was found
         if (staffRecord.data) {
           if (selectedFeatures.length > 0) {
             const { error: permError } = await supabase
