@@ -104,7 +104,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       let authId;
       
       if (!initialData) {
-        // When creating a new staff member, use signUp
+        // When creating a new staff member, use signUp without email verification
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: staffData.email,
           password: staffData.password,
@@ -112,23 +112,21 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             data: {
               name: staffData.name,
               role: 'staff'
-            },
-            emailRedirectTo: window.location.origin,
+            }
           }
         });
 
         if (authError) throw authError;
         authId = authData.user?.id;
+        
+        console.log("New staff auth account created:", authId);
       } else if (changePassword && staffData.password) {
         // For existing staff, we can't change their password through the admin API with the anon key
-        // Instead, inform the user that this operation requires admin privileges
         toast({
           title: "Password Change Not Supported",
-          description: "Changing staff passwords requires admin privileges. Please log in as the staff member to change their password or use Supabase dashboard.",
+          description: "Changing staff passwords requires admin privileges. Please log in as the staff member to change their password.",
           variant: "destructive"
         });
-        
-        // Continue with the update of other fields
       }
 
       const staffPayload = {
@@ -141,33 +139,40 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       delete staffPayload.password;
       delete staffPayload.confirmPassword;
 
-      await onSubmit?.(staffPayload);
-
-      if (!initialData && authId) {
-        // After creating the staff record, add permissions
-        const staffRecord = await supabase
-          .from('staff')
-          .select('id')
-          .eq('auth_id', authId)
-          .maybeSingle();
-
-        if (staffRecord.error) throw staffRecord.error;
-        
-        if (staffRecord.data) {
-          if (selectedFeatures.length > 0) {
+      console.log("Submitting staff data:", { ...staffPayload, auth_id: authId ? "[redacted]" : undefined });
+      
+      if (onSubmit) {
+        await onSubmit(staffPayload);
+      } else {
+        // Direct database insert if no onSubmit callback
+        if (initialData) {
+          const { error } = await supabase
+            .from('staff')
+            .update(staffPayload)
+            .eq('id', initialData.id);
+            
+          if (error) throw error;
+        } else {
+          const { data, error } = await supabase
+            .from('staff')
+            .insert([staffPayload])
+            .select();
+            
+          if (error) throw error;
+          
+          // Add permissions if new staff was created
+          if (data && data.length > 0 && selectedFeatures.length > 0) {
             const { error: permError } = await supabase
               .from('staff_permissions')
               .insert(
                 selectedFeatures.map(feature => ({
-                  staff_id: staffRecord.data.id,
+                  staff_id: data[0].id,
                   feature
                 }))
               );
 
             if (permError) throw permError;
           }
-        } else {
-          console.log('No staff record found for auth_id:', authId);
         }
       }
 
@@ -176,6 +181,9 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         description: `${staffData.name} has been ${initialData ? 'updated' : 'added'} successfully.`
       });
 
+      // Close the form on success
+      if (onCancel) onCancel();
+      
     } catch (error: any) {
       console.error('Error saving staff:', error);
       toast({

@@ -50,7 +50,7 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
       <FeatureSelection
         staffId={initialData?.id}
         onFeaturesChange={setSelectedFeatures}
-        initialFeatures={[]}
+        initialFeatures={initialData?.features || []}
       />
 
       <div className="flex justify-end gap-2 pt-4">

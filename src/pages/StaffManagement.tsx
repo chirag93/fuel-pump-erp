@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ interface Staff {
   salary: number;
   joining_date: string;
   assigned_pumps: string[];
+  features?: string[];
 }
 
 const StaffManagement = () => {
@@ -43,40 +44,42 @@ const StaffManagement = () => {
   };
   
   // Fetch staff data from Supabase
-  useEffect(() => {
-    const fetchStaff = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('staff')
-          .select('*');
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (data) {
-          // Convert Json to string[] for assigned_pumps
-          const formattedData = data.map(item => ({
-            ...item,
-            assigned_pumps: convertJsonToStringArray(item.assigned_pumps)
-          }));
-          setStaff(formattedData as Staff[]);
-        }
-      } catch (error) {
-        console.error('Error fetching staff:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load staff data",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
+  const fetchStaff = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      console.log("Fetching staff data...");
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*');
+      
+      if (error) {
+        throw error;
       }
-    };
-    
-    fetchStaff();
+      
+      if (data) {
+        console.log("Staff data fetched:", data.length, "records");
+        // Convert Json to string[] for assigned_pumps
+        const formattedData = data.map(item => ({
+          ...item,
+          assigned_pumps: convertJsonToStringArray(item.assigned_pumps)
+        }));
+        setStaff(formattedData as Staff[]);
+      }
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load staff data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+  
+  useEffect(() => {
+    fetchStaff();
+  }, [fetchStaff]);
   
   // Filter staff based on search term
   const filteredStaff = staff.filter(s => 
@@ -97,6 +100,8 @@ const StaffManagement = () => {
 
   const handleSaveStaff = async (staffData: any) => {
     try {
+      console.log("Saving staff data:", staffData);
+      
       if (editingStaff) {
         // Update existing staff
         const { error } = await supabase
@@ -110,7 +115,9 @@ const StaffManagement = () => {
         const updatedStaff: Staff = {
           ...staffData,
           id: editingStaff.id,
-          assigned_pumps: convertJsonToStringArray(staffData.assigned_pumps)
+          assigned_pumps: Array.isArray(staffData.assigned_pumps) 
+            ? staffData.assigned_pumps 
+            : convertJsonToStringArray(staffData.assigned_pumps)
         };
         
         setStaff(staff.map(s => s.id === editingStaff.id ? updatedStaff : s));
@@ -128,10 +135,14 @@ const StaffManagement = () => {
         if (error) throw error;
         
         if (data && data.length > 0) {
+          console.log("New staff created:", data[0]);
+          
           // Create a properly typed staff object for state update
           const newStaff: Staff = {
             ...data[0],
-            assigned_pumps: convertJsonToStringArray(data[0].assigned_pumps)
+            assigned_pumps: Array.isArray(data[0].assigned_pumps) 
+              ? data[0].assigned_pumps 
+              : convertJsonToStringArray(data[0].assigned_pumps)
           };
           
           setStaff([...staff, newStaff]);
@@ -142,6 +153,8 @@ const StaffManagement = () => {
         }
       }
       setFormOpen(false);
+      // Refresh the staff list to ensure it's up to date
+      fetchStaff();
     } catch (error: any) {
       console.error('Error saving staff:', error);
       toast({
