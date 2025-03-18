@@ -70,17 +70,22 @@ export function RecordPaymentDialog({ open, onOpenChange, customerId, onPaymentR
       if (transactionError) throw transactionError;
       
       // Update customer balance using a direct update
-      const { error: customerError } = await supabase
-        .from('customers')
-        .update({ 
-          balance: supabase.rpc('decrement_balance', { 
-            customer_id: customerId, 
-            amount_value: values.amount // This is now a number due to the transform
-          }) 
-        })
-        .eq('id', customerId);
+      // Fix: Call the RPC function properly and handle the returned data
+      const { data: updatedBalance, error: customerError } = await supabase
+        .rpc('decrement_balance', { 
+          customer_id: customerId, 
+          amount_value: values.amount // This is now a number due to the transform
+        });
       
       if (customerError) throw customerError;
+      
+      // Update the customer balance with the returned value
+      const { error: updateError } = await supabase
+        .from('customers')
+        .update({ balance: updatedBalance })
+        .eq('id', customerId);
+        
+      if (updateError) throw updateError;
       
       toast({
         title: 'Payment recorded',
