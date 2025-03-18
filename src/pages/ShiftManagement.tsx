@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -39,6 +38,7 @@ interface Shift {
   card_sales: number | null;
   upi_sales: number | null;
   cash_sales: number | null;
+  testing_fuel: number | null;
   created_at?: string | null;
 }
 
@@ -168,7 +168,8 @@ const ShiftManagement = () => {
             ending_cash_balance: readingsData?.cash_remaining || null,
             card_sales: readingsData?.card_sales || null,
             upi_sales: readingsData?.upi_sales || null,
-            cash_sales: readingsData?.cash_sales || null
+            cash_sales: readingsData?.cash_sales || null,
+            testing_fuel: readingsData?.testing_fuel || null
           } as Shift;
         })
       );
@@ -251,6 +252,7 @@ const ShiftManagement = () => {
         card_sales: null,
         upi_sales: null,
         cash_sales: null,
+        testing_fuel: null,
         status: 'active'
       };
       
@@ -554,6 +556,7 @@ const ShiftManagement = () => {
                           <TableHead>Card Sales</TableHead>
                           <TableHead>UPI Sales</TableHead>
                           <TableHead>Cash Sales</TableHead>
+                          <TableHead>Testing Fuel</TableHead>
                           <TableHead>Total</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
@@ -561,6 +564,8 @@ const ShiftManagement = () => {
                       <TableBody>
                         {completedShifts.map((shift) => {
                           const totalVolume = (shift.closing_reading || 0) - shift.opening_reading;
+                          const testingFuel = shift.testing_fuel || 0;
+                          const actualSalesVolume = totalVolume - testingFuel;
                           const totalSales = (shift.card_sales || 0) + (shift.upi_sales || 0) + (shift.cash_sales || 0);
                           
                           return (
@@ -574,6 +579,7 @@ const ShiftManagement = () => {
                               <TableCell>₹{(shift.card_sales || 0).toLocaleString()}</TableCell>
                               <TableCell>₹{(shift.upi_sales || 0).toLocaleString()}</TableCell>
                               <TableCell>₹{(shift.cash_sales || 0).toLocaleString()}</TableCell>
+                              <TableCell>{testingFuel > 0 ? `${testingFuel.toFixed(2)} L` : '-'}</TableCell>
                               <TableCell className="font-bold">₹{totalSales.toLocaleString()}</TableCell>
                               <TableCell>
                                 <Button 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
@@ -31,7 +30,8 @@ interface EndShiftDialogProps {
 export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: EndShiftDialogProps) {
   const [closingReading, setClosingReading] = useState<string>('');
   const [cashRemaining, setCashRemaining] = useState<string>('');
-  const [expenses, setExpenses] = useState<string>(''); // New expenses field
+  const [expenses, setExpenses] = useState<string>(''); 
+  const [testingFuel, setTestingFuel] = useState<string>(''); // New testing fuel field
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [staff, setStaff] = useState<any[]>([]);
@@ -85,8 +85,8 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
       const fuelSold = Number(closingReading) - shiftData.opening_reading;
       const expectedCash = Number(cashSales) || 0;
       const actualCash = Number(cashRemaining) || 0;
-      const expensesAmount = Number(expenses) || 0; // Include expenses in the calculation
-      const difference = actualCash - expectedCash + expensesAmount; // Adjust difference calculation to account for expenses
+      const expensesAmount = Number(expenses) || 0;
+      const difference = actualCash - expectedCash + expensesAmount;
       
       setCashReconciliation({
         expected: expectedCash,
@@ -100,7 +100,8 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
     if (isOpen) {
       setClosingReading('');
       setCashRemaining('');
-      setExpenses(''); // Reset expenses field
+      setExpenses('');
+      setTestingFuel('0'); // Reset testing fuel field
       setCardSales('');
       setUpiSales('');
       setCashSales('');
@@ -193,7 +194,8 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
           upi_sales: Number(upiSales) || 0,
           cash_sales: Number(cashSales) || 0,
           cash_remaining: Number(cashRemaining),
-          expenses: Number(expenses) || 0 // Save the expenses value to the database
+          expenses: Number(expenses) || 0,
+          testing_fuel: Number(testingFuel) || 0 // Save testing fuel to the database
         })
         .eq('shift_id', shiftData.id);
       
@@ -268,9 +270,10 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
     }
   };
 
-  // Calculate fuel quantity sold
+  // Calculate fuel quantity sold (now accounting for testing fuel)
+  const testingFuelAmount = Number(testingFuel) || 0;
   const fuelLiters = Number(closingReading) - shiftData?.opening_reading > 0 
-    ? Number(closingReading) - shiftData?.opening_reading 
+    ? Number(closingReading) - shiftData?.opening_reading - testingFuelAmount
     : 0;
 
   // Calculate expected sales amount
@@ -301,13 +304,41 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             <p className="text-xs text-muted-foreground">
               Opening reading: {shiftData?.opening_reading || 0}
             </p>
-            {Number(closingReading) > 0 && shiftData?.opening_reading > 0 && (
+          </div>
+          
+          {/* Testing Fuel Quantity Field */}
+          <div className="grid gap-2">
+            <Label htmlFor="testingFuel">Testing Fuel Quantity</Label>
+            <Input
+              id="testingFuel"
+              type="number"
+              value={testingFuel}
+              onChange={(e) => setTestingFuel(e.target.value)}
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter quantity of fuel used for testing (will be deducted from sales)
+            </p>
+          </div>
+          
+          {Number(closingReading) > 0 && shiftData?.opening_reading > 0 && (
+            <div className="grid gap-1">
               <p className="text-xs font-medium text-green-600">
+                Total fuel dispensed: {(Number(closingReading) - shiftData?.opening_reading).toFixed(2)} liters
+              </p>
+              {testingFuelAmount > 0 && (
+                <p className="text-xs font-medium text-amber-600">
+                  Testing fuel: {testingFuelAmount.toFixed(2)} liters
+                </p>
+              )}
+              <p className="text-xs font-medium text-blue-600">
                 Fuel sold: {fuelLiters.toFixed(2)} liters
                 {fuelPrice > 0 && ` (₹${expectedSalesAmount.toFixed(2)})`}
               </p>
-            )}
-          </div>
+            </div>
+          )}
           
           <div className="grid grid-cols-3 gap-3">
             <div className="grid gap-1">
@@ -371,6 +402,12 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
                   <span>Fuel Sold:</span>
                   <span>{fuelLiters.toFixed(2)} L</span>
                 </div>
+                {testingFuelAmount > 0 && (
+                  <div className="flex justify-between text-amber-600">
+                    <span>Testing Fuel:</span>
+                    <span>{testingFuelAmount.toFixed(2)} L</span>
+                  </div>
+                )}
                 {fuelPrice > 0 && (
                   <div className="flex justify-between">
                     <span>Expected Amount:</span>
@@ -381,7 +418,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             </CardContent>
           </Card>
           
-          {/* New Expenses field */}
+          {/* Keep expenses field */}
           <div className="grid gap-2">
             <Label htmlFor="expenses">Expenses (₹)</Label>
             <Input
@@ -444,6 +481,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             </Card>
           )}
           
+          {/* Keep remaining components the same */}
           <div className="flex items-center space-x-2 pt-2">
             <Checkbox 
               id="createNewShift" 
