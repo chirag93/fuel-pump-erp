@@ -17,9 +17,11 @@ import {
   PlusCircle,
   Fuel,
   List,
-  LinkIcon
+  LinkIcon,
+  RefreshCw
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { toast } from '@/hooks/use-toast';
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -53,18 +55,24 @@ const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [linkedPumps, setLinkedPumps] = useState<FuelPump[]>([]);
   const [pumpCount, setPumpCount] = useState<number>(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    // Fetch linked fuel pumps when the component mounts
-    const fetchLinkedPumps = async () => {
-      const { data, error, count } = await supabase
+  const fetchLinkedPumps = async () => {
+    try {
+      setIsRefreshing(true);
+
+      // First try to get pumps created by the current user
+      let { data, error, count } = await supabase
         .from('fuel_pumps')
-        .select('*', { count: 'exact' })
-        .eq('created_by', user?.id || '')
-        .order('name', { ascending: true });
+        .select('*', { count: 'exact' });
       
       if (error) {
-        console.error('Error fetching linked pumps:', error);
+        console.error('Error fetching fuel pumps:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch fuel pumps',
+          variant: 'destructive',
+        });
         return;
       }
       
@@ -72,10 +80,24 @@ const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
         setLinkedPumps(data);
         setPumpCount(count || 0);
       }
-    };
-    
+    } catch (error) {
+      console.error('Error in fetchLinkedPumps:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     fetchLinkedPumps();
   }, [user?.id]);
+
+  const handleRefresh = async () => {
+    await fetchLinkedPumps();
+    toast({
+      title: 'Refreshed',
+      description: 'Linked pumps list has been updated',
+    });
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -132,22 +154,42 @@ const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <LinkIcon size={16} className="text-muted-foreground" />
-              <span className="text-sm font-medium">Linked Fuel Pumps</span>
+              <span className="text-sm font-medium">Fuel Pumps</span>
             </div>
-            <Badge variant="outline">{pumpCount}</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">{pumpCount}</Badge>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6" 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw 
+                  size={14} 
+                  className={`text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} 
+                />
+              </Button>
+            </div>
           </div>
-          <div className="max-h-24 overflow-y-auto">
+          <div className="max-h-32 overflow-y-auto">
             {linkedPumps.length > 0 ? (
               <ul className="text-xs space-y-1">
                 {linkedPumps.map((pump) => (
                   <li key={pump.id} className="text-muted-foreground flex items-center gap-1 py-1">
                     <Fuel size={12} />
                     <span className="truncate">{pump.name}</span>
+                    <Badge 
+                      variant={pump.status === 'active' ? 'default' : 'secondary'} 
+                      className="ml-auto text-[10px] py-0 h-4"
+                    >
+                      {pump.status}
+                    </Badge>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-muted-foreground italic">No linked pumps yet</p>
+              <p className="text-xs text-muted-foreground italic">No fuel pumps available</p>
             )}
           </div>
         </div>

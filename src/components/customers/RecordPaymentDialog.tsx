@@ -1,49 +1,28 @@
 
-import React from 'react';
-import { z } from 'zod';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Calendar } from '@/components/ui/calendar';
-import { toast } from '@/hooks/use-toast';
-import { supabase, Customer } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
+import { useCustomerData } from './hooks/useCustomerData';
 
 const formSchema = z.object({
-  amount: z.string().min(1, 'Amount is required').transform(val => parseFloat(val)),
-  paymentMethod: z.string().min(1, 'Payment method is required'),
-  date: z.date({
-    required_error: "Payment date is required",
-  }),
+  amount: z.string()
+    .min(1, { message: 'Amount is required' })
+    .refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+      message: 'Amount must be a positive number',
+    })
+    .transform(val => parseFloat(val)), // Convert string to number
+  paymentMethod: z.enum(['Cash', 'Card', 'UPI', 'Bank Transfer']),
   notes: z.string().optional(),
 });
 
@@ -52,103 +31,74 @@ type FormValues = z.infer<typeof formSchema>;
 interface RecordPaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  customer: Customer;
-  onPaymentRecorded: () => void;
+  customerId: string;
 }
 
-const RecordPaymentDialog = ({ 
-  open, 
-  onOpenChange, 
-  customer,
-  onPaymentRecorded
-}: RecordPaymentDialogProps) => {
-  const { user, isSuperAdmin } = useAuth();
-  
+export function RecordPaymentDialog({ open, onOpenChange, customerId }: RecordPaymentDialogProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const { refetchCustomer } = useCustomerData(customerId);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       amount: '',
-      paymentMethod: '',
-      date: new Date(),
+      paymentMethod: 'Cash',
       notes: '',
     },
   });
 
-  // Reset the form when the dialog opens
-  React.useEffect(() => {
-    if (open) {
-      form.reset({
-        amount: '',
-        paymentMethod: '',
-        date: new Date(),
-        notes: '',
-      });
-    }
-  }, [open, form]);
-
   const onSubmit = async (values: FormValues) => {
     try {
-      // First, create a transaction record for the payment
-      const transactionId = `TRX${Date.now()}`;
+      setIsLoading(true);
       
-      // Fetch the first staff record to use as a valid reference
-      // This is a workaround for development purposes
-      const { data: staffData, error: staffError } = await supabase
-        .from('staff')
-        .select('id')
-        .limit(1)
-        .single();
-        
-      if (staffError) {
-        console.error('Error fetching staff:', staffError);
-        throw new Error('Could not find a valid staff reference');
-      }
-      
-      // Create transaction insert object with basic properties
+      // Create a transaction record
       const transactionData = {
-        id: transactionId,
-        customer_id: customer.id,
-        date: format(values.date, 'yyyy-MM-dd'),
-        amount: values.amount, // Now this is a number thanks to the zod transform
-        quantity: 0, // Not applicable for payment
-        fuel_type: 'PAYMENT', // Use a special type to mark as payment
+        id: crypto.randomUUID(),
+        customer_id: customerId,
+        date: format(new Date(), 'yyyy-MM-dd'),
+        amount: values.amount, // This is now a number due to the transform
+        quantity: 0, // There's no fuel in this transaction, it's just a payment
         payment_method: values.paymentMethod,
-        // Use a valid staff ID from the database
-        staff_id: staffData.id,
-        // Remove the notes field as it doesn't exist in the schema
+        fuel_type: 'Payment', // Mark it as a payment
+        staff_id: 'system', // Since this is done by admin
       };
-
-      // Insert the transaction
+      
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert(transactionData);
-
+      
       if (transactionError) throw transactionError;
-
-      // Then, update the customer balance
-      const newBalance = (customer.balance || 0) - values.amount;
+      
+      // Update customer balance
       const { error: customerError } = await supabase
         .from('customers')
-        .update({ balance: newBalance })
-        .eq('id', customer.id);
-
+        .update({ 
+          balance: supabase.rpc('decrement_balance', { 
+            customer_id: customerId, 
+            amount_value: values.amount // This is now a number due to the transform
+          }) 
+        })
+        .eq('id', customerId);
+      
       if (customerError) throw customerError;
-
+      
       toast({
-        title: "Payment Recorded",
-        description: `Payment of ₹${values.amount} has been recorded for ${customer.name}.`,
+        title: 'Payment recorded',
+        description: `₹${values.amount} has been recorded for the customer.`,
       });
       
+      refetchCustomer();
       form.reset();
       onOpenChange(false);
-      onPaymentRecorded();
     } catch (error) {
       console.error('Error recording payment:', error);
       toast({
-        title: "Error",
-        description: "Failed to record the payment. Please try again.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'An error occurred while recording the payment.',
+        variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -156,14 +106,13 @@ const RecordPaymentDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Record Payment for {customer.name}</DialogTitle>
+          <DialogTitle>Record Payment</DialogTitle>
           <DialogDescription>
-            Record a payment from the customer to reduce their balance.
-            {isSuperAdmin && <span className="block mt-1 text-xs font-medium text-blue-500">Recording as Super Admin</span>}
+            Record a payment received from the customer.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="amount"
@@ -171,13 +120,7 @@ const RecordPaymentDialog = ({
                 <FormItem>
                   <FormLabel>Amount (₹)</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Enter payment amount" 
-                      type="number" 
-                      step="0.01"
-                      min="0"
-                      {...field} 
-                    />
+                    <Input placeholder="0.00" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -190,10 +133,7 @@ const RecordPaymentDialog = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Payment Method</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select payment method" />
@@ -213,56 +153,15 @@ const RecordPaymentDialog = ({
             
             <FormField
               control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Payment Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date("1900-01-01")
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="notes"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Notes (Optional)</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Enter any additional notes" 
-                      {...field} 
+                    <Textarea
+                      placeholder="Add any additional notes about the payment"
+                      className="resize-none"
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -271,13 +170,20 @@ const RecordPaymentDialog = ({
             />
             
             <DialogFooter>
-              <Button type="submit">{isSuperAdmin ? "Record Payment as Super Admin" : "Record Payment"}</Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Record Payment'
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
   );
-};
-
-export default RecordPaymentDialog;
+}
