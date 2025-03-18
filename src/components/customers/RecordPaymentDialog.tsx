@@ -104,26 +104,24 @@ const RecordPaymentDialog = ({
         throw new Error('Could not find a valid staff reference');
       }
       
+      // Create transaction insert object with basic properties
+      const transactionData = {
+        id: transactionId,
+        customer_id: customer.id,
+        date: format(values.date, 'yyyy-MM-dd'),
+        amount: values.amount, // Now this is a number thanks to the zod transform
+        quantity: 0, // Not applicable for payment
+        fuel_type: 'PAYMENT', // Use a special type to mark as payment
+        payment_method: values.paymentMethod,
+        // Use a valid staff ID from the database
+        staff_id: staffData.id,
+        notes: values.notes || null,
+      };
+
+      // Insert the transaction
       const { error: transactionError } = await supabase
         .from('transactions')
-        .insert({
-          id: transactionId,
-          customer_id: customer.id,
-          date: format(values.date, 'yyyy-MM-dd'),
-          amount: values.amount, // Now this is a number thanks to the zod transform
-          quantity: 0, // Not applicable for payment
-          fuel_type: 'PAYMENT', // Use a special type to mark as payment
-          payment_method: values.paymentMethod,
-          // Use a valid staff ID from the database
-          staff_id: staffData.id,
-          notes: values.notes || null,
-          // If super admin, add a meta tag
-          meta: isSuperAdmin ? { 
-            created_by_super_admin: true,
-            super_admin_id: user?.id,
-            super_admin_email: user?.email 
-          } : null
-        });
+        .insert(transactionData);
 
       if (transactionError) throw transactionError;
 
