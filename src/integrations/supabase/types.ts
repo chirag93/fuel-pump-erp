@@ -69,6 +69,44 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          customer_id: string
+          date: string
+          id: string
+          notes: string | null
+          payment_method: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          customer_id: string
+          date?: string
+          id?: string
+          notes?: string | null
+          payment_method: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          customer_id?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           balance: number | null

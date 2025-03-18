@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Customer, Transaction } from '@/integrations/supabase/client';
-import { RecordPaymentDialog } from './RecordPaymentDialog';
+import RecordPaymentDialog from './RecordPaymentDialog';
 import { useCustomerData } from './hooks/useCustomerData';
 
 interface TransactionWithDetails extends Transaction {
@@ -84,7 +84,7 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
                       </TableCell>
                       <TableCell className={transaction.fuel_type === 'PAYMENT' ? 'text-green-600 font-medium' : ''}>
                         {transaction.fuel_type === 'PAYMENT'
-                          ? `-₹${transaction.amount}`
+                          ? `₹${transaction.amount}`
                           : `₹${transaction.amount}`
                         }
                       </TableCell>
@@ -111,6 +111,8 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
         open={isPaymentDialogOpen}
         onOpenChange={setIsPaymentDialogOpen}
         customerId={customer.id}
+        customerName={customerName}
+        currentBalance={customer.balance}
         onPaymentRecorded={handlePaymentRecorded}
       />
     </div>

@@ -17,10 +17,10 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface RecordPaymentDialogProps {
   customerId: string;
-  customerName: string;
-  currentBalance: number | null;
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
+  customerName?: string;
+  currentBalance?: number | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onPaymentRecorded: () => void;
 }
 
@@ -28,8 +28,8 @@ export default function RecordPaymentDialog({
   customerId,
   customerName,
   currentBalance,
-  isOpen,
-  setIsOpen,
+  open,
+  onOpenChange,
   onPaymentRecorded
 }: RecordPaymentDialogProps) {
   const [amount, setAmount] = useState<number>(0);
@@ -62,8 +62,24 @@ export default function RecordPaymentDialog({
 
       if (paymentError) throw paymentError;
 
+      // Record a transaction with type PAYMENT
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          id: crypto.randomUUID(),
+          customer_id: customerId,
+          date: new Date().toISOString().split('T')[0],
+          fuel_type: 'PAYMENT',
+          amount: amount,
+          quantity: 0,
+          payment_method: paymentMethod,
+          staff_id: '00000000-0000-0000-0000-000000000000' // Placeholder staff ID
+        });
+
+      if (transactionError) throw transactionError;
+
       // Update the customer balance
-      const newBalance = (currentBalance || 0) + amount;
+      const newBalance = ((currentBalance || 0) - amount);
       
       const { error: updateError } = await supabase
         .from('customers')
@@ -74,14 +90,14 @@ export default function RecordPaymentDialog({
 
       toast({
         title: "Payment recorded",
-        description: `Successfully recorded payment of ₹${amount} for ${customerName}`
+        description: `Successfully recorded payment of ₹${amount} for ${customerName || 'customer'}`
       });
 
       // Reset form and close dialog
       setAmount(0);
       setPaymentMethod('Cash');
       setNotes('');
-      setIsOpen(false);
+      onOpenChange(false);
       onPaymentRecorded();
     } catch (error) {
       console.error('Error recording payment:', error);
@@ -96,12 +112,12 @@ export default function RecordPaymentDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Record Payment</DialogTitle>
           <DialogDescription>
-            Record a new payment for {customerName}
+            Record a new payment for {customerName || 'customer'}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -144,7 +160,7 @@ export default function RecordPaymentDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
