@@ -31,6 +31,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     confirmPassword: '',
   });
   const [selectedFeatures, setSelectedFeatures] = useState<StaffFeature[]>([]);
+  const [initialFeatures, setInitialFeatures] = useState<StaffFeature[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPump, setSelectedPump] = useState<string>('');
@@ -218,6 +219,8 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     handleSubmit,
     setSelectedFeatures,
     setSelectedPump,
-    setChangePassword
+    setChangePassword,
+    initialFeatures,
+    setInitialFeatures
   };
 };

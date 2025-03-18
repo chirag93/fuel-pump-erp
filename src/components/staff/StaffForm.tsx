@@ -29,7 +29,8 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     setSelectedFeatures,
     setSelectedPump,
     setChangePassword,
-    initialFeatures
+    initialFeatures,
+    setInitialFeatures
   } = useStaffForm(initialData, onSubmit, onCancel);
 
   return (
