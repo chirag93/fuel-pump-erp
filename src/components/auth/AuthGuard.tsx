@@ -40,7 +40,8 @@ export const AuthGuard = ({ feature, children }: AuthGuardProps) => {
           navigate('/unauthorized');
         } else {
           console.log('Permission check for feature', feature, ':', data);
-          setHasAccess(data); // The RPC will return true/false based on access
+          // Ensure we set a boolean value to state
+          setHasAccess(!!data); // Convert any returned value to boolean
         }
       } catch (error) {
         console.error('Error in permission check:', error);
