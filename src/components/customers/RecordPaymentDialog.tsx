@@ -69,7 +69,7 @@ export function RecordPaymentDialog({ open, onOpenChange, customerId, onPaymentR
       
       if (transactionError) throw transactionError;
       
-      // Update customer balance using a simple update
+      // Update customer balance using a direct update
       const { error: customerError } = await supabase
         .from('customers')
         .update({ 

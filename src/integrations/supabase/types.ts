@@ -759,6 +759,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      decrement_balance: {
+        Args: {
+          customer_id: string
+          amount_value: number
+        }
+        Returns: number
+      }
       is_super_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
