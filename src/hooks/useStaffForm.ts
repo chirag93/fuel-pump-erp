@@ -121,19 +121,16 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         authId = authData.user?.id;
       } else if (changePassword && staffData.password) {
         // For existing staff, we can't change their password through the admin API with the anon key
-        // Instead, inform the user that this operation requires admin privileges
         toast({
           title: "Password Change Not Supported",
           description: "Changing staff passwords requires admin privileges. Please log in as the staff member to change their password or use Supabase dashboard.",
           variant: "destructive"
         });
-        
-        // Continue with the update of other fields
       }
 
       const staffPayload = {
         ...staffData,
-        auth_id: authId,
+        auth_id: authId || initialData?.auth_id,
         salary: parseFloat(staffData.salary.toString())
       };
 
@@ -141,6 +138,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       delete staffPayload.password;
       delete staffPayload.confirmPassword;
 
+      // Call the onSubmit callback with the staff data
       await onSubmit?.(staffPayload);
 
       if (!initialData && authId) {
@@ -153,21 +151,40 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
 
         if (staffRecord.error) throw staffRecord.error;
         
-        if (staffRecord.data) {
-          if (selectedFeatures.length > 0) {
-            const { error: permError } = await supabase
-              .from('staff_permissions')
-              .insert(
-                selectedFeatures.map(feature => ({
-                  staff_id: staffRecord.data.id,
-                  feature
-                }))
-              );
+        if (staffRecord.data && selectedFeatures.length > 0) {
+          const { error: permError } = await supabase
+            .from('staff_permissions')
+            .insert(
+              selectedFeatures.map(feature => ({
+                staff_id: staffRecord.data.id,
+                feature
+              }))
+            );
 
-            if (permError) throw permError;
-          }
-        } else {
-          console.log('No staff record found for auth_id:', authId);
+          if (permError) throw permError;
+        }
+      } else if (initialData && initialData.id) {
+        // For existing staff, update permissions
+        // First delete all existing permissions
+        const { error: deleteError } = await supabase
+          .from('staff_permissions')
+          .delete()
+          .eq('staff_id', initialData.id);
+          
+        if (deleteError) throw deleteError;
+        
+        // Then insert the new permissions
+        if (selectedFeatures.length > 0) {
+          const { error: permError } = await supabase
+            .from('staff_permissions')
+            .insert(
+              selectedFeatures.map(feature => ({
+                staff_id: initialData.id,
+                feature
+              }))
+            );
+
+          if (permError) throw permError;
         }
       }
 

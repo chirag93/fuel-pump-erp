@@ -29,6 +29,7 @@ interface FeatureSelectionProps {
 
 export function FeatureSelection({ staffId, onFeaturesChange, initialFeatures = [] }: FeatureSelectionProps) {
   const [selectedFeatures, setSelectedFeatures] = useState<StaffFeature[]>(initialFeatures);
+  const [isLoading, setIsLoading] = useState<boolean>(!!staffId);
 
   useEffect(() => {
     if (staffId) {
@@ -38,20 +39,27 @@ export function FeatureSelection({ staffId, onFeaturesChange, initialFeatures = 
 
   const loadStaffFeatures = async () => {
     if (!staffId) return;
+    
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('staff_permissions')
+        .select('feature')
+        .eq('staff_id', staffId);
 
-    const { data, error } = await supabase
-      .from('staff_permissions')
-      .select('feature')
-      .eq('staff_id', staffId);
+      if (error) {
+        console.error('Error loading staff features:', error);
+        return;
+      }
 
-    if (error) {
-      console.error('Error loading staff features:', error);
-      return;
+      const features = data.map(item => item.feature);
+      setSelectedFeatures(features);
+      onFeaturesChange(features);
+    } catch (error) {
+      console.error('Error loading permissions:', error);
+    } finally {
+      setIsLoading(false);
     }
-
-    const features = data.map(item => item.feature);
-    setSelectedFeatures(features);
-    onFeaturesChange(features);
   };
 
   const handleFeatureToggle = (feature: StaffFeature, checked: boolean) => {
@@ -66,19 +74,22 @@ export function FeatureSelection({ staffId, onFeaturesChange, initialFeatures = 
   return (
     <div className="space-y-4">
       <div className="text-sm font-medium mb-2">Feature Access</div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {FEATURES.map(feature => (
-          <div key={feature.id} className="flex items-center space-x-2">
-            <Checkbox
-              id={feature.id}
-              checked={selectedFeatures.includes(feature.id)}
-              onCheckedChange={(checked) => handleFeatureToggle(feature.id, checked as boolean)}
-            />
-            <Label htmlFor={feature.id}>{feature.label}</Label>
-          </div>
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="text-sm text-muted-foreground">Loading permissions...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {FEATURES.map(feature => (
+            <div key={feature.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={feature.id}
+                checked={selectedFeatures.includes(feature.id)}
+                onCheckedChange={(checked) => handleFeatureToggle(feature.id, checked as boolean)}
+              />
+              <Label htmlFor={feature.id}>{feature.label}</Label>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
-

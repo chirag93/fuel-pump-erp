@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,29 +15,73 @@ interface AuthGuardProps {
 export const AuthGuard = ({ feature, children }: AuthGuardProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [hasAccess, setHasAccess] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const checkAccess = async () => {
+      setIsLoading(true);
+      
       if (!user) {
         navigate('/login');
         return;
       }
 
-      const { data, error } = await supabase
-        .from('staff_permissions')
-        .select('feature')
-        .eq('staff_id', user.id)
-        .eq('feature', feature)
-        .maybeSingle();
+      // Super admins always have access to everything
+      if (user.role === 'super_admin') {
+        setHasAccess(true);
+        setIsLoading(false);
+        return;
+      }
 
-      if (error || !data) {
-        navigate('/unauthorized');
+      // For staff, check if they have the specific permission
+      try {
+        // First fetch the staff record to get the staff_id
+        const { data: staffData, error: staffError } = await supabase
+          .from('staff')
+          .select('id')
+          .eq('auth_id', user.id)
+          .maybeSingle();
+
+        if (staffError || !staffData) {
+          console.error('Error fetching staff record:', staffError);
+          setHasAccess(false);
+          setIsLoading(false);
+          navigate('/unauthorized');
+          return;
+        }
+
+        // Now check if this staff has the specific feature permission
+        const { data, error } = await supabase
+          .from('staff_permissions')
+          .select('feature')
+          .eq('staff_id', staffData.id)
+          .eq('feature', feature)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error checking permissions:', error);
+          setHasAccess(false);
+        } else {
+          setHasAccess(!!data); // Set to true if data exists (permission found)
+        }
+      } catch (error) {
+        console.error('Error in permission check:', error);
+        setHasAccess(false);
+      } finally {
+        setIsLoading(false);
+        if (!hasAccess) {
+          navigate('/unauthorized');
+        }
       }
     };
 
     checkAccess();
   }, [user, feature, navigate]);
 
-  return <>{children}</>;
-};
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen">Checking permissions...</div>;
+  }
 
+  return hasAccess ? <>{children}</> : null;
+};
