@@ -114,7 +114,8 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
               name: staffData.name,
               role: 'staff'
             },
-            emailRedirectTo: window.location.origin,
+            // Remove email redirect to disable email verification
+            // emailRedirectTo: window.location.origin,
           }
         });
 

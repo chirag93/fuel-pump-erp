@@ -225,7 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: `Welcome back, ${data.user.email?.split('@')[0] || 'user'}!`,
         });
         
-        // Check if the user is a super admin
+        // Check if the user is a super admin using the defined function
         await checkIsSuperAdmin(data.user.id);
         
         // If not a super admin, fetch associated fuel pump
