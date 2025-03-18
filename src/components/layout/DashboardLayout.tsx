@@ -91,7 +91,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     setIsLoading(true);
     
     try {
-      // Super admins and admins have access to everything
+      // Super admins and admins have access to everything - extract all available features
       if (user?.role === 'super_admin' || user?.role === 'admin') {
         const allFeatures = allNavItems
           .filter(item => item.feature !== null)
@@ -150,10 +150,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const visibleNavItems = allNavItems.filter(item => 
     // Always show items with null feature (like Home)
     item.feature === null || 
-    // Or show items for which the user has permission
-    userFeatures.includes(item.feature) ||
-    // Or if the user is a super admin or admin
-    user?.role === 'super_admin' || user?.role === 'admin'
+    // For admins and super admins, show all items
+    user?.role === 'super_admin' || 
+    user?.role === 'admin' ||
+    // For staff, show only items they have permission for
+    userFeatures.includes(item.feature as StaffFeature)
   );
 
   return (
