@@ -86,13 +86,15 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       let authId;
       
       if (!initialData) {
+        // When creating a new staff member, only set role: 'staff' in user metadata
+        // This avoids the profiles_role_check constraint error
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: staffData.email,
           password: staffData.password,
           options: {
             data: {
               name: staffData.name,
-              role: staffData.role
+              role: 'staff' // Use 'staff' role instead of the staffData.role
             }
           }
         });
@@ -112,6 +114,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       await onSubmit?.(staffPayload);
 
       if (!initialData && authId) {
+        // After creating the staff record, add permissions
         const staffRecord = await supabase
           .from('staff')
           .select('id')
@@ -120,16 +123,18 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
 
         if (staffRecord.error) throw staffRecord.error;
 
-        const { error: permError } = await supabase
-          .from('staff_permissions')
-          .insert(
-            selectedFeatures.map(feature => ({
-              staff_id: staffRecord.data.id,
-              feature: feature as Database['public']['Enums']['staff_feature']
-            }))
-          );
+        if (selectedFeatures.length > 0) {
+          const { error: permError } = await supabase
+            .from('staff_permissions')
+            .insert(
+              selectedFeatures.map(feature => ({
+                staff_id: staffRecord.data.id,
+                feature
+              }))
+            );
 
-        if (permError) throw permError;
+          if (permError) throw permError;
+        }
       }
 
       toast({
@@ -137,7 +142,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         description: `${staffData.name} has been ${initialData ? 'updated' : 'added'} successfully.`
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving staff:', error);
       toast({
         title: "Error",
