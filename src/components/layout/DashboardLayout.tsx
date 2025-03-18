@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -93,11 +92,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     try {
       // Admin and Super admin check - immediately give them all features
       if (user?.role === 'admin' || user?.role === 'super_admin') {
-        console.log('User is admin or super admin, granting all features');
+        console.log('User is admin or super admin with role:', user.role);
+        console.log('User email:', user.email);
+        
         const allFeatures = allNavItems
           .filter(item => item.feature !== null)
           .map(item => item.feature) as StaffFeature[];
         
+        console.log('All features for admin/super admin:', allFeatures);
         setUserFeatures(allFeatures);
         setIsLoading(false);
         return;
@@ -147,15 +149,26 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   };
 
   // Filter navigation items based on user permissions
-  const visibleNavItems = allNavItems.filter(item => 
-    // Always show items with null feature (like Home)
-    item.feature === null || 
-    // For admins and super admins, show all items
-    user?.role === 'admin' || 
-    user?.role === 'super_admin' ||
-    // For staff, show only items they have permission for
-    userFeatures.includes(item.feature as StaffFeature)
-  );
+  const visibleNavItems = allNavItems.filter(item => {
+    // Debug output to help diagnose issues
+    if (item.feature && user?.email === 'admin@example.com') {
+      console.log(`Item ${item.label} accessible:`, 
+        item.feature === null || 
+        user?.role === 'admin' || 
+        user?.role === 'super_admin' ||
+        userFeatures.includes(item.feature as StaffFeature));
+    }
+    
+    return (
+      // Always show items with null feature (like Home)
+      item.feature === null || 
+      // For admins and super admins, show all items
+      user?.role === 'admin' || 
+      user?.role === 'super_admin' ||
+      // For staff, show only items they have permission for
+      userFeatures.includes(item.feature as StaffFeature)
+    );
+  });
 
   return (
     <div className="flex min-h-screen bg-background">

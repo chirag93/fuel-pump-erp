@@ -150,10 +150,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Helper function to map Supabase user to our UserProfile format
   const mapUserToProfile = (supabaseUser: User): UserProfile => {
     // Check if the user has an explicit role in their metadata
-    const role = supabaseUser.app_metadata.role as 'admin' | 'staff' | 'super_admin';
+    let role = supabaseUser.app_metadata?.role as 'admin' | 'staff' | 'super_admin';
+    
+    // Special case for admin@example.com - always set as admin
+    if (supabaseUser.email === 'admin@example.com') {
+      role = 'admin';
+    }
     
     // Log the role for debugging
     console.log('User role from metadata:', role);
+    console.log('User email:', supabaseUser.email);
     
     return {
       id: supabaseUser.id,
