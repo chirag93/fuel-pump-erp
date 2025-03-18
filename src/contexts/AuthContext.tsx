@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         checkIsSuperAdmin(session.user.id);
         
         // If not a super admin, fetch associated fuel pump
-        if (!userProfile.role.includes('super_admin')) {
+        if (userProfile.role !== 'super_admin') {
           fetchAssociatedFuelPump(session.user.email);
         }
       } else {
@@ -76,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         checkIsSuperAdmin(session.user.id);
         
         // If not a super admin, fetch associated fuel pump
-        if (!userProfile.role.includes('super_admin')) {
+        if (userProfile.role !== 'super_admin') {
           fetchAssociatedFuelPump(session.user.email);
         }
       } else {
@@ -150,6 +151,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const mapUserToProfile = (supabaseUser: User): UserProfile => {
     // Check if the user has an explicit role in their metadata
     const role = supabaseUser.app_metadata.role as 'admin' | 'staff' | 'super_admin';
+    
+    // Log the role for debugging
+    console.log('User role from metadata:', role);
     
     return {
       id: supabaseUser.id,
