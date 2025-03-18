@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import type { Database } from '@/integrations/supabase/types';
 
 type StaffFeature = Database['public']['Enums']['staff_feature'];
@@ -52,6 +53,11 @@ export function FeatureSelection({ staffId, onFeaturesChange, initialFeatures = 
 
       if (error) {
         console.error('Error loading staff features:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load staff permissions",
+          variant: "destructive"
+        });
         return;
       }
 
@@ -61,18 +67,76 @@ export function FeatureSelection({ staffId, onFeaturesChange, initialFeatures = 
       onFeaturesChange(features);
     } catch (error) {
       console.error('Error loading permissions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load staff permissions",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleFeatureToggle = (feature: StaffFeature, checked: boolean) => {
-    const newFeatures = checked
-      ? [...selectedFeatures, feature]
-      : selectedFeatures.filter(f => f !== feature);
-    
-    setSelectedFeatures(newFeatures);
-    onFeaturesChange(newFeatures);
+  const handleFeatureToggle = async (feature: StaffFeature, checked: boolean) => {
+    try {
+      if (checked) {
+        // Add permission
+        if (staffId) {
+          const { error } = await supabase
+            .from('staff_permissions')
+            .insert({
+              staff_id: staffId,
+              feature: feature
+            });
+            
+          if (error) {
+            console.error('Error adding permission:', error);
+            toast({
+              title: "Error",
+              description: "Failed to add permission",
+              variant: "destructive"
+            });
+            return;
+          }
+        }
+        
+        // Update local state
+        const newFeatures = [...selectedFeatures, feature];
+        setSelectedFeatures(newFeatures);
+        onFeaturesChange(newFeatures);
+      } else {
+        // Remove permission
+        if (staffId) {
+          const { error } = await supabase
+            .from('staff_permissions')
+            .delete()
+            .eq('staff_id', staffId)
+            .eq('feature', feature);
+            
+          if (error) {
+            console.error('Error removing permission:', error);
+            toast({
+              title: "Error",
+              description: "Failed to remove permission",
+              variant: "destructive"
+            });
+            return;
+          }
+        }
+        
+        // Update local state
+        const newFeatures = selectedFeatures.filter(f => f !== feature);
+        setSelectedFeatures(newFeatures);
+        onFeaturesChange(newFeatures);
+      }
+    } catch (error) {
+      console.error('Error updating permissions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update permissions",
+        variant: "destructive"
+      });
+    }
   };
 
   return (

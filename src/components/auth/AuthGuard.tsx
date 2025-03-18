@@ -27,56 +27,27 @@ export const AuthGuard = ({ feature, children }: AuthGuardProps) => {
         return;
       }
 
-      // Super admins and admins always have access to everything
-      if (user.role === 'admin' || user.role === 'super_admin') {
-        console.log('Admin/Super admin has access to', feature);
-        console.log('User role:', user.role);
-        console.log('User email:', user.email);
-        setHasAccess(true);
-        setIsLoading(false);
-        return;
-      }
-
-      // For staff, check if they have the specific permission
       try {
-        // First fetch the staff record to get the staff_id
-        const { data: staffData, error: staffError } = await supabase
-          .from('staff')
-          .select('id')
-          .eq('auth_id', user.id)
-          .maybeSingle();
-
-        if (staffError || !staffData) {
-          console.error('Error fetching staff record:', staffError);
-          setHasAccess(false);
-          setIsLoading(false);
-          navigate('/unauthorized');
-          return;
-        }
-
-        // Now check if this staff has the specific feature permission
-        const { data, error } = await supabase
-          .from('staff_permissions')
-          .select('feature')
-          .eq('staff_id', staffData.id)
-          .eq('feature', feature)
-          .maybeSingle();
+        // Always check with the backend for permission, regardless of user role
+        const { data, error } = await supabase.rpc('has_feature_access', {
+          p_auth_id: user.id,
+          p_feature: feature
+        });
 
         if (error) {
-          console.error('Error checking permissions:', error);
+          console.error('Error checking feature access:', error);
           setHasAccess(false);
+          navigate('/unauthorized');
         } else {
-          console.log('Permission check for feature', feature, ':', !!data);
-          setHasAccess(!!data); // Set to true if data exists (permission found)
+          console.log('Permission check for feature', feature, ':', data);
+          setHasAccess(data); // The RPC will return true/false based on access
         }
       } catch (error) {
         console.error('Error in permission check:', error);
         setHasAccess(false);
+        navigate('/unauthorized');
       } finally {
         setIsLoading(false);
-        if (!hasAccess) {
-          navigate('/unauthorized');
-        }
       }
     };
 

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,19 +42,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
   const [fuelPumpName, setFuelPumpName] = useState<string | null>(null);
 
+  // Fetch user role from the database
+  const fetchUserRole = async (userId: string): Promise<'admin' | 'staff' | 'super_admin'> => {
+    try {
+      // Check if user is a super admin
+      const { data: superAdminData, error: superAdminError } = await supabase
+        .from('super_admins')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (superAdminData) {
+        console.log('User is a super admin');
+        return 'super_admin';
+      }
+      
+      // Check if user is an admin (specific email or has admin in profiles)
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role, email')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (profileData?.email === 'admin@example.com' || profileData?.role === 'admin') {
+        console.log('User is an admin');
+        return 'admin';
+      }
+      
+      // Default to staff role
+      console.log('User is staff');
+      return 'staff';
+    } catch (error) {
+      console.error('Error fetching user role:', error);
+      return 'staff'; // Default to staff if there's an error
+    }
+  };
+
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session) {
-        const userProfile = mapUserToProfile(session.user);
-        setUser(userProfile);
+        // Fetch the role from the database
+        const role = await fetchUserRole(session.user.id);
+        const userProfile: UserProfile = {
+          id: session.user.id,
+          username: session.user.email?.split('@')[0] || 'user',
+          email: session.user.email || '',
+          role: role
+        };
         
-        // Check if the user is a super admin
-        checkIsSuperAdmin(session.user.id);
+        setUser(userProfile);
+        setIsSuperAdmin(role === 'super_admin');
         
         // If not a super admin, fetch associated fuel pump
-        if (userProfile.role !== 'super_admin') {
+        if (role !== 'super_admin') {
           fetchAssociatedFuelPump(session.user.email);
         }
       } else {
@@ -66,18 +107,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       
       if (session) {
-        const userProfile = mapUserToProfile(session.user);
-        setUser(userProfile);
+        // Fetch the role from the database
+        const role = await fetchUserRole(session.user.id);
+        const userProfile: UserProfile = {
+          id: session.user.id,
+          username: session.user.email?.split('@')[0] || 'user',
+          email: session.user.email || '',
+          role: role
+        };
         
-        // Check if the user is a super admin
-        checkIsSuperAdmin(session.user.id);
+        setUser(userProfile);
+        setIsSuperAdmin(role === 'super_admin');
         
         // If not a super admin, fetch associated fuel pump
-        if (userProfile.role !== 'super_admin') {
+        if (role !== 'super_admin') {
           fetchAssociatedFuelPump(session.user.email);
         }
       } else {
@@ -123,51 +170,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setFuelPumpId(null);
       setFuelPumpName(null);
     }
-  };
-
-  // Check if a user is a super admin
-  const checkIsSuperAdmin = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('super_admins')
-        .select('id')
-        .eq('id', userId)
-        .single();
-      
-      if (error) {
-        console.error('Error checking super admin status:', error);
-        setIsSuperAdmin(false);
-        return;
-      }
-      
-      setIsSuperAdmin(data ? true : false);
-    } catch (error) {
-      console.error('Error checking super admin status:', error);
-      setIsSuperAdmin(false);
-    }
-  };
-
-  // Helper function to map Supabase user to our UserProfile format
-  const mapUserToProfile = (supabaseUser: User): UserProfile => {
-    // Check if the user has an explicit role in their metadata
-    let role = supabaseUser.app_metadata?.role as 'admin' | 'staff' | 'super_admin';
-    
-    // Special case for admin@example.com - always set as admin
-    if (supabaseUser.email === 'admin@example.com') {
-      role = 'admin';
-    }
-    
-    // Log the role for debugging
-    console.log('User role from metadata:', role);
-    console.log('User email:', supabaseUser.email);
-    
-    return {
-      id: supabaseUser.id,
-      username: supabaseUser.email?.split('@')[0] || 'user',
-      email: supabaseUser.email || '',
-      // Default to 'staff' role if no role is specified
-      role: role || 'staff'
-    };
   };
 
   const login = async (email: string, password: string, rememberMe: boolean = false): Promise<boolean> => {
@@ -248,6 +250,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "You have been successfully logged out.",
       });
     }
+  };
+
+  // Helper function to map Supabase user to our UserProfile format
+  const mapUserToProfile = (supabaseUser: User): UserProfile => {
+    // Check if the user has an explicit role in their metadata
+    let role = supabaseUser.app_metadata?.role as 'admin' | 'staff' | 'super_admin';
+    
+    // Special case for admin@example.com - always set as admin
+    if (supabaseUser.email === 'admin@example.com') {
+      role = 'admin';
+    }
+    
+    // Log the role for debugging
+    console.log('User role from metadata:', role);
+    console.log('User email:', supabaseUser.email);
+    
+    return {
+      id: supabaseUser.id,
+      username: supabaseUser.email?.split('@')[0] || 'user',
+      email: supabaseUser.email || '',
+      // Default to 'staff' role if no role is specified
+      role: role || 'staff'
+    };
   };
 
   return (
