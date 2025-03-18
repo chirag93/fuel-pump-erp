@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -114,7 +115,7 @@ const RecordPaymentDialog = ({
         payment_method: values.paymentMethod,
         // Use a valid staff ID from the database
         staff_id: staffData.id,
-        notes: values.notes || null,
+        // Remove the notes field as it doesn't exist in the schema
       };
 
       // Insert the transaction
