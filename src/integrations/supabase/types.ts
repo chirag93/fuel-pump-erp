@@ -151,7 +151,7 @@ export type Database = {
           id: string
           net_stock: number | null
           opening_stock: number
-          receipt_quantity: number
+          receipt_quantity: number | null
           sales_per_tank_stock: number | null
           stock_variation: number | null
           tank_number: number | null
@@ -166,7 +166,7 @@ export type Database = {
           id?: string
           net_stock?: number | null
           opening_stock: number
-          receipt_quantity: number
+          receipt_quantity?: number | null
           sales_per_tank_stock?: number | null
           stock_variation?: number | null
           tank_number?: number | null
@@ -181,7 +181,7 @@ export type Database = {
           id?: string
           net_stock?: number | null
           opening_stock?: number
-          receipt_quantity?: number
+          receipt_quantity?: number | null
           sales_per_tank_stock?: number | null
           stock_variation?: number | null
           tank_number?: number | null

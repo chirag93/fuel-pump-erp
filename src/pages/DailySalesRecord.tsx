@@ -26,7 +26,7 @@ interface DailyReading {
   dip_reading: number;
   net_stock: number;
   opening_stock: number;
-  receipt_quantity: number;
+  receipt_quantity: number | null;
   closing_stock: number;
   sales_per_tank_stock: number;
   actual_meter_sales: number;
@@ -263,7 +263,7 @@ const DailySalesRecord = () => {
         net_stock: tank.net_stock,
         tank_number: tank.tank_number,
         opening_stock: calculations.opening_stock,
-        receipt_quantity: readingFormData.receipt_quantity || null, // Make receipt_quantity optional
+        receipt_quantity: readingFormData.receipt_quantity || null,
         closing_stock: readingFormData.closing_stock,
         actual_meter_sales: readingFormData.actual_meter_sales
         // We no longer send sales_per_tank_stock and stock_variation as they're computed columns
