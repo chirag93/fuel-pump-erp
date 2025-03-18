@@ -23,6 +23,9 @@ interface FuelTransactionFormProps {
   setDate: (date: Date | undefined) => void;
   isSubmitting: boolean;
   onSubmit: (e: React.FormEvent) => void;
+  staff: { id: string; name: string }[];
+  selectedStaff: string;
+  setSelectedStaff: (staffId: string) => void;
 }
 
 export const FuelTransactionForm = ({
@@ -37,7 +40,10 @@ export const FuelTransactionForm = ({
   date,
   setDate,
   isSubmitting,
-  onSubmit
+  onSubmit,
+  staff,
+  selectedStaff,
+  setSelectedStaff
 }: FuelTransactionFormProps) => {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -77,6 +83,23 @@ export const FuelTransactionForm = ({
             <SelectContent>
               <SelectItem value="Petrol">Petrol</SelectItem>
               <SelectItem value="Diesel">Diesel</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="staffMember">Staff Member</Label>
+          <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+            <SelectTrigger id="staffMember">
+              <SelectValue placeholder="Select staff member" />
+            </SelectTrigger>
+            <SelectContent>
+              {staff.length === 0 ? (
+                <SelectItem value="no-staff" disabled>No staff members found</SelectItem>
+              ) : (
+                staff.map((member) => (
+                  <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>

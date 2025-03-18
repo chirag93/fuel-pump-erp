@@ -704,7 +704,7 @@ export type Database = {
             columns: ["indent_id"]
             isOneToOne: false
             referencedRelation: "indents"
-            referencedColumns: ["id"]
+            referencedColumns: ["indent_number"]
           },
           {
             foreignKeyName: "transactions_staff_id_fkey"

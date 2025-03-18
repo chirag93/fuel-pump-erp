@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from "@/hooks/use-toast";
@@ -286,6 +285,9 @@ const RecordIndent = () => {
                 setDate={setDate}
                 isSubmitting={isSubmitting}
                 onSubmit={handleSubmit}
+                staff={staff}
+                selectedStaff={selectedStaff}
+                setSelectedStaff={setSelectedStaff}
               />
             )}
           </div>
