@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,13 +21,49 @@ const RecordIndent = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [indentNumberError, setIndentNumberError] = useState<string>('');
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const [staff, setStaff] = useState<{id: string, name: string}[]>([]);
+  const [selectedStaff, setSelectedStaff] = useState<string>('');
+
+  // Fetch staff list when component mounts
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('staff')
+          .select('id, name')
+          .order('name', { ascending: true });
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setStaff(data);
+          setSelectedStaff(data[0].id); // Default to first staff member
+        } else {
+          toast({
+            title: "No staff members found",
+            description: "Please add at least one staff member before recording indents",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching staff:', error);
+        toast({
+          title: "Error loading staff",
+          description: "Could not load staff list. Please try again.",
+          variant: "destructive"
+        });
+      }
+    };
+    
+    fetchStaff();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      if (!selectedCustomer || !selectedVehicle || !fuelType || !amount || !quantity || !date) {
+      if (!selectedCustomer || !selectedVehicle || !fuelType || !amount || !quantity || !date || !selectedStaff) {
         toast({
           title: "Missing information",
           description: "Please fill all required fields",
@@ -62,15 +98,12 @@ const RecordIndent = () => {
 
       // Generate a UUID for the transaction
       const transactionId = crypto.randomUUID();
-      
-      // Using staff_id as a required field - setting a placeholder value
-      const staffId = "00000000-0000-0000-0000-000000000000"; // Default staff ID
 
       console.log("Submitting transaction with data:", {
         id: transactionId,
         customer_id: selectedCustomer,
         vehicle_id: selectedVehicle,
-        staff_id: staffId,
+        staff_id: selectedStaff,
         date: date.toISOString(),
         fuel_type: fuelType,
         amount: amount,
@@ -87,7 +120,7 @@ const RecordIndent = () => {
           id: transactionId,
           customer_id: selectedCustomer,
           vehicle_id: selectedVehicle,
-          staff_id: staffId,
+          staff_id: selectedStaff,
           date: date.toISOString(),
           fuel_type: fuelType,
           amount: amount,
