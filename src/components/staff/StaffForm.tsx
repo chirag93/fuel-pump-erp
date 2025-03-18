@@ -6,6 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { FeatureSelection } from './FeatureSelection';
+import type { Database } from '@/integrations/supabase/types';
+
+type StaffFeature = Database['public']['Enums']['staff_feature'];
 
 interface StaffFormProps {
   onSubmit: (staff: any) => void;
@@ -24,7 +27,7 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     assigned_pumps: initialData?.assigned_pumps || [],
     password: '', // New field for password
   });
-  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+  const [selectedFeatures, setSelectedFeatures] = useState<StaffFeature[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPump, setSelectedPump] = useState<string>('');
@@ -129,7 +132,7 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
           .insert(
             selectedFeatures.map(feature => ({
               staff_id: staffRecord.data.id,
-              feature: feature
+              feature: feature as Database['public']['Enums']['staff_feature']
             }))
           );
 

@@ -3,9 +3,12 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
+
+type StaffFeature = Database['public']['Enums']['staff_feature'];
 
 interface AuthGuardProps {
-  feature: string;
+  feature: StaffFeature;
   children: React.ReactNode;
 }
 
@@ -37,3 +40,4 @@ export const AuthGuard = ({ feature, children }: AuthGuardProps) => {
 
   return <>{children}</>;
 };
+

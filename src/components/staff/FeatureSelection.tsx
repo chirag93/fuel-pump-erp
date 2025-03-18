@@ -1,11 +1,13 @@
 
-import { Staff } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from '@/integrations/supabase/types';
 
-const FEATURES = [
+type StaffFeature = Database['public']['Enums']['staff_feature'];
+
+const FEATURES: Array<{ id: StaffFeature; label: string }> = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'daily_readings', label: 'Daily Sales Record (DSR)' },
   { id: 'stock_levels', label: 'Stock Levels' },
@@ -21,12 +23,12 @@ const FEATURES = [
 
 interface FeatureSelectionProps {
   staffId: string;
-  onFeaturesChange: (features: string[]) => void;
-  initialFeatures?: string[];
+  onFeaturesChange: (features: StaffFeature[]) => void;
+  initialFeatures?: StaffFeature[];
 }
 
 export function FeatureSelection({ staffId, onFeaturesChange, initialFeatures = [] }: FeatureSelectionProps) {
-  const [selectedFeatures, setSelectedFeatures] = useState<string[]>(initialFeatures);
+  const [selectedFeatures, setSelectedFeatures] = useState<StaffFeature[]>(initialFeatures);
 
   useEffect(() => {
     if (staffId) {
@@ -52,7 +54,7 @@ export function FeatureSelection({ staffId, onFeaturesChange, initialFeatures = 
     onFeaturesChange(features);
   };
 
-  const handleFeatureToggle = (feature: string, checked: boolean) => {
+  const handleFeatureToggle = (feature: StaffFeature, checked: boolean) => {
     const newFeatures = checked
       ? [...selectedFeatures, feature]
       : selectedFeatures.filter(f => f !== feature);
@@ -79,3 +81,4 @@ export function FeatureSelection({ staffId, onFeaturesChange, initialFeatures = 
     </div>
   );
 }
+
