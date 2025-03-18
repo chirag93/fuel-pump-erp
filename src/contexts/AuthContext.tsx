@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,6 +42,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
   const [fuelPumpName, setFuelPumpName] = useState<string | null>(null);
+
+  // Check if the user is a super admin
+  const checkIsSuperAdmin = async (userId: string) => {
+    try {
+      const { data: superAdminData } = await supabase
+        .from('super_admins')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      setIsSuperAdmin(!!superAdminData);
+      return !!superAdminData;
+    } catch (error) {
+      console.error('Error checking super admin status:', error);
+      setIsSuperAdmin(false);
+      return false;
+    }
+  };
 
   // Fetch user role from the database
   const fetchUserRole = async (userId: string): Promise<'admin' | 'staff' | 'super_admin'> => {
@@ -210,8 +229,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await checkIsSuperAdmin(data.user.id);
         
         // If not a super admin, fetch associated fuel pump
-        const userProfile = mapUserToProfile(data.user);
-        if (!userProfile.role.includes('super_admin')) {
+        const role = await fetchUserRole(data.user.id);
+        const userProfile: UserProfile = {
+          id: data.user.id,
+          username: data.user.email?.split('@')[0] || 'user',
+          email: data.user.email || '',
+          role: role
+        };
+
+        setUser(userProfile);
+        
+        if (role !== 'super_admin') {
           await fetchAssociatedFuelPump(data.user.email);
         }
         
