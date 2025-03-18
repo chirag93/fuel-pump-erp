@@ -34,8 +34,11 @@ export function FeatureSelection({ staffId, onFeaturesChange, initialFeatures = 
   useEffect(() => {
     if (staffId) {
       loadStaffFeatures();
+    } else if (initialFeatures.length > 0) {
+      setSelectedFeatures(initialFeatures);
+      onFeaturesChange(initialFeatures);
     }
-  }, [staffId]);
+  }, [staffId, initialFeatures]);
 
   const loadStaffFeatures = async () => {
     if (!staffId) return;
@@ -53,6 +56,7 @@ export function FeatureSelection({ staffId, onFeaturesChange, initialFeatures = 
       }
 
       const features = data.map(item => item.feature);
+      console.log('Loaded features for staff:', features);
       setSelectedFeatures(features);
       onFeaturesChange(features);
     } catch (error) {

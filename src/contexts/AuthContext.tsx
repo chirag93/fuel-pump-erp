@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -149,12 +148,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Helper function to map Supabase user to our UserProfile format
   const mapUserToProfile = (supabaseUser: User): UserProfile => {
+    // Check if the user has an explicit role in their metadata
+    const role = supabaseUser.app_metadata.role as 'admin' | 'staff' | 'super_admin';
+    
     return {
       id: supabaseUser.id,
       username: supabaseUser.email?.split('@')[0] || 'user',
       email: supabaseUser.email || '',
-      // Default to 'staff' role - this would ideally come from a profiles table
-      role: (supabaseUser.app_metadata.role as 'admin' | 'staff' | 'super_admin') || 'staff'
+      // Default to 'staff' role if no role is specified
+      role: role || 'staff'
     };
   };
 

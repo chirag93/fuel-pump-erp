@@ -91,9 +91,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     setIsLoading(true);
     
     try {
-      // Super admins have access to everything
-      if (user?.role === 'super_admin') {
-        setUserFeatures(allNavItems.filter(item => item.feature !== null).map(item => item.feature) as StaffFeature[]);
+      // Super admins and admins have access to everything
+      if (user?.role === 'super_admin' || user?.role === 'admin') {
+        const allFeatures = allNavItems
+          .filter(item => item.feature !== null)
+          .map(item => item.feature) as StaffFeature[];
+        
+        console.log('Admin/Super admin has all features:', allFeatures);
+        setUserFeatures(allFeatures);
         setIsLoading(false);
         return;
       }
@@ -122,7 +127,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         return;
       }
       
-      setUserFeatures(permissionsData.map(p => p.feature));
+      const features = permissionsData.map(p => p.feature);
+      console.log('Staff has features:', features);
+      setUserFeatures(features);
     } catch (error) {
       console.error('Error fetching user features:', error);
     } finally {
@@ -145,8 +152,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     item.feature === null || 
     // Or show items for which the user has permission
     userFeatures.includes(item.feature) ||
-    // Or if the user is a super admin
-    user?.role === 'super_admin'
+    // Or if the user is a super admin or admin
+    user?.role === 'super_admin' || user?.role === 'admin'
   );
 
   return (

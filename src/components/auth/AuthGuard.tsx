@@ -27,8 +27,9 @@ export const AuthGuard = ({ feature, children }: AuthGuardProps) => {
         return;
       }
 
-      // Super admins always have access to everything
-      if (user.role === 'super_admin') {
+      // Super admins and admins always have access to everything
+      if (user.role === 'super_admin' || user.role === 'admin') {
+        console.log('Admin/Super admin has access to', feature);
         setHasAccess(true);
         setIsLoading(false);
         return;
@@ -63,6 +64,7 @@ export const AuthGuard = ({ feature, children }: AuthGuardProps) => {
           console.error('Error checking permissions:', error);
           setHasAccess(false);
         } else {
+          console.log('Permission check for feature', feature, ':', !!data);
           setHasAccess(!!data); // Set to true if data exists (permission found)
         }
       } catch (error) {
