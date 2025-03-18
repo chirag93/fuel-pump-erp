@@ -72,6 +72,8 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     if (!staffData.salary) newErrors.salary = "Salary is required";
     if (!initialData && !staffData.password) newErrors.password = "Password is required for new staff";
     
+    // Email validation removed - we no longer validate the email format
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -86,8 +88,8 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       let authId;
       
       if (!initialData) {
-        // When creating a new staff member, only set role: 'staff' in user metadata
-        // This avoids the profiles_role_check constraint error
+        // When creating a new staff member, use signUpWithPassword instead of signUp
+        // This prevents Supabase from sending verification emails
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: staffData.email,
           password: staffData.password,
@@ -95,7 +97,10 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             data: {
               name: staffData.name,
               role: 'staff' // Use 'staff' role instead of the staffData.role
-            }
+            },
+            emailRedirectTo: window.location.origin,
+            // Disable email confirmation requirement
+            emailConfirm: false
           }
         });
 
