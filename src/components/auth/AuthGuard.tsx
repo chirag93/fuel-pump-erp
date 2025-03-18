@@ -13,7 +13,7 @@ interface AuthGuardProps {
 }
 
 export const AuthGuard = ({ feature, children }: AuthGuardProps) => {
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [hasAccess, setHasAccess] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -27,8 +27,16 @@ export const AuthGuard = ({ feature, children }: AuthGuardProps) => {
         return;
       }
 
+      // Super admins and regular admins always have access to all features
+      if (isSuperAdmin || user.role === 'admin') {
+        console.log('User is admin or super admin, granting access to feature:', feature);
+        setHasAccess(true);
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        // Always check with the backend for permission, regardless of user role
+        // Check with the backend for permission
         const { data, error } = await supabase.rpc('has_feature_access', {
           p_auth_id: user.id,
           p_feature: feature
@@ -41,7 +49,7 @@ export const AuthGuard = ({ feature, children }: AuthGuardProps) => {
         } else {
           console.log('Permission check for feature', feature, ':', data);
           // Ensure we set a boolean value to state
-          setHasAccess(!!data); // Convert any returned value to boolean
+          setHasAccess(data === true);
         }
       } catch (error) {
         console.error('Error in permission check:', error);
@@ -53,7 +61,7 @@ export const AuthGuard = ({ feature, children }: AuthGuardProps) => {
     };
 
     checkAccess();
-  }, [user, feature, navigate]);
+  }, [user, feature, navigate, isSuperAdmin]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen">Checking permissions...</div>;

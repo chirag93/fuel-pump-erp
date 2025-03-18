@@ -18,6 +18,7 @@ import FuelPumpSettings from './pages/FuelPumpSettings';
 import TankUnload from './pages/TankUnload';
 import BookletIndents from './pages/BookletIndents';
 import NotFound from './pages/NotFound';
+import Unauthorized from './pages/Unauthorized';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
@@ -29,11 +30,7 @@ import ProvisionPump from './pages/ProvisionPump';
 import FuelPumpsPage from './pages/FuelPumpsPage';
 import SuperAdminAnalytics from './pages/SuperAdminAnalytics';
 import SuperAdminSettings from './pages/SuperAdminSettings';
-
-// Define props interface for ProtectedRoute
-interface ProtectedRouteProps {
-  children: ReactNode;
-}
+import { Toaster } from "./components/ui/toaster";
 
 const App = () => {
   return (
@@ -41,6 +38,7 @@ const App = () => {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
           
           {/* Super Admin Routes */}
           <Route path="/super-admin/login" element={<SuperAdminLogin />} />
@@ -73,6 +71,7 @@ const App = () => {
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <Toaster />
       </Router>
     </AuthProvider>
   );

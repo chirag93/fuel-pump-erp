@@ -19,10 +19,12 @@ const SuperAdminProtectedRoute = () => {
   }
 
   if (!isAuthenticated) {
+    console.log('User not authenticated, redirecting to super-admin login');
     return <Navigate to="/super-admin/login" state={{ from: location }} replace />;
   }
   
   if (!isSuperAdmin) {
+    console.log('User authenticated but not super admin, redirecting to super-admin login');
     return <Navigate to="/super-admin/login" state={{ from: location }} replace />;
   }
 

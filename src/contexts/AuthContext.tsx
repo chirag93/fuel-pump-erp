@@ -52,8 +52,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .maybeSingle();
       
-      setIsSuperAdmin(!!superAdminData);
-      return !!superAdminData;
+      const result = !!superAdminData;
+      setIsSuperAdmin(result);
+      return result;
     } catch (error) {
       console.error('Error checking super admin status:', error);
       setIsSuperAdmin(false);
@@ -65,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchUserRole = async (userId: string): Promise<'admin' | 'staff' | 'super_admin'> => {
     try {
       // Check if user is a super admin
-      const { data: superAdminData, error: superAdminError } = await supabase
+      const { data: superAdminData } = await supabase
         .from('super_admins')
         .select('id')
         .eq('id', userId)
@@ -77,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Check if user is an admin (specific email or has admin in profiles)
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('role, email')
         .eq('id', userId)
@@ -100,23 +101,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('Initial session check:', session ? 'Session found' : 'No session');
       setSession(session);
+      
       if (session) {
-        // Fetch the role from the database
-        const role = await fetchUserRole(session.user.id);
-        const userProfile: UserProfile = {
-          id: session.user.id,
-          username: session.user.email?.split('@')[0] || 'user',
-          email: session.user.email || '',
-          role: role
-        };
-        
-        setUser(userProfile);
-        setIsSuperAdmin(role === 'super_admin');
-        
-        // If not a super admin, fetch associated fuel pump
-        if (role !== 'super_admin') {
-          fetchAssociatedFuelPump(session.user.email);
+        try {
+          // Fetch the role from the database
+          const role = await fetchUserRole(session.user.id);
+          const userProfile: UserProfile = {
+            id: session.user.id,
+            username: session.user.email?.split('@')[0] || 'user',
+            email: session.user.email || '',
+            role: role
+          };
+          
+          setUser(userProfile);
+          await checkIsSuperAdmin(session.user.id);
+          
+          // If not a super admin, fetch associated fuel pump
+          if (role !== 'super_admin' && session.user.email) {
+            await fetchAssociatedFuelPump(session.user.email);
+          }
+        } catch (error) {
+          console.error('Error setting up session:', error);
+          setUser(null);
         }
       } else {
         setUser(null);
@@ -127,24 +135,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('Auth state changed:', _event, session ? 'Session exists' : 'No session');
       setSession(session);
       
       if (session) {
-        // Fetch the role from the database
-        const role = await fetchUserRole(session.user.id);
-        const userProfile: UserProfile = {
-          id: session.user.id,
-          username: session.user.email?.split('@')[0] || 'user',
-          email: session.user.email || '',
-          role: role
-        };
-        
-        setUser(userProfile);
-        setIsSuperAdmin(role === 'super_admin');
-        
-        // If not a super admin, fetch associated fuel pump
-        if (role !== 'super_admin') {
-          fetchAssociatedFuelPump(session.user.email);
+        try {
+          // Fetch the role from the database
+          const role = await fetchUserRole(session.user.id);
+          const userProfile: UserProfile = {
+            id: session.user.id,
+            username: session.user.email?.split('@')[0] || 'user',
+            email: session.user.email || '',
+            role: role
+          };
+          
+          setUser(userProfile);
+          await checkIsSuperAdmin(session.user.id);
+          
+          // If not a super admin, fetch associated fuel pump
+          if (role !== 'super_admin' && session.user.email) {
+            await fetchAssociatedFuelPump(session.user.email);
+          }
+        } catch (error) {
+          console.error('Error in auth state change:', error);
+          setUser(null);
         }
       } else {
         setUser(null);
@@ -168,7 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('fuel_pumps')
         .select('id, name')
         .eq('email', email)
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error('Error fetching associated fuel pump:', error);
@@ -239,7 +253,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setUser(userProfile);
         
-        if (role !== 'super_admin') {
+        if (role !== 'super_admin' && data.user.email) {
           await fetchAssociatedFuelPump(data.user.email);
         }
         
