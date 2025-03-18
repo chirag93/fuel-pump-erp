@@ -2,6 +2,7 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface BasicInfoFieldsProps {
   staffData: {
@@ -12,13 +13,23 @@ interface BasicInfoFieldsProps {
     salary: string | number;
     joining_date: string;
     password: string;
+    confirmPassword: string;
   };
   errors: Record<string, string>;
   isEditing: boolean;
   onChange: (field: string, value: string) => void;
+  changePassword: boolean;
+  setChangePassword: (value: boolean) => void;
 }
 
-export function BasicInfoFields({ staffData, errors, isEditing, onChange }: BasicInfoFieldsProps) {
+export function BasicInfoFields({ 
+  staffData, 
+  errors, 
+  isEditing, 
+  onChange, 
+  changePassword, 
+  setChangePassword 
+}: BasicInfoFieldsProps) {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -101,18 +112,72 @@ export function BasicInfoFields({ staffData, errors, isEditing, onChange }: Basi
         </div>
       </div>
 
-      {!isEditing && (
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            value={staffData.password}
-            onChange={(e) => onChange('password', e.target.value)}
-            className={errors.password ? "border-red-500" : ""}
-            placeholder="Enter password for staff login"
-          />
-          {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+      {isEditing ? (
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="changePassword" 
+              checked={changePassword}
+              onCheckedChange={(checked) => setChangePassword(checked as boolean)}
+            />
+            <Label htmlFor="changePassword" className="cursor-pointer">Change password</Label>
+          </div>
+          
+          {changePassword && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">New Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={staffData.password}
+                  onChange={(e) => onChange('password', e.target.value)}
+                  className={errors.password ? "border-red-500" : ""}
+                  placeholder="Enter new password"
+                />
+                {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={staffData.confirmPassword}
+                  onChange={(e) => onChange('confirmPassword', e.target.value)}
+                  className={errors.confirmPassword ? "border-red-500" : ""}
+                  placeholder="Confirm new password"
+                />
+                {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              value={staffData.password}
+              onChange={(e) => onChange('password', e.target.value)}
+              className={errors.password ? "border-red-500" : ""}
+              placeholder="Enter password for staff login"
+            />
+            {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={staffData.confirmPassword}
+              onChange={(e) => onChange('confirmPassword', e.target.value)}
+              className={errors.confirmPassword ? "border-red-500" : ""}
+              placeholder="Confirm password"
+            />
+            {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
+          </div>
         </div>
       )}
     </>

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -14,6 +15,7 @@ interface StaffFormData {
   joining_date: string;
   assigned_pumps: string[];
   password: string;
+  confirmPassword: string; // Added confirm password field
 }
 
 export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void, onCancel?: () => void) => {
@@ -26,11 +28,13 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     joining_date: initialData?.joining_date || new Date().toISOString().split('T')[0],
     assigned_pumps: initialData?.assigned_pumps || [],
     password: '',
+    confirmPassword: '', // Initialize confirm password
   });
   const [selectedFeatures, setSelectedFeatures] = useState<StaffFeature[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPump, setSelectedPump] = useState<string>('');
+  const [changePassword, setChangePassword] = useState<boolean>(false); // Track whether to change password
 
   const handleChange = (field: string, value: string) => {
     setStaffData({ ...staffData, [field]: value });
@@ -69,9 +73,22 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     
     if (!staffData.role) newErrors.role = "Role is required";
     if (!staffData.salary) newErrors.salary = "Salary is required";
-    if (!initialData && !staffData.password) newErrors.password = "Password is required for new staff";
     
-    // Email validation removed - we no longer validate the email format
+    // Password validation
+    if (!initialData && !staffData.password) {
+      newErrors.password = "Password is required for new staff";
+    } else if (changePassword && !staffData.password) {
+      newErrors.password = "Password is required when changing password";
+    }
+    
+    // Confirm password validation
+    if ((changePassword || !initialData) && staffData.password) {
+      if (!staffData.confirmPassword) {
+        newErrors.confirmPassword = "Please confirm the password";
+      } else if (staffData.password !== staffData.confirmPassword) {
+        newErrors.confirmPassword = "Passwords do not match";
+      }
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -105,6 +122,26 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
 
         if (authError) throw authError;
         authId = authData.user?.id;
+      } else if (changePassword && staffData.password) {
+        // Update password for existing staff if password change is enabled
+        // First, get the auth_id of the staff
+        const { data: staffUser, error: staffError } = await supabase
+          .from('staff')
+          .select('auth_id')
+          .eq('id', initialData.id)
+          .maybeSingle();
+          
+        if (staffError) throw staffError;
+        
+        if (staffUser?.auth_id) {
+          // Use admin API to update the user's password
+          const { error: updateError } = await supabase.auth.admin.updateUserById(
+            staffUser.auth_id,
+            { password: staffData.password }
+          );
+          
+          if (updateError) throw updateError;
+        }
       }
 
       const staffPayload = {
@@ -113,7 +150,9 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         salary: parseFloat(staffData.salary.toString())
       };
 
+      // Remove password fields from database payload
       delete staffPayload.password;
+      delete staffPayload.confirmPassword;
 
       await onSubmit?.(staffPayload);
 
@@ -170,11 +209,13 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     errors,
     isSubmitting,
     selectedPump,
+    changePassword,
     handleChange,
     handleAddPump,
     handleRemovePump,
     handleSubmit,
     setSelectedFeatures,
-    setSelectedPump
+    setSelectedPump,
+    setChangePassword
   };
 };

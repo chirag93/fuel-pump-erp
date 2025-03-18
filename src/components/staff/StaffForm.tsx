@@ -18,12 +18,14 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     errors,
     isSubmitting,
     selectedPump,
+    changePassword,
     handleChange,
     handleAddPump,
     handleRemovePump,
     handleSubmit,
     setSelectedFeatures,
-    setSelectedPump
+    setSelectedPump,
+    setChangePassword
   } = useStaffForm(initialData, onSubmit, onCancel);
 
   return (
@@ -33,6 +35,8 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
         errors={errors}
         isEditing={!!initialData}
         onChange={handleChange}
+        changePassword={changePassword}
+        setChangePassword={setChangePassword}
       />
 
       <PumpSelection
