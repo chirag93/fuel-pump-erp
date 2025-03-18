@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { useCustomerData } from './hooks/useCustomerData';
+import { Customer } from '@/integrations/supabase/client';
 
 const formSchema = z.object({
   amount: z.string()
@@ -32,11 +32,11 @@ interface RecordPaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customerId: string;
+  onPaymentRecorded?: () => void;
 }
 
-export function RecordPaymentDialog({ open, onOpenChange, customerId }: RecordPaymentDialogProps) {
+export function RecordPaymentDialog({ open, onOpenChange, customerId, onPaymentRecorded }: RecordPaymentDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { refetchCustomer } = useCustomerData(customerId);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -59,7 +59,7 @@ export function RecordPaymentDialog({ open, onOpenChange, customerId }: RecordPa
         amount: values.amount, // This is now a number due to the transform
         quantity: 0, // There's no fuel in this transaction, it's just a payment
         payment_method: values.paymentMethod,
-        fuel_type: 'Payment', // Mark it as a payment
+        fuel_type: 'PAYMENT', // Mark it as a payment
         staff_id: 'system', // Since this is done by admin
       };
       
@@ -69,7 +69,7 @@ export function RecordPaymentDialog({ open, onOpenChange, customerId }: RecordPa
       
       if (transactionError) throw transactionError;
       
-      // Update customer balance
+      // Update customer balance using a simple update
       const { error: customerError } = await supabase
         .from('customers')
         .update({ 
@@ -87,7 +87,9 @@ export function RecordPaymentDialog({ open, onOpenChange, customerId }: RecordPa
         description: `₹${values.amount} has been recorded for the customer.`,
       });
       
-      refetchCustomer();
+      if (onPaymentRecorded) {
+        onPaymentRecorded();
+      }
       form.reset();
       onOpenChange(false);
     } catch (error) {

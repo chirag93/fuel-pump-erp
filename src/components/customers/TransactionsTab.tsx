@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Customer, Transaction } from '@/integrations/supabase/client';
-import RecordPaymentDialog from './RecordPaymentDialog';
+import { RecordPaymentDialog } from './RecordPaymentDialog';
 import { useCustomerData } from './hooks/useCustomerData';
 
 interface TransactionWithDetails extends Transaction {
@@ -110,7 +110,7 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
       <RecordPaymentDialog 
         open={isPaymentDialogOpen}
         onOpenChange={setIsPaymentDialogOpen}
-        customer={customer}
+        customerId={customer.id}
         onPaymentRecorded={handlePaymentRecorded}
       />
     </div>
