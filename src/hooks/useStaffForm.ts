@@ -71,9 +71,9 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       newErrors.phone = "Phone number must be 10 digits";
     }
     
-    // Email validation - allow for more flexible email formats
+    // Email validation - make it optional
     if (staffData.email && staffData.email.trim()) {
-      // Basic email format validation
+      // Simple format check, but not enforcing any specific domain restrictions
       if (!/\S+@\S+\.\S+/.test(staffData.email.trim())) {
         newErrors.email = "Please enter a valid email format";
       }
@@ -112,12 +112,17 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       let authId;
       
       if (!initialData) {
-        // Log the email being used for signup to help debug
-        console.log("Creating staff with email:", staffData.email);
+        // Generate a valid email with a real domain if none provided
+        const timestamp = Date.now();
+        const validEmail = staffData.email && staffData.email.trim() ? 
+          staffData.email : 
+          `staff_${timestamp}@fuelapp.net`;
+          
+        console.log("Creating staff with email:", validEmail);
         
-        // When creating a new staff member, use signUp with signupOptions that bypass email verification
+        // When creating a new staff member, use signUp with options that bypass email verification
         const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: staffData.email || `staff_${Date.now()}@example.com`, // Fallback email if none provided
+          email: validEmail,
           password: staffData.password,
           options: {
             data: {
@@ -146,10 +151,16 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         });
       }
 
+      // Generate a valid email if none is provided
+      const timestamp = Date.now();
+      const staffEmail = staffData.email && staffData.email.trim() ? 
+        staffData.email : 
+        `staff_${timestamp}@fuelapp.net`;
+
       const staffPayload = {
         name: staffData.name,
         phone: staffData.phone,
-        email: staffData.email || `staff_${Date.now()}@example.com`, // Fallback email if none provided
+        email: staffEmail,
         role: staffData.role,
         salary: parseFloat(staffData.salary.toString()),
         joining_date: staffData.joining_date,

@@ -58,16 +58,19 @@ export function BasicInfoFields({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">Email (Optional)</Label>
           <Input
             id="email"
             type="text"
             value={staffData.email || ''}
             onChange={(e) => onChange('email', e.target.value)}
             className={errors.email ? 'border-red-500' : ''}
-            placeholder="Optional - Leave blank to auto-generate"
+            placeholder="Optional - System will generate if blank"
           />
           {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+          <p className="text-xs text-muted-foreground">
+            If left blank, a system email will be generated. For testing, don't use example.com domains.
+          </p>
         </div>
       </div>
 
