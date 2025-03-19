@@ -71,6 +71,14 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       newErrors.phone = "Phone number must be 10 digits";
     }
     
+    // Email validation - allow for more flexible email formats
+    if (staffData.email && staffData.email.trim()) {
+      // Basic email format validation
+      if (!/\S+@\S+\.\S+/.test(staffData.email.trim())) {
+        newErrors.email = "Please enter a valid email format";
+      }
+    }
+    
     if (!staffData.role) newErrors.role = "Role is required";
     if (!staffData.salary) newErrors.salary = "Salary is required";
     
@@ -104,21 +112,28 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       let authId;
       
       if (!initialData) {
-        // When creating a new staff member, use signUp without email verification
+        // Log the email being used for signup to help debug
+        console.log("Creating staff with email:", staffData.email);
+        
+        // When creating a new staff member, use signUp with signupOptions that bypass email verification
         const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: staffData.email,
+          email: staffData.email || `staff_${Date.now()}@example.com`, // Fallback email if none provided
           password: staffData.password,
           options: {
             data: {
               name: staffData.name,
               role: 'staff'
             },
-            // Disable email verification for now
-            emailRedirectTo: window.location.origin
+            // Critical: Disable email verification entirely
+            emailRedirectTo: null
           }
         });
 
-        if (authError) throw authError;
+        if (authError) {
+          console.error("Auth error during staff creation:", authError);
+          throw new Error(`Authentication error: ${authError.message}`);
+        }
+        
         authId = authData.user?.id;
         
         console.log("New staff auth account created:", authId);
@@ -132,14 +147,16 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       }
 
       const staffPayload = {
-        ...staffData,
+        name: staffData.name,
+        phone: staffData.phone,
+        email: staffData.email || `staff_${Date.now()}@example.com`, // Fallback email if none provided
+        role: staffData.role,
+        salary: parseFloat(staffData.salary.toString()),
+        joining_date: staffData.joining_date,
+        assigned_pumps: staffData.assigned_pumps,
         auth_id: authId,
-        salary: parseFloat(staffData.salary.toString())
+        is_active: true
       };
-
-      // Remove password fields from database payload
-      delete staffPayload.password;
-      delete staffPayload.confirmPassword;
 
       console.log("Submitting staff data via API:", { ...staffPayload, auth_id: authId ? "[redacted]" : undefined });
       
@@ -161,15 +178,16 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
           const { data, error } = await supabase
             .from('staff')
             .insert([staffPayload])
-            .select();
+            .select('id')
+            .single();
             
           if (error) throw error;
           
-          console.log("Created new staff via API:", data?.[0]?.id);
+          console.log("Created new staff via API:", data?.id);
           
           // Add permissions if new staff was created
-          if (data && data.length > 0 && selectedFeatures.length > 0) {
-            const staffId = data[0].id;
+          if (data?.id && selectedFeatures.length > 0) {
+            const staffId = data.id;
             const permissionsPayload = selectedFeatures.map(feature => ({
               staff_id: staffId,
               feature
