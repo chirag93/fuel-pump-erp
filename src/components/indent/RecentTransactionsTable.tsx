@@ -1,7 +1,10 @@
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { FileText, ArrowRight } from 'lucide-react';
 import { supabase, Transaction } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
@@ -91,6 +94,16 @@ export const RecentTransactionsTable = ({ refreshTrigger = 0 }: RecentTransactio
           </Table>
         )}
       </CardContent>
+      <CardFooter className="flex justify-end">
+        <Link to="/all-transactions">
+          <Button variant="outline" className="gap-2">
+            View all transactions
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </Link>
+      </CardFooter>
     </Card>
   );
 };
+
+export default RecentTransactionsTable;

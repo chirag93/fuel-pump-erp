@@ -1,9 +1,10 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { ArrowLeft, FileText, AlertCircle, Edit } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase, Indent, IndentBooklet, Transaction } from '@/integrations/supabase/client';
@@ -21,6 +22,11 @@ const BookletIndents = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [editingIndent, setEditingIndent] = useState<IndentWithTransaction | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  
+  const PAGE_SIZE = 10;
 
   const fetchData = async () => {
     if (!bookletId) return;
@@ -41,17 +47,28 @@ const BookletIndents = () => {
         setBooklet(bookletData as IndentBooklet);
       }
       
-      // Fetch indents for this booklet
-      const { data: indentsData, error: indentsError } = await supabase
+      // Calculate pagination range
+      const from = (currentPage - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      
+      // Fetch indents for this booklet with pagination
+      const { data: indentsData, error: indentsError, count } = await supabase
         .from('indents')
         .select(`
           *,
           vehicles(number)
-        `)
+        `, { count: 'exact' })
         .eq('booklet_id', bookletId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (indentsError) throw indentsError;
+      
+      // Update pagination info
+      if (count !== null) {
+        setTotalCount(count);
+        setTotalPages(Math.ceil(count / PAGE_SIZE));
+      }
       
       // If we have indents, fetch their related transactions
       if (indentsData && indentsData.length > 0) {
@@ -93,7 +110,7 @@ const BookletIndents = () => {
 
   useEffect(() => {
     fetchData();
-  }, [bookletId]);
+  }, [bookletId, currentPage]);
 
   const handleEditIndent = (indent: IndentWithTransaction) => {
     setEditingIndent(indent);
@@ -108,6 +125,79 @@ const BookletIndents = () => {
       title: "Success",
       description: "Indent has been updated"
     });
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page > 0 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  // Generate pagination items
+  const renderPaginationItems = () => {
+    const items = [];
+    
+    // Always show first page
+    items.push(
+      <PaginationItem key="first">
+        <PaginationLink 
+          isActive={currentPage === 1} 
+          onClick={() => handlePageChange(1)}
+        >
+          1
+        </PaginationLink>
+      </PaginationItem>
+    );
+    
+    // Show ellipsis if needed
+    if (currentPage > 3) {
+      items.push(
+        <PaginationItem key="ellipsis1">
+          <span className="flex h-9 w-9 items-center justify-center">...</span>
+        </PaginationItem>
+      );
+    }
+    
+    // Show pages around current page
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      if (i <= 1 || i >= totalPages) continue; // Skip first and last as they're always shown
+      
+      items.push(
+        <PaginationItem key={i}>
+          <PaginationLink 
+            isActive={currentPage === i} 
+            onClick={() => handlePageChange(i)}
+          >
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+    
+    // Show ellipsis if needed
+    if (currentPage < totalPages - 2) {
+      items.push(
+        <PaginationItem key="ellipsis2">
+          <span className="flex h-9 w-9 items-center justify-center">...</span>
+        </PaginationItem>
+      );
+    }
+    
+    // Always show last page if there's more than 1 page
+    if (totalPages > 1) {
+      items.push(
+        <PaginationItem key="last">
+          <PaginationLink 
+            isActive={currentPage === totalPages} 
+            onClick={() => handlePageChange(totalPages)}
+          >
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+    
+    return items;
   };
 
   if (isLoading) {
@@ -217,6 +307,34 @@ const BookletIndents = () => {
               </Table>
             )}
           </CardContent>
+          
+          {totalPages > 1 && (
+            <CardFooter className="flex justify-center pt-2">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                  
+                  {renderPaginationItems()}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+              
+              <p className="text-sm text-center text-muted-foreground mt-2">
+                Showing {indents.length} of {totalCount} indents
+              </p>
+            </CardFooter>
+          )}
         </Card>
       )}
 
