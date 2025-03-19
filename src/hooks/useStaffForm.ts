@@ -112,7 +112,9 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             data: {
               name: staffData.name,
               role: 'staff'
-            }
+            },
+            // Disable email verification for now
+            emailRedirectTo: window.location.origin
           }
         });
 

@@ -22,7 +22,7 @@ const FEATURES: Array<{ id: StaffFeature; label: string }> = [
 ];
 
 interface FeatureSelectionProps {
-  staffId: string;
+  staffId?: string;
   onFeaturesChange: (features: StaffFeature[]) => void;
   initialFeatures?: StaffFeature[];
 }
@@ -33,25 +33,35 @@ export function FeatureSelection({ staffId, onFeaturesChange, initialFeatures = 
   useEffect(() => {
     if (staffId) {
       loadStaffFeatures();
+    } else {
+      // If no staffId (new staff), use initialFeatures
+      setSelectedFeatures(initialFeatures);
+      onFeaturesChange(initialFeatures);
     }
-  }, [staffId]);
+  }, [staffId, initialFeatures]);
 
   const loadStaffFeatures = async () => {
     if (!staffId) return;
 
-    const { data, error } = await supabase
-      .from('staff_permissions')
-      .select('feature')
-      .eq('staff_id', staffId);
+    try {
+      console.log("Loading features for staff ID:", staffId);
+      const { data, error } = await supabase
+        .from('staff_permissions')
+        .select('feature')
+        .eq('staff_id', staffId);
 
-    if (error) {
-      console.error('Error loading staff features:', error);
-      return;
+      if (error) {
+        console.error('Error loading staff features:', error);
+        return;
+      }
+
+      const features = data?.map(item => item.feature as StaffFeature) || [];
+      console.log("Loaded features:", features);
+      setSelectedFeatures(features);
+      onFeaturesChange(features);
+    } catch (error) {
+      console.error('Error in loadStaffFeatures:', error);
     }
-
-    const features = data.map(item => item.feature);
-    setSelectedFeatures(features);
-    onFeaturesChange(features);
   };
 
   const handleFeatureToggle = (feature: StaffFeature, checked: boolean) => {
@@ -59,6 +69,7 @@ export function FeatureSelection({ staffId, onFeaturesChange, initialFeatures = 
       ? [...selectedFeatures, feature]
       : selectedFeatures.filter(f => f !== feature);
     
+    console.log("Feature toggled:", feature, "New features:", newFeatures);
     setSelectedFeatures(newFeatures);
     onFeaturesChange(newFeatures);
   };
@@ -81,4 +92,3 @@ export function FeatureSelection({ staffId, onFeaturesChange, initialFeatures = 
     </div>
   );
 }
-

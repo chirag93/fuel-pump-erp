@@ -40,6 +40,18 @@ const StaffManagement = () => {
       return jsonValue.map(item => String(item));
     }
     
+    // If it's a JSON string, parse it
+    if (typeof jsonValue === 'string') {
+      try {
+        const parsed = JSON.parse(jsonValue);
+        if (Array.isArray(parsed)) {
+          return parsed.map(item => String(item));
+        }
+      } catch (e) {
+        console.error('Error parsing JSON array:', e);
+      }
+    }
+    
     return [];
   };
   
