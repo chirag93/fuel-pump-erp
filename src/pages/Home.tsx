@@ -72,6 +72,32 @@ const Home = () => {
     { fuelType: 'Petrol', capacity: 10000, lastUpdated: 'Loading...' },
     { fuelType: 'Diesel', capacity: 10000, lastUpdated: 'Loading...' }
   ]);
+  const [fuelPumpName, setFuelPumpName] = useState<string>('Fuel Master');
+
+  // Fetch fuel pump name
+  useEffect(() => {
+    const fetchFuelPumpName = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('fuel_pumps')
+          .select('name')
+          .single();
+          
+        if (error) {
+          console.error('Error fetching fuel pump name:', error);
+          return;
+        }
+        
+        if (data) {
+          setFuelPumpName(data.name);
+        }
+      } catch (error) {
+        console.error('Error fetching fuel pump name:', error);
+      }
+    };
+    
+    fetchFuelPumpName();
+  }, []);
 
   // Fetch fuel levels from the database
   useEffect(() => {
@@ -126,7 +152,9 @@ const Home = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Home</h2>
-        <p className="text-muted-foreground">Quick access to frequent operations</p>
+        <p className="text-muted-foreground">
+          <span className="font-medium">{fuelPumpName}</span> - Quick access to frequent operations
+        </p>
       </div>
 
       {/* Fuel Tank Status */}

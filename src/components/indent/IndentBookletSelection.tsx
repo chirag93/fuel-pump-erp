@@ -300,10 +300,11 @@ export const IndentBookletSelection = ({
     setIndentNumberError('');
   };
 
-  const filteredCustomers = searchCustomer 
-    ? customers.filter(customer => 
-        customer.name.toLowerCase().includes(searchCustomer.toLowerCase()))
-    : customers;
+  // Improved filtering logic for customer search
+  const filteredCustomers = customers.filter(customer => 
+    searchCustomer.trim() === '' || 
+    customer.name.toLowerCase().includes(searchCustomer.toLowerCase())
+  );
 
   return (
     <div className="space-y-4">
@@ -371,10 +372,11 @@ export const IndentBookletSelection = ({
                       placeholder="Search customers..." 
                       value={searchCustomer}
                       onValueChange={setSearchCustomer}
+                      className="h-9"
                     />
                     <CommandList>
                       <CommandEmpty>No customers found.</CommandEmpty>
-                      <CommandGroup>
+                      <CommandGroup className="max-h-[300px] overflow-auto">
                         {isCustomerLoading ? (
                           <CommandItem disabled>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -384,7 +386,7 @@ export const IndentBookletSelection = ({
                           filteredCustomers.map(customer => (
                             <CommandItem
                               key={customer.id}
-                              value={customer.id}
+                              value={customer.name}
                               onSelect={() => handleCustomerSelect(customer.id, customer.name)}
                             >
                               {customer.name}
