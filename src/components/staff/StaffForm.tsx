@@ -28,6 +28,8 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     setChangePassword
   } = useStaffForm(initialData, onSubmit, onCancel);
 
+  console.log("StaffForm rendering with initialData:", initialData?.id);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <BasicInfoFields

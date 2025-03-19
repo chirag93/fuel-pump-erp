@@ -61,7 +61,9 @@ const StaffManagement = () => {
         // Convert Json to string[] for assigned_pumps
         const formattedData = data.map(item => ({
           ...item,
-          assigned_pumps: convertJsonToStringArray(item.assigned_pumps)
+          assigned_pumps: Array.isArray(item.assigned_pumps) 
+            ? item.assigned_pumps.map(String)
+            : convertJsonToStringArray(item.assigned_pumps)
         }));
         setStaff(formattedData as Staff[]);
       }
@@ -100,7 +102,7 @@ const StaffManagement = () => {
 
   const handleSaveStaff = async (staffData: any) => {
     try {
-      console.log("Saving staff data:", staffData);
+      console.log("Saving staff data via API:", staffData);
       
       if (editingStaff) {
         // Update existing staff
@@ -111,16 +113,6 @@ const StaffManagement = () => {
           
         if (error) throw error;
         
-        // Create a properly typed staff object for state update
-        const updatedStaff: Staff = {
-          ...staffData,
-          id: editingStaff.id,
-          assigned_pumps: Array.isArray(staffData.assigned_pumps) 
-            ? staffData.assigned_pumps 
-            : convertJsonToStringArray(staffData.assigned_pumps)
-        };
-        
-        setStaff(staff.map(s => s.id === editingStaff.id ? updatedStaff : s));
         toast({ 
           title: "Staff updated", 
           description: `${staffData.name}'s information has been updated` 
@@ -137,15 +129,6 @@ const StaffManagement = () => {
         if (data && data.length > 0) {
           console.log("New staff created:", data[0]);
           
-          // Create a properly typed staff object for state update
-          const newStaff: Staff = {
-            ...data[0],
-            assigned_pumps: Array.isArray(data[0].assigned_pumps) 
-              ? data[0].assigned_pumps 
-              : convertJsonToStringArray(data[0].assigned_pumps)
-          };
-          
-          setStaff([...staff, newStaff]);
           toast({ 
             title: "Staff added", 
             description: `${staffData.name} has been added to the staff list` 
@@ -153,7 +136,7 @@ const StaffManagement = () => {
         }
       }
       setFormOpen(false);
-      // Refresh the staff list to ensure it's up to date
+      // Refresh the staff list to ensure it's up to date with the latest data from the API
       fetchStaff();
     } catch (error: any) {
       console.error('Error saving staff:', error);
@@ -175,11 +158,13 @@ const StaffManagement = () => {
           
         if (error) throw error;
         
-        setStaff(staff.filter(s => s.id !== id));
         toast({ 
           title: "Staff removed", 
           description: "Staff member has been removed" 
         });
+        
+        // Fetch updated staff list from the API instead of manipulating local state
+        fetchStaff();
       } catch (error) {
         console.error('Error deleting staff:', error);
         toast({

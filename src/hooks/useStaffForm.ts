@@ -139,9 +139,10 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       delete staffPayload.password;
       delete staffPayload.confirmPassword;
 
-      console.log("Submitting staff data:", { ...staffPayload, auth_id: authId ? "[redacted]" : undefined });
+      console.log("Submitting staff data via API:", { ...staffPayload, auth_id: authId ? "[redacted]" : undefined });
       
       if (onSubmit) {
+        // Let the parent component handle the API call
         await onSubmit(staffPayload);
       } else {
         // Direct database insert if no onSubmit callback
@@ -152,6 +153,8 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             .eq('id', initialData.id);
             
           if (error) throw error;
+          
+          console.log("Updated staff via API:", initialData.id);
         } else {
           const { data, error } = await supabase
             .from('staff')
@@ -160,16 +163,21 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             
           if (error) throw error;
           
+          console.log("Created new staff via API:", data?.[0]?.id);
+          
           // Add permissions if new staff was created
           if (data && data.length > 0 && selectedFeatures.length > 0) {
+            const staffId = data[0].id;
+            const permissionsPayload = selectedFeatures.map(feature => ({
+              staff_id: staffId,
+              feature
+            }));
+            
+            console.log("Adding staff permissions via API:", permissionsPayload);
+            
             const { error: permError } = await supabase
               .from('staff_permissions')
-              .insert(
-                selectedFeatures.map(feature => ({
-                  staff_id: data[0].id,
-                  feature
-                }))
-              );
+              .insert(permissionsPayload);
 
             if (permError) throw permError;
           }
