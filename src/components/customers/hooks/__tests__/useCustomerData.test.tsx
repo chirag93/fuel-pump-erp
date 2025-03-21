@@ -11,11 +11,7 @@ jest.mock('@/integrations/customers', () => ({
 
 jest.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    order: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
+    from: jest.fn()
   },
 }));
 
@@ -28,12 +24,29 @@ describe('useCustomerData', () => {
   const mockCustomer = { 
     id: mockCustomerId, 
     name: 'Test Customer',
-    balance: 1000 
+    balance: 1000,
+    contact: 'Test Contact',
+    email: 'test@example.com',
+    phone: '1234567890',
+    gst: 'GST123456',
+    created_at: new Date().toISOString()
   };
-  const mockVehicles = [{ id: 'v1', number: 'ABC123', customer_id: mockCustomerId }];
+  
+  const mockVehicles = [{ id: 'v1', number: 'ABC123', customer_id: mockCustomerId, capacity: '500L', type: 'Truck' }];
   const mockIndents = [{ id: 'i1', customer_id: mockCustomerId, vehicles: { number: 'ABC123' } }];
   const mockIndentBooklets = [{ id: 'b1', customer_id: mockCustomerId, status: 'Active' }];
-  const mockTransactions = [{ id: 't1', customer_id: mockCustomerId, vehicles: { number: 'ABC123' } }];
+  const mockTransactions = [{ 
+    id: 't1', 
+    customer_id: mockCustomerId, 
+    vehicles: { number: 'ABC123' },
+    staff_id: 'staff1',
+    date: new Date().toISOString(),
+    fuel_type: 'DIESEL',
+    amount: 5000,
+    quantity: 50,
+    payment_method: 'CREDIT',
+    created_at: new Date().toISOString()
+  }];
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -41,61 +54,40 @@ describe('useCustomerData', () => {
     // Mock customer data fetch
     (getCustomerById as jest.Mock).mockResolvedValue(mockCustomer);
     
-    // Mock vehicle data fetch
+    // Mock Supabase from method for different tables
     (supabase.from as jest.Mock).mockImplementation((table) => {
       if (table === 'vehicles') {
         return {
-          select: () => ({
-            eq: () => Promise.resolve({ data: mockVehicles, error: null })
-          })
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockResolvedValue({ data: mockVehicles, error: null })
         };
-      }
-      return supabase;
-    });
-    
-    // Mock indents data fetch
-    (supabase.from as jest.Mock).mockImplementation((table) => {
-      if (table === 'indents') {
+      } else if (table === 'indents') {
         return {
-          select: () => ({
-            eq: () => Promise.resolve({ data: mockIndents, error: null })
-          })
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockResolvedValue({ data: mockIndents, error: null })
         };
-      }
-      return supabase;
-    });
-    
-    // Mock booklets data fetch
-    (supabase.from as jest.Mock).mockImplementation((table) => {
-      if (table === 'indent_booklets') {
+      } else if (table === 'indent_booklets') {
         return {
-          select: () => ({
-            eq: () => Promise.resolve({ data: mockIndentBooklets, error: null })
-          })
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockResolvedValue({ data: mockIndentBooklets, error: null })
         };
-      }
-      return supabase;
-    });
-    
-    // Mock transactions data fetch
-    (supabase.from as jest.Mock).mockImplementation((table) => {
-      if (table === 'transactions') {
+      } else if (table === 'transactions') {
         return {
-          select: () => ({
-            eq: () => ({
-              order: () => ({
-                limit: () => Promise.resolve({ data: mockTransactions, error: null })
-              })
-            })
-          })
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          order: jest.fn().mockReturnThis(),
+          limit: jest.fn().mockResolvedValue({ data: mockTransactions, error: null })
         };
       }
-      return supabase;
+      return {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis()
+      };
     });
   });
 
   it('fetches customer data successfully', async () => {
-    const { result, rerender } = renderHook(() => useCustomerData(mockCustomerId));
+    const { result } = renderHook(() => useCustomerData(mockCustomerId));
     
     // Initial state should have loading true
     expect(result.current.isLoading).toBe(true);

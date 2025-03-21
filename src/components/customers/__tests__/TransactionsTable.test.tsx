@@ -17,8 +17,8 @@ describe('TransactionsTable', () => {
     name: 'Test Customer',
     email: 'test@example.com',
     phone: '1234567890',
-    address: '123 Test St',
-    gstin: 'GST123456',
+    contact: 'Test Contact', // Added required field
+    gst: 'GST123456', // Changed to match the actual field name
     balance: 1000,
     created_at: new Date().toISOString()
   };
@@ -34,7 +34,10 @@ describe('TransactionsTable', () => {
       amount: 5000,
       payment_method: 'CREDIT',
       date: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      staff_id: 'staff1', // Added required field
+      indent_id: null, // Added required field
+      discount_amount: null // Added required field
     },
     {
       id: '2',
@@ -43,7 +46,12 @@ describe('TransactionsTable', () => {
       amount: 2000,
       payment_method: 'CASH',
       date: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      staff_id: 'staff1', // Added required field
+      vehicle_id: null, // Added required field
+      quantity: 0, // Added required field
+      indent_id: null, // Added required field
+      discount_amount: null // Added required field
     }
   ];
 
