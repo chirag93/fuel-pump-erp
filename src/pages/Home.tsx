@@ -6,7 +6,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ModuleIcons } from '@/assets/icons';
 import {
   Droplets,
   FileText,
@@ -16,7 +15,6 @@ import {
   ClipboardList,
   Wrench,
   BarChart,
-  TestTube,
 } from 'lucide-react';
 import FuelTankDisplay from '@/components/fuel/FuelTankDisplay';
 import { useEffect, useState } from 'react';
@@ -32,7 +30,7 @@ interface QuickActionProps {
 }
 
 interface FuelLevel {
-  fuelType: 'Petrol' | 'Diesel';
+  fuelType: string;
   capacity: number;
   lastUpdated: string;
 }
@@ -85,30 +83,49 @@ const Home = () => {
   useEffect(() => {
     const fetchFuelLevels = async () => {
       try {
-        // First, get the fuel settings to get tank capacities
+        console.log('Fetching fuel settings and levels for Home page');
+        
+        // First, get the fuel settings to get tank capacities and current levels
         const { data: fuelSettingsData, error: fuelSettingsError } = await supabase
           .from('fuel_settings')
           .select('fuel_type, tank_capacity, current_level, updated_at');
           
         if (fuelSettingsError) {
+          console.error('Error fetching fuel settings:', fuelSettingsError);
           throw fuelSettingsError;
         }
         
-        // Create a map of fuel type to tank capacity
-        const capacityMap: Record<string, number> = {};
+        console.log('Fuel settings data:', fuelSettingsData);
+        
         if (fuelSettingsData && fuelSettingsData.length > 0) {
-          fuelSettingsData.forEach(setting => {
-            capacityMap[setting.fuel_type] = Number(setting.tank_capacity);
-          });
+          // Format the data for our component directly from fuel_settings
+          const fuelData = fuelSettingsData.map(item => ({
+            fuelType: item.fuel_type,
+            capacity: Number(item.tank_capacity),
+            lastUpdated: item.updated_at ? new Date(item.updated_at).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            }) : 'Unknown'
+          }));
+          
+          console.log('Processed fuel data from settings:', fuelData);
+          
+          if (fuelData.length > 0) {
+            setFuelLevels(fuelData);
+            return; // Exit early if we have good data from settings
+          }
         }
         
-        // Now get inventory data for current levels
+        // Fallback to inventory if no fuel_settings data
+        console.log('No fuel settings data, falling back to inventory');
         const { data, error } = await supabase
           .from('inventory')
           .select('*')
           .order('date', { ascending: false });
           
         if (error) {
+          console.error('Error fetching inventory:', error);
           throw error;
         }
         
@@ -117,20 +134,22 @@ const Home = () => {
           const latestByFuelType: Record<string, any> = {};
           data.forEach(item => {
             // Only process Petrol and Diesel fuel types (no CNG)
-            if ((item.fuel_type === 'Petrol' || item.fuel_type === 'Diesel') && 
+            if ((item.fuel_type === 'Petrol' || item.fuel_type === 'Diesel' || item.fuel_type === 'Premium') && 
                 (!latestByFuelType[item.fuel_type] || new Date(item.date) > new Date(latestByFuelType[item.fuel_type].date))) {
               latestByFuelType[item.fuel_type] = item;
             }
           });
+          
+          console.log('Latest by fuel type from inventory:', latestByFuelType);
           
           // Format the data for our component
           const fuelData = Object.values(latestByFuelType).map(item => {
             // Ensure we have a valid fuel_type before using it
             if (item && typeof item.fuel_type === 'string') {
               return {
-                fuelType: item.fuel_type as 'Petrol' | 'Diesel',
-                // Use capacity from settings if available, otherwise use default
-                capacity: capacityMap[item.fuel_type] || (item.fuel_type === 'Petrol' ? 10000 : 12000),
+                fuelType: item.fuel_type,
+                // Use default capacities since we don't have settings
+                capacity: item.fuel_type === 'Petrol' ? 10000 : 12000,
                 lastUpdated: item.date ? new Date(item.date).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'short',
@@ -140,6 +159,8 @@ const Home = () => {
             }
             return null;
           }).filter(Boolean) as FuelLevel[];
+          
+          console.log('Processed fuel data from inventory:', fuelData);
           
           if (fuelData.length > 0) {
             setFuelLevels(fuelData);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -26,6 +25,8 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
         setIsLoading(true);
         setError(null);
         
+        console.log(`Fetching data for ${fuelType}, provided capacity: ${capacity}`);
+        
         // Try to get data from fuel_settings first
         const { data: settingsData, error: settingsError } = await supabase
           .from('fuel_settings')
@@ -34,13 +35,20 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
           .maybeSingle();
 
         if (settingsData) {
+          console.log('Settings data found:', settingsData);
           setCurrentLevel(Number(settingsData.current_level));
           setPricePerUnit(Number(settingsData.current_price));
-          // Only set tank capacity from settings if no capacity was provided as prop
+          
+          // Only set tank capacity from settings if no capacity was provided as prop or if it's the default value
           if (!capacity && settingsData.tank_capacity) {
+            console.log(`Using capacity from settings: ${settingsData.tank_capacity}`);
             setTankCapacity(Number(settingsData.tank_capacity));
+          } else if (capacity) {
+            console.log(`Using capacity from props: ${capacity}`);
+            setTankCapacity(Number(capacity));
           }
         } else {
+          console.log('No settings data found, falling back to inventory');
           // Fallback to inventory table
           const { data, error } = await supabase
             .from('inventory')
@@ -54,8 +62,14 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
           }
           
           if (data && data.length > 0) {
+            console.log('Inventory data found:', data[0]);
             setCurrentLevel(Number(data[0].quantity));
             setPricePerUnit(Number(data[0].price_per_unit));
+            
+            // Keep using provided capacity or default if still needed
+            if (capacity) {
+              setTankCapacity(Number(capacity));
+            }
           } else {
             setError(`No data found for ${fuelType} tank`);
           }

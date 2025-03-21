@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,6 +44,7 @@ export function FuelTypeSettings() {
   
   const fetchFuelSettings = async () => {
     try {
+      console.log('Fetching fuel settings for settings page');
       const { data, error } = await supabase
         .from('fuel_settings')
         .select('*');
@@ -52,6 +52,7 @@ export function FuelTypeSettings() {
       if (error) throw error;
       
       if (data) {
+        console.log('Fetched fuel settings:', data);
         setFuelSettings(data as FuelSettings[]);
       }
     } catch (error) {
@@ -124,20 +125,27 @@ export function FuelTypeSettings() {
         return;
       }
       
+      console.log('Updating fuel type with data:', editFuelType);
+      
       const { data, error } = await supabase
         .from('fuel_settings')
         .update({
           fuel_type: editFuelType.fuel_type,
           current_price: editFuelType.current_price,
           tank_capacity: editFuelType.tank_capacity,
-          current_level: editFuelType.current_level
+          current_level: editFuelType.current_level,
+          updated_at: new Date().toISOString()
         })
         .eq('id', editFuelType.id)
         .select();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase update error:', error);
+        throw error;
+      }
       
       if (data) {
+        console.log('Update successful, returned data:', data);
         // Update the fuel settings state with the updated fuel type
         setFuelSettings(fuelSettings.map(fuel => 
           fuel.id === editFuelType.id ? data[0] as FuelSettings : fuel
@@ -162,7 +170,8 @@ export function FuelTypeSettings() {
   };
   
   const handleEditFuelType = (fuel: FuelSettings) => {
-    setEditFuelType(fuel);
+    console.log('Editing fuel type:', fuel);
+    setEditFuelType({...fuel});
     setIsEditFuelDialogOpen(true);
   };
 
