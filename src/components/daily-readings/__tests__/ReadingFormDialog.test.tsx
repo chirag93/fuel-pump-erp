@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ReadingFormDialog } from '@/components/daily-readings/ReadingFormDialog';
+import ReadingFormDialog from '@/components/daily-readings/ReadingFormDialog';
 import '@testing-library/jest-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';

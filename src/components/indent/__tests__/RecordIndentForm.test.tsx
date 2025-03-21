@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { RecordIndent } from '@/pages/RecordIndent';
+import { toast } from '@/hooks/use-toast';
+import RecordIndent from '@/pages/RecordIndent';
 import '@testing-library/jest-dom';
 import { supabase } from '@/integrations/supabase/client';
 import userEvent from '@testing-library/user-event';
