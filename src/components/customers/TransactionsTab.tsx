@@ -171,7 +171,7 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
       
       // Add transaction table
       autoTable(pdf, {
-        head: [['Date', 'Vehicle', 'Fuel Type', 'Quantity (L)', 'Amount (₹)', 'Payment Method']],
+        head: [['Date', 'Vehicle', 'Fuel Type', 'Quantity (L)', 'Amount (INR)', 'Payment Method']],
         body: fuelTransactions.map(trans => [
           format(new Date(trans.date), 'dd/MM/yyyy'),
           trans.vehicle_number || 'N/A',
@@ -195,12 +195,12 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
       pdf.text(`Total Quantity: ${totalQuantity.toFixed(2)} L`, 140, finalY + 7);
-      pdf.text(`Base Amount: ₹${baseAmount.toFixed(2)}`, 140, finalY + 14);
-      pdf.text(`CGST (${(gstRate/2)*100}%): ₹${(gstAmount/2).toFixed(2)}`, 140, finalY + 21);
-      pdf.text(`SGST (${(gstRate/2)*100}%): ₹${(gstAmount/2).toFixed(2)}`, 140, finalY + 28);
+      pdf.text(`Base Amount: INR ${baseAmount.toFixed(2)}`, 140, finalY + 14);
+      pdf.text(`CGST (${(gstRate/2)*100}%): INR ${(gstAmount/2).toFixed(2)}`, 140, finalY + 21);
+      pdf.text(`SGST (${(gstRate/2)*100}%): INR ${(gstAmount/2).toFixed(2)}`, 140, finalY + 28);
       
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`Total Amount: ₹${totalAmount.toFixed(2)}`, 140, finalY + 35);
+      pdf.text(`Total Amount: INR ${totalAmount.toFixed(2)}`, 140, finalY + 35);
       
       // Add footer
       pdf.setFontSize(9);
@@ -349,8 +349,8 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
                       </TableCell>
                       <TableCell className={transaction.fuel_type === 'PAYMENT' ? 'text-green-600 font-medium' : ''}>
                         {transaction.fuel_type === 'PAYMENT'
-                          ? `₹${transaction.amount}`
-                          : `₹${transaction.amount}`
+                          ? `INR ${transaction.amount}`
+                          : `INR ${transaction.amount}`
                         }
                       </TableCell>
                       <TableCell>{transaction.payment_method}</TableCell>
