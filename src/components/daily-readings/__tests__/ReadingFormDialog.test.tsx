@@ -6,7 +6,7 @@ import ReadingFormDialog from '@/components/daily-readings/ReadingFormDialog';
 import '@testing-library/jest-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
-import { calculateReadingValues } from '@/components/daily-readings/readingUtils';
+import { calculateValues } from '@/components/daily-readings/readingUtils';
 
 // Mock Supabase client
 jest.mock('@/integrations/supabase/client', () => ({
@@ -27,7 +27,7 @@ jest.mock('@/components/ui/use-toast', () => ({
 
 // Mock the calculation utilities
 jest.mock('@/components/daily-readings/readingUtils', () => ({
-  calculateReadingValues: jest.fn().mockReturnValue({
+  calculateValues: jest.fn().mockReturnValue({
     opening_stock: 500,
     sales_per_tank_stock: 200,
     stock_variation: 0
