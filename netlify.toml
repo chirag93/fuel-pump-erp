@@ -7,3 +7,7 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Run tests before build
+[build]
+  command = "npm test && npm run build"
