@@ -18,6 +18,8 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { DateRange } from 'react-day-picker';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface TransactionWithDetails extends Transaction {
   vehicle_number?: string;
@@ -91,6 +93,12 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
         .select('*')
         .single();
 
+      // Get business settings for GST number
+      const { data: businessSettings } = await supabase
+        .from('business_settings')
+        .select('*')
+        .single();
+
       // Calculate totals
       let totalAmount = 0;
       let totalQuantity = 0;
@@ -114,70 +122,108 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
         ? `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`
         : 'All time';
 
-      // Create CSV data
-      let csvContent = 'data:text/csv;charset=utf-8,';
+      // Create PDF document
+      const pdf = new jsPDF();
       
-      // Add headers
-      csvContent += 'GST INVOICE\r\n\r\n';
-      csvContent += `Invoice Date: ${invoiceDate}\r\n`;
-      csvContent += `Period: ${invoicePeriod}\r\n\r\n`;
+      // Add logo/header
+      pdf.setFontSize(18);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(businessData?.name || 'Fuel Station', 105, 20, { align: 'center' });
       
-      // Seller details
-      csvContent += 'Seller Details:\r\n';
-      csvContent += `${businessData?.name || 'Fuel Station'}\r\n`;
-      csvContent += `${businessData?.address || 'Address not available'}\r\n`;
+      // Add address and contact details
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      const address = businessData?.address || 'Address not available';
+      pdf.text(address, 105, 28, { align: 'center' });
       
-      // Get business settings for GST number
-      const { data: businessSettings } = await supabase
-        .from('business_settings')
-        .select('*')
-        .single();
-        
-      csvContent += `GSTIN: ${businessSettings?.gst_number || 'Not available'}\r\n\r\n`;
+      const contact = businessData?.contact_number ? `Contact: ${businessData.contact_number}` : '';
+      pdf.text(contact, 105, 34, { align: 'center' });
       
-      // Buyer details
-      csvContent += 'Buyer Details:\r\n';
-      csvContent += `${customer.name}\r\n`;
-      csvContent += `Contact: ${customer.contact}\r\n`;
-      csvContent += `Phone: ${customer.phone}\r\n`;
-      csvContent += `GSTIN: ${customer.gst}\r\n\r\n`;
+      const gstNumber = businessSettings?.gst_number ? `GSTIN: ${businessSettings.gst_number}` : 'GSTIN: Not Available';
+      pdf.text(gstNumber, 105, 40, { align: 'center' });
       
-      // Transaction details
-      csvContent += 'Date,Vehicle,Fuel Type,Quantity (L),Amount (₹),Payment Method\r\n';
+      // Add invoice title
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text("TAX INVOICE", 105, 50, { align: 'center' });
       
-      fuelTransactions.forEach(trans => {
-        csvContent += `${format(new Date(trans.date), 'dd/MM/yyyy')},`;
-        csvContent += `${trans.vehicle_number || 'N/A'},`;
-        csvContent += `${trans.fuel_type},`;
-        csvContent += `${trans.quantity || 0},`;
-        csvContent += `${trans.amount},`;
-        csvContent += `${trans.payment_method}\r\n`;
+      // Add a line
+      pdf.line(14, 55, 196, 55);
+      
+      // Invoice details
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Invoice Date: ${invoiceDate}`, 14, 65);
+      pdf.text(`Period: ${invoicePeriod}`, 14, 71);
+      pdf.text(`Invoice No: INV-${new Date().getTime().toString().substring(0, 10)}`, 14, 77);
+      
+      // Customer details
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text("Customer Details:", 14, 87);
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Name: ${customer.name}`, 14, 94);
+      pdf.text(`Contact: ${customer.contact}`, 14, 100);
+      pdf.text(`Phone: ${customer.phone}`, 14, 106);
+      pdf.text(`GSTIN: ${customer.gst || 'Not Available'}`, 14, 112);
+      
+      // Add transaction table
+      autoTable(pdf, {
+        head: [['Date', 'Vehicle', 'Fuel Type', 'Quantity (L)', 'Amount (₹)', 'Payment Method']],
+        body: fuelTransactions.map(trans => [
+          format(new Date(trans.date), 'dd/MM/yyyy'),
+          trans.vehicle_number || 'N/A',
+          trans.fuel_type,
+          trans.quantity ? trans.quantity.toString() : '0',
+          trans.amount.toString(),
+          trans.payment_method
+        ]),
+        startY: 120,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [66, 66, 66] }
       });
       
-      // Summary
-      csvContent += '\r\nSummary:\r\n';
-      csvContent += `Total Quantity: ${totalQuantity.toFixed(2)} L\r\n`;
-      csvContent += `Base Amount: ₹${baseAmount.toFixed(2)}\r\n`;
-      csvContent += `CGST (${(gstRate/2)*100}%): ₹${(gstAmount/2).toFixed(2)}\r\n`;
-      csvContent += `SGST (${(gstRate/2)*100}%): ₹${(gstAmount/2).toFixed(2)}\r\n`;
-      csvContent += `Total Amount: ₹${totalAmount.toFixed(2)}\r\n`;
+      // Add summary
+      const finalY = (pdf as any).lastAutoTable.finalY + 10;
+      
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text("Invoice Summary", 140, finalY);
+      
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Total Quantity: ${totalQuantity.toFixed(2)} L`, 140, finalY + 7);
+      pdf.text(`Base Amount: ₹${baseAmount.toFixed(2)}`, 140, finalY + 14);
+      pdf.text(`CGST (${(gstRate/2)*100}%): ₹${(gstAmount/2).toFixed(2)}`, 140, finalY + 21);
+      pdf.text(`SGST (${(gstRate/2)*100}%): ₹${(gstAmount/2).toFixed(2)}`, 140, finalY + 28);
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Total Amount: ₹${totalAmount.toFixed(2)}`, 140, finalY + 35);
+      
+      // Add footer
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Generated on: ${new Date().toLocaleString()}`, 14, 280);
       
       // Add signature line
-      csvContent += '\r\n\r\nAuthorized Signatory';
+      pdf.line(140, finalY + 50, 190, finalY + 50);
+      pdf.text("Authorized Signature", 150, finalY + 55);
       
-      // Create download link
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement('a');
-      link.setAttribute('href', encodedUri);
-      link.setAttribute('download', `${customer.name}-GST-Invoice-${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
+      // Terms and conditions
+      pdf.setFontSize(8);
+      pdf.text("Terms & Conditions:", 14, 255);
+      pdf.text("1. This is a computer generated invoice and does not require a physical signature.", 14, 260);
+      pdf.text("2. Please pay within 30 days of the invoice date.", 14, 265);
+      pdf.text("3. For any queries related to this invoice, please contact us.", 14, 270);
       
-      // Trigger download
-      link.click();
+      // Save the PDF
+      pdf.save(`${customer.name}-GST-Invoice-${new Date().toISOString().split('T')[0]}.pdf`);
       
       toast({
         title: "Invoice Generated",
-        description: "The GST invoice has been downloaded successfully",
+        description: "The GST invoice has been generated and downloaded successfully",
       });
     } catch (error) {
       console.error('Error generating invoice:', error);
