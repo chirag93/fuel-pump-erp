@@ -20,10 +20,5 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Add test command to ensure tests run before build
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: './jest.setup.ts',
-  }
+  // Remove test command since we're using Jest separately
 }));
