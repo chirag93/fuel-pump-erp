@@ -65,12 +65,18 @@ export const processReadingsData = (data: any[]) => {
       });
     }
     
-    // Add tank information
-    groupedMap.get(key).tanks.push({
-      tank_number: item.tank_number || 1,
-      dip_reading: item.dip_reading,
-      net_stock: item.net_stock || item.opening_stock
-    });
+    // Check if this tank already exists in the array (avoid duplicates)
+    const existingEntry = groupedMap.get(key);
+    const tankExists = existingEntry.tanks.some((tank: any) => tank.tank_number === item.tank_number);
+    
+    // Only add tank information if it doesn't already exist
+    if (!tankExists) {
+      existingEntry.tanks.push({
+        tank_number: item.tank_number || 1,
+        dip_reading: item.dip_reading,
+        net_stock: item.net_stock || item.opening_stock
+      });
+    }
   });
   
   // Convert map to array and sort tanks within each entry

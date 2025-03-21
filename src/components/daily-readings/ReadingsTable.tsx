@@ -62,8 +62,8 @@ const ReadingsTable = ({ readings, handleOpenDialog, handleOpenDeleteDialog }: R
             <TableCell>
               {reading.tanks ? (
                 <div className="flex flex-col gap-1">
-                  {reading.tanks.map((tank: TankReading) => (
-                    <div key={`${reading.id}-tank-${tank.tank_number}`} className="text-xs">
+                  {reading.tanks.map((tank: TankReading, index: number) => (
+                    <div key={`${reading.id}-tank-${tank.tank_number}-${index}`} className="text-xs">
                       Tank {tank.tank_number}
                     </div>
                   ))}
