@@ -21,7 +21,7 @@ export function EndShiftConsumables({
   if (!allocatedConsumables || allocatedConsumables.length === 0) {
     return (
       <div className="border-t pt-4 mt-4">
-        <h3 className="text-lg font-medium mb-2">Consumables Used</h3>
+        <h3 className="text-lg font-medium mb-2">Consumables Reconciliation</h3>
         <Card>
           <CardContent className="pt-6 text-center text-muted-foreground">
             No consumables were allocated for this shift.
@@ -33,14 +33,14 @@ export function EndShiftConsumables({
 
   return (
     <div className="border-t pt-4 mt-4">
-      <h3 className="text-lg font-medium mb-2">Consumables Used</h3>
+      <h3 className="text-lg font-medium mb-2">Consumables Reconciliation</h3>
       <Card>
         <CardContent className="pt-6">
           <div className="space-y-4">
             {allocatedConsumables.map((item) => {
               const returned = returnedConsumables.find(r => r.id === item.id);
-              const used = item.quantity - (returned?.quantity || 0);
-              const cost = used * item.price_per_unit;
+              const sold = item.quantity - (returned?.quantity || 0);
+              const revenue = sold * item.price_per_unit;
               
               return (
                 <div key={item.id} className="grid gap-1">
@@ -72,7 +72,7 @@ export function EndShiftConsumables({
                       </span>
                     </div>
                     <div className="font-medium">
-                      Used: {used} {item.unit} (₹{cost.toFixed(2)})
+                      Sold: {sold} {item.unit} (₹{revenue.toFixed(2)})
                     </div>
                   </div>
                 </div>
@@ -80,7 +80,7 @@ export function EndShiftConsumables({
             })}
             <div className="pt-4 border-t">
               <div className="flex justify-between font-medium">
-                <span>Total Consumables Expense:</span>
+                <span>Total Consumables Sold:</span>
                 <span>₹{consumablesExpense.toFixed(2)}</span>
               </div>
             </div>

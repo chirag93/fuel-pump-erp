@@ -201,17 +201,17 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
     }
   }, [shiftData?.id]);
   
-  // Add function to calculate consumables expense
+  // Update function to calculate consumables sold revenue
   useEffect(() => {
     if (allocatedConsumables.length > 0 && returnedConsumables.length > 0) {
-      // Calculate consumables expense - only count consumed items (allocated minus returned)
-      const expense = allocatedConsumables.reduce((total, allocated) => {
+      // Calculate consumables revenue - only count sold items (allocated minus returned)
+      const revenue = allocatedConsumables.reduce((total, allocated) => {
         const returned = returnedConsumables.find(r => r.id === allocated.id);
-        const usedQuantity = allocated.quantity - (returned?.quantity || 0);
-        return total + (usedQuantity * allocated.price_per_unit);
+        const soldQuantity = allocated.quantity - (returned?.quantity || 0);
+        return total + (soldQuantity * allocated.price_per_unit);
       }, 0);
       
-      setConsumablesExpense(expense);
+      setConsumablesExpense(revenue);
     } else {
       setConsumablesExpense(0);
     }
@@ -263,7 +263,7 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
       
       if (updateShiftError) throw updateShiftError;
       
-      // 2. Update readings with closing reading, sales data, and consumables expense
+      // 2. Update readings with closing reading, sales data, and consumables sold
       const { error: updateReadingError } = await supabase
         .from('readings')
         .update({
@@ -274,7 +274,7 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
           cash_remaining: Number(formData.cashRemaining),
           expenses: Number(formData.expenses) || 0,
           testing_fuel: Number(formData.testingFuel) || 0,
-          consumable_expenses: consumablesExpense
+          consumable_expenses: consumablesExpense // This is actually revenue from consumables sold
         })
         .eq('shift_id', shiftData.id);
       
