@@ -66,30 +66,6 @@ const DailySalesRecord = () => {
     fetchFuelTypes();
   }, []);
 
-  const fetchFuelTypes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('fuel_settings')
-        .select('fuel_type');
-        
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        const types = data.map(item => item.fuel_type);
-        setFuelTypes(types);
-        // Set default fuel type if none is selected
-        if (!readingFormData.fuel_type && types.length > 0) {
-          setReadingFormData(prev => ({
-            ...prev,
-            fuel_type: types[0]
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching fuel types:', error);
-    }
-  };
-
   const fetchReadings = async () => {
     setIsLoading(true);
     try {
@@ -114,6 +90,30 @@ const DailySalesRecord = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchFuelTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('fuel_settings')
+        .select('fuel_type');
+        
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const types = data.map(item => item.fuel_type);
+        setFuelTypes(types);
+        // Set default fuel type if none is selected
+        if (!readingFormData.fuel_type && types.length > 0) {
+          setReadingFormData(prev => ({
+            ...prev,
+            fuel_type: types[0]
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching fuel types:', error);
     }
   };
 
@@ -367,6 +367,27 @@ const DailySalesRecord = () => {
         .insert(entries);
         
       if (error) throw error;
+      
+      // Update fuel_settings with the new closing stock (tank level)
+      const { error: updateError } = await supabase
+        .from('fuel_settings')
+        .update({
+          current_level: readingFormData.closing_stock,
+          updated_at: new Date().toISOString()
+        })
+        .eq('fuel_type', readingFormData.fuel_type.trim());
+        
+      if (updateError) {
+        console.error('Error updating fuel settings:', updateError);
+        // Still show success for the reading, but log the error
+        toast({
+          title: "Warning",
+          description: "Reading saved but failed to update tank level",
+          variant: "destructive"
+        });
+      } else {
+        console.log(`Updated tank level for ${readingFormData.fuel_type} to ${readingFormData.closing_stock}`);
+      }
       
       toast({
         title: "Success",

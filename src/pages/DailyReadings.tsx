@@ -368,6 +368,27 @@ const DailyReadings = () => {
         
       if (error) throw error;
       
+      // Update fuel_settings with the new closing stock (tank level)
+      const { error: updateError } = await supabase
+        .from('fuel_settings')
+        .update({
+          current_level: readingFormData.closing_stock,
+          updated_at: new Date().toISOString()
+        })
+        .eq('fuel_type', readingFormData.fuel_type.trim());
+        
+      if (updateError) {
+        console.error('Error updating fuel settings:', updateError);
+        // Still show success for the reading, but log the error
+        toast({
+          title: "Warning",
+          description: "Reading saved but failed to update tank level",
+          variant: "destructive"
+        });
+      } else {
+        console.log(`Updated tank level for ${readingFormData.fuel_type} to ${readingFormData.closing_stock}`);
+      }
+      
       toast({
         title: "Success",
         description: isEditing ? "Reading updated successfully" : "Reading added successfully"
