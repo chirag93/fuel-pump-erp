@@ -1,6 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shift } from '@/types/shift';
+import { isToday } from 'date-fns';
 
 interface ShiftSummaryCardsProps {
   activeShifts: Shift[];
@@ -8,9 +9,17 @@ interface ShiftSummaryCardsProps {
 }
 
 export function ShiftSummaryCards({ activeShifts, completedShifts }: ShiftSummaryCardsProps) {
-  const today = new Date().toISOString().split('T')[0];
-  const todayCompletedShifts = completedShifts.filter(shift => shift.date === today);
+  // Filter to get only shifts completed today
+  const todayCompletedShifts = completedShifts.filter(shift => {
+    // Check if shift has an end_time and that it's today
+    if (!shift.end_time) return false;
+    
+    // Parse date from end_time
+    const endTime = new Date(shift.end_time);
+    return isToday(endTime);
+  });
   
+  // Calculate total sales for today's completed shifts
   const totalSalesToday = todayCompletedShifts.reduce(
     (sum, shift) => sum + (shift.card_sales || 0) + (shift.upi_sales || 0) + (shift.cash_sales || 0), 
     0
@@ -37,7 +46,7 @@ export function ShiftSummaryCards({ activeShifts, completedShifts }: ShiftSummar
           <div className="text-4xl font-bold">
             {todayCompletedShifts.length}
           </div>
-          <p className="text-sm text-muted-foreground">shifts completed</p>
+          <p className="text-sm text-muted-foreground">shifts completed today</p>
         </CardContent>
       </Card>
       <Card>
