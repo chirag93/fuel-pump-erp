@@ -3,7 +3,15 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TransactionsTable from '../TransactionsTable';
-import '@testing-library/jest-dom'; // Explicitly import jest-dom in the test file for TypeScript
+import '@testing-library/jest-dom';
+
+// Mock fetch for API calls
+global.fetch = jest.fn(() => 
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve([])
+  })
+) as jest.Mock;
 
 // Mock the BillPreviewDialog component
 jest.mock('@/components/indent/BillPreviewDialog', () => {
@@ -18,8 +26,8 @@ describe('TransactionsTable', () => {
     name: 'Test Customer',
     email: 'test@example.com',
     phone: '1234567890',
-    contact: 'Test Contact', // Added required field
-    gst: 'GST123456', // Changed to match the actual field name
+    contact: 'Test Contact',
+    gst: 'GST123456',
     balance: 1000,
     created_at: new Date().toISOString()
   };
@@ -36,9 +44,9 @@ describe('TransactionsTable', () => {
       payment_method: 'CREDIT',
       date: new Date().toISOString(),
       created_at: new Date().toISOString(),
-      staff_id: 'staff1', // Added required field
-      indent_id: null, // Added required field
-      discount_amount: null // Added required field
+      staff_id: 'staff1',
+      indent_id: null,
+      discount_amount: null
     },
     {
       id: '2',
@@ -48,13 +56,17 @@ describe('TransactionsTable', () => {
       payment_method: 'CASH',
       date: new Date().toISOString(),
       created_at: new Date().toISOString(),
-      staff_id: 'staff1', // Added required field
-      vehicle_id: null, // Added required field
-      quantity: 0, // Added required field
-      indent_id: null, // Added required field
-      discount_amount: null // Added required field
+      staff_id: 'staff1',
+      vehicle_id: null,
+      quantity: 0,
+      indent_id: null,
+      discount_amount: null
     }
   ];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
   it('renders transactions correctly', () => {
     render(<TransactionsTable transactions={mockTransactions} customer={mockCustomer} />);

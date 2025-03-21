@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Edit, Truck } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { supabase, Vehicle } from '@/integrations/supabase/client';
+import { Vehicle } from '@/integrations/supabase/client';
 
 interface VehiclesTabProps {
   vehicles: Vehicle[];
@@ -67,26 +67,35 @@ const VehiclesTab = ({ vehicles, setVehicles, customerId, customerName }: Vehicl
         return;
       }
 
-      const { data, error } = await supabase
-        .from('vehicles')
-        .insert([{
+      const response = await fetch('/api/vehicles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           customer_id: customerId,
           number: newVehicle.number,
           type: newVehicle.type || 'Not Specified',
           capacity: newVehicle.capacity || 'Not Specified'
-        }])
-        .select();
-
-      if (error) throw error;
+        }),
+      });
       
-      if (data) {
-        setVehicles([...vehicles, data[0] as Vehicle]);
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && result.vehicle) {
+        setVehicles([...vehicles, result.vehicle as Vehicle]);
         handleCloseDialog();
         
         toast({
           title: "Success",
           description: "Vehicle added successfully"
         });
+      } else {
+        throw new Error('Failed to add vehicle');
       }
     } catch (error) {
       console.error('Error adding vehicle:', error);
@@ -109,22 +118,28 @@ const VehiclesTab = ({ vehicles, setVehicles, customerId, customerName }: Vehicl
         return;
       }
 
-      const { data, error } = await supabase
-        .from('vehicles')
-        .update({
+      const response = await fetch(`/api/vehicles/${newVehicle.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           number: newVehicle.number,
           type: newVehicle.type || 'Not Specified',
           capacity: newVehicle.capacity || 'Not Specified'
-        })
-        .eq('id', newVehicle.id)
-        .select();
-
-      if (error) throw error;
+        }),
+      });
       
-      if (data) {
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && result.vehicle) {
         // Update the vehicles array with the updated vehicle
         setVehicles(vehicles.map(v => 
-          v.id === newVehicle.id ? (data[0] as Vehicle) : v
+          v.id === newVehicle.id ? (result.vehicle as Vehicle) : v
         ));
         
         handleCloseDialog();
@@ -133,6 +148,8 @@ const VehiclesTab = ({ vehicles, setVehicles, customerId, customerName }: Vehicl
           title: "Success",
           description: "Vehicle updated successfully"
         });
+      } else {
+        throw new Error('Failed to update vehicle');
       }
     } catch (error) {
       console.error('Error updating vehicle:', error);

@@ -21,6 +21,14 @@ jest.mock('@/integrations/supabase/client', () => ({
   }
 }));
 
+// Mock fetch for API calls
+global.fetch = jest.fn(() => 
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve([{ id: 'staff-1', name: 'John Doe' }])
+  })
+) as jest.Mock;
+
 // Mock toast
 jest.mock('@/hooks/use-toast', () => ({
   toast: jest.fn()
@@ -57,6 +65,20 @@ describe('RecordIndent Component', () => {
         order: jest.fn().mockReturnThis(),
         single: jest.fn().mockReturnThis()
       };
+    });
+
+    // Mock fetch implementation for API calls
+    (global.fetch as jest.Mock).mockImplementation((url) => {
+      if (url.includes('/api/staff')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([{ id: 'staff-1', name: 'John Doe' }])
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([])
+      });
     });
   });
 
@@ -100,6 +122,25 @@ describe('RecordIndent Component', () => {
         order: jest.fn().mockReturnThis(),
         single: jest.fn().mockReturnThis()
       };
+    });
+
+    // Mock API responses
+    (global.fetch as jest.Mock).mockImplementation((url) => {
+      if (url.includes('/api/customers')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([{ id: 'cust-1', name: 'Test Customer', contact: 'Contact', phone: '1234567890', email: 'test@example.com', gst: 'GST123' }])
+        });
+      } else if (url.includes('/api/vehicles')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([{ id: 'veh-1', number: 'ABC123', type: 'Truck', capacity: '100L' }])
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([])
+      });
     });
 
     render(<RecordIndent />);

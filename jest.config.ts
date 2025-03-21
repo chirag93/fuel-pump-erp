@@ -21,6 +21,15 @@ const config: Config = {
     }],
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  // Added these settings to fix potential issues
+  testTimeout: 10000,
+  globals: {
+    'ts-jest': {
+      isolatedModules: true
+    }
+  },
+  // Mock fetch globally
+  setupFiles: ['./src/setupTests.ts'],
 };
 
 export default config;

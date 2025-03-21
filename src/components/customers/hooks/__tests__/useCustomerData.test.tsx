@@ -15,6 +15,14 @@ jest.mock('@/integrations/supabase/client', () => ({
   },
 }));
 
+// Mock fetch for API calls
+global.fetch = jest.fn(() => 
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve([])
+  })
+) as jest.Mock;
+
 jest.mock('@/hooks/use-toast', () => ({
   toast: jest.fn(),
 }));
@@ -53,6 +61,35 @@ describe('useCustomerData', () => {
     
     // Mock customer data fetch
     (getCustomerById as jest.Mock).mockResolvedValue(mockCustomer);
+    
+    // Mock fetch API calls
+    (global.fetch as jest.Mock).mockImplementation((url) => {
+      if (url === `/api/customers/${mockCustomerId}`) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockCustomer)
+        });
+      } else if (url === `/api/vehicles?customer_id=${mockCustomerId}`) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockVehicles)
+        });
+      } else if (url.includes('/api/indents')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockIndents)
+        });
+      } else if (url.includes('/api/transactions')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockTransactions)
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([])
+      });
+    });
     
     // Mock Supabase from method for different tables
     (supabase.from as jest.Mock).mockImplementation((table) => {

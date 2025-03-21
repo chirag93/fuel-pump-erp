@@ -7,13 +7,13 @@ import { toast } from '@/hooks/use-toast';
  */
 export const getAllCustomers = async (): Promise<Customer[]> => {
   try {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .order('name');
+    const response = await fetch('/api/customers');
     
-    if (error) throw error;
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}`);
+    }
     
+    const data = await response.json();
     return data || [];
   } catch (error) {
     console.error('Error fetching customers:', error);
@@ -31,14 +31,13 @@ export const getAllCustomers = async (): Promise<Customer[]> => {
  */
 export const getCustomerById = async (id: string): Promise<Customer | null> => {
   try {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const response = await fetch(`/api/customers/${id}`);
     
-    if (error) throw error;
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}`);
+    }
     
+    const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error fetching customer:', error);
@@ -56,20 +55,30 @@ export const getCustomerById = async (id: string): Promise<Customer | null> => {
  */
 export const createCustomer = async (customerData: Omit<Customer, 'id' | 'created_at'>): Promise<Customer | null> => {
   try {
-    const { data, error } = await supabase
-      .from('customers')
-      .insert([customerData])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    toast({
-      title: "Success",
-      description: "Customer created successfully"
+    const response = await fetch('/api/customers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(customerData),
     });
     
-    return data;
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.success && result.customer) {
+      toast({
+        title: "Success",
+        description: "Customer created successfully"
+      });
+      
+      return result.customer;
+    } else {
+      throw new Error('Failed to create customer');
+    }
   } catch (error) {
     console.error('Error creating customer:', error);
     toast({
@@ -86,21 +95,30 @@ export const createCustomer = async (customerData: Omit<Customer, 'id' | 'create
  */
 export const updateCustomer = async (id: string, customerData: Partial<Customer>): Promise<Customer | null> => {
   try {
-    const { data, error } = await supabase
-      .from('customers')
-      .update(customerData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    toast({
-      title: "Success",
-      description: "Customer updated successfully"
+    const response = await fetch(`/api/customers/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(customerData),
     });
     
-    return data;
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.success && result.customer) {
+      toast({
+        title: "Success",
+        description: "Customer updated successfully"
+      });
+      
+      return result.customer;
+    } else {
+      throw new Error('Failed to update customer');
+    }
   } catch (error) {
     console.error('Error updating customer:', error);
     toast({
@@ -117,14 +135,20 @@ export const updateCustomer = async (id: string, customerData: Partial<Customer>
  */
 export const updateCustomerBalance = async (id: string, newBalance: number): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from('customers')
-      .update({ balance: newBalance })
-      .eq('id', id);
+    const response = await fetch(`/api/customers/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ balance: newBalance }),
+    });
     
-    if (error) throw error;
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}`);
+    }
     
-    return true;
+    const result = await response.json();
+    return result.success || false;
   } catch (error) {
     console.error('Error updating customer balance:', error);
     return false;

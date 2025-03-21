@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { supabase, Customer, Vehicle, Indent, IndentBooklet, Transaction } from '@/integrations/supabase/client';
+import { Customer, Vehicle, Indent, IndentBooklet, Transaction } from '@/integrations/supabase/client';
 import { getCustomerById } from '@/integrations/customers';
 
 interface TransactionWithDetails extends Transaction {
@@ -46,13 +47,13 @@ export const useCustomerData = (customerId: string) => {
 
   const fetchVehicles = async (id: string) => {
     try {
-      const { data, error } = await supabase
-        .from('vehicles')
-        .select('*')
-        .eq('customer_id', id);
-
-      if (error) throw error;
+      const response = await fetch(`/api/vehicles?customer_id=${id}`);
       
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      
+      const data = await response.json();
       setVehicles(data as Vehicle[]);
     } catch (error) {
       console.error('Error fetching vehicles:', error);
@@ -61,17 +62,18 @@ export const useCustomerData = (customerId: string) => {
 
   const fetchIndents = async (id: string) => {
     try {
-      const { data, error } = await supabase
-        .from('indents')
-        .select(`*, vehicles(number)`)
-        .eq('customer_id', id);
-
-      if (error) throw error;
+      const response = await fetch(`/api/indents?customer_id=${id}`);
       
-      // Process data to include vehicle number
-      const processedIndents = data.map(indent => ({
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Process data to include vehicle number if needed
+      const processedIndents = data.map((indent: any) => ({
         ...indent,
-        vehicle_number: indent.vehicles ? indent.vehicles.number : 'Unknown',
+        vehicle_number: indent.vehicle_number || 'Unknown',
       }));
       
       setIndents(processedIndents as unknown as Indent[]);
@@ -82,16 +84,20 @@ export const useCustomerData = (customerId: string) => {
 
   const fetchIndentBooklets = async (id: string) => {
     try {
-      const { data, error } = await supabase
-        .from('indent_booklets')
-        .select('*')
-        .eq('customer_id', id);
+      // If there's an API endpoint for indent booklets, uncomment and use this:
+      // const response = await fetch(`/api/indent-booklets?customer_id=${id}`);
+      // const data = await response.json();
+      
+      // For now, use Supabase directly if the API endpoint doesn't exist
+      const { data, error } = await fetch(`/api/indent-booklets?customer_id=${id}`)
+        .then(res => res.json())
+        .catch(() => ({ data: null, error: new Error('Failed to fetch indent booklets') }));
 
       if (error) throw error;
       
       if (data) {
         // Transform the data to ensure status is one of the allowed types
-        const typedBooklets: IndentBooklet[] = data.map(booklet => ({
+        const typedBooklets: IndentBooklet[] = data.map((booklet: any) => ({
           ...booklet,
           status: booklet.status as 'Active' | 'Completed' | 'Cancelled'
         }));
@@ -104,19 +110,18 @@ export const useCustomerData = (customerId: string) => {
 
   const fetchTransactions = async (id: string) => {
     try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select(`*, vehicles(number)`)
-        .eq('customer_id', id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
+      const response = await fetch(`/api/transactions?customer_id=${id}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      
+      const data = await response.json();
       
       // Process data to include vehicle number
-      const processedTransactions = data.map(transaction => ({
+      const processedTransactions = data.map((transaction: any) => ({
         ...transaction,
-        vehicle_number: transaction.vehicles ? transaction.vehicles.number : 'Unknown',
+        vehicle_number: transaction.vehicle_number || 'Unknown',
       }));
       
       setTransactions(processedTransactions as TransactionWithDetails[]);

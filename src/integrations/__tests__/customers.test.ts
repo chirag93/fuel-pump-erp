@@ -25,6 +25,14 @@ jest.mock('@/integrations/supabase/client', () => ({
   }
 }));
 
+// Mock fetch for API calls
+global.fetch = jest.fn(() => 
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve([])
+  })
+) as jest.Mock;
+
 // Mock toast
 jest.mock('@/hooks/use-toast', () => ({
   toast: jest.fn(),
@@ -37,40 +45,65 @@ describe('Customer Integration Tests', () => {
   // Clear mocks before each test
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Default fetch mock implementation
+    (global.fetch as jest.Mock).mockImplementation((url) => {
+      if (url.includes('/api/customers') && !url.includes('/api/customers/')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([{ id: '1', name: 'Test Customer' }])
+        });
+      } else if (url.includes('/api/customers/1')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ 
+            id: '1', 
+            name: 'Test Customer',
+            email: 'test@example.com',
+            phone: '1234567890',
+            contact: 'Test Contact',
+            gst: 'GST123456',
+            balance: 1000,
+            created_at: new Date().toISOString()
+          })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([])
+      });
+    });
   });
 
   describe('getAllCustomers', () => {
     it('should fetch all customers successfully', async () => {
       // Mock successful response
-      const mockData = [{ id: '1', name: 'Test Customer' }];
-      const fromSpy = jest.spyOn(supabase, 'from').mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          order: jest.fn().mockResolvedValue({ data: mockData, error: null })
-        })
-      } as any);
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([{ id: '1', name: 'Test Customer' }])
+      });
 
       const result = await getAllCustomers();
 
-      expect(fromSpy).toHaveBeenCalledWith('customers');
-      expect(result).toEqual(mockData);
+      expect(global.fetch).toHaveBeenCalledWith('/api/customers');
+      expect(result).toEqual([{ id: '1', name: 'Test Customer' }]);
     });
 
     it('should handle errors and show toast', async () => {
       // Mock error response
-      const mockError = new Error('Database error');
-      const fromSpy = jest.spyOn(supabase, 'from').mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          order: jest.fn().mockResolvedValue({ data: null, error: mockError })
-        })
-      } as any);
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error'
+      });
 
       const result = await getAllCustomers();
 
       expect(console.error).toHaveBeenCalled();
       expect(toast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Failed to load customers',
-        variant: 'destructive'
+        title: "Error",
+        description: "Failed to load customers",
+        variant: "destructive"
       });
       expect(result).toEqual([]);
     });
@@ -90,38 +123,32 @@ describe('Customer Integration Tests', () => {
         created_at: new Date().toISOString()
       };
       
-      const fromSpy = jest.spyOn(supabase, 'from').mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: mockData, error: null })
-          })
-        })
-      } as any);
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockData)
+      });
 
       const result = await getCustomerById('1');
 
-      expect(fromSpy).toHaveBeenCalledWith('customers');
+      expect(global.fetch).toHaveBeenCalledWith('/api/customers/1');
       expect(result).toEqual(mockData);
     });
 
     it('should handle errors when fetching by ID', async () => {
       // Mock error response
-      const mockError = new Error('Not found');
-      const fromSpy = jest.spyOn(supabase, 'from').mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: null, error: mockError })
-          })
-        })
-      } as any);
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found'
+      });
 
       const result = await getCustomerById('999');
 
       expect(console.error).toHaveBeenCalled();
       expect(toast).toHaveBeenCalledWith({
-        title: 'Error',
-        description: 'Failed to load customer data',
-        variant: 'destructive'
+        title: "Error",
+        description: "Failed to load customer data",
+        variant: "destructive"
       });
       expect(result).toBeNull();
     });
@@ -144,20 +171,22 @@ describe('Customer Integration Tests', () => {
         created_at: new Date().toISOString() 
       };
       
-      const fromSpy = jest.spyOn(supabase, 'from').mockReturnValue({
-        insert: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: mockData, error: null })
-          })
-        })
-      } as any);
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ success: true, customer: mockData })
+      });
 
       const result = await createCustomer(newCustomer);
 
-      expect(fromSpy).toHaveBeenCalledWith('customers');
+      expect(global.fetch).toHaveBeenCalledWith('/api/customers', expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCustomer)
+      }));
+      
       expect(toast).toHaveBeenCalledWith({
-        title: 'Success',
-        description: 'Customer created successfully'
+        title: "Success",
+        description: "Customer created successfully"
       });
       expect(result).toEqual(mockData);
     });
@@ -168,15 +197,13 @@ describe('Customer Integration Tests', () => {
       const customerId = '123';
       const newBalance = 500;
       
-      const fromSpy = jest.spyOn(supabase, 'from').mockReturnValue({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ error: null })
-        })
-      } as any);
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ success: true })
+      });
 
       const result = await updateCustomerBalance(customerId, newBalance);
 
-      expect(fromSpy).toHaveBeenCalledWith('customers');
       expect(result).toBeTruthy();
     });
   });
