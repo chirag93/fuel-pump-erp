@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Shift, Staff } from '@/types/shift';
+import { SelectedConsumable } from '@/components/shift/StartShiftForm';
 
 export function useShiftManagement() {
   const [shifts, setShifts] = useState<Shift[]>([]);

@@ -499,6 +499,7 @@ export type Database = {
           cash_remaining: number | null
           cash_sales: number | null
           closing_reading: number | null
+          consumable_expenses: number | null
           created_at: string | null
           date: string
           expenses: number | null
@@ -516,6 +517,7 @@ export type Database = {
           cash_remaining?: number | null
           cash_sales?: number | null
           closing_reading?: number | null
+          consumable_expenses?: number | null
           created_at?: string | null
           date: string
           expenses?: number | null
@@ -533,6 +535,7 @@ export type Database = {
           cash_remaining?: number | null
           cash_sales?: number | null
           closing_reading?: number | null
+          consumable_expenses?: number | null
           created_at?: string | null
           date?: string
           expenses?: number | null
@@ -557,6 +560,60 @@ export type Database = {
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_consumables: {
+        Row: {
+          consumable_id: string
+          created_at: string | null
+          id: string
+          quantity_allocated: number
+          quantity_returned: number | null
+          shift_id: string
+          status:
+            | Database["public"]["Enums"]["consumable_allocation_status"]
+            | null
+          updated_at: string | null
+        }
+        Insert: {
+          consumable_id: string
+          created_at?: string | null
+          id?: string
+          quantity_allocated: number
+          quantity_returned?: number | null
+          shift_id: string
+          status?:
+            | Database["public"]["Enums"]["consumable_allocation_status"]
+            | null
+          updated_at?: string | null
+        }
+        Update: {
+          consumable_id?: string
+          created_at?: string | null
+          id?: string
+          quantity_allocated?: number
+          quantity_returned?: number | null
+          shift_id?: string
+          status?:
+            | Database["public"]["Enums"]["consumable_allocation_status"]
+            | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_consumables_consumable_id_fkey"
+            columns: ["consumable_id"]
+            isOneToOne: false
+            referencedRelation: "consumables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_consumables_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
             referencedColumns: ["id"]
           },
         ]
@@ -861,6 +918,7 @@ export type Database = {
       }
     }
     Enums: {
+      consumable_allocation_status: "allocated" | "returned"
       staff_feature:
         | "dashboard"
         | "daily_readings"

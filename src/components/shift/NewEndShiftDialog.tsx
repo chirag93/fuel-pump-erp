@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
@@ -13,6 +12,7 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ConsumableSelection } from './ConsumableSelection';
 
 interface EndShiftDialogProps {
   isOpen: boolean;
@@ -26,6 +26,15 @@ interface EndShiftDialogProps {
     shift_type: string;
   };
   onShiftEnded: () => void;
+}
+
+export interface SelectedConsumable {
+  id: string;
+  name: string;
+  quantity: number;
+  available: number;
+  price_per_unit: number;
+  unit: string;
 }
 
 export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: EndShiftDialogProps) {
@@ -49,6 +58,9 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
     expected: 0,
     difference: 0
   });
+  
+  const [allocatedConsumables, setAllocatedConsumables] = useState<SelectedConsumable[]>([]);
+  const [returnedConsumables, setReturnedConsumables] = useState<SelectedConsumable[]>([]);
 
   // Calculate total sales whenever sales input changes
   useEffect(() => {
@@ -139,6 +151,55 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
       fetchStaff();
     }
   }, [isOpen, shiftData?.pump_id]);
+  
+  // Add function to fetch allocated consumables
+  useEffect(() => {
+    if (isOpen && shiftData?.id) {
+      const fetchAllocatedConsumables = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('shift_consumables')
+            .select(`
+              consumable_id,
+              quantity_allocated,
+              consumables (
+                id,
+                name,
+                unit,
+                price_per_unit
+              )
+            `)
+            .eq('shift_id', shiftData.id)
+            .eq('status', 'allocated');
+
+          if (error) throw error;
+
+          if (data) {
+            setAllocatedConsumables(data.map(item => ({
+              id: item.consumables.id,
+              name: item.consumables.name,
+              quantity: item.quantity_allocated,
+              available: item.quantity_allocated, // This is the max that can be returned
+              price_per_unit: item.consumables.price_per_unit,
+              unit: item.consumables.unit || 'units'
+            })));
+          }
+        } catch (error) {
+          console.error('Error fetching allocated consumables:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load allocated consumables",
+            variant: "destructive"
+          });
+        }
+      };
+
+      fetchAllocatedConsumables();
+    } else {
+      setAllocatedConsumables([]);
+      setReturnedConsumables([]);
+    }
+  }, [isOpen, shiftData?.id]);
 
   const validateForm = () => {
     setError(null);
@@ -201,6 +262,51 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
         .eq('shift_id', shiftData.id);
       
       if (updateReadingError) throw updateReadingError;
+      
+      // Handle consumable returns
+      if (returnedConsumables.length > 0) {
+        // Calculate consumables expense
+        const consumablesExpense = allocatedConsumables.reduce((total, allocated) => {
+          const returned = returnedConsumables.find(r => r.id === allocated.id);
+          const usedQuantity = allocated.quantity - (returned?.quantity || 0);
+          return total + (usedQuantity * allocated.price_per_unit);
+        }, 0);
+
+        // Update the reading with consumables expense
+        const { error: readingUpdateError } = await supabase
+          .from('readings')
+          .update({
+            expenses: Number(expenses) + consumablesExpense
+          })
+          .eq('shift_id', shiftData.id);
+
+        if (readingUpdateError) throw readingUpdateError;
+
+        // Update consumables inventory and shift_consumables status
+        for (const returned of returnedConsumables) {
+          // Update inventory
+          const { error: inventoryError } = await supabase
+            .from('consumables')
+            .update({ 
+              quantity: returned.available + returned.quantity 
+            })
+            .eq('id', returned.id);
+
+          if (inventoryError) throw inventoryError;
+
+          // Update shift_consumables status and returned quantity
+          const { error: shiftConsumableError } = await supabase
+            .from('shift_consumables')
+            .update({ 
+              status: 'returned',
+              quantity_returned: returned.quantity
+            })
+            .eq('shift_id', shiftData.id)
+            .eq('consumable_id', returned.id);
+
+          if (shiftConsumableError) throw shiftConsumableError;
+        }
+      }
       
       // 3. Create new shift if required
       if (createNewShift && selectedStaff) {
@@ -480,6 +586,17 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
                 </div>
               </CardContent>
             </Card>
+          )}
+          
+          {allocatedConsumables.length > 0 && (
+            <div className="border-t pt-4 mt-4">
+              <ConsumableSelection
+                selectedConsumables={returnedConsumables}
+                setSelectedConsumables={setReturnedConsumables}
+                mode="return"
+                allocatedConsumables={allocatedConsumables}
+              />
+            </div>
           )}
           
           {/* Keep remaining components the same */}
