@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -77,10 +78,13 @@ export function FuelTypeSettings() {
         return;
       }
       
+      // Trim whitespace from fuel type
+      const cleanedFuelType = newFuelType.fuel_type.trim();
+      
       const { data, error } = await supabase
         .from('fuel_settings')
         .insert([{
-          fuel_type: newFuelType.fuel_type,
+          fuel_type: cleanedFuelType,
           current_price: newFuelType.current_price,
           tank_capacity: newFuelType.tank_capacity,
           current_level: newFuelType.current_level
@@ -125,12 +129,18 @@ export function FuelTypeSettings() {
         return;
       }
       
-      console.log('Updating fuel type with data:', editFuelType);
+      // Trim whitespace from fuel type
+      const cleanedFuelType = editFuelType.fuel_type.trim();
+      
+      console.log('Updating fuel type with data:', {
+        ...editFuelType,
+        fuel_type: cleanedFuelType
+      });
       
       const { data, error } = await supabase
         .from('fuel_settings')
         .update({
-          fuel_type: editFuelType.fuel_type,
+          fuel_type: cleanedFuelType,
           current_price: editFuelType.current_price,
           tank_capacity: editFuelType.tank_capacity,
           current_level: editFuelType.current_level,

@@ -31,7 +31,6 @@ interface QuickActionProps {
 
 interface FuelLevel {
   fuelType: string;
-  capacity: number;
   lastUpdated: string;
 }
 
@@ -73,8 +72,8 @@ const QuickAction = ({
 
 const Home = () => {
   const [fuelLevels, setFuelLevels] = useState<FuelLevel[]>([
-    { fuelType: 'Petrol', capacity: 10000, lastUpdated: 'Loading...' },
-    { fuelType: 'Diesel', capacity: 12000, lastUpdated: 'Loading...' }
+    { fuelType: 'Petrol', lastUpdated: 'Loading...' },
+    { fuelType: 'Diesel', lastUpdated: 'Loading...' }
   ]);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
@@ -101,7 +100,6 @@ const Home = () => {
           // Format the data for our component directly from fuel_settings
           const fuelData = fuelSettingsData.map(item => ({
             fuelType: item.fuel_type,
-            capacity: Number(item.tank_capacity),
             lastUpdated: item.updated_at ? new Date(item.updated_at).toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'short',
@@ -148,8 +146,6 @@ const Home = () => {
             if (item && typeof item.fuel_type === 'string') {
               return {
                 fuelType: item.fuel_type,
-                // Use default capacities since we don't have settings
-                capacity: item.fuel_type === 'Petrol' ? 10000 : 12000,
                 lastUpdated: item.date ? new Date(item.date).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'short',
@@ -383,7 +379,6 @@ const Home = () => {
             <FuelTankDisplay 
               key={index}
               fuelType={fuel.fuelType} 
-              capacity={fuel.capacity} 
               lastUpdated={fuel.lastUpdated}
               showTankIcon={true}
             />

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -31,7 +32,7 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
         const { data: settingsData, error: settingsError } = await supabase
           .from('fuel_settings')
           .select('current_level, current_price, tank_capacity')
-          .eq('fuel_type', fuelType)
+          .eq('fuel_type', fuelType.trim())
           .maybeSingle();
 
         if (settingsData) {
@@ -39,8 +40,8 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
           setCurrentLevel(Number(settingsData.current_level));
           setPricePerUnit(Number(settingsData.current_price));
           
-          // Only set tank capacity from settings if no capacity was provided as prop or if it's the default value
-          if (!capacity && settingsData.tank_capacity) {
+          // Always prioritize settings tank capacity over prop capacity
+          if (settingsData.tank_capacity) {
             console.log(`Using capacity from settings: ${settingsData.tank_capacity}`);
             setTankCapacity(Number(settingsData.tank_capacity));
           } else if (capacity) {
@@ -53,7 +54,7 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
           const { data, error } = await supabase
             .from('inventory')
             .select('*')
-            .eq('fuel_type', fuelType)
+            .eq('fuel_type', fuelType.trim())
             .order('date', { ascending: false })
             .limit(1);
             
