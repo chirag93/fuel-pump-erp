@@ -1,4 +1,6 @@
 
+import { format } from 'date-fns';
+
 export function formatTime(timeString?: string | null): string {
   if (!timeString) return 'N/A';
   try {
@@ -7,7 +9,7 @@ export function formatTime(timeString?: string | null): string {
     if (isNaN(date.getTime())) {
       return timeString;
     }
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return format(date, 'hh:mm a');
   } catch (e) {
     console.error('Error formatting time:', e);
     return timeString;
@@ -21,7 +23,7 @@ export function formatDate(dateString?: string | null): string {
     if (isNaN(date.getTime())) {
       return dateString;
     }
-    return date.toLocaleDateString();
+    return format(date, 'MM/dd/yyyy');
   } catch (e) {
     console.error('Error formatting date:', e);
     return dateString;
