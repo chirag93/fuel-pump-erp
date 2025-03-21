@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DollarSign, ClipboardList } from 'lucide-react';
+import { formatDate, formatTime } from '@/utils/dateUtils';
 
 interface CompletedShiftsTableProps {
   completedShifts: Shift[];
@@ -11,15 +12,6 @@ interface CompletedShiftsTableProps {
 }
 
 export function CompletedShiftsTable({ completedShifts, onEditShift }: CompletedShiftsTableProps) {
-  const formatTime = (timeString?: string | null) => {
-    if (!timeString) return 'N/A';
-    try {
-      return new Date(timeString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
-      return timeString;
-    }
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -58,10 +50,15 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
                 const actualSalesVolume = totalVolume - testingFuel;
                 const totalSales = (shift.card_sales || 0) + (shift.upi_sales || 0) + (shift.cash_sales || 0);
                 
+                // Format the date using the end_time if available, otherwise use the date field
+                const shiftDate = shift.end_time 
+                  ? formatDate(shift.end_time) 
+                  : formatDate(shift.date);
+                
                 return (
                   <TableRow key={shift.id}>
                     <TableCell className="font-medium">{shift.staff_name}</TableCell>
-                    <TableCell>{shift.date}</TableCell>
+                    <TableCell>{shiftDate}</TableCell>
                     <TableCell>{`${formatTime(shift.start_time)} - ${formatTime(shift.end_time)}`}</TableCell>
                     <TableCell>{shift.pump_id}</TableCell>
                     <TableCell>{shift.opening_reading} → {shift.closing_reading || 'N/A'}</TableCell>
