@@ -15,6 +15,12 @@ const config: Config = {
     '!src/main.tsx',
     '!src/vite-env.d.ts',
   ],
+  transform: {
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
+      tsconfig: 'tsconfig.json',
+    }],
+  },
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
 };
 
 export default config;

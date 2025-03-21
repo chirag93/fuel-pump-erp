@@ -3,6 +3,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TransactionsTable from '../TransactionsTable';
+import '@testing-library/jest-dom'; // Explicitly import jest-dom in the test file for TypeScript
 
 // Mock the BillPreviewDialog component
 jest.mock('@/components/indent/BillPreviewDialog', () => {
