@@ -17,8 +17,18 @@ export function EndShiftConsumables({
   updateReturnedConsumable,
   consumablesExpense
 }: EndShiftConsumablesProps) {
-  if (allocatedConsumables.length === 0) {
-    return null;
+  // Only render this component if there are allocated consumables
+  if (!allocatedConsumables || allocatedConsumables.length === 0) {
+    return (
+      <div className="border-t pt-4 mt-4">
+        <h3 className="text-lg font-medium mb-2">Consumables Used</h3>
+        <Card>
+          <CardContent className="pt-6 text-center text-muted-foreground">
+            No consumables were allocated for this shift.
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -37,7 +47,7 @@ export function EndShiftConsumables({
                   <div className="flex justify-between items-center">
                     <p className="font-medium">{item.name}</p>
                     <p className="text-sm font-medium text-gray-500">
-                      {item.price_per_unit}/per {item.unit}
+                      ₹{item.price_per_unit}/per {item.unit}
                     </p>
                   </div>
                   <div className="flex justify-between items-center">

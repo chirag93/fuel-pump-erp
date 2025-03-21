@@ -142,6 +142,7 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
     if (shiftData?.id) {
       const fetchAllocatedConsumables = async () => {
         try {
+          console.log('Fetching consumables for shift:', shiftData.id);
           const { data, error } = await supabase
             .from('shift_consumables')
             .select(`
@@ -159,7 +160,9 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
 
           if (error) throw error;
 
-          if (data) {
+          console.log('Fetch consumables response:', data);
+
+          if (data && data.length > 0) {
             const allocatedItems = data.map(item => ({
               id: item.consumables.id,
               name: item.consumables.name,
@@ -169,13 +172,17 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
               unit: item.consumables.unit || 'units'
             }));
             
+            console.log('Processed allocated items:', allocatedItems);
             setAllocatedConsumables(allocatedItems);
             
-            // Initialize returned consumables with full amounts
+            // Initialize returned consumables with zero to start with
             setReturnedConsumables(allocatedItems.map(item => ({
               ...item,
-              quantity: item.quantity // Default to returning all
+              quantity: 0 // Default to returning none - user will specify
             })));
+          } else {
+            setAllocatedConsumables([]);
+            setReturnedConsumables([]);
           }
         } catch (error) {
           console.error('Error fetching allocated consumables:', error);
@@ -404,6 +411,7 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
   };
   
   const updateReturnedConsumable = (id: string, quantity: number) => {
+    console.log('Updating returned consumable:', id, quantity);
     setReturnedConsumables(prev => {
       const existing = prev.findIndex(r => r.id === id);
       if (existing >= 0) {
