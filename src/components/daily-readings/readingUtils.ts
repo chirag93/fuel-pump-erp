@@ -35,16 +35,30 @@ export const processReadingsData = (data: any[]) => {
     const key = `${item.date}-${item.fuel_type}`;
     
     if (!groupedMap.has(key)) {
+      // Calculate sales_per_tank_stock and stock_variation if they're null
+      const openingStock = item.opening_stock || 0;
+      const receiptQuantity = item.receipt_quantity || 0;
+      const closingStock = item.closing_stock || 0;
+      const actualMeterSales = item.actual_meter_sales || 0;
+      
+      const salesPerTankStock = item.sales_per_tank_stock !== null ? 
+        item.sales_per_tank_stock : 
+        (openingStock + receiptQuantity - closingStock);
+      
+      const stockVariation = item.stock_variation !== null ? 
+        item.stock_variation : 
+        (actualMeterSales - salesPerTankStock);
+      
       groupedMap.set(key, {
         id: item.id,
         date: item.date,
         fuel_type: item.fuel_type,
-        opening_stock: item.opening_stock,
-        receipt_quantity: item.receipt_quantity,
-        closing_stock: item.closing_stock,
-        sales_per_tank_stock: item.sales_per_tank_stock,
-        actual_meter_sales: item.actual_meter_sales,
-        stock_variation: item.stock_variation,
+        opening_stock: openingStock,
+        receipt_quantity: receiptQuantity,
+        closing_stock: closingStock,
+        sales_per_tank_stock: salesPerTankStock,
+        actual_meter_sales: actualMeterSales,
+        stock_variation: stockVariation,
         created_at: item.created_at,
         tank_number: item.tank_number,
         tanks: []
@@ -98,7 +112,7 @@ export const prepareExportData = (readings: any[]) => {
           tank.dip_reading.toFixed(2),
           tank.net_stock.toFixed(2),
           reading.opening_stock.toFixed(2),
-          reading.receipt_quantity.toFixed(2),
+          reading.receipt_quantity ? reading.receipt_quantity.toFixed(2) : '0.00',
           reading.closing_stock.toFixed(2),
           reading.sales_per_tank_stock.toFixed(2),
           reading.actual_meter_sales.toFixed(2),
@@ -114,7 +128,7 @@ export const prepareExportData = (readings: any[]) => {
         reading.dip_reading.toFixed(2),
         reading.opening_stock.toFixed(2),
         reading.opening_stock.toFixed(2),
-        reading.receipt_quantity.toFixed(2),
+        reading.receipt_quantity ? reading.receipt_quantity.toFixed(2) : '0.00',
         reading.closing_stock.toFixed(2),
         reading.sales_per_tank_stock.toFixed(2),
         reading.actual_meter_sales.toFixed(2),

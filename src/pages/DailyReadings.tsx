@@ -356,8 +356,9 @@ const DailyReadings = () => {
         opening_stock: calculations.opening_stock,
         receipt_quantity: readingFormData.receipt_quantity || null,
         closing_stock: readingFormData.closing_stock,
-        actual_meter_sales: readingFormData.actual_meter_sales
-        // We no longer send sales_per_tank_stock and stock_variation as they're computed columns
+        actual_meter_sales: readingFormData.actual_meter_sales,
+        sales_per_tank_stock: calculations.sales_per_tank_stock,
+        stock_variation: calculations.stock_variation
       }));
       
       // Insert entries

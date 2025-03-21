@@ -35,7 +35,7 @@ interface ReadingsTableProps {
 const ReadingsTable = ({ readings, handleOpenDialog, handleOpenDeleteDialog }: ReadingsTableProps) => {
   // Format the stock variation to include + sign if positive
   const formatStockVariation = (value: number) => {
-    return value > 0 ? `+${value}` : value;
+    return value > 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
   };
   
   return (
@@ -63,7 +63,7 @@ const ReadingsTable = ({ readings, handleOpenDialog, handleOpenDeleteDialog }: R
               {reading.tanks ? (
                 <div className="flex flex-col gap-1">
                   {reading.tanks.map((tank: TankReading) => (
-                    <div key={tank.tank_number} className="text-xs">
+                    <div key={`${reading.id}-tank-${tank.tank_number}`} className="text-xs">
                       Tank {tank.tank_number}
                     </div>
                   ))}
@@ -74,11 +74,15 @@ const ReadingsTable = ({ readings, handleOpenDialog, handleOpenDeleteDialog }: R
                 </div>
               )}
             </TableCell>
-            <TableCell>{reading.opening_stock}</TableCell>
-            <TableCell>{reading.receipt_quantity || '-'}</TableCell>
-            <TableCell>{reading.closing_stock}</TableCell>
-            <TableCell>{reading.sales_per_tank_stock}</TableCell>
-            <TableCell>{reading.actual_meter_sales}</TableCell>
+            <TableCell>{reading.opening_stock.toFixed(2)}</TableCell>
+            <TableCell>{reading.receipt_quantity ? reading.receipt_quantity.toFixed(2) : '-'}</TableCell>
+            <TableCell>{reading.closing_stock.toFixed(2)}</TableCell>
+            <TableCell>
+              {typeof reading.sales_per_tank_stock === 'number' 
+                ? reading.sales_per_tank_stock.toFixed(2) 
+                : (reading.opening_stock + (reading.receipt_quantity || 0) - reading.closing_stock).toFixed(2)}
+            </TableCell>
+            <TableCell>{reading.actual_meter_sales.toFixed(2)}</TableCell>
             <TableCell 
               className={
                 reading.stock_variation > 0 
@@ -88,7 +92,9 @@ const ReadingsTable = ({ readings, handleOpenDialog, handleOpenDeleteDialog }: R
                     : ""
               }
             >
-              {formatStockVariation(reading.stock_variation)}
+              {typeof reading.stock_variation === 'number'
+                ? formatStockVariation(reading.stock_variation)
+                : formatStockVariation(reading.actual_meter_sales - (reading.opening_stock + (reading.receipt_quantity || 0) - reading.closing_stock))}
             </TableCell>
             <TableCell>
               <div className="flex space-x-2">
