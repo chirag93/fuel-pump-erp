@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase, Customer, Vehicle, Indent, IndentBooklet, Transaction } from '@/integrations/supabase/client';
+import { getCustomerById } from '@/integrations/customers';
 
 interface TransactionWithDetails extends Transaction {
   vehicle_number?: string;
@@ -28,15 +28,10 @@ export const useCustomerData = (customerId: string) => {
 
   const fetchCustomerData = async (id: string) => {
     try {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      
-      setCustomer(data as Customer);
+      const data = await getCustomerById(id);
+      if (data) {
+        setCustomer(data);
+      }
     } catch (error) {
       console.error('Error fetching customer:', error);
       toast({
