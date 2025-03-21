@@ -17,7 +17,7 @@ interface StartShiftFormProps {
   setFormOpen: Dispatch<SetStateAction<boolean>>;
   newShift: Partial<Shift>;
   setNewShift: Dispatch<SetStateAction<Partial<Shift>>>;
-  handleAddShift: () => Promise<boolean>;
+  handleAddShift: (selectedConsumables?: SelectedConsumable[]) => Promise<boolean>;
   staffList: Staff[];
 }
 
@@ -41,7 +41,7 @@ export function StartShiftForm({
   const [selectedConsumables, setSelectedConsumables] = useState<SelectedConsumable[]>([]);
   
   const onSubmit = async () => {
-    const success = await handleAddShift();
+    const success = await handleAddShift(selectedConsumables);
     if (success) {
       setFormOpen(false);
       setSelectedConsumables([]);

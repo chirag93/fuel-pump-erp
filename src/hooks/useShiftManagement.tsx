@@ -121,7 +121,7 @@ export function useShiftManagement() {
     }
   };
 
-  const handleAddShift = async () => {
+  const handleAddShift = async (selectedConsumables: SelectedConsumable[] = []) => {
     try {
       if (!newShift.staff_id || !newShift.pump_id || !newShift.opening_reading) {
         toast({
@@ -129,7 +129,7 @@ export function useShiftManagement() {
           description: "Please fill all required fields",
           variant: "destructive"
         });
-        return;
+        return false;
       }
       
       const staffName = staffList.find(s => s.id === newShift.staff_id)?.name || 'Unknown Staff';
@@ -166,6 +166,44 @@ export function useShiftManagement() {
         
       if (readingError) {
         throw readingError;
+      }
+      
+      // Handle consumables allocation if any are selected
+      if (selectedConsumables && selectedConsumables.length > 0) {
+        for (const consumable of selectedConsumables) {
+          // Check current inventory level
+          const { data: inventoryData, error: inventoryError } = await supabase
+            .from('consumables')
+            .select('quantity')
+            .eq('id', consumable.id)
+            .single();
+            
+          if (inventoryError) throw inventoryError;
+          
+          if (!inventoryData || inventoryData.quantity < consumable.quantity) {
+            throw new Error(`Not enough ${consumable.name} in inventory`);
+          }
+          
+          // Create allocation record
+          const { error: allocationError } = await supabase
+            .from('shift_consumables')
+            .insert({
+              shift_id: shiftData[0].id,
+              consumable_id: consumable.id,
+              quantity_allocated: consumable.quantity,
+              status: 'allocated'
+            });
+            
+          if (allocationError) throw allocationError;
+          
+          // Update inventory
+          const { error: updateError } = await supabase
+            .from('consumables')
+            .update({ quantity: inventoryData.quantity - consumable.quantity })
+            .eq('id', consumable.id);
+            
+          if (updateError) throw updateError;
+        }
       }
       
       const newShiftWithName: Shift = {

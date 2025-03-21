@@ -61,6 +61,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
   
   const [allocatedConsumables, setAllocatedConsumables] = useState<SelectedConsumable[]>([]);
   const [returnedConsumables, setReturnedConsumables] = useState<SelectedConsumable[]>([]);
+  const [consumablesExpense, setConsumablesExpense] = useState(0);
 
   // Calculate total sales whenever sales input changes
   useEffect(() => {
@@ -183,6 +184,16 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
               price_per_unit: item.consumables.price_per_unit,
               unit: item.consumables.unit || 'units'
             })));
+            
+            // Initialize returned consumables with full amounts
+            setReturnedConsumables(data.map(item => ({
+              id: item.consumables.id,
+              name: item.consumables.name,
+              quantity: item.quantity_allocated, // Default to returning all
+              available: item.quantity_allocated,
+              price_per_unit: item.consumables.price_per_unit,
+              unit: item.consumables.unit || 'units'
+            })));
           }
         } catch (error) {
           console.error('Error fetching allocated consumables:', error);
@@ -200,6 +211,22 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
       setReturnedConsumables([]);
     }
   }, [isOpen, shiftData?.id]);
+  
+  // Add function to calculate consumables expense
+  useEffect(() => {
+    if (allocatedConsumables.length > 0 && returnedConsumables.length > 0) {
+      // Calculate consumables expense - only count consumed items (allocated minus returned)
+      const expense = allocatedConsumables.reduce((total, allocated) => {
+        const returned = returnedConsumables.find(r => r.id === allocated.id);
+        const usedQuantity = allocated.quantity - (returned?.quantity || 0);
+        return total + (usedQuantity * allocated.price_per_unit);
+      }, 0);
+      
+      setConsumablesExpense(expense);
+    } else {
+      setConsumablesExpense(0);
+    }
+  }, [allocatedConsumables, returnedConsumables]);
 
   const validateForm = () => {
     setError(null);
@@ -247,7 +274,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
       
       if (updateShiftError) throw updateShiftError;
       
-      // 2. Update readings with closing reading and sales data
+      // 2. Update readings with closing reading, sales data, and consumables expense
       const { error: updateReadingError } = await supabase
         .from('readings')
         .update({
@@ -257,38 +284,27 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
           cash_sales: Number(cashSales) || 0,
           cash_remaining: Number(cashRemaining),
           expenses: Number(expenses) || 0,
-          testing_fuel: Number(testingFuel) || 0 
+          testing_fuel: Number(testingFuel) || 0,
+          consumable_expenses: consumablesExpense // Add consumables expense
         })
         .eq('shift_id', shiftData.id);
       
       if (updateReadingError) throw updateReadingError;
       
       // Handle consumable returns
-      if (returnedConsumables.length > 0) {
-        // Calculate consumables expense
-        const consumablesExpense = allocatedConsumables.reduce((total, allocated) => {
-          const returned = returnedConsumables.find(r => r.id === allocated.id);
-          const usedQuantity = allocated.quantity - (returned?.quantity || 0);
-          return total + (usedQuantity * allocated.price_per_unit);
-        }, 0);
-
-        // Update the reading with consumables expense
-        const { error: readingUpdateError } = await supabase
-          .from('readings')
-          .update({
-            expenses: Number(expenses) + consumablesExpense
-          })
-          .eq('shift_id', shiftData.id);
-
-        if (readingUpdateError) throw readingUpdateError;
-
-        // Update consumables inventory and shift_consumables status
+      if (allocatedConsumables.length > 0) {
         for (const returned of returnedConsumables) {
-          // Update inventory
+          const allocated = allocatedConsumables.find(a => a.id === returned.id);
+          if (!allocated) continue;
+          
+          // Update inventory - add back the returned quantity
           const { error: inventoryError } = await supabase
             .from('consumables')
             .update({ 
-              quantity: returned.available + returned.quantity 
+              quantity: supabase.rpc('increment', { 
+                row_id: returned.id,
+                amount: returned.quantity
+              })
             })
             .eq('id', returned.id);
 
@@ -590,12 +606,79 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
           
           {allocatedConsumables.length > 0 && (
             <div className="border-t pt-4 mt-4">
-              <ConsumableSelection
-                selectedConsumables={returnedConsumables}
-                setSelectedConsumables={setReturnedConsumables}
-                mode="return"
-                allocatedConsumables={allocatedConsumables}
-              />
+              <h3 className="text-lg font-medium mb-2">Consumables Used</h3>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    {allocatedConsumables.map((item) => {
+                      const returned = returnedConsumables.find(r => r.id === item.id);
+                      const used = item.quantity - (returned?.quantity || 0);
+                      const cost = used * item.price_per_unit;
+                      
+                      return (
+                        <div key={item.id} className="grid gap-1">
+                          <div className="flex justify-between items-center">
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-sm font-medium text-gray-500">
+                              {item.price_per_unit}/per {item.unit}
+                            </p>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <div className="text-sm text-muted-foreground">
+                              <span className="font-medium text-blue-600">Allocated: {item.quantity} {item.unit}</span>
+                              <span className="mx-2">•</span>
+                              <span className="font-medium text-green-600">
+                                Return: 
+                                <Input
+                                  type="number"
+                                  className="ml-2 w-20 h-7 inline-block"
+                                  value={returned?.quantity || 0}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    const newQuantity = isNaN(val) ? 0 : Math.min(val, item.quantity);
+                                    
+                                    setReturnedConsumables(prev => {
+                                      const existing = prev.findIndex(r => r.id === item.id);
+                                      if (existing >= 0) {
+                                        const updated = [...prev];
+                                        updated[existing] = {
+                                          ...updated[existing],
+                                          quantity: newQuantity
+                                        };
+                                        return updated;
+                                      } else {
+                                        return [
+                                          ...prev,
+                                          {
+                                            ...item,
+                                            quantity: newQuantity
+                                          }
+                                        ];
+                                      }
+                                    });
+                                  }}
+                                  min={0}
+                                  max={item.quantity}
+                                />
+                                <span className="ml-1">{item.unit}</span>
+                              </span>
+                            </div>
+                            <div className="font-medium">
+                              Used: {used} {item.unit} (₹{cost.toFixed(2)})
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className="pt-4 border-t">
+                      <div className="flex justify-between font-medium">
+                        <span>Total Consumables Expense:</span>
+                        <span>₹{consumablesExpense.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
           
