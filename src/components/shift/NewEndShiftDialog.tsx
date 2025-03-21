@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
@@ -297,12 +298,27 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
           const allocated = allocatedConsumables.find(a => a.id === returned.id);
           if (!allocated) continue;
           
-          // Update inventory - add back the returned quantity
+          // Get current quantity from consumables table
+          const { data: consumableData, error: getConsumableError } = await supabase
+            .from('consumables')
+            .select('quantity')
+            .eq('id', returned.id)
+            .single();
+            
+          if (getConsumableError) throw getConsumableError;
+          
+          if (!consumableData) {
+            throw new Error(`Consumable with ID ${returned.id} not found`);
+          }
+          
+          // Calculate returned quantity and update inventory
+          const returnQuantity = returned.quantity || 0;
+          const newQuantity = consumableData.quantity + returnQuantity;
+          
+          // Update inventory with the new quantity
           const { error: inventoryError } = await supabase
             .from('consumables')
-            .update({ 
-              quantity: allocated.quantity - (allocated.quantity - returned.quantity)
-            })
+            .update({ quantity: newQuantity })
             .eq('id', returned.id);
 
           if (inventoryError) throw inventoryError;
@@ -312,7 +328,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             .from('shift_consumables')
             .update({ 
               status: 'returned',
-              quantity_returned: returned.quantity
+              quantity_returned: returnQuantity
             })
             .eq('shift_id', shiftData.id)
             .eq('consumable_id', returned.id);
