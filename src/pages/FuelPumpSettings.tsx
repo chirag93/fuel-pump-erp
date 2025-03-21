@@ -62,12 +62,14 @@ const FuelPumpSettings = () => {
   });
   const [isAddFuelDialogOpen, setIsAddFuelDialogOpen] = useState(false);
   const [isAddPumpDialogOpen, setIsAddPumpDialogOpen] = useState(false);
+  const [isEditFuelDialogOpen, setIsEditFuelDialogOpen] = useState(false);
   const [newFuelType, setNewFuelType] = useState<Partial<FuelSettings>>({
     fuel_type: '',
     current_price: 0,
     tank_capacity: 0,
     current_level: 0
   });
+  const [editFuelType, setEditFuelType] = useState<FuelSettings | null>(null);
   const [newPump, setNewPump] = useState<Partial<PumpSettings>>({
     pump_number: '',
     nozzle_count: 1,
@@ -170,6 +172,59 @@ const FuelPumpSettings = () => {
     }
   };
   
+  const handleUpdateFuelType = async () => {
+    try {
+      if (!editFuelType) {
+        toast({
+          title: "Error",
+          description: "No fuel type selected for editing",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('fuel_settings')
+        .update({
+          fuel_type: editFuelType.fuel_type,
+          current_price: editFuelType.current_price,
+          tank_capacity: editFuelType.tank_capacity,
+          current_level: editFuelType.current_level
+        })
+        .eq('id', editFuelType.id)
+        .select();
+        
+      if (error) throw error;
+      
+      if (data) {
+        // Update the fuel settings state with the updated fuel type
+        setFuelSettings(fuelSettings.map(fuel => 
+          fuel.id === editFuelType.id ? data[0] as FuelSettings : fuel
+        ));
+        
+        setIsEditFuelDialogOpen(false);
+        setEditFuelType(null);
+        
+        toast({
+          title: "Success",
+          description: "Fuel type updated successfully"
+        });
+      }
+    } catch (error) {
+      console.error('Error updating fuel type:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update fuel type. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleEditFuelType = (fuel: FuelSettings) => {
+    setEditFuelType(fuel);
+    setIsEditFuelDialogOpen(true);
+  };
+
   const handleAddPump = async () => {
     try {
       if (!newPump.pump_number || !newPump.nozzle_count) {
@@ -404,7 +459,11 @@ const FuelPumpSettings = () => {
                             : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleEditFuelType(fuel)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -415,6 +474,61 @@ const FuelPumpSettings = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Edit Fuel Type Dialog */}
+          <Dialog open={isEditFuelDialogOpen} onOpenChange={setIsEditFuelDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Fuel Type</DialogTitle>
+                <DialogDescription>
+                  Update fuel type configuration
+                </DialogDescription>
+              </DialogHeader>
+              {editFuelType && (
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit_fuel_type">Fuel Type</Label>
+                    <Input 
+                      id="edit_fuel_type" 
+                      value={editFuelType.fuel_type}
+                      onChange={e => setEditFuelType({...editFuelType, fuel_type: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit_current_price">Current Price (per liter)</Label>
+                    <Input 
+                      id="edit_current_price" 
+                      type="number"
+                      value={editFuelType.current_price}
+                      onChange={e => setEditFuelType({...editFuelType, current_price: parseFloat(e.target.value)})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit_tank_capacity">Tank Capacity (liters)</Label>
+                    <Input 
+                      id="edit_tank_capacity" 
+                      type="number"
+                      value={editFuelType.tank_capacity}
+                      onChange={e => setEditFuelType({...editFuelType, tank_capacity: parseFloat(e.target.value)})}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit_current_level">Current Stock Level (liters)</Label>
+                    <Input 
+                      id="edit_current_level" 
+                      type="number"
+                      value={editFuelType.current_level}
+                      onChange={e => setEditFuelType({...editFuelType, current_level: parseFloat(e.target.value)})}
+                    />
+                  </div>
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditFuelDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleUpdateFuelType}>Update Fuel Type</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
         
         <TabsContent value="pumps" className="space-y-4">
