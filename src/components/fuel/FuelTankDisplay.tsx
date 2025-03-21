@@ -12,11 +12,12 @@ interface FuelTankProps {
   showTankIcon?: boolean;
 }
 
-const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated, showTankIcon = false }: FuelTankProps) => {
+const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false }: FuelTankProps) => {
   const [currentLevel, setCurrentLevel] = useState<number>(0);
   const [pricePerUnit, setPricePerUnit] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tankCapacity, setTankCapacity] = useState<number>(capacity || 10000);
   
   // Fetch the current fuel level from the database
   useEffect(() => {
@@ -35,9 +36,9 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated, showTankIcon
         if (settingsData) {
           setCurrentLevel(Number(settingsData.current_level));
           setPricePerUnit(Number(settingsData.current_price));
-          // If capacity is not provided as a prop, use from settings
+          // Only set tank capacity from settings if no capacity was provided as prop
           if (!capacity && settingsData.tank_capacity) {
-            capacity = Number(settingsData.tank_capacity);
+            setTankCapacity(Number(settingsData.tank_capacity));
           }
         } else {
           // Fallback to inventory table
@@ -70,7 +71,7 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated, showTankIcon
     fetchFuelData();
   }, [fuelType, capacity]);
   
-  const fillPercentage = Math.round((currentLevel / capacity) * 100);
+  const fillPercentage = Math.round((currentLevel / tankCapacity) * 100);
   const isLow = fillPercentage < 20;
   
   // Define solid colors based on fuel type
@@ -172,12 +173,12 @@ const FuelTankDisplay = ({ fuelType, capacity = 10000, lastUpdated, showTankIcon
             <Progress value={fillPercentage} className={`h-3 ${color}`} />
             
             {/* Tank visualization */}
-            {renderTankIcon()}
+            {renderTankIcon && renderTankIcon()}
             
             <div className="grid grid-cols-2 gap-2 text-sm mt-4">
               <div>
                 <span className="text-muted-foreground">Capacity</span>
-                <p className="font-semibold">{capacity.toLocaleString()} liters</p>
+                <p className="font-semibold">{tankCapacity.toLocaleString()} liters</p>
               </div>
               <div>
                 <span className="text-muted-foreground">Available</span>
