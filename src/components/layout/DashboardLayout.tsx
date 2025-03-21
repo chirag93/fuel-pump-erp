@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -72,7 +71,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: <Fuel size={20} />, label: 'Record Indent', to: '/record-indent' },
     { icon: <ClipboardList size={20} />, label: 'Shift Management', to: '/shift-management' },
     { icon: <Package size={20} />, label: 'Consumables', to: '/consumables' },
-    { icon: <Camera size={20} />, label: 'Testing', to: '/testing-details' },
     { icon: <Settings size={20} />, label: 'Settings', to: '/settings' },
   ];
 

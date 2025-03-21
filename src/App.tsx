@@ -13,7 +13,6 @@ import StaffManagement from './pages/StaffManagement';
 import RecordIndent from './pages/RecordIndent';
 import ShiftManagement from './pages/ShiftManagement';
 import Consumables from './pages/Consumables';
-import TestingDetails from './pages/TestingDetails';
 import FuelPumpSettings from './pages/FuelPumpSettings';
 import TankUnload from './pages/TankUnload';
 import BookletIndents from './pages/BookletIndents';
@@ -66,7 +65,6 @@ const App = () => {
             <Route path="/record-indent" element={<RecordIndent />} />
             <Route path="/shift-management" element={<ShiftManagement />} />
             <Route path="/consumables" element={<Consumables />} />
-            <Route path="/testing-details" element={<TestingDetails />} />
             <Route path="/settings" element={<FuelPumpSettings />} />
             <Route path="/tank-unload" element={<TankUnload />} />
           </Route>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -17,7 +16,6 @@ const FEATURES: Array<{ id: StaffFeature; label: string }> = [
   { id: 'record_indent', label: 'Record Indent' },
   { id: 'shift_management', label: 'Shift Management' },
   { id: 'consumables', label: 'Consumables' },
-  { id: 'testing', label: 'Testing' },
   { id: 'settings', label: 'Settings' }
 ];
 
