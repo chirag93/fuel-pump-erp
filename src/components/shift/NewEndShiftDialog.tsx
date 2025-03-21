@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
@@ -27,15 +26,6 @@ interface EndShiftDialogProps {
     shift_type: string;
   };
   onShiftEnded: () => void;
-}
-
-export interface SelectedConsumable {
-  id: string;
-  name: string;
-  quantity: number;
-  available: number;
-  price_per_unit: number;
-  unit: string;
 }
 
 export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: EndShiftDialogProps) {

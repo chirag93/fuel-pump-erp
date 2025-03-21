@@ -18,7 +18,8 @@ interface Consumable {
   category: string;
 }
 
-interface SelectedConsumable {
+// Export the SelectedConsumable interface so other modules can import it
+export interface SelectedConsumable {
   id: string;
   name: string;
   quantity: number;
