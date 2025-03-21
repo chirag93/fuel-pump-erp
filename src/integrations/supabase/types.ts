@@ -912,6 +912,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment: {
+        Args: {
+          row_id: string
+          amount: number
+        }
+        Returns: number
+      }
       is_super_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean

@@ -301,10 +301,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
           const { error: inventoryError } = await supabase
             .from('consumables')
             .update({ 
-              quantity: supabase.rpc('increment', { 
-                row_id: returned.id,
-                amount: returned.quantity
-              })
+              quantity: allocated.quantity - (allocated.quantity - returned.quantity)
             })
             .eq('id', returned.id);
 
