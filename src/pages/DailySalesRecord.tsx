@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -118,7 +117,31 @@ const DailySalesRecord = () => {
     }
   };
 
-  const handleOpenDialog = (reading?: DailyReading) => {
+  const fetchPreviousDayClosingStock = async (date: string, fuelType: string): Promise<number | null> => {
+    try {
+      // Find the most recent reading before the selected date
+      const { data, error } = await supabase
+        .from('daily_readings')
+        .select('closing_stock, date')
+        .eq('fuel_type', fuelType)
+        .lt('date', date)
+        .order('date', { ascending: false })
+        .limit(1);
+        
+      if (error) throw error;
+      
+      if (data && data.length > 0 && data[0].closing_stock !== null) {
+        return data[0].closing_stock;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching previous day closing stock:', error);
+      return null;
+    }
+  };
+
+  const handleOpenDialog = async (reading?: DailyReading) => {
     if (reading) {
       // Setup form for editing
       const tankReadings: {[key: number]: any} = {};
@@ -154,14 +177,34 @@ const DailySalesRecord = () => {
       setIsEditing(true);
     } else {
       // Setup form for new reading
+      const newReadingDate = new Date().toISOString().split('T')[0];
+      const defaultFuelType = fuelTypes.length > 0 ? fuelTypes[0] : '';
+      
+      // Initialize with empty values first
       setReadingFormData({
-        date: new Date().toISOString().split('T')[0],
-        fuel_type: fuelTypes.length > 0 ? fuelTypes[0] : '',
+        date: newReadingDate,
+        fuel_type: defaultFuelType,
         readings: { 1: { dip_reading: 0, net_stock: 0, tank_number: 1 } },
         receipt_quantity: 0,
         closing_stock: 0,
         actual_meter_sales: 0
       });
+      
+      // If we have a fuel type, fetch the previous day's closing stock
+      if (defaultFuelType) {
+        const prevClosingStock = await fetchPreviousDayClosingStock(newReadingDate, defaultFuelType);
+        
+        // If we found a previous closing stock, update the net stock
+        if (prevClosingStock !== null) {
+          setReadingFormData(prev => ({
+            ...prev,
+            readings: {
+              1: { ...prev.readings[1], net_stock: prevClosingStock }
+            }
+          }));
+        }
+      }
+      
       setTankCount(1);
       setIsEditing(false);
     }
@@ -176,6 +219,61 @@ const DailySalesRecord = () => {
     setDeleteDialogOpen(true);
   };
 
+  const handleInputChange = async (field: string, value: string) => {
+    if (field === 'fuel_type' && !isEditing) {
+      // When fuel type changes, fetch the previous day's closing stock
+      const prevClosingStock = await fetchPreviousDayClosingStock(readingFormData.date, value);
+      
+      setReadingFormData(prev => {
+        const updatedReadings = { ...prev.readings };
+        
+        // Update net stock for all tanks
+        Object.keys(updatedReadings).forEach(tankKey => {
+          const tankNumber = parseInt(tankKey);
+          updatedReadings[tankNumber] = {
+            ...updatedReadings[tankNumber],
+            net_stock: prevClosingStock !== null ? prevClosingStock / Object.keys(updatedReadings).length : 0
+          };
+        });
+        
+        return {
+          ...prev,
+          [field]: value,
+          readings: updatedReadings
+        };
+      });
+    } else if (field === 'date' && !isEditing) {
+      // When date changes, fetch the previous day's closing stock for the current fuel type
+      const newDate = value;
+      const prevClosingStock = await fetchPreviousDayClosingStock(newDate, readingFormData.fuel_type);
+      
+      setReadingFormData(prev => {
+        const updatedReadings = { ...prev.readings };
+        
+        // Update net stock for all tanks
+        Object.keys(updatedReadings).forEach(tankKey => {
+          const tankNumber = parseInt(tankKey);
+          updatedReadings[tankNumber] = {
+            ...updatedReadings[tankNumber],
+            net_stock: prevClosingStock !== null ? prevClosingStock / Object.keys(updatedReadings).length : 0
+          };
+        });
+        
+        return {
+          ...prev,
+          [field]: value,
+          readings: updatedReadings
+        };
+      });
+    } else {
+      // For other fields, just update normally
+      setReadingFormData(prev => ({
+        ...prev,
+        [field]: field === 'date' || field === 'fuel_type' ? value : (value === '' ? '' : parseFloat(value) || 0)
+      }));
+    }
+  };
+
   const handleTankInputChange = (tankNumber: number, field: string, value: string) => {
     setReadingFormData(prev => ({
       ...prev,
@@ -186,13 +284,6 @@ const DailySalesRecord = () => {
           [field]: value === '' ? '' : parseFloat(value) || 0
         }
       }
-    }));
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setReadingFormData(prev => ({
-      ...prev,
-      [field]: field === 'date' || field === 'fuel_type' ? value : (value === '' ? '' : parseFloat(value) || 0)
     }));
   };
 
