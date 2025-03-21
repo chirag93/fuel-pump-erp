@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,17 +14,47 @@ interface VehiclesTabProps {
   vehicles: Vehicle[];
   setVehicles: React.Dispatch<React.SetStateAction<Vehicle[]>>;
   customerId: string;
-  customerName: string; // Added the missing customerName prop
+  customerName: string;
 }
 
 const VehiclesTab = ({ vehicles, setVehicles, customerId, customerName }: VehiclesTabProps) => {
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [newVehicle, setNewVehicle] = useState<Partial<Vehicle>>({
     customer_id: customerId,
     number: '',
     type: 'Truck',
     capacity: ''
   });
+
+  const resetVehicleForm = () => {
+    setNewVehicle({
+      customer_id: customerId,
+      number: '',
+      type: 'Truck',
+      capacity: ''
+    });
+    setEditMode(false);
+  };
+
+  const handleOpenDialog = (vehicle?: Vehicle) => {
+    if (vehicle) {
+      // Edit mode
+      setNewVehicle({
+        ...vehicle
+      });
+      setEditMode(true);
+    } else {
+      // Add mode
+      resetVehicleForm();
+    }
+    setVehicleDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setVehicleDialogOpen(false);
+    resetVehicleForm();
+  };
 
   const handleAddVehicle = async () => {
     try {
@@ -50,13 +81,7 @@ const VehiclesTab = ({ vehicles, setVehicles, customerId, customerName }: Vehicl
       
       if (data) {
         setVehicles([...vehicles, data[0] as Vehicle]);
-        setVehicleDialogOpen(false);
-        setNewVehicle({
-          customer_id: customerId,
-          number: '',
-          type: 'Truck',
-          capacity: ''
-        });
+        handleCloseDialog();
         
         toast({
           title: "Success",
@@ -73,60 +98,68 @@ const VehiclesTab = ({ vehicles, setVehicles, customerId, customerName }: Vehicl
     }
   };
 
+  const handleUpdateVehicle = async () => {
+    try {
+      if (!newVehicle.id || !newVehicle.number) {
+        toast({
+          title: "Missing information",
+          description: "Vehicle ID or number is missing",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('vehicles')
+        .update({
+          number: newVehicle.number,
+          type: newVehicle.type || 'Not Specified',
+          capacity: newVehicle.capacity || 'Not Specified'
+        })
+        .eq('id', newVehicle.id)
+        .select();
+
+      if (error) throw error;
+      
+      if (data) {
+        // Update the vehicles array with the updated vehicle
+        setVehicles(vehicles.map(v => 
+          v.id === newVehicle.id ? (data[0] as Vehicle) : v
+        ));
+        
+        handleCloseDialog();
+        
+        toast({
+          title: "Success",
+          description: "Vehicle updated successfully"
+        });
+      }
+    } catch (error) {
+      console.error('Error updating vehicle:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update vehicle. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const dialogTitle = editMode ? "Edit Vehicle" : "Add New Vehicle";
+  const dialogDescription = editMode 
+    ? `Update the details for vehicle ${newVehicle.number}`
+    : `Register a new vehicle for ${customerName}`;
+  const submitButtonText = editMode ? "Update Vehicle" : "Add Vehicle";
+  const submitHandler = editMode ? handleUpdateVehicle : handleAddVehicle;
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Registered Vehicles</CardTitle>
-          <Dialog open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1">
-                <Truck className="h-4 w-4" />
-                Add Vehicle
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Vehicle</DialogTitle>
-                <DialogDescription>
-                  Register a new vehicle for this customer.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="vehicle_number">Vehicle Number</Label>
-                  <Input 
-                    id="vehicle_number" 
-                    placeholder="e.g. KA-01-AB-1234"
-                    value={newVehicle.number}
-                    onChange={e => setNewVehicle({...newVehicle, number: e.target.value})}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="vehicle_type">Vehicle Type</Label>
-                  <Input 
-                    id="vehicle_type" 
-                    placeholder="e.g. Truck, Tanker"
-                    value={newVehicle.type}
-                    onChange={e => setNewVehicle({...newVehicle, type: e.target.value})}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="vehicle_capacity">Capacity</Label>
-                  <Input 
-                    id="vehicle_capacity" 
-                    placeholder="e.g. 12 Ton, 20000 Liters"
-                    value={newVehicle.capacity}
-                    onChange={e => setNewVehicle({...newVehicle, capacity: e.target.value})}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setVehicleDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleAddVehicle}>Add Vehicle</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button size="sm" className="gap-1" onClick={() => handleOpenDialog()}>
+            <Truck className="h-4 w-4" />
+            Add Vehicle
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -137,7 +170,7 @@ const VehiclesTab = ({ vehicles, setVehicles, customerId, customerName }: Vehicl
             <Button 
               variant="outline" 
               className="mt-4" 
-              onClick={() => setVehicleDialogOpen(true)}
+              onClick={() => handleOpenDialog()}
             >
               Add First Vehicle
             </Button>
@@ -165,7 +198,11 @@ const VehiclesTab = ({ vehicles, setVehicles, customerId, customerName }: Vehicl
                       : 'Unknown'}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleOpenDialog(vehicle)}
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -174,6 +211,50 @@ const VehiclesTab = ({ vehicles, setVehicles, customerId, customerName }: Vehicl
             </TableBody>
           </Table>
         )}
+
+        <Dialog open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{dialogTitle}</DialogTitle>
+              <DialogDescription>
+                {dialogDescription}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="vehicle_number">Vehicle Number</Label>
+                <Input 
+                  id="vehicle_number" 
+                  placeholder="e.g. KA-01-AB-1234"
+                  value={newVehicle.number}
+                  onChange={e => setNewVehicle({...newVehicle, number: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="vehicle_type">Vehicle Type</Label>
+                <Input 
+                  id="vehicle_type" 
+                  placeholder="e.g. Truck, Tanker"
+                  value={newVehicle.type}
+                  onChange={e => setNewVehicle({...newVehicle, type: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="vehicle_capacity">Capacity</Label>
+                <Input 
+                  id="vehicle_capacity" 
+                  placeholder="e.g. 12 Ton, 20000 Liters"
+                  value={newVehicle.capacity}
+                  onChange={e => setNewVehicle({...newVehicle, capacity: e.target.value})}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleCloseDialog}>Cancel</Button>
+              <Button onClick={submitHandler}>{submitButtonText}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
