@@ -17,6 +17,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { DateRange } from 'react-day-picker';
 
 interface TransactionWithDetails extends Transaction {
   vehicle_number?: string;
@@ -32,10 +33,7 @@ interface TransactionsTabProps {
 const TransactionsTab = ({ transactions: initialTransactions, customerName, customer, customerId }: TransactionsTabProps) => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const { transactions, refreshData } = useCustomerData(customerId);
-  const [dateRange, setDateRange] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
+  const [dateRange, setDateRange] = useState<DateRange>({
     from: undefined,
     to: undefined,
   });
@@ -128,7 +126,14 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
       csvContent += 'Seller Details:\r\n';
       csvContent += `${businessData?.name || 'Fuel Station'}\r\n`;
       csvContent += `${businessData?.address || 'Address not available'}\r\n`;
-      csvContent += `GSTIN: ${businessData?.gst_number || 'Not available'}\r\n\r\n`;
+      
+      // Get business settings for GST number
+      const { data: businessSettings } = await supabase
+        .from('business_settings')
+        .select('*')
+        .single();
+        
+      csvContent += `GSTIN: ${businessSettings?.gst_number || 'Not available'}\r\n\r\n`;
       
       // Buyer details
       csvContent += 'Buyer Details:\r\n';
