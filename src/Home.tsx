@@ -38,6 +38,13 @@ interface FuelLevel {
   lastUpdated: string;
 }
 
+interface RecentActivity {
+  id: string;
+  time: string;
+  action: string;
+  type: string;
+}
+
 const QuickAction = ({
   title,
   description,
@@ -72,6 +79,8 @@ const Home = () => {
     { fuelType: 'Petrol', capacity: 10000, lastUpdated: 'Loading...' },
     { fuelType: 'Diesel', capacity: 12000, lastUpdated: 'Loading...' }
   ]);
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(true);
 
   // Fetch fuel levels from the database
   useEffect(() => {
@@ -126,6 +135,145 @@ const Home = () => {
     fetchFuelLevels();
   }, []);
 
+  // Fetch recent activities
+  useEffect(() => {
+    const fetchRecentActivities = async () => {
+      setIsLoadingActivities(true);
+      try {
+        // Array to hold all activities
+        let allActivities: RecentActivity[] = [];
+        
+        // Fetch recent shifts
+        const { data: shiftsData, error: shiftsError } = await supabase
+          .from('shifts')
+          .select('id, start_time, staff_id, staff(name)')
+          .order('start_time', { ascending: false })
+          .limit(3);
+          
+        if (shiftsError) throw shiftsError;
+        
+        if (shiftsData && shiftsData.length > 0) {
+          const shiftActivities = shiftsData.map(shift => ({
+            id: `shift-${shift.id}`,
+            time: formatTime(shift.start_time),
+            action: `Shift started by ${shift.staff?.name || 'Staff'}`,
+            type: 'shift-start'
+          }));
+          allActivities = [...allActivities, ...shiftActivities];
+        }
+        
+        // Fetch recent tank unloads
+        const { data: unloadsData, error: unloadsError } = await supabase
+          .from('tank_unloads')
+          .select('*')
+          .order('date', { ascending: false })
+          .limit(3);
+          
+        if (unloadsError) throw unloadsError;
+        
+        if (unloadsData && unloadsData.length > 0) {
+          const unloadActivities = unloadsData.map(unload => ({
+            id: `unload-${unload.id}`,
+            time: formatTime(unload.date),
+            action: `Tank unload received: ${unload.quantity.toLocaleString()}L ${unload.fuel_type}`,
+            type: 'tank-unload'
+          }));
+          allActivities = [...allActivities, ...unloadActivities];
+        }
+        
+        // Fetch recent transactions
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('transactions')
+          .select('id, date, fuel_type, amount, quantity, payment_method, created_at')
+          .order('created_at', { ascending: false })
+          .limit(3);
+          
+        if (transactionsError) throw transactionsError;
+        
+        if (transactionsData && transactionsData.length > 0) {
+          const transactionActivities = transactionsData.map(transaction => ({
+            id: `transaction-${transaction.id}`,
+            time: formatTime(transaction.created_at),
+            action: transaction.fuel_type === 'PAYMENT' 
+              ? `Payment received: ₹${transaction.amount.toLocaleString()}`
+              : `${transaction.fuel_type} sales: ${transaction.quantity.toLocaleString()}L for ₹${transaction.amount.toLocaleString()}`,
+            type: 'transaction'
+          }));
+          allActivities = [...allActivities, ...transactionActivities];
+        }
+        
+        // Sort all activities by time (most recent first)
+        allActivities.sort((a, b) => {
+          // If time contains "ago" format, we need to parse it differently
+          const timeA = a.time.includes('ago') ? new Date().getTime() - parseTimeAgo(a.time) : parseDisplayTime(a.time);
+          const timeB = b.time.includes('ago') ? new Date().getTime() - parseTimeAgo(b.time) : parseDisplayTime(b.time);
+          return timeB - timeA;
+        });
+        
+        // Take the 5 most recent activities
+        setRecentActivities(allActivities.slice(0, 5));
+      } catch (error) {
+        console.error('Error fetching recent activities:', error);
+      } finally {
+        setIsLoadingActivities(false);
+      }
+    };
+    
+    fetchRecentActivities();
+  }, []);
+
+  // Helper function to format time for display
+  const formatTime = (timeString: string) => {
+    if (!timeString) return 'Unknown';
+    
+    const date = new Date(timeString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 60) {
+      return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    } else if (diffDays < 2) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+  };
+
+  // Helper function to parse time ago format back to milliseconds
+  const parseTimeAgo = (timeAgo: string): number => {
+    if (timeAgo.includes('min')) {
+      const mins = parseInt(timeAgo);
+      return mins * 60 * 1000;
+    } else if (timeAgo.includes('hour')) {
+      const hours = parseInt(timeAgo);
+      return hours * 60 * 60 * 1000;
+    } else if (timeAgo === 'Yesterday') {
+      return 24 * 60 * 60 * 1000;
+    }
+    return 0;
+  };
+
+  // Helper function to parse display time to timestamp
+  const parseDisplayTime = (displayTime: string): number => {
+    if (displayTime === 'Yesterday') {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      return yesterday.getTime();
+    }
+    // For dates like "Mar 15"
+    const now = new Date();
+    const year = now.getFullYear();
+    return new Date(`${displayTime}, ${year}`).getTime();
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -156,13 +304,6 @@ const Home = () => {
             description="Record end-of-day stock levels"
             icon={<Package size={20} />}
             href="/stock-levels"
-          />
-          
-          <QuickAction
-            title="Testing Details"
-            description="Record fuel testing information"
-            icon={<TestTube size={20} />}
-            href="/testing-details"
           />
           
           <QuickAction
@@ -214,33 +355,22 @@ const Home = () => {
       <div className="mt-8">
         <h3 className="mb-4 text-xl font-semibold">Recent Activity</h3>
         <div className="space-y-4">
-          {[
-            {
-              time: "10:45 AM",
-              action: "Shift started by Raj Kumar",
-              type: "shift-start"
-            },
-            {
-              time: "10:30 AM",
-              action: "₹2,500 cash provided to Amit Singh",
-              type: "cash-provided"
-            },
-            {
-              time: "09:15 AM",
-              action: "Tank unload received: 5,000L Petrol",
-              type: "tank-unload"
-            },
-            {
-              time: "Yesterday",
-              action: "End of day stock recorded: Petrol 75%, Diesel 60%",
-              type: "stock-level"
-            },
-          ].map((activity, i) => (
-            <div key={i} className="flex items-center rounded-lg border p-3">
-              <div className="mr-4 font-medium">{activity.time}</div>
-              <div>{activity.action}</div>
+          {isLoadingActivities ? (
+            <div className="text-center py-4">
+              <p className="text-muted-foreground">Loading recent activities...</p>
             </div>
-          ))}
+          ) : recentActivities.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-muted-foreground">No recent activities found</p>
+            </div>
+          ) : (
+            recentActivities.map((activity) => (
+              <div key={activity.id} className="flex items-center rounded-lg border p-3">
+                <div className="mr-4 font-medium">{activity.time}</div>
+                <div>{activity.action}</div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
