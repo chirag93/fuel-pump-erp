@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -30,6 +29,13 @@ interface TransactionsTabProps {
   customerName: string;
   customer: Customer;
   customerId: string;
+}
+
+interface BusinessInfo {
+  id?: string;
+  business_name: string;
+  gst_number: string;
+  address: string;
 }
 
 const TransactionsTab = ({ transactions: initialTransactions, customerName, customer, customerId }: TransactionsTabProps) => {
@@ -87,17 +93,22 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
     setIsGeneratingInvoice(true);
 
     try {
-      // Get business details for the invoice
-      const { data: businessData } = await supabase
-        .from('fuel_pumps')
-        .select('*')
-        .single();
-
-      // Get business settings for GST number
-      const { data: businessSettings } = await supabase
+      // Get business details for the invoice from business_settings table
+      const { data: businessSettings, error: businessError } = await supabase
         .from('business_settings')
         .select('*')
         .single();
+
+      if (businessError) {
+        console.error('Error fetching business settings:', businessError);
+        throw new Error('Could not fetch business information');
+      }
+
+      const businessInfo: BusinessInfo = businessSettings || {
+        business_name: 'Fuel Station',
+        gst_number: 'Not Available',
+        address: 'Address not available'
+      };
 
       // Calculate totals
       let totalAmount = 0;
@@ -128,46 +139,42 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
       // Add logo/header
       pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(businessData?.name || 'Fuel Station', 105, 20, { align: 'center' });
+      pdf.text(businessInfo.business_name, 105, 20, { align: 'center' });
       
       // Add address and contact details
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      const address = businessData?.address || 'Address not available';
-      pdf.text(address, 105, 28, { align: 'center' });
+      pdf.text(businessInfo.address, 105, 28, { align: 'center' });
       
-      const contact = businessData?.contact_number ? `Contact: ${businessData.contact_number}` : '';
-      pdf.text(contact, 105, 34, { align: 'center' });
-      
-      const gstNumber = businessSettings?.gst_number ? `GSTIN: ${businessSettings.gst_number}` : 'GSTIN: Not Available';
-      pdf.text(gstNumber, 105, 40, { align: 'center' });
+      const gstNumber = businessInfo.gst_number ? `GSTIN: ${businessInfo.gst_number}` : 'GSTIN: Not Available';
+      pdf.text(gstNumber, 105, 34, { align: 'center' });
       
       // Add invoice title
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text("TAX INVOICE", 105, 50, { align: 'center' });
+      pdf.text("TAX INVOICE", 105, 42, { align: 'center' });
       
       // Add a line
-      pdf.line(14, 55, 196, 55);
+      pdf.line(14, 47, 196, 47);
       
       // Invoice details
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Invoice Date: ${invoiceDate}`, 14, 65);
-      pdf.text(`Period: ${invoicePeriod}`, 14, 71);
-      pdf.text(`Invoice No: INV-${new Date().getTime().toString().substring(0, 10)}`, 14, 77);
+      pdf.text(`Invoice Date: ${invoiceDate}`, 14, 55);
+      pdf.text(`Period: ${invoicePeriod}`, 14, 61);
+      pdf.text(`Invoice No: INV-${new Date().getTime().toString().substring(0, 10)}`, 14, 67);
       
       // Customer details
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.text("Customer Details:", 14, 87);
+      pdf.text("Customer Details:", 14, 77);
       
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Name: ${customer.name}`, 14, 94);
-      pdf.text(`Contact: ${customer.contact}`, 14, 100);
-      pdf.text(`Phone: ${customer.phone}`, 14, 106);
-      pdf.text(`GSTIN: ${customer.gst || 'Not Available'}`, 14, 112);
+      pdf.text(`Name: ${customer.name}`, 14, 84);
+      pdf.text(`Contact: ${customer.contact}`, 14, 90);
+      pdf.text(`Phone: ${customer.phone}`, 14, 96);
+      pdf.text(`GSTIN: ${customer.gst || 'Not Available'}`, 14, 102);
       
       // Add transaction table
       autoTable(pdf, {
@@ -180,7 +187,7 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
           trans.amount.toString(),
           trans.payment_method
         ]),
-        startY: 120,
+        startY: 110,
         styles: { fontSize: 9 },
         headStyles: { fillColor: [66, 66, 66] }
       });
@@ -237,6 +244,7 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
     }
   };
 
+  
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
