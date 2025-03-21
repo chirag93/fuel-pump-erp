@@ -1,7 +1,11 @@
 
+import { useState } from 'react';
 import { format } from 'date-fns';
+import { FileText } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import { Transaction, Customer } from '@/integrations/supabase/client';
+import BillPreviewDialog from '@/components/indent/BillPreviewDialog';
 
 interface TransactionWithDetails extends Transaction {
   vehicle_number?: string;
@@ -13,6 +17,9 @@ interface TransactionsTableProps {
 }
 
 const TransactionsTable = ({ transactions, customer }: TransactionsTableProps) => {
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionWithDetails | null>(null);
+  const [billDialogOpen, setBillDialogOpen] = useState(false);
+
   if (transactions.length === 0) {
     return (
       <p className="text-muted-foreground text-center py-4">
@@ -20,6 +27,11 @@ const TransactionsTable = ({ transactions, customer }: TransactionsTableProps) =
       </p>
     );
   }
+
+  const handleGenerateBill = (transaction: TransactionWithDetails) => {
+    setSelectedTransaction(transaction);
+    setBillDialogOpen(true);
+  };
 
   return (
     <div className="overflow-x-auto">
@@ -33,6 +45,7 @@ const TransactionsTable = ({ transactions, customer }: TransactionsTableProps) =
             <TableHead>Amount</TableHead>
             <TableHead>Payment Method</TableHead>
             {customer.balance !== null && <TableHead>Status</TableHead>}
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -65,10 +78,33 @@ const TransactionsTable = ({ transactions, customer }: TransactionsTableProps) =
                   )}
                 </TableCell>
               )}
+              <TableCell>
+                {transaction.fuel_type !== 'PAYMENT' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleGenerateBill(transaction)}
+                    className="flex items-center gap-1"
+                  >
+                    <FileText className="h-3 w-3" />
+                    Bill
+                  </Button>
+                )}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      {selectedTransaction && (
+        <BillPreviewDialog
+          open={billDialogOpen}
+          onOpenChange={setBillDialogOpen}
+          transaction={selectedTransaction}
+          vehicleNumber={selectedTransaction.vehicle_number}
+          customerName={customer.name}
+        />
+      )}
     </div>
   );
 };

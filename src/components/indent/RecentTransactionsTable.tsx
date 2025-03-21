@@ -1,25 +1,32 @@
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { FileText, ArrowRight } from 'lucide-react';
-import { supabase, Transaction } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { FileText } from 'lucide-react';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { supabase, Transaction } from '@/integrations/supabase/client';
+import BillPreviewDialog from './BillPreviewDialog';
 
-interface RecentTransactionsTableProps {
-  refreshTrigger?: number;
+interface ExtendedTransaction extends Transaction {
+  customer_name?: string;
+  vehicle_number?: string;
 }
 
-export const RecentTransactionsTable = ({ refreshTrigger = 0 }: RecentTransactionsTableProps) => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+interface RecentTransactionsTableProps {
+  refreshTrigger: number;
+}
+
+export const RecentTransactionsTable = ({ refreshTrigger }: RecentTransactionsTableProps) => {
+  const [transactions, setTransactions] = useState<ExtendedTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedTransaction, setSelectedTransaction] = useState<ExtendedTransaction | null>(null);
+  const [billDialogOpen, setBillDialogOpen] = useState(false);
 
   useEffect(() => {
-    const fetchTransactions = async () => {
+    const fetchRecentTransactions = async () => {
       setIsLoading(true);
       try {
+        // Get the last 5 transactions with customer and vehicle info
         const { data, error } = await supabase
           .from('transactions')
           .select(`
@@ -28,82 +35,112 @@ export const RecentTransactionsTable = ({ refreshTrigger = 0 }: RecentTransactio
             vehicles(number)
           `)
           .order('created_at', { ascending: false })
-          .limit(10);
-
+          .limit(5);
+          
         if (error) throw error;
-
-        // Process the data to include customer_name and vehicle_number
+        
+        // Process the data to flatten the structure
         const processedData = data.map(transaction => ({
           ...transaction,
-          customer_name: transaction.customers?.name || 'Unknown',
-          vehicle_number: transaction.vehicles?.number || 'Unknown'
+          customer_name: transaction.customers?.name,
+          vehicle_number: transaction.vehicles?.number
         }));
-
-        setTransactions(processedData as Transaction[]);
+        
+        setTransactions(processedData);
       } catch (error) {
-        console.error('Error fetching transactions:', error);
+        console.error('Error fetching recent transactions:', error);
       } finally {
         setIsLoading(false);
       }
     };
-
-    fetchTransactions();
+    
+    fetchRecentTransactions();
   }, [refreshTrigger]);
 
+  const handleGenerateBill = (transaction: ExtendedTransaction) => {
+    setSelectedTransaction(transaction);
+    setBillDialogOpen(true);
+  };
+
+  if (isLoading) {
+    return <p className="text-center py-4">Loading recent transactions...</p>;
+  }
+
+  if (transactions.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No recent transactions found</p>
+      </div>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recent Transactions</CardTitle>
-        <CardDescription>
-          The most recent 10 fuel transactions
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <p>Loading transactions...</p>
-        ) : transactions.length === 0 ? (
-          <p>No recent transactions found.</p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Fuel Type</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Discount</TableHead>
-                <TableHead>Final Amount</TableHead>
+    <div>
+      <h2 className="text-xl font-semibold mb-4">Recent Transactions</h2>
+      <div className="overflow-x-auto rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Vehicle</TableHead>
+              <TableHead>Fuel Type</TableHead>
+              <TableHead>Quantity</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Payment</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {transactions.map((transaction) => (
+              <TableRow key={transaction.id}>
+                <TableCell>
+                  {format(new Date(transaction.date), 'dd/MM/yyyy')}
+                </TableCell>
+                <TableCell>{transaction.customer_name || 'N/A'}</TableCell>
+                <TableCell>{transaction.vehicle_number || 'N/A'}</TableCell>
+                <TableCell>{transaction.fuel_type}</TableCell>
+                <TableCell>
+                  {transaction.fuel_type === 'PAYMENT' 
+                    ? 'N/A' 
+                    : `${transaction.quantity} L`
+                  }
+                </TableCell>
+                <TableCell>
+                  {transaction.fuel_type === 'PAYMENT'
+                    ? <span className="text-green-500">INR {transaction.amount}</span>
+                    : `INR ${transaction.amount}`
+                  }
+                </TableCell>
+                <TableCell>{transaction.payment_method}</TableCell>
+                <TableCell>
+                  {transaction.fuel_type !== 'PAYMENT' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleGenerateBill(transaction)}
+                      className="flex items-center gap-1"
+                    >
+                      <FileText className="h-3 w-3" />
+                      Bill
+                    </Button>
+                  )}
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell>{transaction.date ? format(new Date(transaction.date), 'dd/MM/yyyy') : 'Unknown'}</TableCell>
-                  <TableCell>{transaction.customer_name || 'Unknown'}</TableCell>
-                  <TableCell>{transaction.vehicle_number || 'Unknown'}</TableCell>
-                  <TableCell>{transaction.fuel_type}</TableCell>
-                  <TableCell>{transaction.quantity} L</TableCell>
-                  <TableCell>₹{transaction.amount.toFixed(2)}</TableCell>
-                  <TableCell>₹{(transaction.discount_amount || 0).toFixed(2)}</TableCell>
-                  <TableCell>₹{(transaction.amount - (transaction.discount_amount || 0)).toFixed(2)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-end">
-        <Link to="/all-transactions">
-          <Button variant="outline" className="gap-2">
-            View all transactions
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </Link>
-      </CardFooter>
-    </Card>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {selectedTransaction && (
+        <BillPreviewDialog
+          open={billDialogOpen}
+          onOpenChange={setBillDialogOpen}
+          transaction={selectedTransaction}
+          vehicleNumber={selectedTransaction.vehicle_number}
+          customerName={selectedTransaction.customer_name}
+        />
+      )}
+    </div>
   );
 };
-
-export default RecentTransactionsTable;
