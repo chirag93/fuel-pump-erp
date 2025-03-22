@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -282,7 +281,14 @@ const StockLevels = () => {
           processedData[month][unload.fuel_type] = 0;
         }
         
-        processedData[month][unload.fuel_type] += Number(unload.quantity);
+        // Fix for the error: Ensure quantity is a number
+        const quantity = typeof unload.quantity === 'string' 
+          ? parseFloat(unload.quantity) 
+          : Number(unload.quantity);
+          
+        if (!isNaN(quantity)) {
+          processedData[month][unload.fuel_type] += quantity;
+        }
       });
       
       // Convert to array format for recharts
