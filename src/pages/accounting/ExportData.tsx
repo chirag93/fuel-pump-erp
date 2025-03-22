@@ -22,7 +22,7 @@ const ExportData = () => {
   const dataTypes = [
     { value: 'transactions', label: 'Transactions' },
     { value: 'customers', label: 'Customers' },
-    { value: 'payments', label: 'Payments' },
+    { value: 'customer_payments', label: 'Payments' },
     { value: 'indents', label: 'Indents' },
     { value: 'stock', label: 'Stock' },
     { value: 'vehicles', label: 'Vehicles' },
@@ -77,9 +77,9 @@ const ExportData = () => {
           data = customers;
           break;
           
-        case 'payments':
+        case 'customer_payments':
           const { data: payments, error: paymentError } = await supabase
-            .from('payments')
+            .from('customer_payments')
             .select('*')
             .gte('date', fromDateStr)
             .lte('date', toDateStr);
@@ -90,20 +90,33 @@ const ExportData = () => {
           
         case 'invoices':
           const { data: invoices, error: invoiceError } = await supabase
-            .rpc('get_invoices_with_customer_names')
-            .order('date', { ascending: false });
+            .rpc('get_invoices_with_customer_names');
           
           if (invoiceError) throw invoiceError;
           data = invoices;
           break;
           
-        default:
-          const { data: defaultData, error: defaultError } = await supabase
-            .from(dataType)
+        case 'stock':
+          const { data: inventory, error: inventoryError } = await supabase
+            .from('inventory')
             .select('*');
           
-          if (defaultError) throw defaultError;
-          data = defaultData;
+          if (inventoryError) throw inventoryError;
+          data = inventory;
+          break;
+          
+        default:
+          // For explicitly defined tables that have specific types in the TypeScript definitions
+          if (['indents', 'vehicles', 'daily_readings', 'fuel_settings'].includes(dataType)) {
+            const { data: tableData, error: tableError } = await supabase
+              .from(dataType)
+              .select('*');
+            
+            if (tableError) throw tableError;
+            data = tableData;
+          } else {
+            throw new Error(`Export of ${dataType} is not supported`);
+          }
       }
       
       // Process the data for export
