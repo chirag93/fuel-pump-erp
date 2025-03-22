@@ -72,14 +72,39 @@ const ExportData = () => {
       // Fetch data based on type
       switch (dataType) {
         case 'transactions':
+          // Join with customers, vehicles, and staff tables to get names
           const { data: transactions, error: transactionError } = await supabase
             .from('transactions')
-            .select('*')
+            .select(`
+              id,
+              amount,
+              quantity,
+              fuel_type,
+              date,
+              payment_method,
+              discount_amount,
+              customers:customer_id(name),
+              vehicles:vehicle_id(number),
+              staff:staff_id(name)
+            `)
             .gte('date', fromDateStr)
             .lte('date', toDateStr);
           
           if (transactionError) throw transactionError;
-          data = transactions;
+          
+          // Transform the joined data for export
+          data = transactions.map(transaction => ({
+            id: transaction.id,
+            date: transaction.date,
+            fuel_type: transaction.fuel_type,
+            quantity: transaction.quantity,
+            amount: transaction.amount,
+            payment_method: transaction.payment_method,
+            discount_amount: transaction.discount_amount,
+            customer_name: transaction.customers?.name || 'N/A',
+            vehicle_number: transaction.vehicles?.number || 'N/A',
+            staff_name: transaction.staff?.name || 'N/A'
+          }));
           break;
           
         case 'customers':
@@ -92,14 +117,31 @@ const ExportData = () => {
           break;
           
         case 'customer_payments':
+          // Join with customers table to get customer names
           const { data: payments, error: paymentError } = await supabase
             .from('customer_payments')
-            .select('*')
+            .select(`
+              id,
+              date,
+              amount,
+              payment_method,
+              notes,
+              customers:customer_id(name)
+            `)
             .gte('date', fromDateStr)
             .lte('date', toDateStr);
           
           if (paymentError) throw paymentError;
-          data = payments;
+          
+          // Transform the joined data for export
+          data = payments.map(payment => ({
+            id: payment.id,
+            date: payment.date,
+            amount: payment.amount,
+            payment_method: payment.payment_method,
+            notes: payment.notes,
+            customer_name: payment.customers?.name || 'N/A'
+          }));
           break;
           
         case 'invoices':
@@ -120,23 +162,65 @@ const ExportData = () => {
           break;
           
         case 'indents':
+          // Join with customers and vehicles tables to get names
           const { data: indents, error: indentsError } = await supabase
             .from('indents')
-            .select('*')
+            .select(`
+              id,
+              date,
+              indent_number,
+              amount,
+              quantity,
+              fuel_type,
+              status,
+              discount_amount,
+              customers:customer_id(name),
+              vehicles:vehicle_id(number)
+            `)
             .gte('date', fromDateStr)
             .lte('date', toDateStr);
           
           if (indentsError) throw indentsError;
-          data = indents;
+          
+          // Transform the joined data for export
+          data = indents.map(indent => ({
+            id: indent.id,
+            date: indent.date,
+            indent_number: indent.indent_number,
+            amount: indent.amount,
+            quantity: indent.quantity,
+            fuel_type: indent.fuel_type,
+            status: indent.status,
+            discount_amount: indent.discount_amount,
+            customer_name: indent.customers?.name || 'N/A',
+            vehicle_number: indent.vehicles?.number || 'N/A'
+          }));
           break;
           
         case 'vehicles':
+          // Join with customers table to get customer names
           const { data: vehicles, error: vehiclesError } = await supabase
             .from('vehicles')
-            .select('*');
+            .select(`
+              id,
+              number,
+              type,
+              capacity,
+              created_at,
+              customers:customer_id(name)
+            `);
           
           if (vehiclesError) throw vehiclesError;
-          data = vehicles;
+          
+          // Transform the joined data for export
+          data = vehicles.map(vehicle => ({
+            id: vehicle.id,
+            number: vehicle.number,
+            type: vehicle.type,
+            capacity: vehicle.capacity,
+            created_at: vehicle.created_at,
+            customer_name: vehicle.customers?.name || 'N/A'
+          }));
           break;
           
         case 'daily_readings':
