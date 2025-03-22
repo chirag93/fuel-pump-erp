@@ -4,11 +4,13 @@ import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, Printer } from 'lucide-react';
+import { printReport } from '@/utils/reportUtils';
 
 interface RecentReport {
   type: string;
   date: Date;
   icon: React.ReactNode;
+  data?: any; // Add data property for printing
 }
 
 interface RecentReportsListProps {
@@ -20,6 +22,12 @@ export const RecentReportsList: React.FC<RecentReportsListProps> = ({
   reports,
   onExportReport
 }) => {
+  const handlePrintReport = (report: RecentReport) => {
+    if (report.data) {
+      printReport(report.data);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -45,7 +53,12 @@ export const RecentReportsList: React.FC<RecentReportsListProps> = ({
                 <Button variant="ghost" size="icon" onClick={onExportReport}>
                   <Download size={16} />
                 </Button>
-                <Button variant="ghost" size="icon">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => handlePrintReport(report)}
+                  disabled={!report.data}
+                >
                   <Printer size={16} />
                 </Button>
               </div>

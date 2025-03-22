@@ -1,4 +1,3 @@
-
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { BarChart, FileText } from 'lucide-react';
@@ -365,6 +364,145 @@ export const exportReportToCsv = (reportData: ReportData) => {
   link.download = `${reportData.title.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.csv`;
   link.click();
   URL.revokeObjectURL(url);
+  
+  return true;
+};
+
+export const printReport = (reportData: ReportData) => {
+  if (!reportData) {
+    return false;
+  }
+  
+  // Create a new window for printing
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    console.error('Unable to open print window');
+    return false;
+  }
+  
+  // Generate printable HTML content
+  const printContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${reportData.title}</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 20px;
+        }
+        h1 { 
+          font-size: 24px;
+          margin-bottom: 5px; 
+        }
+        .report-date {
+          font-size: 14px;
+          margin-bottom: 20px;
+          color: #666;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 20px 0;
+        }
+        th, td {
+          padding: 10px;
+          text-align: left;
+          border-bottom: 1px solid #ddd;
+        }
+        th {
+          background-color: #f7f7f7;
+          font-weight: bold;
+        }
+        .value-cell {
+          text-align: right;
+        }
+        .header-row {
+          background-color: #f0f0f0;
+          font-weight: bold;
+        }
+        .details-section {
+          margin-top: 30px;
+        }
+        .print-footer {
+          margin-top: 30px;
+          font-size: 12px;
+          text-align: center;
+          color: #666;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>${reportData.title}</h1>
+      <div class="report-date">${reportData.date}</div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th class="value-cell">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${reportData.summary.map(item => `
+            <tr class="${item.value === '' ? 'header-row' : ''}">
+              <td>${item.label}</td>
+              <td class="value-cell">${item.value}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      
+      ${reportData.details && reportData.details.length > 0 ? `
+        <div class="details-section">
+          <h2>Detailed Transactions</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th class="value-cell">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${reportData.details.map(detail => `
+                <tr>
+                  <td>${detail.date}</td>
+                  <td>${detail.customerName}</td>
+                  <td>${detail.fuelType}</td>
+                  <td>${detail.quantity}</td>
+                  <td class="value-cell">${detail.amount}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      ` : ''}
+      
+      <div class="print-footer">
+        Generated on ${format(new Date(), 'dd/MM/yyyy HH:mm')}
+      </div>
+    </body>
+    </html>
+  `;
+  
+  // Write to the new window and print
+  printWindow.document.open();
+  printWindow.document.write(printContent);
+  printWindow.document.close();
+  
+  // Wait for content to load before printing
+  printWindow.onload = () => {
+    printWindow.print();
+    // Close the window after printing (optional)
+    // printWindow.close();
+  };
   
   return true;
 };

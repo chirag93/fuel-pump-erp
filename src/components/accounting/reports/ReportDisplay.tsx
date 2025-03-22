@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Download, Printer, ChevronRight } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ReportData } from '@/utils/reportUtils';
+import { ReportData, printReport } from '@/utils/reportUtils';
 
 interface ReportDisplayProps {
   reportData: ReportData;
@@ -15,6 +15,10 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({
   reportData,
   onExportReport
 }) => {
+  const handlePrintReport = () => {
+    printReport(reportData);
+  };
+
   return (
     <Card className="mt-6">
       <CardHeader>
@@ -87,7 +91,7 @@ export const ReportDisplay: React.FC<ReportDisplayProps> = ({
               <Download className="mr-2 h-4 w-4" />
               Export Report
             </Button>
-            <Button>
+            <Button onClick={handlePrintReport}>
               <Printer className="mr-2 h-4 w-4" />
               Print Report
             </Button>

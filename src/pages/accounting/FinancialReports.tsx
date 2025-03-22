@@ -16,8 +16,16 @@ import {
   generateBalanceSheetReport,
   generateCashFlowReport,
   generateTaxSummaryReport,
-  exportReportToCsv
+  exportReportToCsv,
+  printReport
 } from '@/utils/reportUtils';
+
+interface ExtendedRecentReport {
+  type: string;
+  date: Date;
+  icon: React.ReactNode;
+  data?: ReportData;
+}
 
 const FinancialReports = () => {
   const [reportType, setReportType] = useState<string>('profit-loss');
@@ -27,7 +35,7 @@ const FinancialReports = () => {
   const [toDate, setToDate] = useState<Date | undefined>(new Date());
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [recentReports, setRecentReports] = useState<{type: string; date: Date; icon: React.ReactNode}[]>([
+  const [recentReports, setRecentReports] = useState<ExtendedRecentReport[]>([
     { type: 'Profit & Loss', date: new Date(Date.now() - 86400000 * 2), icon: <BarChart size={16} /> },
     { type: 'Balance Sheet', date: new Date(Date.now() - 86400000 * 5), icon: <FileText size={16} /> },
     { type: 'Sales Report', date: new Date(Date.now() - 86400000 * 10), icon: <BarChart size={16} /> },
@@ -75,10 +83,11 @@ const FinancialReports = () => {
       setReportData(data);
       
       // Add to recent reports
-      const newReport = {
+      const newReport: ExtendedRecentReport = {
         type: getReportTypeLabel(reportType),
         date: new Date(),
-        icon: getReportIcon(reportType)
+        icon: getReportIcon(reportType),
+        data: data // Store the report data for printing recent reports
       };
       
       setRecentReports([newReport, ...recentReports.slice(0, 2)]);
@@ -120,6 +129,18 @@ const FinancialReports = () => {
       toast({
         title: "Export Failed",
         description: "There was a problem exporting the report. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handlePrintRecent = () => {
+    if (recentReports.length > 0 && recentReports[0].data) {
+      printReport(recentReports[0].data);
+    } else {
+      toast({
+        title: "No Report Data",
+        description: "No report data available to print.",
         variant: "destructive"
       });
     }
