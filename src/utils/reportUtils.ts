@@ -1,3 +1,4 @@
+
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { BarChart, FileText } from 'lucide-react';
@@ -186,15 +187,33 @@ export const generateBalanceSheetReport = async (fromDate: string, toDate: strin
     inventoryValue += level * price;
   });
   
-  // For demonstration purposes, using some fixed values for other assets and liabilities
-  const cashAndBank = 250000; // Example fixed value
-  const fixtures = 1500000; // Example fixed value
-  const accountsPayable = 175000; // Example fixed value
-  const loans = 500000; // Example fixed value
+  // Get cash from transactions and other assets
+  const { data: cashTransactions, error: cashError } = await supabase
+    .from('transactions')
+    .select('amount')
+    .eq('payment_method', 'cash')
+    .gte('date', fromDate)
+    .lte('date', toDate);
+  
+  if (cashError) throw cashError;
+  
+  const cashAndBank = cashTransactions ? cashTransactions.reduce((sum, item) => sum + Number(item.amount), 0) : 0;
+  
+  // Get business equipment value (using a fixed value for now as we don't have this data in the DB)
+  // In a real application, this should come from an assets table
+  const { data: businessSettings, error: businessError } = await supabase
+    .from('business_settings')
+    .select('*')
+    .single();
+  
+  if (businessError) throw businessError;
+  
+  // For simplicity, we'll use a default fixtures value
+  // In a real application, this should come from fixed assets table
+  const fixtures = 150000;
   
   const totalAssets = cashAndBank + accountsReceivable + inventoryValue + fixtures;
-  const totalLiabilities = accountsPayable + loans;
-  const equity = totalAssets - totalLiabilities;
+  const equity = totalAssets; // Equity = Assets (since we removed liabilities)
   
   return {
     title: 'Balance Sheet',
@@ -206,11 +225,7 @@ export const generateBalanceSheetReport = async (fromDate: string, toDate: strin
       { label: 'Inventory', value: `₹${inventoryValue.toLocaleString('en-IN')}` },
       { label: 'Fixtures and Equipment', value: `₹${fixtures.toLocaleString('en-IN')}` },
       { label: 'Total Assets', value: `₹${totalAssets.toLocaleString('en-IN')}` },
-      { label: 'Liabilities', value: '' },
-      { label: 'Accounts Payable', value: `₹${accountsPayable.toLocaleString('en-IN')}` },
-      { label: 'Loans', value: `₹${loans.toLocaleString('en-IN')}` },
-      { label: 'Total Liabilities', value: `₹${totalLiabilities.toLocaleString('en-IN')}` },
-      { label: 'Equity', value: `₹${equity.toLocaleString('en-IN')}` },
+      { label: 'Owner\'s Equity', value: `₹${equity.toLocaleString('en-IN')}` },
     ]
   };
 };
