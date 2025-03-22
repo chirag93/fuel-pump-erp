@@ -37,6 +37,7 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
             <TableHeader>
               <TableRow>
                 <TableHead>Staff</TableHead>
+                <TableHead>Staff ID</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Times</TableHead>
                 <TableHead>Pump</TableHead>
@@ -65,6 +66,7 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
                 return (
                   <TableRow key={shift.id}>
                     <TableCell className="font-medium">{shift.staff_name}</TableCell>
+                    <TableCell>{shift.staff_id.substring(0, 8)}</TableCell>
                     <TableCell>{shiftDate}</TableCell>
                     <TableCell>{`${formatTime(shift.start_time)} - ${formatTime(shift.end_time)}`}</TableCell>
                     <TableCell>{shift.pump_id}</TableCell>
