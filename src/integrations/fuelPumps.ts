@@ -21,6 +21,7 @@ export interface FuelSettingsType {
   tank_capacity: number;
   current_level: number;
   updated_at?: string;
+  fuel_pump_id?: string;
 }
 
 // Interface for pump settings
@@ -113,7 +114,7 @@ export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<FuelSe
   try {
     const { data, error } = await supabase
       .from('fuel_settings')
-      .select('*')
+      .select('id, fuel_type, current_price, tank_capacity, current_level, updated_at, fuel_pump_id')
       .eq('fuel_pump_id', fuelPumpId);
       
     if (error) throw error;
@@ -131,7 +132,7 @@ export const getPumpSettingsForFuelPump = async (fuelPumpId: string): Promise<Pu
   try {
     const { data, error } = await supabase
       .from('pump_settings')
-      .select('*')
+      .select('id, pump_number, nozzle_count, fuel_types, created_at, fuel_pump_id')
       .eq('fuel_pump_id', fuelPumpId);
       
     if (error) throw error;
