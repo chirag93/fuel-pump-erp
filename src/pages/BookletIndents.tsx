@@ -56,6 +56,84 @@ const BookletIndents = () => {
     return allNumbers.filter(num => !usedNumbers.includes(num));
   };
 
+  // Update booklet status based on indent usage
+  const updateBookletStatus = async (booklet: IndentBooklet, unusedCount: number) => {
+    if (!booklet) return;
+    
+    const totalIndents = booklet.total_indents;
+    const usedIndents = totalIndents - unusedCount;
+    
+    let newStatus: 'Active' | 'Completed' | 'Cancelled';
+    
+    if (usedIndents === 0) {
+      newStatus = 'Active'; // None used - "un-used"
+    } else if (usedIndents === totalIndents) {
+      newStatus = 'Completed'; // All used - "completed"
+    } else {
+      newStatus = 'Active'; // Some used - "in-progress" (represented as "Active")
+    }
+    
+    // Only update if status has changed
+    if (newStatus !== booklet.status) {
+      try {
+        const { data, error } = await supabase
+          .from('indent_booklets')
+          .update({ 
+            status: newStatus,
+            used_indents: usedIndents
+          })
+          .eq('id', booklet.id)
+          .select();
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          const updatedBooklet: IndentBooklet = {
+            ...data[0],
+            status: data[0].status as 'Active' | 'Completed' | 'Cancelled'
+          };
+          
+          setBooklet(updatedBooklet);
+          toast({
+            title: "Booklet Updated",
+            description: `Booklet status updated to ${newStatus}`
+          });
+        }
+      } catch (error) {
+        console.error('Error updating booklet status:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update booklet status",
+          variant: "destructive"
+        });
+      }
+    } else {
+      // If just the used_indents count has changed but not the status
+      if (usedIndents !== booklet.used_indents) {
+        try {
+          const { data, error } = await supabase
+            .from('indent_booklets')
+            .update({ used_indents: usedIndents })
+            .eq('id', booklet.id)
+            .select();
+            
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            const updatedBooklet: IndentBooklet = {
+              ...data[0],
+              status: data[0].status as 'Active' | 'Completed' | 'Cancelled'
+            };
+            
+            setBooklet(updatedBooklet);
+          }
+        } catch (error) {
+          console.error('Error updating used_indents count:', error);
+        }
+      }
+    }
+  };
+
   const fetchData = async () => {
     if (!bookletId) return;
     
@@ -145,6 +223,9 @@ const BookletIndents = () => {
           // Now we're passing the correct type - just objects with indent_number
           const unused = findUnusedIndentNumbers(typedBooklet, allIndentsData);
           setUnusedIndentNumbers(unused);
+          
+          // Update booklet status based on unused count
+          updateBookletStatus(typedBooklet, unused.length);
         }
       } else {
         setIndents([]);
@@ -157,6 +238,9 @@ const BookletIndents = () => {
           };
           const unused = findUnusedIndentNumbers(typedBooklet, []);
           setUnusedIndentNumbers(unused);
+          
+          // Update booklet status based on unused count (all unused)
+          updateBookletStatus(typedBooklet, unused.length);
         }
       }
     } catch (error) {
@@ -300,10 +384,18 @@ const BookletIndents = () => {
                   Status: <span className={`px-2 py-1 text-xs rounded-full ${
                     booklet.status === 'Completed' 
                       ? 'bg-green-100 text-green-800' 
-                      : booklet.status === 'Active' 
+                      : booklet.status === 'Active' && booklet.used_indents > 0
                       ? 'bg-blue-100 text-blue-800' 
+                      : booklet.status === 'Active' && booklet.used_indents === 0
+                      ? 'bg-gray-100 text-gray-800'
                       : 'bg-red-100 text-red-800'
-                  }`}>{booklet.status}</span>
+                  }`}>
+                    {booklet.status === 'Active' && booklet.used_indents === 0 
+                      ? 'Unused' 
+                      : booklet.status === 'Active' && booklet.used_indents > 0 
+                      ? 'In Progress' 
+                      : booklet.status}
+                  </span>
                 </CardDescription>
               </div>
               
@@ -454,7 +546,6 @@ const BookletIndents = () => {
         </Card>
       )}
 
-      {/* Edit Dialog */}
       {editingIndent && (
         <IndentEditDialog
           open={showEditDialog}
