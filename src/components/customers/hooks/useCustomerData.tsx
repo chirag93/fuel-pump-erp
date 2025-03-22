@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Customer, Vehicle, Indent, IndentBooklet, Transaction } from '@/integrations/supabase/client';
+import { getCustomerById, updateCustomerBalance } from '@/integrations/customers';
 import { supabase } from '@/integrations/supabase/client';
 
 interface TransactionWithDetails extends Transaction {
@@ -32,16 +33,7 @@ export const useCustomerData = (customerId: string) => {
       setIsLoading(true);
       console.log('Fetching customer data for ID:', id);
       
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', id)
-        .single();
-        
-      if (error) {
-        console.error('Supabase error fetching customer:', error);
-        throw error;
-      }
+      const data = await getCustomerById(id);
       
       if (data) {
         console.log('Customer data found:', data);
@@ -66,6 +58,7 @@ export const useCustomerData = (customerId: string) => {
     }
   };
 
+  // For these methods, we'll continue using Supabase directly until we create dedicated API methods
   const fetchVehicles = async (id: string) => {
     try {
       console.log('Fetching vehicles for customer ID:', id);
@@ -179,6 +172,17 @@ export const useCustomerData = (customerId: string) => {
     }
   };
 
+  const updateBalance = async (newBalance: number) => {
+    if (!customer || !customer.id) return false;
+    
+    const success = await updateCustomerBalance(customer.id, newBalance);
+    if (success) {
+      // Trigger a refresh to load the updated data
+      refreshData();
+    }
+    return success;
+  };
+
   const refreshData = () => {
     setRefreshTrigger(prev => prev + 1);
   };
@@ -192,6 +196,7 @@ export const useCustomerData = (customerId: string) => {
     isLoading,
     setVehicles,
     setIndentBooklets,
+    updateBalance,
     refreshData
   };
 };

@@ -1,4 +1,3 @@
-
 import { supabase, Customer } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -7,13 +6,12 @@ import { toast } from '@/hooks/use-toast';
  */
 export const getAllCustomers = async (): Promise<Customer[]> => {
   try {
-    const response = await fetch('/api/customers');
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
-    }
-    
-    const data = await response.json();
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .order('name');
+      
+    if (error) throw error;
     return data || [];
   } catch (error) {
     console.error('Error fetching customers:', error);
@@ -31,14 +29,15 @@ export const getAllCustomers = async (): Promise<Customer[]> => {
  */
 export const getCustomerById = async (id: string): Promise<Customer | null> => {
   try {
-    const response = await fetch(`/api/customers/${id}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data;
+    console.log('API getCustomerById called for ID:', id);
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error) throw error;
+    return data as Customer;
   } catch (error) {
     console.error('Error fetching customer:', error);
     toast({
@@ -55,30 +54,20 @@ export const getCustomerById = async (id: string): Promise<Customer | null> => {
  */
 export const createCustomer = async (customerData: Omit<Customer, 'id' | 'created_at'>): Promise<Customer | null> => {
   try {
-    const response = await fetch('/api/customers', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(customerData),
+    const { data, error } = await supabase
+      .from('customers')
+      .insert([customerData])
+      .select()
+      .single();
+      
+    if (error) throw error;
+    
+    toast({
+      title: "Success",
+      description: "Customer created successfully"
     });
     
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
-    }
-    
-    const result = await response.json();
-    
-    if (result.success && result.customer) {
-      toast({
-        title: "Success",
-        description: "Customer created successfully"
-      });
-      
-      return result.customer;
-    } else {
-      throw new Error('Failed to create customer');
-    }
+    return data as Customer;
   } catch (error) {
     console.error('Error creating customer:', error);
     toast({
@@ -95,30 +84,21 @@ export const createCustomer = async (customerData: Omit<Customer, 'id' | 'create
  */
 export const updateCustomer = async (id: string, customerData: Partial<Customer>): Promise<Customer | null> => {
   try {
-    const response = await fetch(`/api/customers/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(customerData),
+    const { data, error } = await supabase
+      .from('customers')
+      .update(customerData)
+      .eq('id', id)
+      .select()
+      .single();
+      
+    if (error) throw error;
+    
+    toast({
+      title: "Success",
+      description: "Customer updated successfully"
     });
     
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
-    }
-    
-    const result = await response.json();
-    
-    if (result.success && result.customer) {
-      toast({
-        title: "Success",
-        description: "Customer updated successfully"
-      });
-      
-      return result.customer;
-    } else {
-      throw new Error('Failed to update customer');
-    }
+    return data as Customer;
   } catch (error) {
     console.error('Error updating customer:', error);
     toast({
@@ -135,22 +115,20 @@ export const updateCustomer = async (id: string, customerData: Partial<Customer>
  */
 export const updateCustomerBalance = async (id: string, newBalance: number): Promise<boolean> => {
   try {
-    const response = await fetch(`/api/customers/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ balance: newBalance }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
-    }
-    
-    const result = await response.json();
-    return result.success || false;
+    const { error } = await supabase
+      .from('customers')
+      .update({ balance: newBalance })
+      .eq('id', id);
+      
+    if (error) throw error;
+    return true;
   } catch (error) {
     console.error('Error updating customer balance:', error);
+    toast({
+      title: "Error",
+      description: "Failed to update customer balance",
+      variant: "destructive"
+    });
     return false;
   }
 };
