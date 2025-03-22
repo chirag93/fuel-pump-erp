@@ -18,8 +18,24 @@ interface DatePickerProps {
 }
 
 export function DatePicker({ date, setDate, className }: DatePickerProps) {
+  const [open, setOpen] = React.useState(false);
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(date);
+  
+  const handleSelect = (date?: Date) => {
+    setSelectedDate(date);
+  };
+  
+  const handleDone = () => {
+    setDate(selectedDate);
+    setOpen(false);
+  };
+  
+  React.useEffect(() => {
+    setSelectedDate(date);
+  }, [date]);
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant={"outline"}
@@ -34,12 +50,18 @@ export function DatePicker({ date, setDate, className }: DatePickerProps) {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={setDate}
-          initialFocus
-        />
+        <div className="p-0">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={handleSelect}
+            initialFocus
+            className={cn("p-3 pointer-events-auto")}
+          />
+          <div className="flex justify-end p-2 border-t">
+            <Button size="sm" onClick={handleDone}>Done</Button>
+          </div>
+        </div>
       </PopoverContent>
     </Popover>
   );

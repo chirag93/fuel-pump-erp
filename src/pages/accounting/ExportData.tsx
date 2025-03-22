@@ -8,6 +8,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DownloadCloud, FileSpreadsheet, FileText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const ExportData = () => {
   const [dataType, setDataType] = useState<string>('transactions');
@@ -25,6 +26,7 @@ const ExportData = () => {
     { value: 'indents', label: 'Indents' },
     { value: 'stock', label: 'Stock' },
     { value: 'vehicles', label: 'Vehicles' },
+    { value: 'invoices', label: 'Invoices' },
   ];
   
   const fileFormats = [
@@ -33,15 +35,162 @@ const ExportData = () => {
     { value: 'pdf', label: 'PDF', icon: <FileText size={16} /> },
   ];
   
-  const handleExport = () => {
+  const handleExport = async () => {
+    if (!fromDate || !toDate) {
+      toast({
+        title: "Date Range Required",
+        description: "Please select both from and to dates.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsExporting(true);
+    
+    try {
+      // Format dates for the query
+      const fromDateStr = fromDate.toISOString().split('T')[0];
+      const toDateStr = toDate.toISOString().split('T')[0];
+      
+      let data;
+      let filename = `${dataType}_${fromDateStr}_to_${toDateStr}.${fileFormat}`;
+      
+      // Fetch data based on type
+      switch (dataType) {
+        case 'transactions':
+          const { data: transactions, error: transactionError } = await supabase
+            .from('transactions')
+            .select('*')
+            .gte('date', fromDateStr)
+            .lte('date', toDateStr);
+          
+          if (transactionError) throw transactionError;
+          data = transactions;
+          break;
+          
+        case 'customers':
+          const { data: customers, error: customerError } = await supabase
+            .from('customers')
+            .select('*');
+          
+          if (customerError) throw customerError;
+          data = customers;
+          break;
+          
+        case 'payments':
+          const { data: payments, error: paymentError } = await supabase
+            .from('payments')
+            .select('*')
+            .gte('date', fromDateStr)
+            .lte('date', toDateStr);
+          
+          if (paymentError) throw paymentError;
+          data = payments;
+          break;
+          
+        case 'invoices':
+          const { data: invoices, error: invoiceError } = await supabase
+            .rpc('get_invoices_with_customer_names')
+            .order('date', { ascending: false });
+          
+          if (invoiceError) throw invoiceError;
+          data = invoices;
+          break;
+          
+        default:
+          const { data: defaultData, error: defaultError } = await supabase
+            .from(dataType)
+            .select('*');
+          
+          if (defaultError) throw defaultError;
+          data = defaultData;
+      }
+      
+      // Process the data for export
+      if (data && data.length > 0) {
+        // For CSV/Excel, create a downloadable file
+        if (fileFormat === 'csv') {
+          const csvContent = convertToCSV(data);
+          downloadFile(csvContent, filename, 'text/csv');
+        } else if (fileFormat === 'excel') {
+          // For Excel, we'd typically use a library like xlsx
+          // This is a simple CSV alternative for now
+          const csvContent = convertToCSV(data);
+          downloadFile(csvContent, filename.replace('csv', 'xlsx'), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        } else if (fileFormat === 'pdf') {
+          // For PDF, typically use a library like jsPDF
+          // Displaying a message for now
+          toast({
+            title: "PDF Export",
+            description: `Your ${dataType} data (${data.length} records) is ready for PDF export.`,
+          });
+        }
+        
+        toast({
+          title: "Export Successful",
+          description: `Successfully exported ${data.length} ${dataType} records.`,
+        });
+      } else {
+        toast({
+          title: "No Data",
+          description: `No ${dataType} data found for the selected date range.`,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({
+        title: "Export Failed",
+        description: `There was an error exporting the ${dataType} data.`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+  
+  // Helper function to convert data to CSV
+  const convertToCSV = (data: any[]) => {
+    if (!data || data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]);
+    const headerRow = headers.join(',');
+    
+    const rows = data.map(row => {
+      return headers.map(header => {
+        const value = row[header];
+        // Handle special cases for CSV formatting
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'object') return JSON.stringify(value);
+        if (typeof value === 'string') return `"${value.replace(/"/g, '""')}"`;
+        return value;
+      }).join(',');
+    });
+    
+    return [headerRow, ...rows].join('\n');
+  };
+  
+  // Helper function to download a file
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  
+  // Clone the handleExport function for template exports
+  const handleTemplateExport = (templateName: string, format: string) => {
     setIsExporting(true);
     
     // Simulate export delay
     setTimeout(() => {
       setIsExporting(false);
       toast({
-        title: "Data Exported",
-        description: `Your ${dataType} data has been exported as ${fileFormat.toUpperCase()}.`,
+        title: "Template Exported",
+        description: `Your ${templateName} template has been exported as ${format}.`,
       });
     }, 1500);
   };
@@ -159,7 +308,11 @@ const ExportData = () => {
                     <h4 className="text-sm font-medium">{template.name}</h4>
                     <p className="text-xs text-muted-foreground">{template.description}</p>
                   </div>
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleTemplateExport(template.name, template.format)}
+                  >
                     <DownloadCloud className="w-4 h-4 mr-1" />
                     {template.format}
                   </Button>

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
@@ -19,7 +19,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { Customer, Transaction } from '@/integrations/supabase/client';
+import { Customer } from '@/integrations/supabase/client';
 
 interface InvoiceDateRangeDialogProps {
   open: boolean;
@@ -36,10 +36,41 @@ const InvoiceDateRangeDialog = ({
   customer,
   isGenerating
 }: InvoiceDateRangeDialogProps) => {
-  const [dateRange, setDateRange] = React.useState<DateRange>({
+  const [dateRange, setDateRange] = useState<DateRange>({
     from: undefined,
     to: undefined,
   });
+  
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [tempDateRange, setTempDateRange] = useState<DateRange>({
+    from: undefined,
+    to: undefined,
+  });
+  
+  useEffect(() => {
+    if (open) {
+      // Reset date range when dialog opens
+      setDateRange({
+        from: undefined,
+        to: undefined,
+      });
+      setTempDateRange({
+        from: undefined,
+        to: undefined,
+      });
+    }
+  }, [open]);
+  
+  const handleCalendarSelect = (range: DateRange | undefined) => {
+    if (range) {
+      setTempDateRange(range);
+    }
+  };
+  
+  const handleCalendarDone = () => {
+    setDateRange(tempDateRange);
+    setIsCalendarOpen(false);
+  };
   
   const handleGenerate = () => {
     onGenerate(dateRange);
@@ -59,7 +90,7 @@ const InvoiceDateRangeDialog = ({
           <div className="grid gap-2">
             <div className="flex flex-col space-y-1.5">
               <h3 className="text-sm font-medium">Select Date Range</h3>
-              <Popover>
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     id="date"
@@ -85,15 +116,20 @@ const InvoiceDateRangeDialog = ({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={dateRange.from}
-                    selected={dateRange}
-                    onSelect={setDateRange}
-                    numberOfMonths={2}
-                    className={cn("p-3 pointer-events-auto")}
-                  />
+                  <div>
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={tempDateRange.from}
+                      selected={tempDateRange}
+                      onSelect={handleCalendarSelect}
+                      numberOfMonths={2}
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                    <div className="flex justify-end p-2 border-t">
+                      <Button size="sm" onClick={handleCalendarDone}>Done</Button>
+                    </div>
+                  </div>
                 </PopoverContent>
               </Popover>
             </div>
