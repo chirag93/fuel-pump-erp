@@ -18,6 +18,9 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, TrendingUp, Calendar, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import FuelTankDisplay from '@/components/fuel/FuelTankDisplay';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { Bar, BarChart, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { format, parseISO, isValid } from 'date-fns';
 
 interface StockEntry {
   id: string;
@@ -223,14 +226,120 @@ const StockLevels = () => {
       
       if (!monthlyData[month][entry.fuel_type]) {
         monthlyData[month][entry.fuel_type] = entry.quantity;
+      } else {
+        // If we already have an entry for this month and fuel type, use the latest one
+        const existingDate = new Date(monthlyData[month].date || 0);
+        const currentDate = new Date(entry.date);
+        if (currentDate > existingDate) {
+          monthlyData[month][entry.fuel_type] = entry.quantity;
+          monthlyData[month].date = entry.date;
+        }
       }
     });
     
-    return monthlyData;
+    // Convert to array format for recharts
+    return Object.entries(monthlyData).map(([month, data]) => ({
+      month,
+      ...data
+    })).sort((a, b) => {
+      // Sort by date (assuming month format is "MMM YYYY")
+      const [aMonth, aYear] = a.month.split(' ');
+      const [bMonth, bYear] = b.month.split(' ');
+      return new Date(`${aMonth} 1, ${aYear}`).getTime() - new Date(`${bMonth} 1, ${bYear}`).getTime();
+    });
+  };
+
+  // Get chart data for tank unloads
+  const getTankUnloadData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tank_unloads')
+        .select('*')
+        .order('date', { ascending: true });
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        return [];
+      }
+      
+      // Process the data for the chart
+      // Group by month and fuel type
+      const processedData: Record<string, Record<string, number>> = {};
+      
+      data.forEach(unload => {
+        if (!isValid(parseISO(unload.date))) return;
+        
+        const month = format(parseISO(unload.date), 'MMM yyyy');
+        
+        if (!processedData[month]) {
+          processedData[month] = {};
+        }
+        
+        if (!processedData[month][unload.fuel_type]) {
+          processedData[month][unload.fuel_type] = 0;
+        }
+        
+        processedData[month][unload.fuel_type] += Number(unload.quantity);
+      });
+      
+      // Convert to array format for recharts
+      return Object.entries(processedData).map(([month, data]) => ({
+        month,
+        ...data
+      })).sort((a, b) => {
+        // Sort by date
+        const [aMonth, aYear] = a.month.split(' ');
+        const [bMonth, bYear] = b.month.split(' ');
+        return new Date(`${aMonth} 1, ${aYear}`).getTime() - new Date(`${bMonth} 1, ${bYear}`).getTime();
+      });
+    } catch (error) {
+      console.error('Error fetching tank unload data:', error);
+      return [];
+    }
   };
   
+  // State for chart data
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartType, setChartType] = useState<'stock' | 'inflow'>('stock');
+  
+  // Fetch chart data
+  useEffect(() => {
+    const fetchChartData = async () => {
+      if (chartType === 'stock') {
+        setChartData(getMonthlyStockData());
+      } else {
+        const inflowData = await getTankUnloadData();
+        setChartData(inflowData);
+      }
+    };
+    
+    fetchChartData();
+  }, [stockData, chartType, refreshTrigger]);
+  
   const latestStocks = getLatestStocks();
-  const monthlyData = getMonthlyStockData();
+  
+  // Get unique fuel types for chart coloring
+  const uniqueFuelTypes = Array.from(
+    new Set(stockData.map(entry => entry.fuel_type))
+  );
+  
+  // Chart colors based on fuel type
+  const getColorForFuelType = (fuelType: string) => {
+    if (fuelType.toLowerCase().includes('petrol')) {
+      return '#f97316'; // orange-500
+    } else if (fuelType.toLowerCase().includes('diesel')) {
+      return '#2563eb'; // blue-600
+    } else if (fuelType.toLowerCase().includes('premium')) {
+      return '#f59e0b'; // amber-500
+    } else if (fuelType.toLowerCase().includes('cng')) {
+      return '#22c55e'; // green-500
+    } else {
+      return '#8b5cf6'; // violet-500
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -386,13 +495,70 @@ const StockLevels = () => {
                     <CardTitle>Stock Trends</CardTitle>
                     <BarChart3 className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <CardDescription>
-                    Visualization of stock levels over time
+                  <CardDescription className="flex items-center justify-between">
+                    <span>Visualization of stock levels over time</span>
+                    <div className="flex space-x-2">
+                      <Button 
+                        size="sm" 
+                        variant={chartType === 'stock' ? "default" : "outline"}
+                        onClick={() => setChartType('stock')}
+                      >
+                        Stock Levels
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant={chartType === 'inflow' ? "default" : "outline"}
+                        onClick={() => setChartType('inflow')}
+                      >
+                        Fuel Inflow
+                      </Button>
+                    </div>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[300px] flex items-center justify-center">
-                    <p className="text-muted-foreground">Historical stock chart visualization</p>
+                  <div className="h-[350px]">
+                    {chartData.length === 0 ? (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        No data available for the selected chart type
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 70 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis 
+                            dataKey="month" 
+                            angle={-45} 
+                            textAnchor="end" 
+                            height={70}
+                            tick={{ fontSize: 12 }}
+                          />
+                          <YAxis 
+                            tickFormatter={(value) => `${(value / 1000).toFixed(1)}k`}
+                            tick={{ fontSize: 12 }}
+                            label={{ 
+                              value: 'Liters', 
+                              angle: -90, 
+                              position: 'insideLeft',
+                              style: { textAnchor: 'middle' }
+                            }}
+                          />
+                          <Tooltip 
+                            formatter={(value) => [`${value.toLocaleString()} liters`, '']}
+                            labelFormatter={(label) => `Month: ${label}`}
+                          />
+                          <Legend />
+                          {uniqueFuelTypes.map((fuelType, index) => (
+                            <Bar 
+                              key={index}
+                              dataKey={fuelType}
+                              name={fuelType}
+                              fill={getColorForFuelType(fuelType)}
+                              radius={[4, 4, 0, 0]}
+                            />
+                          ))}
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                 </CardContent>
               </Card>
