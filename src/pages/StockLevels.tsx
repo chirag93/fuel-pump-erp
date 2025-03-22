@@ -291,6 +291,7 @@ const StockLevels = () => {
           quantity = Number(unload.quantity) || 0;
         }
         
+        // Add an explicit check to make sure quantity is not NaN
         if (!isNaN(quantity)) {
           processedData[month][unload.fuel_type] += quantity;
         }
