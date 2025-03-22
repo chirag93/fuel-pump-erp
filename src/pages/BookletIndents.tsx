@@ -5,7 +5,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardFooter }
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { ArrowLeft, FileText, AlertCircle, Edit } from 'lucide-react';
+import { ArrowLeft, FileText, AlertCircle, Edit, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase, Indent, IndentBooklet, Transaction } from '@/integrations/supabase/client';
 import { IndentEditDialog } from '@/components/indent/IndentEditDialog';
@@ -25,8 +25,36 @@ const BookletIndents = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [unusedIndentNumbers, setUnusedIndentNumbers] = useState<string[]>([]);
+  const [showUnusedIndents, setShowUnusedIndents] = useState(false);
   
   const PAGE_SIZE = 10;
+
+  // Get all indent numbers that should exist in this booklet
+  const generateAllIndentNumbers = (booklet: IndentBooklet) => {
+    if (!booklet) return [];
+    
+    const start = parseInt(booklet.start_number);
+    const end = parseInt(booklet.end_number);
+    const allNumbers: string[] = [];
+    
+    for (let i = start; i <= end; i++) {
+      allNumbers.push(i.toString());
+    }
+    
+    return allNumbers;
+  };
+
+  // Find unused indent numbers by comparing all possible numbers with used ones
+  const findUnusedIndentNumbers = (booklet: IndentBooklet, usedIndents: Indent[]) => {
+    if (!booklet) return [];
+    
+    const allNumbers = generateAllIndentNumbers(booklet);
+    const usedNumbers = usedIndents.map(indent => indent.indent_number);
+    
+    // Filter out used numbers to get unused ones
+    return allNumbers.filter(num => !usedNumbers.includes(num));
+  };
 
   const fetchData = async () => {
     if (!bookletId) return;
@@ -93,8 +121,26 @@ const BookletIndents = () => {
         });
         
         setIndents(indentsWithTransactions as IndentWithTransaction[]);
+        
+        // Now get all indents for this booklet (not just the paginated ones)
+        // to calculate the unused indent numbers
+        const { data: allIndentsData } = await supabase
+          .from('indents')
+          .select('indent_number')
+          .eq('booklet_id', bookletId);
+        
+        if (allIndentsData && bookletData) {
+          const unused = findUnusedIndentNumbers(bookletData, allIndentsData);
+          setUnusedIndentNumbers(unused);
+        }
       } else {
         setIndents([]);
+        
+        // If no indents at all, all numbers in the range are unused
+        if (bookletData) {
+          const unused = findUnusedIndentNumbers(bookletData, []);
+          setUnusedIndentNumbers(unused);
+        }
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -131,6 +177,11 @@ const BookletIndents = () => {
     if (page > 0 && page <= totalPages) {
       setCurrentPage(page);
     }
+  };
+
+  const navigateToCreateIndent = () => {
+    // Navigate to the create indent page with the customer ID and booklet ID
+    window.location.href = `/record-indent?customerId=${customerId}&bookletId=${bookletId}`;
   };
 
   // Generate pagination items
@@ -223,24 +274,72 @@ const BookletIndents = () => {
       {booklet && (
         <Card>
           <CardHeader>
-            <CardTitle>Booklet {booklet.start_number} - {booklet.end_number}</CardTitle>
-            <CardDescription>
-              Issued on {new Date(booklet.issued_date).toLocaleDateString()} • 
-              {booklet.used_indents} of {booklet.total_indents} indents used • 
-              Status: <span className={`px-2 py-1 text-xs rounded-full ${
-                booklet.status === 'Completed' 
-                  ? 'bg-green-100 text-green-800' 
-                  : booklet.status === 'Active' 
-                  ? 'bg-blue-100 text-blue-800' 
-                  : 'bg-red-100 text-red-800'
-              }`}>{booklet.status}</span>
-            </CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Booklet {booklet.start_number} - {booklet.end_number}</CardTitle>
+                <CardDescription>
+                  Issued on {new Date(booklet.issued_date).toLocaleDateString()} • 
+                  {booklet.used_indents} of {booklet.total_indents} indents used • 
+                  Status: <span className={`px-2 py-1 text-xs rounded-full ${
+                    booklet.status === 'Completed' 
+                      ? 'bg-green-100 text-green-800' 
+                      : booklet.status === 'Active' 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>{booklet.status}</span>
+                </CardDescription>
+              </div>
+              
+              <Button onClick={() => navigateToCreateIndent()} className="gap-1">
+                <Plus size={16} />
+                New Indent
+              </Button>
+            </div>
+            
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                {unusedIndentNumbers.length} unused indent numbers available
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowUnusedIndents(!showUnusedIndents)}
+              >
+                {showUnusedIndents ? "Hide Unused Indents" : "Show Unused Indents"}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            {indents.length === 0 ? (
+            {showUnusedIndents && unusedIndentNumbers.length > 0 && (
+              <div className="mb-6 p-4 border rounded-md bg-slate-50">
+                <h3 className="text-sm font-medium mb-2">Unused Indent Numbers</h3>
+                <div className="flex flex-wrap gap-2">
+                  {unusedIndentNumbers.map(number => (
+                    <span 
+                      key={number} 
+                      className="inline-block px-2 py-1 text-xs bg-slate-100 rounded-md"
+                      title="Click to create new indent with this number"
+                      onClick={() => window.location.href = `/record-indent?customerId=${customerId}&bookletId=${bookletId}&indentNumber=${number}`}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {number}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {indents.length === 0 && !showUnusedIndents ? (
               <div className="py-8 text-center">
                 <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">No indents have been created for this booklet yet</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4" 
+                  onClick={() => navigateToCreateIndent()}
+                >
+                  Create First Indent
+                </Button>
               </div>
             ) : (
               <Table>
