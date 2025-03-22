@@ -281,10 +281,10 @@ const StockLevels = () => {
           processedData[month][unload.fuel_type] = 0;
         }
         
-        // Fix for the type error: Ensure quantity is always treated as a number
-        const quantity: number = typeof unload.quantity === 'string' 
+        // Ensure quantity is always converted to a number properly
+        const quantity = typeof unload.quantity === 'string' 
           ? parseFloat(unload.quantity) 
-          : Number(unload.quantity);
+          : Number(unload.quantity || 0);
         
         if (!isNaN(quantity)) {
           processedData[month][unload.fuel_type] += quantity;

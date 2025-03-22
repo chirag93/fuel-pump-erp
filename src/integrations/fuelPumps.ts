@@ -13,6 +13,26 @@ export interface FuelPump {
   created_by: string | null;
 }
 
+// Interface for fuel settings
+export interface FuelSettingsType {
+  id: string;
+  fuel_type: string;
+  current_price: number;
+  tank_capacity: number;
+  current_level: number;
+  updated_at?: string;
+}
+
+// Interface for pump settings
+export interface PumpSettingsType {
+  id: string;
+  pump_number: string;
+  nozzle_count: number;
+  fuel_types: string[];
+  created_at?: string;
+  fuel_pump_id?: string;
+}
+
 /**
  * Fetch all fuel pumps
  */
@@ -89,7 +109,7 @@ export const getFuelPumpById = async (id: string): Promise<FuelPump | null> => {
 /**
  * Get fuel settings for a specific fuel pump
  */
-export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<any[]> => {
+export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<FuelSettingsType[]> => {
   try {
     const { data, error } = await supabase
       .from('fuel_settings')
@@ -107,7 +127,7 @@ export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<any[]>
 /**
  * Get pump settings for a specific fuel pump
  */
-export const getPumpSettingsForFuelPump = async (fuelPumpId: string): Promise<any[]> => {
+export const getPumpSettingsForFuelPump = async (fuelPumpId: string): Promise<PumpSettingsType[]> => {
   try {
     const { data, error } = await supabase
       .from('pump_settings')
