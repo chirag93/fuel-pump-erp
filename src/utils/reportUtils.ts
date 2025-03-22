@@ -1,4 +1,3 @@
-
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { BarChart, FileText } from 'lucide-react';
@@ -30,9 +29,9 @@ export const getReportIcon = (type: string): React.ReactNode => {
     case 'profit-loss':
     case 'sales-report':
     case 'cash-flow':
-      return <BarChart size={16} />;
+      return React.createElement(BarChart, { size: 16 });
     default:
-      return <FileText size={16} />;
+      return React.createElement(FileText, { size: 16 });
   }
 };
 
