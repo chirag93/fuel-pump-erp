@@ -10,6 +10,7 @@ export interface FuelPump {
   contact_number?: string;
   status: string;
   created_at: string;
+  created_by: string | null;
 }
 
 /**

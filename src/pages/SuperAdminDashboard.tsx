@@ -1,9 +1,8 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FuelPump } from '@/integrations/supabase/client';
 import { Fuel, Users, Clock, Check } from 'lucide-react';
-import { getAllFuelPumps } from '@/integrations/fuelPumps';
+import { getAllFuelPumps, FuelPump } from '@/integrations/fuelPumps';
 
 const SuperAdminDashboard = () => {
   const [fuelPumps, setFuelPumps] = useState<FuelPump[]>([]);
