@@ -430,7 +430,13 @@ const Customers = () => {
                           <TableCell>{customer.email}</TableCell>
                           <TableCell>{customer.gst}</TableCell>
                           <TableCell className="text-right">
-                            <span className={customer.balance > 0 ? "text-orange-600 font-medium" : ""}>
+                            <span className={
+                              customer.balance > 0 
+                                ? "text-green-600 font-medium" 
+                                : customer.balance < 0 
+                                  ? "text-red-600 font-medium" 
+                                  : ""
+                            }>
                               ₹{customer.balance.toLocaleString()}
                             </span>
                           </TableCell>
