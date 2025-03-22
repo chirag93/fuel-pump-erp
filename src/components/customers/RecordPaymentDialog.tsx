@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { recordPayment } from '@/integrations/payments';
 
 interface RecordPaymentDialogProps {
   customerId: string;
@@ -49,56 +49,27 @@ export default function RecordPaymentDialog({
 
     setIsSubmitting(true);
     try {
-      // Create a new payment record
-      const { error: paymentError } = await supabase
-        .from('customer_payments')
-        .insert({
-          customer_id: customerId,
-          amount: amount,
-          payment_method: paymentMethod,
-          notes: notes,
-          date: new Date().toISOString()
+      const success = await recordPayment({
+        customer_id: customerId,
+        amount: amount,
+        payment_method: paymentMethod,
+        notes: notes,
+        date: new Date().toISOString()
+      }, currentBalance);
+
+      if (success) {
+        toast({
+          title: "Payment recorded",
+          description: `Successfully recorded payment of ₹${amount} for ${customerName || 'customer'}`
         });
 
-      if (paymentError) throw paymentError;
-
-      // Record a transaction with type PAYMENT
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          id: crypto.randomUUID(),
-          customer_id: customerId,
-          date: new Date().toISOString().split('T')[0],
-          fuel_type: 'PAYMENT',
-          amount: amount,
-          quantity: 0,
-          payment_method: paymentMethod,
-          staff_id: '00000000-0000-0000-0000-000000000000' // Placeholder staff ID
-        });
-
-      if (transactionError) throw transactionError;
-
-      // Update the customer balance
-      const newBalance = ((currentBalance || 0) - amount);
-      
-      const { error: updateError } = await supabase
-        .from('customers')
-        .update({ balance: newBalance })
-        .eq('id', customerId);
-
-      if (updateError) throw updateError;
-
-      toast({
-        title: "Payment recorded",
-        description: `Successfully recorded payment of ₹${amount} for ${customerName || 'customer'}`
-      });
-
-      // Reset form and close dialog
-      setAmount(0);
-      setPaymentMethod('Cash');
-      setNotes('');
-      onOpenChange(false);
-      onPaymentRecorded();
+        // Reset form and close dialog
+        setAmount(0);
+        setPaymentMethod('Cash');
+        setNotes('');
+        onOpenChange(false);
+        onPaymentRecorded();
+      }
     } catch (error) {
       console.error('Error recording payment:', error);
       toast({

@@ -1,7 +1,9 @@
+
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase, FuelPump } from '@/integrations/supabase/client';
+import { FuelPump } from '@/integrations/supabase/client';
 import { Fuel, Users, Clock, Check } from 'lucide-react';
+import { getAllFuelPumps } from '@/integrations/fuelPumps';
 
 const SuperAdminDashboard = () => {
   const [fuelPumps, setFuelPumps] = useState<FuelPump[]>([]);
@@ -11,17 +13,10 @@ const SuperAdminDashboard = () => {
   useEffect(() => {
     const fetchFuelPumps = async () => {
       try {
-        const { data, error } = await supabase
-          .from('fuel_pumps')
-          .select('*');
-          
-        if (error) {
-          console.error('Error fetching fuel pumps:', error);
-          return;
-        }
-        
-        setFuelPumps(data || []);
-        setActivePumps(data?.filter(pump => pump.status === 'active').length || 0);
+        setIsLoading(true);
+        const data = await getAllFuelPumps();
+        setFuelPumps(data);
+        setActivePumps(data.filter(pump => pump.status === 'active').length || 0);
       } catch (error) {
         console.error('Error fetching fuel pumps:', error);
       } finally {

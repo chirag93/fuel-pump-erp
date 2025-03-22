@@ -5,18 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Save } from 'lucide-react';
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/components/ui/use-toast';
-
-interface BusinessSettings {
-  id?: string;
-  gst_number: string;
-  business_name: string;
-  address: string;
-}
+import { getBusinessSettings, updateBusinessSettings, BusinessSettings as BusinessSettingsType } from '@/integrations/businessSettings';
 
 export function BusinessSettings() {
-  const [businessSettings, setBusinessSettings] = useState<BusinessSettings>({
+  const [businessSettings, setBusinessSettings] = useState<BusinessSettingsType>({
     gst_number: '',
     business_name: 'Fuel Pump ERP',
     address: '',
@@ -28,75 +21,26 @@ export function BusinessSettings() {
 
   const fetchBusinessSettings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('business_settings')
-        .select('*')
-        .maybeSingle();
-        
-      if (!error && data) {
-        setBusinessSettings(data as BusinessSettings);
+      const data = await getBusinessSettings();
+      if (data) {
+        setBusinessSettings(data);
       }
     } catch (error) {
       console.error('Error fetching business settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load business settings. Please try again.",
-        variant: "destructive"
-      });
     }
   };
 
   const handleUpdateBusinessSettings = async () => {
     try {
-      if (!businessSettings.gst_number) {
+      const success = await updateBusinessSettings(businessSettings);
+      if (success) {
         toast({
-          title: "Missing information",
-          description: "Please enter GST number",
-          variant: "destructive"
+          title: "Success",
+          description: "Business settings updated successfully"
         });
-        return;
       }
-      
-      const { data: existingData, error: existingError } = await supabase
-        .from('business_settings')
-        .select('*');
-        
-      if (existingError) throw existingError;
-      
-      if (existingData && existingData.length > 0) {
-        const { error } = await supabase
-          .from('business_settings')
-          .update({
-            gst_number: businessSettings.gst_number,
-            business_name: businessSettings.business_name,
-            address: businessSettings.address
-          })
-          .eq('id', existingData[0].id);
-          
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('business_settings')
-          .insert([{
-            gst_number: businessSettings.gst_number,
-            business_name: businessSettings.business_name,
-            address: businessSettings.address
-          }]);
-          
-        if (error) throw error;
-      }
-      
-      toast({
-        title: "Success",
-        description: "Business settings updated successfully"
-      });
     } catch (error) {
       console.error('Error updating business settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update business settings. Please try again.",
-        variant: "destructive"
-      });
     }
   };
 

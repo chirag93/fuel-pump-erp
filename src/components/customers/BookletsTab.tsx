@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Book, Edit, FileText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { supabase, IndentBooklet } from '@/integrations/supabase/client';
+import { IndentBooklet } from '@/integrations/supabase/client';
+import { createIndentBooklet } from '@/integrations/indentBooklets';
 import { Link } from 'react-router-dom';
 
 interface NewBookletData {
@@ -58,29 +60,20 @@ const BookletsTab = ({ indentBooklets, setIndentBooklets, customerId, customerNa
 
       const totalIndents = endNum - startNum + 1;
 
-      const { data, error } = await supabase
-        .from('indent_booklets')
-        .insert([{
-          customer_id: customerId,
-          start_number: newBooklet.start_number,
-          end_number: newBooklet.end_number,
-          issued_date: newBooklet.issued_date,
-          total_indents: totalIndents,
-          used_indents: 0,
-          status: 'Active'
-        }])
-        .select();
-
-      if (error) throw error;
+      const bookletData = {
+        customer_id: customerId,
+        start_number: newBooklet.start_number,
+        end_number: newBooklet.end_number,
+        issued_date: newBooklet.issued_date,
+        total_indents: totalIndents,
+        used_indents: 0,
+        status: 'Active' as 'Active' | 'Completed' | 'Cancelled'
+      };
       
-      if (data) {
-        // Transform to ensure status is of the correct type
-        const booklet: IndentBooklet = {
-          ...data[0],
-          status: data[0].status as 'Active' | 'Completed' | 'Cancelled'
-        };
-        
-        setIndentBooklets([...indentBooklets, booklet]);
+      const result = await createIndentBooklet(bookletData);
+      
+      if (result) {
+        setIndentBooklets([...indentBooklets, result]);
         setBookletDialogOpen(false);
         setNewBooklet({
           customer_id: customerId,
@@ -88,19 +81,9 @@ const BookletsTab = ({ indentBooklets, setIndentBooklets, customerId, customerNa
           end_number: '',
           issued_date: new Date().toISOString().split('T')[0]
         });
-        
-        toast({
-          title: "Success",
-          description: "Indent booklet issued successfully"
-        });
       }
     } catch (error) {
       console.error('Error adding indent booklet:', error);
-      toast({
-        title: "Error",
-        description: "Failed to issue indent booklet. Please try again.",
-        variant: "destructive"
-      });
     }
   };
 

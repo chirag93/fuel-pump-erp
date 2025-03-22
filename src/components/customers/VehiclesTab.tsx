@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Edit, Truck } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Vehicle } from '@/integrations/supabase/client';
+import { createVehicle, updateVehicle } from '@/integrations/vehicles';
 
 interface VehiclesTabProps {
   vehicles: Vehicle[];
@@ -67,43 +68,21 @@ const VehiclesTab = ({ vehicles, setVehicles, customerId, customerName }: Vehicl
         return;
       }
 
-      const response = await fetch('/api/vehicles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          customer_id: customerId,
-          number: newVehicle.number,
-          type: newVehicle.type || 'Not Specified',
-          capacity: newVehicle.capacity || 'Not Specified'
-        }),
-      });
+      const vehicleData = {
+        customer_id: customerId,
+        number: newVehicle.number,
+        type: newVehicle.type || 'Not Specified',
+        capacity: newVehicle.capacity || 'Not Specified'
+      };
+
+      const result = await createVehicle(vehicleData);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (result.success && result.vehicle) {
-        setVehicles([...vehicles, result.vehicle as Vehicle]);
+      if (result) {
+        setVehicles([...vehicles, result]);
         handleCloseDialog();
-        
-        toast({
-          title: "Success",
-          description: "Vehicle added successfully"
-        });
-      } else {
-        throw new Error('Failed to add vehicle');
       }
     } catch (error) {
       console.error('Error adding vehicle:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add vehicle. Please try again.",
-        variant: "destructive"
-      });
     }
   };
 
@@ -118,46 +97,24 @@ const VehiclesTab = ({ vehicles, setVehicles, customerId, customerName }: Vehicl
         return;
       }
 
-      const response = await fetch(`/api/vehicles/${newVehicle.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          number: newVehicle.number,
-          type: newVehicle.type || 'Not Specified',
-          capacity: newVehicle.capacity || 'Not Specified'
-        }),
-      });
+      const vehicleData = {
+        number: newVehicle.number,
+        type: newVehicle.type || 'Not Specified',
+        capacity: newVehicle.capacity || 'Not Specified'
+      };
+
+      const result = await updateVehicle(newVehicle.id, vehicleData);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (result.success && result.vehicle) {
+      if (result) {
         // Update the vehicles array with the updated vehicle
         setVehicles(vehicles.map(v => 
-          v.id === newVehicle.id ? (result.vehicle as Vehicle) : v
+          v.id === newVehicle.id ? result : v
         ));
         
         handleCloseDialog();
-        
-        toast({
-          title: "Success",
-          description: "Vehicle updated successfully"
-        });
-      } else {
-        throw new Error('Failed to update vehicle');
       }
     } catch (error) {
       console.error('Error updating vehicle:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update vehicle. Please try again.",
-        variant: "destructive"
-      });
     }
   };
 
