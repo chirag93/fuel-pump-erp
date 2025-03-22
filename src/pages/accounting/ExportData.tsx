@@ -10,8 +10,20 @@ import { DownloadCloud, FileSpreadsheet, FileText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+// Define a type for the available data types to export
+type ExportDataType = 
+  | 'transactions' 
+  | 'customers' 
+  | 'customer_payments' 
+  | 'indents' 
+  | 'stock' 
+  | 'vehicles' 
+  | 'invoices' 
+  | 'daily_readings'
+  | 'fuel_settings';
+
 const ExportData = () => {
-  const [dataType, setDataType] = useState<string>('transactions');
+  const [dataType, setDataType] = useState<ExportDataType>('transactions');
   const [fromDate, setFromDate] = useState<Date | undefined>(
     new Date(new Date().setMonth(new Date().getMonth() - 1))
   );
@@ -27,7 +39,9 @@ const ExportData = () => {
     { value: 'stock', label: 'Stock' },
     { value: 'vehicles', label: 'Vehicles' },
     { value: 'invoices', label: 'Invoices' },
-  ];
+    { value: 'daily_readings', label: 'Daily Readings' },
+    { value: 'fuel_settings', label: 'Fuel Settings' },
+  ] as const;
   
   const fileFormats = [
     { value: 'csv', label: 'CSV', icon: <FileText size={16} /> },
@@ -105,18 +119,45 @@ const ExportData = () => {
           data = inventory;
           break;
           
-        default:
-          // For explicitly defined tables that have specific types in the TypeScript definitions
-          if (['indents', 'vehicles', 'daily_readings', 'fuel_settings'].includes(dataType)) {
-            const { data: tableData, error: tableError } = await supabase
-              .from(dataType)
-              .select('*');
-            
-            if (tableError) throw tableError;
-            data = tableData;
-          } else {
-            throw new Error(`Export of ${dataType} is not supported`);
-          }
+        case 'indents':
+          const { data: indents, error: indentsError } = await supabase
+            .from('indents')
+            .select('*')
+            .gte('date', fromDateStr)
+            .lte('date', toDateStr);
+          
+          if (indentsError) throw indentsError;
+          data = indents;
+          break;
+          
+        case 'vehicles':
+          const { data: vehicles, error: vehiclesError } = await supabase
+            .from('vehicles')
+            .select('*');
+          
+          if (vehiclesError) throw vehiclesError;
+          data = vehicles;
+          break;
+          
+        case 'daily_readings':
+          const { data: readings, error: readingsError } = await supabase
+            .from('daily_readings')
+            .select('*')
+            .gte('date', fromDateStr)
+            .lte('date', toDateStr);
+          
+          if (readingsError) throw readingsError;
+          data = readings;
+          break;
+          
+        case 'fuel_settings':
+          const { data: fuelSettings, error: fuelSettingsError } = await supabase
+            .from('fuel_settings')
+            .select('*');
+          
+          if (fuelSettingsError) throw fuelSettingsError;
+          data = fuelSettings;
+          break;
       }
       
       // Process the data for export
@@ -224,7 +265,10 @@ const ExportData = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Data Type</label>
-              <Select value={dataType} onValueChange={setDataType}>
+              <Select 
+                value={dataType} 
+                onValueChange={(value) => setDataType(value as ExportDataType)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select data type" />
                 </SelectTrigger>
