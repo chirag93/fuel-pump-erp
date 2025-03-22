@@ -49,18 +49,51 @@ const ProvisionPump = () => {
     setSuccessMessage(null);
     
     try {
-      // First, create a new user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // Create the fuel pump record first
+      const { data: pumpData, error: pumpError } = await supabase
+        .from('fuel_pumps')
+        .insert([
+          {
+            name: values.name,
+            email: values.email,
+            address: values.address,
+            contact_number: values.contactNumber,
+            status: 'active',
+            created_by: user?.id
+          }
+        ])
+        .select();
+        
+      if (pumpError) {
+        toast({
+          title: 'Error creating fuel pump',
+          description: pumpError.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Use the sign-up method instead of admin.createUser
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
-        email_confirm: true, // Auto-confirm the email
-        user_metadata: {
-          role: 'admin', // Give them admin role for their fuel pump
-          name: values.name
+        options: {
+          data: {
+            role: 'admin', // Give them admin role for their fuel pump
+            name: values.name
+          }
         }
       });
       
       if (authError) {
+        // If there's an error with auth, clean up the fuel pump record
+        if (pumpData && pumpData.length > 0) {
+          await supabase
+            .from('fuel_pumps')
+            .delete()
+            .eq('id', pumpData[0].id);
+        }
+        
         toast({
           title: 'Error creating user',
           description: authError.message,
@@ -69,52 +102,23 @@ const ProvisionPump = () => {
         return;
       }
       
-      // Then, create the fuel pump record
-      if (authData.user) {
-        const { data: pumpData, error: pumpError } = await supabase
-          .from('fuel_pumps')
-          .insert([
-            {
-              name: values.name,
-              email: values.email,
-              address: values.address,
-              contact_number: values.contactNumber,
-              status: 'active',
-              created_by: user?.id
-            }
-          ])
-          .select();
-          
-        if (pumpError) {
-          toast({
-            title: 'Error creating fuel pump',
-            description: pumpError.message,
-            variant: 'destructive',
-          });
-          
-          // Try to clean up the auth user if fuel pump creation fails
-          await supabase.auth.admin.deleteUser(authData.user.id);
-          return;
-        }
-        
-        // Success
-        toast({
-          title: 'Fuel Pump Provisioned',
-          description: `${values.name} has been successfully created`,
-        });
-        
-        setSuccessMessage(`Fuel pump "${values.name}" has been provisioned successfully. The manager can now log in using the provided email and password. They will be automatically directed to their specific ERP instance upon login.`);
-        
-        // Reset the form
-        form.reset({
-          name: '',
-          email: '',
-          address: '',
-          contactNumber: '',
-          password: '',
-          confirmPassword: '',
-        });
-      }
+      // Success
+      toast({
+        title: 'Fuel Pump Provisioned',
+        description: `${values.name} has been successfully created`,
+      });
+      
+      setSuccessMessage(`Fuel pump "${values.name}" has been provisioned successfully. The manager can now log in using the provided email and password. They will be automatically directed to their specific ERP instance upon login.`);
+      
+      // Reset the form
+      form.reset({
+        name: '',
+        email: '',
+        address: '',
+        contactNumber: '',
+        password: '',
+        confirmPassword: '',
+      });
     } catch (error) {
       console.error('Error provisioning pump:', error);
       toast({
