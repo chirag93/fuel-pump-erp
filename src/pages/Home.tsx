@@ -19,6 +19,7 @@ import {
 import FuelTankDisplay from '@/components/fuel/FuelTankDisplay';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface QuickActionProps {
   title: string;
@@ -71,6 +72,7 @@ const QuickAction = ({
 };
 
 const Home = () => {
+  const { fuelPumpName } = useAuth();
   const [fuelLevels, setFuelLevels] = useState<FuelLevel[]>([
     { fuelType: 'Petrol', lastUpdated: 'Loading...' },
     { fuelType: 'Diesel', lastUpdated: 'Loading...' }
@@ -312,11 +314,12 @@ const Home = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Home</h2>
+        <h2 className="text-3xl font-bold tracking-tight">
+          {fuelPumpName ? `${fuelPumpName} Dashboard` : 'Home'}
+        </h2>
         <p className="text-muted-foreground">Quick access to frequent operations</p>
       </div>
 
-      {/* Quick Actions Section - Moved to top */}
       <div>
         <h3 className="mb-4 text-xl font-semibold">Quick Actions</h3>
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -371,7 +374,6 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Fuel Tank Status - Moved below Quick Actions */}
       <div>
         <h3 className="mb-4 text-xl font-semibold">Fuel Storage Status</h3>
         <div className="grid gap-4 md:grid-cols-2">
