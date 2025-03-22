@@ -128,12 +128,30 @@ const StockLevels = () => {
         return;
       }
       
+      // Ensure quantity and price are numbers
+      const quantity = typeof newStock.quantity === 'string' 
+        ? parseFloat(newStock.quantity) 
+        : newStock.quantity || 0;
+        
+      const price = typeof newStock.price_per_unit === 'string' 
+        ? parseFloat(newStock.price_per_unit) 
+        : newStock.price_per_unit || 0;
+      
+      if (isNaN(quantity) || isNaN(price)) {
+        toast({
+          title: "Invalid values",
+          description: "Quantity and price must be valid numbers",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('inventory')
         .insert([{
           fuel_type: newStock.fuel_type,
-          quantity: newStock.quantity,
-          price_per_unit: newStock.price_per_unit,
+          quantity: quantity,
+          price_per_unit: price,
           date: newStock.date
         }])
         .select();
@@ -156,8 +174,8 @@ const StockLevels = () => {
             await supabase
               .from('fuel_settings')
               .update({
-                current_level: newStock.quantity,
-                current_price: newStock.price_per_unit,
+                current_level: quantity,
+                current_price: price,
                 updated_at: new Date().toISOString()
               })
               .eq('id', settingsData.id);
@@ -167,8 +185,8 @@ const StockLevels = () => {
               .from('fuel_settings')
               .insert({
                 fuel_type: newStock.fuel_type,
-                current_level: newStock.quantity,
-                current_price: newStock.price_per_unit,
+                current_level: quantity,
+                current_price: price,
                 tank_capacity: newStock.fuel_type === 'Petrol' ? 10000 : 12000,
                 updated_at: new Date().toISOString()
               });
@@ -281,17 +299,18 @@ const StockLevels = () => {
           processedData[month][unload.fuel_type] = 0;
         }
         
-        // Ensure quantity is always a number
+        // Convert quantity to a number and ensure it's valid
         let quantity = 0;
+        
         if (typeof unload.quantity === 'string') {
-          quantity = parseFloat(unload.quantity) || 0;
+          quantity = parseFloat(unload.quantity);
         } else if (typeof unload.quantity === 'number') {
           quantity = unload.quantity;
         } else if (unload.quantity) {
-          quantity = Number(unload.quantity) || 0;
+          quantity = Number(unload.quantity);
         }
         
-        // Add an explicit check to make sure quantity is not NaN
+        // Make sure quantity is a valid number before adding
         if (!isNaN(quantity)) {
           processedData[month][unload.fuel_type] += quantity;
         }
@@ -395,7 +414,7 @@ const StockLevels = () => {
                     id="quantity"
                     type="number"
                     value={newStock.quantity?.toString()}
-                    onChange={e => setNewStock({...newStock, quantity: parseFloat(e.target.value)})}
+                    onChange={e => setNewStock({...newStock, quantity: parseFloat(e.target.value) || 0})}
                     placeholder="Enter quantity in liters"
                   />
                 </div>
@@ -405,7 +424,7 @@ const StockLevels = () => {
                     id="price"
                     type="number"
                     value={newStock.price_per_unit?.toString()}
-                    onChange={e => setNewStock({...newStock, price_per_unit: parseFloat(e.target.value)})}
+                    onChange={e => setNewStock({...newStock, price_per_unit: parseFloat(e.target.value) || 0})}
                     placeholder="Enter price per liter"
                   />
                 </div>
