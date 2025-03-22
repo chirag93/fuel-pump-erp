@@ -49,7 +49,7 @@ const ProvisionPump = () => {
     setSuccessMessage(null);
     
     try {
-      // Create the fuel pump record first
+      // 1. Create the fuel pump record first with active status
       const { data: pumpData, error: pumpError } = await supabase
         .from('fuel_pumps')
         .insert([
@@ -73,26 +73,36 @@ const ProvisionPump = () => {
         return;
       }
 
-      // Use the sign-up method instead of admin.createUser
+      if (!pumpData || pumpData.length === 0) {
+        toast({
+          title: 'Error creating fuel pump',
+          description: 'No data returned from fuel pump creation',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const pumpId = pumpData[0].id;
+
+      // 2. Sign up a new user with the pump manager role and metadata about their fuel pump
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
           data: {
-            role: 'admin', // Give them admin role for their fuel pump
-            name: values.name
+            role: 'pump_manager',
+            name: values.name,
+            fuel_pump_id: pumpId
           }
         }
       });
       
       if (authError) {
         // If there's an error with auth, clean up the fuel pump record
-        if (pumpData && pumpData.length > 0) {
-          await supabase
-            .from('fuel_pumps')
-            .delete()
-            .eq('id', pumpData[0].id);
-        }
+        await supabase
+          .from('fuel_pumps')
+          .delete()
+          .eq('id', pumpId);
         
         toast({
           title: 'Error creating user',
@@ -101,11 +111,53 @@ const ProvisionPump = () => {
         });
         return;
       }
+
+      // 3. Initialize default pump settings for this new fuel pump
+      const { error: settingsError } = await supabase
+        .from('fuel_settings')
+        .insert([
+          {
+            fuel_type: 'Petrol',
+            current_price: 87.50,
+            tank_capacity: 10000,
+            current_level: 5000,
+            fuel_pump_id: pumpId
+          },
+          {
+            fuel_type: 'Diesel',
+            current_price: 85.20,
+            tank_capacity: 10000,
+            current_level: 5000,
+            fuel_pump_id: pumpId
+          }
+        ]);
+
+      if (settingsError) {
+        console.error('Error creating default fuel settings:', settingsError);
+        // Continue anyway as this is not critical
+      }
+
+      // 4. Create default pump settings for the new fuel pump
+      const { error: pumpSettingsError } = await supabase
+        .from('pump_settings')
+        .insert([
+          {
+            pump_number: '1',
+            nozzle_count: 2,
+            fuel_types: ['Petrol', 'Diesel'],
+            fuel_pump_id: pumpId
+          }
+        ]);
+
+      if (pumpSettingsError) {
+        console.error('Error creating default pump settings:', pumpSettingsError);
+        // Continue anyway as this is not critical
+      }
       
       // Success
       toast({
         title: 'Fuel Pump Provisioned',
-        description: `${values.name} has been successfully created`,
+        description: `${values.name} has been successfully created with its own isolated ERP instance`,
       });
       
       setSuccessMessage(`Fuel pump "${values.name}" has been provisioned successfully. The manager can now log in using the provided email and password. They will be automatically directed to their specific ERP instance upon login.`);
@@ -139,7 +191,7 @@ const ProvisionPump = () => {
         <CardHeader>
           <CardTitle>New Fuel Pump Details</CardTitle>
           <CardDescription>
-            Create a new fuel pump with manager account. Each fuel pump will have its own dedicated ERP system.
+            Create a new fuel pump with manager account. Each fuel pump will have its own dedicated ERP system with isolated data.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -264,7 +316,7 @@ const ProvisionPump = () => {
         </CardContent>
         <CardFooter className="flex justify-between">
           <p className="text-sm text-muted-foreground">
-            The fuel pump manager will be able to log in immediately and access their dedicated ERP system.
+            The fuel pump manager will be able to log in immediately and access their dedicated ERP system with isolated data.
           </p>
         </CardFooter>
       </Card>

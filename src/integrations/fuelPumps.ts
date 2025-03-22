@@ -60,3 +60,64 @@ export const getFuelPumpByEmail = async (email: string): Promise<FuelPump | null
     return null;
   }
 };
+
+/**
+ * Fetch a fuel pump by ID
+ */
+export const getFuelPumpById = async (id: string): Promise<FuelPump | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('fuel_pumps')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching fuel pump by ID:', error);
+    return null;
+  }
+};
+
+/**
+ * Get fuel settings for a specific fuel pump
+ */
+export const getFuelSettingsForPump = async (fuelPumpId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('fuel_settings')
+      .select('*')
+      .eq('fuel_pump_id', fuelPumpId);
+      
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching fuel settings for pump:', error);
+    return [];
+  }
+};
+
+/**
+ * Get pump settings for a specific fuel pump
+ */
+export const getPumpSettingsForFuelPump = async (fuelPumpId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('pump_settings')
+      .select('*')
+      .eq('fuel_pump_id', fuelPumpId);
+      
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching pump settings for fuel pump:', error);
+    return [];
+  }
+};
