@@ -63,18 +63,21 @@ const BookletIndents = () => {
     const totalIndents = booklet.total_indents;
     const usedIndents = totalIndents - unusedCount;
     
+    // Determine the status based on used indents
     let newStatus: 'Active' | 'Completed' | 'Cancelled';
     
-    if (usedIndents === 0) {
-      newStatus = 'Active'; // None used - "un-used"
-    } else if (usedIndents === totalIndents) {
-      newStatus = 'Completed'; // All used - "completed"
+    if (usedIndents === totalIndents) {
+      newStatus = 'Completed'; // All indents are used
+    } else if (usedIndents > 0) {
+      newStatus = 'Active'; // Some indents are used (will display as "In Progress")
     } else {
-      newStatus = 'Active'; // Some used - "in-progress" (represented as "Active")
+      newStatus = 'Active'; // No indents used (will display as "Unused")
     }
     
-    // Only update if status has changed
-    if (newStatus !== booklet.status) {
+    console.log(`Updating booklet status: total=${totalIndents}, used=${usedIndents}, unused=${unusedCount}, newStatus=${newStatus}`);
+    
+    // Only update if status has changed or used_indents count has changed
+    if (newStatus !== booklet.status || usedIndents !== booklet.used_indents) {
       try {
         const { data, error } = await supabase
           .from('indent_booklets')
@@ -94,10 +97,16 @@ const BookletIndents = () => {
           };
           
           setBooklet(updatedBooklet);
-          toast({
-            title: "Booklet Updated",
-            description: `Booklet status updated to ${newStatus}`
-          });
+          
+          if (newStatus !== booklet.status) {
+            toast({
+              title: "Booklet Updated",
+              description: `Booklet status updated to ${
+                newStatus === 'Completed' ? 'Completed' : 
+                newStatus === 'Active' && usedIndents > 0 ? 'In Progress' : 'Unused'
+              }`
+            });
+          }
         }
       } catch (error) {
         console.error('Error updating booklet status:', error);
@@ -106,30 +115,6 @@ const BookletIndents = () => {
           description: "Failed to update booklet status",
           variant: "destructive"
         });
-      }
-    } else {
-      // If just the used_indents count has changed but not the status
-      if (usedIndents !== booklet.used_indents) {
-        try {
-          const { data, error } = await supabase
-            .from('indent_booklets')
-            .update({ used_indents: usedIndents })
-            .eq('id', booklet.id)
-            .select();
-            
-          if (error) throw error;
-          
-          if (data && data.length > 0) {
-            const updatedBooklet: IndentBooklet = {
-              ...data[0],
-              status: data[0].status as 'Active' | 'Completed' | 'Cancelled'
-            };
-            
-            setBooklet(updatedBooklet);
-          }
-        } catch (error) {
-          console.error('Error updating used_indents count:', error);
-        }
       }
     }
   };
@@ -390,10 +375,12 @@ const BookletIndents = () => {
                       ? 'bg-gray-100 text-gray-800'
                       : 'bg-red-100 text-red-800'
                   }`}>
-                    {booklet.status === 'Active' && booklet.used_indents === 0 
-                      ? 'Unused' 
+                    {booklet.status === 'Completed' 
+                      ? 'Completed' 
                       : booklet.status === 'Active' && booklet.used_indents > 0 
                       ? 'In Progress' 
+                      : booklet.status === 'Active' && booklet.used_indents === 0
+                      ? 'Unused'
                       : booklet.status}
                   </span>
                 </CardDescription>
