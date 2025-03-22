@@ -20,6 +20,14 @@ import NotFound from './pages/NotFound';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
+// Import Accounting Pages
+import FinancialReports from './pages/accounting/FinancialReports';
+import TaxCalculation from './pages/accounting/TaxCalculation';
+import ExportData from './pages/accounting/ExportData';
+import InvoiceProcessing from './pages/accounting/InvoiceProcessing';
+import Reconciliation from './pages/accounting/Reconciliation';
+import ExpenseCategories from './pages/accounting/ExpenseCategories';
+
 // Import Super Admin components
 import SuperAdminProtectedRoute from './components/auth/SuperAdminProtectedRoute';
 import SuperAdminLogin from './pages/SuperAdminLogin';
@@ -67,6 +75,14 @@ const App = () => {
             <Route path="/consumables" element={<Consumables />} />
             <Route path="/settings" element={<FuelPumpSettings />} />
             <Route path="/tank-unload" element={<TankUnload />} />
+            
+            {/* Accounting Routes */}
+            <Route path="/accounting/financial-reports" element={<FinancialReports />} />
+            <Route path="/accounting/tax-calculation" element={<TaxCalculation />} />
+            <Route path="/accounting/export-data" element={<ExportData />} />
+            <Route path="/accounting/invoice-processing" element={<InvoiceProcessing />} />
+            <Route path="/accounting/reconciliation" element={<Reconciliation />} />
+            <Route path="/accounting/expense-categories" element={<ExpenseCategories />} />
           </Route>
           
           <Route path="*" element={<Navigate to="/" replace />} />
