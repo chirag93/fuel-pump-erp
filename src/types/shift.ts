@@ -3,6 +3,7 @@ export interface Shift {
   id: string;
   staff_id: string;
   staff_name: string;
+  staff_numeric_id?: string;
   shift_type: string;
   start_time: string;
   end_time: string | null;
@@ -23,6 +24,8 @@ export interface Shift {
 export interface Staff {
   id: string;
   name: string;
+  staff_numeric_id?: string;
+  role?: string;
 }
 
 export interface CurrentShiftData {
@@ -35,6 +38,7 @@ export interface SelectedShiftData {
   id: string;
   staff_id: string;
   staff_name: string;
+  staff_numeric_id?: string;
   pump_id: string;
   opening_reading: number;
   shift_type: string;

@@ -42,7 +42,9 @@ export function EndShiftStaff({
             </SelectTrigger>
             <SelectContent>
               {staff.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.name} (ID: {s.id.substring(0, 8)}) - {s.role}</SelectItem>
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name} (ID: {s.staff_numeric_id || 'N/A'}) - {s.role}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

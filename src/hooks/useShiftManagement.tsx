@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -24,7 +25,7 @@ export function useShiftManagement() {
       try {
         const { data, error } = await supabase
           .from('staff')
-          .select('id, name');
+          .select('id, name, staff_numeric_id, role');
           
         if (error) {
           throw error;
@@ -79,7 +80,7 @@ export function useShiftManagement() {
         shiftsData.map(async (shift) => {
           const { data: staffData } = await supabase
             .from('staff')
-            .select('name')
+            .select('name, staff_numeric_id')
             .eq('id', shift.staff_id)
             .single();
             
@@ -92,6 +93,7 @@ export function useShiftManagement() {
           return {
             ...shift,
             staff_name: staffData?.name || 'Unknown Staff',
+            staff_numeric_id: staffData?.staff_numeric_id || null,
             date: readingsData?.date || new Date().toISOString().split('T')[0],
             pump_id: readingsData?.pump_id || 'Unknown',
             opening_reading: readingsData?.opening_reading || 0,

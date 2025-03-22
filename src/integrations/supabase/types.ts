@@ -709,6 +709,7 @@ export type Database = {
           phone: string
           role: string
           salary: number
+          staff_numeric_id: string | null
         }
         Insert: {
           assigned_pumps?: Json | null
@@ -721,6 +722,7 @@ export type Database = {
           phone: string
           role: string
           salary: number
+          staff_numeric_id?: string | null
         }
         Update: {
           assigned_pumps?: Json | null
@@ -733,6 +735,7 @@ export type Database = {
           phone?: string
           role?: string
           salary?: number
+          staff_numeric_id?: string | null
         }
         Relationships: []
       }

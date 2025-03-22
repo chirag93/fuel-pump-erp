@@ -79,7 +79,9 @@ export function StartShiftForm({
               </SelectTrigger>
               <SelectContent>
                 {staffList.map((staff) => (
-                  <SelectItem key={staff.id} value={staff.id}>{staff.name} (ID: {staff.id.substring(0, 8)})</SelectItem>
+                  <SelectItem key={staff.id} value={staff.id}>
+                    {staff.name} (ID: {staff.staff_numeric_id || 'N/A'})
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
