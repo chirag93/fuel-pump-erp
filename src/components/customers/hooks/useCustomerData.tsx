@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Customer, Vehicle, Indent, IndentBooklet, Transaction } from '@/integrations/supabase/client';
-import { getCustomerById } from '@/integrations/customers';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TransactionWithDetails extends Transaction {
   vehicle_number?: string;
@@ -29,9 +29,30 @@ export const useCustomerData = (customerId: string) => {
 
   const fetchCustomerData = async (id: string) => {
     try {
-      const data = await getCustomerById(id);
+      setIsLoading(true);
+      console.log('Fetching customer data for ID:', id);
+      
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (error) {
+        console.error('Supabase error fetching customer:', error);
+        throw error;
+      }
+      
       if (data) {
-        setCustomer(data);
+        console.log('Customer data found:', data);
+        setCustomer(data as Customer);
+      } else {
+        console.error('No customer found with ID:', id);
+        toast({
+          title: "Customer not found",
+          description: "Could not find customer with the provided ID",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error fetching customer:', error);
@@ -47,14 +68,21 @@ export const useCustomerData = (customerId: string) => {
 
   const fetchVehicles = async (id: string) => {
     try {
-      const response = await fetch(`/api/vehicles?customer_id=${id}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}`);
+      console.log('Fetching vehicles for customer ID:', id);
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select('*')
+        .eq('customer_id', id);
+        
+      if (error) {
+        console.error('Error fetching vehicles:', error);
+        throw error;
       }
       
-      const data = await response.json();
-      setVehicles(data as Vehicle[]);
+      if (data) {
+        console.log(`Found ${data.length} vehicles`);
+        setVehicles(data as Vehicle[]);
+      }
     } catch (error) {
       console.error('Error fetching vehicles:', error);
     }
@@ -62,21 +90,31 @@ export const useCustomerData = (customerId: string) => {
 
   const fetchIndents = async (id: string) => {
     try {
-      const response = await fetch(`/api/indents?customer_id=${id}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}`);
+      console.log('Fetching indents for customer ID:', id);
+      const { data, error } = await supabase
+        .from('indents')
+        .select(`
+          *,
+          vehicles:vehicle_id (number)
+        `)
+        .eq('customer_id', id);
+        
+      if (error) {
+        console.error('Error fetching indents:', error);
+        throw error;
       }
       
-      const data = await response.json();
-      
-      // Process data to include vehicle number if needed
-      const processedIndents = data.map((indent: any) => ({
-        ...indent,
-        vehicle_number: indent.vehicle_number || 'Unknown',
-      }));
-      
-      setIndents(processedIndents as unknown as Indent[]);
+      if (data) {
+        console.log(`Found ${data.length} indents`);
+        
+        // Process data to include vehicle number if needed
+        const processedIndents = data.map((indent: any) => ({
+          ...indent,
+          vehicle_number: indent.vehicles?.number || 'Unknown',
+        }));
+        
+        setIndents(processedIndents as unknown as Indent[]);
+      }
     } catch (error) {
       console.error('Error fetching indents:', error);
     }
@@ -84,18 +122,19 @@ export const useCustomerData = (customerId: string) => {
 
   const fetchIndentBooklets = async (id: string) => {
     try {
-      // If there's an API endpoint for indent booklets, uncomment and use this:
-      // const response = await fetch(`/api/indent-booklets?customer_id=${id}`);
-      // const data = await response.json();
-      
-      // For now, use Supabase directly if the API endpoint doesn't exist
-      const { data, error } = await fetch(`/api/indent-booklets?customer_id=${id}`)
-        .then(res => res.json())
-        .catch(() => ({ data: null, error: new Error('Failed to fetch indent booklets') }));
-
-      if (error) throw error;
+      console.log('Fetching indent booklets for customer ID:', id);
+      const { data, error } = await supabase
+        .from('indent_booklets')
+        .select('*')
+        .eq('customer_id', id);
+        
+      if (error) {
+        console.error('Error fetching indent booklets:', error);
+        throw error;
+      }
       
       if (data) {
+        console.log(`Found ${data.length} indent booklets`);
         // Transform the data to ensure status is one of the allowed types
         const typedBooklets: IndentBooklet[] = data.map((booklet: any) => ({
           ...booklet,
@@ -110,21 +149,31 @@ export const useCustomerData = (customerId: string) => {
 
   const fetchTransactions = async (id: string) => {
     try {
-      const response = await fetch(`/api/transactions?customer_id=${id}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}`);
+      console.log('Fetching transactions for customer ID:', id);
+      const { data, error } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          vehicles:vehicle_id (number)
+        `)
+        .eq('customer_id', id);
+        
+      if (error) {
+        console.error('Error fetching transactions:', error);
+        throw error;
       }
       
-      const data = await response.json();
-      
-      // Process data to include vehicle number
-      const processedTransactions = data.map((transaction: any) => ({
-        ...transaction,
-        vehicle_number: transaction.vehicle_number || 'Unknown',
-      }));
-      
-      setTransactions(processedTransactions as TransactionWithDetails[]);
+      if (data) {
+        console.log(`Found ${data.length} transactions`);
+        
+        // Process data to include vehicle number
+        const processedTransactions = data.map((transaction: any) => ({
+          ...transaction,
+          vehicle_number: transaction.vehicles?.number || 'Unknown',
+        }));
+        
+        setTransactions(processedTransactions as TransactionWithDetails[]);
+      }
     } catch (error) {
       console.error('Error fetching transactions:', error);
     }

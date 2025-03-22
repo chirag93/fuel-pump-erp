@@ -8,6 +8,8 @@ const CustomerDetails = () => {
   const { id } = useParams<{ id: string }>();
   const customerId = id || '';
   
+  console.log('Customer details page: Loading customer ID:', customerId);
+  
   const {
     customer,
     vehicles,
