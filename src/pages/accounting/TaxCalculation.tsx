@@ -9,26 +9,195 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from '@/hooks/use-toast';
 import { Calculator, DownloadCloud, Upload, FileText } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 const TaxCalculation = () => {
   const [fromDate, setFromDate] = useState<Date | undefined>(
     new Date(new Date().setMonth(new Date().getMonth() - 3))
   );
   const [toDate, setToDate] = useState<Date | undefined>(new Date());
-  const [taxType, setTaxType] = useState<string>('gst');
+  const [taxType, setTaxType] = useState<string>('gstr1');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [reportData, setReportData] = useState<any>(null);
   
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
+    if (!fromDate || !toDate) {
+      toast({
+        title: "Date Range Required",
+        description: "Please select both from and to dates.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsGenerating(true);
     
-    // Simulate API call delay
-    setTimeout(() => {
-      setIsGenerating(false);
+    try {
+      // Format dates for the query
+      const fromDateStr = fromDate.toISOString().split('T')[0];
+      const toDateStr = toDate.toISOString().split('T')[0];
+      
+      let data;
+      let summary = {
+        totalTaxableSales: 0,
+        outputCGST: 0,
+        outputSGST: 0,
+        inputTaxCredit: 0,
+        netGSTPayable: 0
+      };
+      
+      // Fetch transactions based on the type of report
+      if (taxType === 'gstr1') {
+        // GSTR-1 is for outward supplies (sales)
+        const { data: transactions, error } = await supabase
+          .from('transactions')
+          .select(`
+            id,
+            amount,
+            quantity,
+            fuel_type,
+            date,
+            payment_method,
+            discount_amount
+          `)
+          .gte('date', fromDateStr)
+          .lte('date', toDateStr);
+        
+        if (error) throw error;
+        data = transactions;
+        
+        // Calculate GST (assuming 18% GST for fuel transactions)
+        const gstRate = 0.18;
+        
+        // Process transactions to calculate totals
+        if (data && data.length > 0) {
+          let totalSales = 0;
+          
+          data.forEach((transaction: any) => {
+            const amount = Number(transaction.amount) || 0;
+            totalSales += amount;
+          });
+          
+          // Calculate GST components
+          const baseAmount = totalSales / (1 + gstRate);
+          const totalGST = totalSales - baseAmount;
+          
+          summary = {
+            totalTaxableSales: parseFloat(baseAmount.toFixed(2)),
+            outputCGST: parseFloat((totalGST / 2).toFixed(2)),
+            outputSGST: parseFloat((totalGST / 2).toFixed(2)),
+            inputTaxCredit: 8750.00, // Example fixed value for now
+            netGSTPayable: parseFloat((totalGST - 8750.00).toFixed(2))
+          };
+          
+          setReportData(summary);
+        }
+      } else if (taxType === 'gstr2') {
+        // GSTR-2 is for inward supplies (purchases)
+        const { data: purchases, error } = await supabase
+          .from('tank_unloads')
+          .select('*')
+          .gte('date', fromDateStr)
+          .lte('date', toDateStr);
+        
+        if (error) throw error;
+        data = purchases;
+        
+        // This is simplified - in real world would need more complex calculation
+        if (data && data.length > 0) {
+          let totalPurchases = 0;
+          
+          data.forEach((purchase: any) => {
+            const amount = Number(purchase.amount) || 0;
+            totalPurchases += amount;
+          });
+          
+          // Assuming 18% GST on purchases
+          const gstRate = 0.18;
+          const baseAmount = totalPurchases / (1 + gstRate);
+          const totalInputGST = totalPurchases - baseAmount;
+          
+          summary = {
+            totalTaxableSales: 125680.00, // Example fixed values
+            outputCGST: 11311.20,
+            outputSGST: 11311.20,
+            inputTaxCredit: parseFloat(totalInputGST.toFixed(2)),
+            netGSTPayable: parseFloat((22622.40 - totalInputGST).toFixed(2))
+          };
+          
+          setReportData(summary);
+        }
+      } else if (taxType === 'gstr3b') {
+        // GSTR-3B is a summary return
+        // For demo we'll generate example data
+        summary = {
+          totalTaxableSales: 125680.00,
+          outputCGST: 11311.20,
+          outputSGST: 11311.20,
+          inputTaxCredit: 8750.00,
+          netGSTPayable: 13872.40
+        };
+        
+        setReportData(summary);
+      }
+      
       toast({
-        title: "Tax Report Generated",
-        description: "Your GST tax report has been generated successfully.",
+        title: "GST Report Generated",
+        description: `Your ${taxType.toUpperCase()} report has been generated successfully.`,
       });
-    }, 1500);
+    } catch (error) {
+      console.error("Error generating GST report:", error);
+      toast({
+        title: "Error Generating Report",
+        description: "There was a problem generating the tax report. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+  
+  // Helper function to download reports
+  const handleExportReport = () => {
+    if (!reportData) {
+      toast({
+        title: "No Report Data",
+        description: "Please generate a report first before exporting.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const reportPeriod = fromDate && toDate 
+      ? `${format(fromDate, 'dd-MM-yyyy')}_to_${format(toDate, 'dd-MM-yyyy')}`
+      : 'custom_period';
+    
+    // Create CSV content
+    const headers = "Category,Amount (INR)\n";
+    const rows = [
+      `Taxable Sales,${reportData.totalTaxableSales}`,
+      `Output CGST,${reportData.outputCGST}`,
+      `Output SGST,${reportData.outputSGST}`,
+      `Input Tax Credit,${reportData.inputTaxCredit}`,
+      `Net GST Payable,${reportData.netGSTPayable}`
+    ].join('\n');
+    
+    const csvContent = `${headers}${rows}`;
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `GST_Report_${taxType.toUpperCase()}_${reportPeriod}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Report Exported",
+      description: "Your GST report has been downloaded as a CSV file."
+    });
   };
   
   return (
@@ -60,7 +229,7 @@ const TaxCalculation = () => {
                       <SelectValue placeholder="Select return type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="gst">GSTR-1 (Sales)</SelectItem>
+                      <SelectItem value="gstr1">GSTR-1 (Sales)</SelectItem>
                       <SelectItem value="gstr2">GSTR-2 (Purchases)</SelectItem>
                       <SelectItem value="gstr3b">GSTR-3B (Summary)</SelectItem>
                     </SelectContent>
@@ -86,7 +255,10 @@ const TaxCalculation = () => {
                 >
                   {isGenerating ? 
                     "Generating..." : 
-                    "Generate GST Report"
+                    <>
+                      <Calculator className="w-4 h-4 mr-2" />
+                      Generate GST Report
+                    </>
                   }
                 </Button>
               </CardFooter>
@@ -96,30 +268,32 @@ const TaxCalculation = () => {
               <CardHeader>
                 <CardTitle>GST Calculations Summary</CardTitle>
                 <CardDescription>
-                  Current quarter GST calculations
+                  {reportData ? 
+                    `${format(fromDate!, 'dd/MM/yyyy')} - ${format(toDate!, 'dd/MM/yyyy')}` : 
+                    'Current quarter GST calculations'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between pb-2 border-b">
                     <span className="text-sm">Total Taxable Sales</span>
-                    <span className="font-medium">₹125,680.00</span>
+                    <span className="font-medium">₹{reportData ? reportData.totalTaxableSales.toLocaleString('en-IN') : '125,680.00'}</span>
                   </div>
                   <div className="flex items-center justify-between pb-2 border-b">
                     <span className="text-sm">Output CGST</span>
-                    <span className="font-medium">₹11,311.20</span>
+                    <span className="font-medium">₹{reportData ? reportData.outputCGST.toLocaleString('en-IN') : '11,311.20'}</span>
                   </div>
                   <div className="flex items-center justify-between pb-2 border-b">
                     <span className="text-sm">Output SGST</span>
-                    <span className="font-medium">₹11,311.20</span>
+                    <span className="font-medium">₹{reportData ? reportData.outputSGST.toLocaleString('en-IN') : '11,311.20'}</span>
                   </div>
                   <div className="flex items-center justify-between pb-2 border-b">
                     <span className="text-sm">Input Tax Credit</span>
-                    <span className="font-medium">₹8,750.00</span>
+                    <span className="font-medium">₹{reportData ? reportData.inputTaxCredit.toLocaleString('en-IN') : '8,750.00'}</span>
                   </div>
                   <div className="flex items-center justify-between pb-2 border-b">
                     <span className="text-sm font-medium">Net GST Payable</span>
-                    <span className="font-medium">₹13,872.40</span>
+                    <span className="font-medium">₹{reportData ? reportData.netGSTPayable.toLocaleString('en-IN') : '13,872.40'}</span>
                   </div>
                 </div>
                 
@@ -128,7 +302,12 @@ const TaxCalculation = () => {
                     <FileText className="w-4 h-4 mr-2" />
                     View Details
                   </Button>
-                  <Button className="flex-1" variant="outline">
+                  <Button 
+                    className="flex-1" 
+                    variant="outline"
+                    onClick={handleExportReport}
+                    disabled={!reportData}
+                  >
                     <DownloadCloud className="w-4 h-4 mr-2" />
                     Export
                   </Button>
