@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AccountingPageLayout } from '@/components/accounting/AccountingPageLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,16 +10,71 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
-import { Receipt, Search, Printer, FileCheck, FileEdit, FileX } from 'lucide-react';
+import { Receipt, Search, Printer, FileCheck, FileX, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DatePicker } from '@/components/ui/date-picker';
+
+interface Invoice {
+  id: string;
+  customer_id: string;
+  customer_name: string;
+  date: string;
+  amount: number;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at?: string;
+  updated_at?: string;
+}
 
 const InvoiceProcessing = () => {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [isBatchProcessing, setIsBatchProcessing] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<string>('pending');
+  const [showUpdateDialog, setShowUpdateDialog] = useState<boolean>(false);
+  const [currentInvoice, setCurrentInvoice] = useState<Invoice | null>(null);
+  const [updatedStatus, setUpdatedStatus] = useState<string>('');
+  
+  // Fetch invoices from the database
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      setIsLoading(true);
+      try {
+        let query = supabase
+          .from('invoices')
+          .select('*');
+        
+        if (activeTab !== 'all') {
+          query = query.eq('status', activeTab);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          throw error;
+        }
+        
+        setInvoices(data || []);
+      } catch (error) {
+        console.error('Error fetching invoices:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load invoices. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchInvoices();
+  }, [activeTab]);
   
   const handleSelectAllChange = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
-      setSelectedInvoices(invoices.map(invoice => invoice.id));
+      setSelectedInvoices(filteredInvoices.map(invoice => invoice.id));
     } else {
       setSelectedInvoices([]);
     }
@@ -33,34 +88,98 @@ const InvoiceProcessing = () => {
     }
   };
   
-  const handleBatchProcess = () => {
+  const handleBatchProcess = async () => {
     setIsBatchProcessing(true);
     
-    // Simulate processing delay
-    setTimeout(() => {
-      setIsBatchProcessing(false);
+    try {
+      const updates = selectedInvoices.map(async (invoiceId) => {
+        const { error } = await supabase
+          .from('invoices')
+          .update({ status: 'approved', updated_at: new Date().toISOString() })
+          .eq('id', invoiceId);
+          
+        if (error) throw error;
+        return invoiceId;
+      });
+      
+      await Promise.all(updates);
+      
       toast({
         title: "Invoices Processed",
         description: `Successfully processed ${selectedInvoices.length} invoices.`,
       });
+      
+      // Refresh the data
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('status', activeTab === 'all' ? activeTab : activeTab);
+      
+      if (error) throw error;
+      setInvoices(data || []);
       setSelectedInvoices([]);
-    }, 1500);
+    } catch (error) {
+      console.error('Error processing invoices:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process invoices. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBatchProcessing(false);
+    }
   };
   
-  // Sample invoice data
-  const invoices = [
-    { id: 'INV-001', customer: 'Acme Transport', date: new Date(2023, 5, 15), amount: 12500, status: 'pending' },
-    { id: 'INV-002', customer: 'Global Logistics', date: new Date(2023, 5, 18), amount: 8750, status: 'approved' },
-    { id: 'INV-003', customer: 'City Fuels', date: new Date(2023, 5, 20), amount: 15200, status: 'pending' },
-    { id: 'INV-004', customer: 'Express Carriers', date: new Date(2023, 5, 22), amount: 9300, status: 'rejected' },
-    { id: 'INV-005', customer: 'Prime Motors', date: new Date(2023, 5, 25), amount: 11800, status: 'pending' },
-    { id: 'INV-006', customer: 'Royal Transport', date: new Date(2023, 5, 28), amount: 7600, status: 'approved' },
-  ];
+  const handleStatusUpdate = async (invoiceId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ 
+          status: newStatus, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', invoiceId);
+        
+      if (error) throw error;
+      
+      // Update the local state
+      setInvoices(invoices.map(invoice => 
+        invoice.id === invoiceId 
+          ? { ...invoice, status: newStatus as 'pending' | 'approved' | 'rejected' } 
+          : invoice
+      ));
+      
+      toast({
+        title: `Invoice ${newStatus}`,
+        description: `Invoice ${invoiceId} has been ${newStatus}.`,
+      });
+    } catch (error) {
+      console.error('Error updating invoice status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update invoice status. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const openUpdateDialog = (invoice: Invoice) => {
+    setCurrentInvoice(invoice);
+    setUpdatedStatus(invoice.status);
+    setShowUpdateDialog(true);
+  };
+  
+  const handleSaveUpdate = async () => {
+    if (!currentInvoice) return;
+    
+    await handleStatusUpdate(currentInvoice.id, updatedStatus);
+    setShowUpdateDialog(false);
+  };
   
   // Filter invoices based on search term
   const filteredInvoices = invoices.filter(invoice =>
     invoice.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.customer.toLowerCase().includes(searchTerm.toLowerCase())
+    invoice.customer_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   return (
@@ -68,7 +187,15 @@ const InvoiceProcessing = () => {
       title="Invoice Processing" 
       description="Process, approve, and manage customer invoices."
     >
-      <Tabs defaultValue="pending" className="w-full">
+      <Tabs 
+        defaultValue="pending" 
+        value={activeTab} 
+        onValueChange={(value) => {
+          setActiveTab(value);
+          setSelectedInvoices([]);
+        }}
+        className="w-full"
+      >
         <TabsList className="w-full grid grid-cols-4 mb-6">
           <TabsTrigger value="pending">Pending</TabsTrigger>
           <TabsTrigger value="approved">Approved</TabsTrigger>
@@ -76,161 +203,205 @@ const InvoiceProcessing = () => {
           <TabsTrigger value="all">All Invoices</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="pending" className="space-y-6">
-          <Card>
-            <CardHeader className="px-6 py-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Pending Invoices</CardTitle>
-                  <CardDescription>
-                    Review and process pending invoices
-                  </CardDescription>
+        {['pending', 'approved', 'rejected', 'all'].map((tabValue) => (
+          <TabsContent key={tabValue} value={tabValue} className="space-y-6">
+            <Card>
+              <CardHeader className="px-6 py-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>
+                      {tabValue === 'pending' && 'Pending Invoices'}
+                      {tabValue === 'approved' && 'Approved Invoices'}
+                      {tabValue === 'rejected' && 'Rejected Invoices'}
+                      {tabValue === 'all' && 'All Invoices'}
+                    </CardTitle>
+                    <CardDescription>
+                      {tabValue === 'pending' && 'Review and process pending invoices'}
+                      {tabValue === 'approved' && 'View and manage approved invoices'}
+                      {tabValue === 'rejected' && 'View and manage rejected invoices'}
+                      {tabValue === 'all' && 'View and manage all invoices regardless of status'}
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="search"
+                        placeholder="Search invoices..."
+                        className="pl-8 w-[250px]"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    {tabValue === 'pending' && (
+                      <Button 
+                        onClick={handleBatchProcess} 
+                        disabled={selectedInvoices.length === 0 || isBatchProcessing}
+                      >
+                        {isBatchProcessing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : "Process Selected"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="flex justify-center items-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {tabValue === 'pending' && (
+                          <TableHead className="w-[50px]">
+                            <Checkbox 
+                              checked={selectedInvoices.length === filteredInvoices.length && filteredInvoices.length > 0}
+                              onCheckedChange={handleSelectAllChange}
+                            />
+                          </TableHead>
+                        )}
+                        <TableHead>Invoice #</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredInvoices.length > 0 ? (
+                        filteredInvoices.map((invoice) => (
+                          <TableRow key={invoice.id}>
+                            {tabValue === 'pending' && (
+                              <TableCell>
+                                <Checkbox 
+                                  checked={selectedInvoices.includes(invoice.id)}
+                                  onCheckedChange={(checked) => handleInvoiceSelect(invoice.id, checked)}
+                                />
+                              </TableCell>
+                            )}
+                            <TableCell className="font-medium">{invoice.id}</TableCell>
+                            <TableCell>{invoice.customer_name}</TableCell>
+                            <TableCell>{format(new Date(invoice.date), 'dd/MM/yyyy')}</TableCell>
+                            <TableCell>₹{invoice.amount.toLocaleString()}</TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                                invoice.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                invoice.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {invoice.status}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={() => openUpdateDialog(invoice)}
+                                  title="Update Status"
+                                >
+                                  <FileEdit className="h-4 w-4" />
+                                </Button>
+                                {invoice.status === 'pending' && (
+                                  <>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      onClick={() => handleStatusUpdate(invoice.id, 'approved')}
+                                      title="Approve"
+                                    >
+                                      <FileCheck className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      onClick={() => handleStatusUpdate(invoice.id, 'rejected')}
+                                      title="Reject"
+                                    >
+                                      <FileX className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                                <Button variant="ghost" size="icon" title="Print">
+                                  <Printer className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={tabValue === 'pending' ? 7 : 6} className="text-center py-6 text-muted-foreground">
+                            {searchTerm ? 'No invoices found matching your search' : 'No invoices found'}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+              <CardFooter className="flex justify-between py-4 px-6">
+                <div className="text-sm text-muted-foreground">
+                  Showing {filteredInvoices.length} of {invoices.length} invoices
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="Search invoices..."
-                      className="pl-8 w-[250px]"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleBatchProcess} 
-                    disabled={selectedInvoices.length === 0 || isBatchProcessing}
-                  >
-                    {isBatchProcessing ? "Processing..." : "Process Selected"}
-                  </Button>
+                  <Button variant="outline" size="sm" disabled>Previous</Button>
+                  <Button variant="outline" size="sm" disabled>Next</Button>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">
-                      <Checkbox 
-                        checked={selectedInvoices.length === filteredInvoices.length && filteredInvoices.length > 0}
-                        onCheckedChange={handleSelectAllChange}
-                      />
-                    </TableHead>
-                    <TableHead>Invoice #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredInvoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell>
-                        <Checkbox 
-                          checked={selectedInvoices.includes(invoice.id)}
-                          onCheckedChange={(checked) => handleInvoiceSelect(invoice.id, checked)}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">{invoice.id}</TableCell>
-                      <TableCell>{invoice.customer}</TableCell>
-                      <TableCell>{format(invoice.date, 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>₹{invoice.amount.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                          invoice.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          invoice.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {invoice.status}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon">
-                            <FileCheck className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon">
-                            <FileX className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon">
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredInvoices.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
-                        No invoices found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-            <CardFooter className="flex justify-between py-4 px-6">
-              <div className="text-sm text-muted-foreground">
-                Showing {filteredInvoices.length} of {invoices.length} invoices
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled>Previous</Button>
-                <Button variant="outline" size="sm" disabled>Next</Button>
-              </div>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="approved" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Approved Invoices</CardTitle>
-              <CardDescription>
-                View and manage approved invoices
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                This section shows all approved invoices.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="rejected" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Rejected Invoices</CardTitle>
-              <CardDescription>
-                View and manage rejected invoices
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                This section shows all rejected invoices.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="all" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Invoices</CardTitle>
-              <CardDescription>
-                View and manage all invoices
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                This section shows all invoices regardless of status.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+        ))}
       </Tabs>
+      
+      {/* Invoice Update Dialog */}
+      <Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Invoice Status</DialogTitle>
+            <DialogDescription>
+              Change the status of invoice {currentInvoice?.id}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Invoice Details</h4>
+              <p className="text-sm text-muted-foreground">
+                Customer: {currentInvoice?.customer_name}<br />
+                Amount: ₹{currentInvoice?.amount.toLocaleString()}<br />
+                Date: {currentInvoice?.date ? format(new Date(currentInvoice.date), 'dd MMM yyyy') : ''}
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select value={updatedStatus} onValueChange={setUpdatedStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUpdateDialog(false)}>Cancel</Button>
+            <Button onClick={handleSaveUpdate}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AccountingPageLayout>
   );
 };
