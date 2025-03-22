@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -317,10 +318,20 @@ const StockLevels = () => {
       });
       
       // Convert to array format for recharts
-      return Object.entries(processedData).map(([month, data]) => ({
-        month,
-        ...data
-      })).sort((a, b) => {
+      return Object.entries(processedData).map(([month, data]) => {
+        // Create a new object with the month property
+        const chartPoint: Record<string, any> = { month };
+        
+        // Add each fuel type's quantity as a numerical property
+        Object.entries(data).forEach(([fuelType, quantityValue]) => {
+          // Ensure we're storing a number, not a string
+          chartPoint[fuelType] = typeof quantityValue === 'string' 
+            ? parseFloat(quantityValue) || 0 
+            : quantityValue;
+        });
+        
+        return chartPoint;
+      }).sort((a, b) => {
         // Sort by date
         const [aMonth, aYear] = a.month.split(' ');
         const [bMonth, bYear] = b.month.split(' ');
