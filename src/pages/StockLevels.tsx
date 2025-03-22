@@ -324,10 +324,13 @@ const StockLevels = () => {
         // Add each fuel type's quantity as a numerical property
         Object.entries(data).forEach(([fuelType, quantityValue]) => {
           // Ensure we're storing a number, not a string
-          // Fix for line 253: Make sure we're always using a number in the chart data
-          chartPoint[fuelType] = typeof quantityValue === 'string' 
-            ? (parseFloat(quantityValue) || 0) 
-            : (quantityValue || 0);
+          // Fix for line 252-253: Make sure we're always using a number in the chart data
+          if (typeof quantityValue === 'string') {
+            const parsedValue = parseFloat(quantityValue);
+            chartPoint[fuelType] = !isNaN(parsedValue) ? parsedValue : 0;
+          } else {
+            chartPoint[fuelType] = quantityValue || 0;
+          }
             
           // Extra validation to ensure we have a number
           if (isNaN(chartPoint[fuelType])) {
