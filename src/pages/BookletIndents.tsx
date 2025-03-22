@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import { ArrowLeft, FileText, AlertCircle, Edit, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase, Indent, IndentBooklet, Transaction } from '@/integrations/supabase/client';
 import { IndentEditDialog } from '@/components/indent/IndentEditDialog';
+import { getIndentsByBookletId } from '@/integrations/indents';
 
 interface IndentWithTransaction extends Indent {
   transaction?: Transaction;
@@ -46,7 +46,7 @@ const BookletIndents = () => {
   };
 
   // Find unused indent numbers by comparing all possible numbers with used ones
-  const findUnusedIndentNumbers = (booklet: IndentBooklet, usedIndents: Indent[]) => {
+  const findUnusedIndentNumbers = (booklet: IndentBooklet, usedIndents: { indent_number: string }[]) => {
     if (!booklet) return [];
     
     const allNumbers = generateAllIndentNumbers(booklet);
@@ -142,6 +142,7 @@ const BookletIndents = () => {
             ...bookletData,
             status: bookletData.status as 'Active' | 'Completed' | 'Cancelled'
           };
+          // Now we're passing the correct type - just objects with indent_number
           const unused = findUnusedIndentNumbers(typedBooklet, allIndentsData);
           setUnusedIndentNumbers(unused);
         }
