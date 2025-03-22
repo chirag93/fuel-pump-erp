@@ -64,11 +64,38 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
     setDateRange({ from: undefined, to: undefined });
   };
 
-  const handleGenerateInvoice = async () => {
+  const handleGenerateInvoice = async (selectedDateRange: DateRange) => {
     setIsGeneratingInvoice(true);
     
     try {
-      const result = await generateGSTInvoice(customer, filteredTransactions, dateRange);
+      // Apply the selected date range rather than the filter range
+      const invoiceDateRange = {
+        from: selectedDateRange.from,
+        to: selectedDateRange.to
+      };
+      
+      // Filter transactions based on the selected date range for the invoice
+      const invoiceTransactions = displayTransactions.filter(transaction => {
+        const transactionDate = new Date(transaction.date);
+        
+        if (invoiceDateRange.from && invoiceDateRange.to) {
+          return transactionDate >= invoiceDateRange.from && transactionDate <= invoiceDateRange.to;
+        }
+        
+        return true;
+      });
+      
+      if (invoiceTransactions.length === 0) {
+        toast({
+          title: "No Transactions",
+          description: "There are no transactions in the selected date range.",
+          variant: "destructive"
+        });
+        setIsGeneratingInvoice(false);
+        return;
+      }
+      
+      const result = await generateGSTInvoice(customer, invoiceTransactions, invoiceDateRange);
       
       toast({
         title: result.success ? "Invoice Generated" : "Error",
@@ -91,6 +118,7 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
           onGenerateInvoice={handleGenerateInvoice}
           isGeneratingInvoice={isGeneratingInvoice}
           onRecordPayment={() => setIsPaymentDialogOpen(true)}
+          customer={customer}
         />
       </div>
 

@@ -3,14 +3,18 @@ import { Button } from '@/components/ui/button';
 import { FileText, Plus } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import DateRangeSelector from './DateRangeSelector';
+import { useState } from 'react';
+import InvoiceDateRangeDialog from './InvoiceDateRangeDialog';
+import { Customer } from '@/integrations/supabase/client';
 
 interface TransactionActionsProps {
   dateRange: DateRange;
   setDateRange: (dateRange: DateRange) => void;
   resetDateRange: () => void;
-  onGenerateInvoice: () => void;
+  onGenerateInvoice: (dateRange: DateRange) => void;
   isGeneratingInvoice: boolean;
   onRecordPayment: () => void;
+  customer: Customer;
 }
 
 const TransactionActions = ({
@@ -19,8 +23,16 @@ const TransactionActions = ({
   resetDateRange,
   onGenerateInvoice,
   isGeneratingInvoice,
-  onRecordPayment
+  onRecordPayment,
+  customer
 }: TransactionActionsProps) => {
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  
+  const handleGenerateInvoice = (selectedDateRange: DateRange) => {
+    onGenerateInvoice(selectedDateRange);
+    setIsInvoiceDialogOpen(false);
+  };
+
   return (
     <div className="flex space-x-2">
       <DateRangeSelector 
@@ -30,7 +42,7 @@ const TransactionActions = ({
       />
       
       <Button 
-        onClick={onGenerateInvoice} 
+        onClick={() => setIsInvoiceDialogOpen(true)} 
         variant="outline"
         className="gap-1"
         disabled={isGeneratingInvoice}
@@ -46,6 +58,14 @@ const TransactionActions = ({
         <Plus className="h-4 w-4" />
         Record Payment
       </Button>
+      
+      <InvoiceDateRangeDialog
+        open={isInvoiceDialogOpen}
+        onOpenChange={setIsInvoiceDialogOpen}
+        onGenerate={handleGenerateInvoice}
+        customer={customer}
+        isGenerating={isGeneratingInvoice}
+      />
     </div>
   );
 };
