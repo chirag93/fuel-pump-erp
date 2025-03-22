@@ -35,14 +35,14 @@ const InvoiceProcessing = () => {
   const [activeTab, setActiveTab] = useState<string>('pending');
   const [showUpdateDialog, setShowUpdateDialog] = useState<boolean>(false);
   const [currentInvoice, setCurrentInvoice] = useState<Invoice | null>(null);
-  const [updatedStatus, setUpdatedStatus] = useState<string>('');
+  const [updatedStatus, setUpdatedStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
   
   // Fetch invoices from the database
   useEffect(() => {
     const fetchInvoices = async () => {
       setIsLoading(true);
       try {
-        // Generate mock data since we don't have an actual invoices table in the schema
+        // Generate mock data since we don't have an actual invoices table in the schema yet
         const mockInvoices: Invoice[] = Array(10).fill(null).map((_, index) => ({
           id: `INV-00${index + 1}`,
           customer_id: `cust-${index}`,
@@ -101,7 +101,7 @@ const InvoiceProcessing = () => {
       // Update local state
       const updatedInvoices = invoices.map(invoice => 
         selectedInvoices.includes(invoice.id) 
-          ? { ...invoice, status: 'approved', updated_at: new Date().toISOString() } 
+          ? { ...invoice, status: 'approved' as const, updated_at: new Date().toISOString() } 
           : invoice
       );
       
@@ -124,15 +124,15 @@ const InvoiceProcessing = () => {
     }
   };
   
-  const handleStatusUpdate = async (invoiceId: string, newStatus: string) => {
+  const handleStatusUpdate = async (invoiceId: string, newStatus: 'pending' | 'approved' | 'rejected') => {
     try {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Update the local state
+      // Update the local state with properly typed status
       setInvoices(invoices.map(invoice => 
         invoice.id === invoiceId 
-          ? { ...invoice, status: newStatus as 'pending' | 'approved' | 'rejected', updated_at: new Date().toISOString() } 
+          ? { ...invoice, status: newStatus, updated_at: new Date().toISOString() } 
           : invoice
       ));
       
@@ -370,7 +370,10 @@ const InvoiceProcessing = () => {
             
             <div className="space-y-2">
               <label className="text-sm font-medium">Status</label>
-              <Select value={updatedStatus} onValueChange={setUpdatedStatus}>
+              <Select 
+                value={updatedStatus} 
+                onValueChange={(value: 'pending' | 'approved' | 'rejected') => setUpdatedStatus(value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
