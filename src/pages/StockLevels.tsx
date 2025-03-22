@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ import FuelTankDisplay from '@/components/fuel/FuelTankDisplay';
 
 interface StockEntry {
   id: string;
-  fuel_type: 'Petrol' | 'Diesel';
+  fuel_type: 'Petrol' | 'Diesel' | 'Premium Petrol' | 'Premium Diesel' | 'CNG';
   quantity: number;
   price_per_unit: number;
   date: string;
@@ -32,6 +32,7 @@ const StockLevels = () => {
   const [stockData, setStockData] = useState<StockEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [newStock, setNewStock] = useState<Partial<StockEntry>>({
     fuel_type: 'Petrol',
     quantity: 0,
@@ -39,25 +40,68 @@ const StockLevels = () => {
     date: new Date().toISOString().split('T')[0]
   });
   
+  // Listen for tank unload events using Supabase real-time
   useEffect(() => {
-    fetchStockData();
+    // Set up a real-time subscription for tank_unloads
+    const channel = supabase
+      .channel('tank-unloads-channel')
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'tank_unloads' 
+        }, 
+        (payload) => {
+          console.log('New tank unload detected:', payload);
+          // Trigger a refresh when a new tank unload is detected
+          setRefreshTrigger(prev => prev + 1);
+          
+          // Show a toast notification
+          toast({
+            title: "Fuel Delivery Detected",
+            description: `${payload.new.quantity} liters of ${payload.new.fuel_type} received`,
+          });
+          
+          // Refresh the stock data
+          fetchStockData();
+        })
+      .subscribe();
+      
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
   
-  const fetchStockData = async () => {
+  useEffect(() => {
+    fetchStockData();
+  }, [refreshTrigger]);
+  
+  const fetchStockData = useCallback(async () => {
     try {
       setIsLoading(true);
       
-      const { data, error } = await supabase
+      // First, try to get data from fuel_settings
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('fuel_settings')
+        .select('*');
+        
+      if (settingsError) {
+        console.error('Error fetching fuel settings:', settingsError);
+      }
+      
+      // Then get latest inventory records
+      const { data: inventoryData, error: inventoryError } = await supabase
         .from('inventory')
         .select('*')
         .order('date', { ascending: false });
         
-      if (error) {
-        throw error;
+      if (inventoryError) {
+        throw inventoryError;
       }
       
-      if (data) {
-        setStockData(data as StockEntry[]);
+      if (inventoryData) {
+        setStockData(inventoryData as StockEntry[]);
       }
     } catch (error) {
       console.error('Error fetching stock data:', error);
@@ -69,7 +113,7 @@ const StockLevels = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
   
   const handleAddStock = async () => {
     try {
@@ -97,7 +141,40 @@ const StockLevels = () => {
       }
       
       if (data) {
+        // Also update the fuel_settings table
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('fuel_settings')
+          .select('id, current_level')
+          .eq('fuel_type', newStock.fuel_type)
+          .maybeSingle();
+          
+        if (!settingsError) {
+          if (settingsData) {
+            // Update existing record
+            await supabase
+              .from('fuel_settings')
+              .update({
+                current_level: newStock.quantity,
+                current_price: newStock.price_per_unit,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', settingsData.id);
+          } else {
+            // Create new record
+            await supabase
+              .from('fuel_settings')
+              .insert({
+                fuel_type: newStock.fuel_type,
+                current_level: newStock.quantity,
+                current_price: newStock.price_per_unit,
+                tank_capacity: newStock.fuel_type === 'Petrol' ? 10000 : 12000,
+                updated_at: new Date().toISOString()
+              });
+          }
+        }
+        
         setStockData([...data as StockEntry[], ...stockData]);
+        setRefreshTrigger(prev => prev + 1);
         toast({
           title: "Success",
           description: "Stock entry added successfully"
@@ -159,66 +236,75 @@ const StockLevels = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Stock Levels</h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>Add Stock Entry</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Stock Entry</DialogTitle>
-              <DialogDescription>
-                Record today's fuel stock levels.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="fuel_type">Fuel Type</Label>
-                <select 
-                  id="fuel_type"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
-                  value={newStock.fuel_type}
-                  onChange={e => setNewStock({...newStock, fuel_type: e.target.value as 'Petrol' | 'Diesel'})}
-                >
-                  <option value="Petrol">Petrol</option>
-                  <option value="Diesel">Diesel</option>
-                </select>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setRefreshTrigger(prev => prev + 1)}>
+            <Loader2 className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>Add Stock Entry</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Stock Entry</DialogTitle>
+                <DialogDescription>
+                  Record today's fuel stock levels.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="fuel_type">Fuel Type</Label>
+                  <select 
+                    id="fuel_type"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+                    value={newStock.fuel_type}
+                    onChange={e => setNewStock({...newStock, fuel_type: e.target.value as StockEntry['fuel_type']})}
+                  >
+                    <option value="Petrol">Petrol</option>
+                    <option value="Diesel">Diesel</option>
+                    <option value="Premium Petrol">Premium Petrol</option>
+                    <option value="Premium Diesel">Premium Diesel</option>
+                    <option value="CNG">CNG</option>
+                  </select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="quantity">Quantity (Liters)</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    value={newStock.quantity?.toString()}
+                    onChange={e => setNewStock({...newStock, quantity: parseFloat(e.target.value)})}
+                    placeholder="Enter quantity in liters"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="price">Price Per Liter (₹)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    value={newStock.price_per_unit?.toString()}
+                    onChange={e => setNewStock({...newStock, price_per_unit: parseFloat(e.target.value)})}
+                    placeholder="Enter price per liter"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="date">Date</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={newStock.date}
+                    onChange={e => setNewStock({...newStock, date: e.target.value})}
+                  />
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="quantity">Quantity (Liters)</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  value={newStock.quantity?.toString()}
-                  onChange={e => setNewStock({...newStock, quantity: parseFloat(e.target.value)})}
-                  placeholder="Enter quantity in liters"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="price">Price Per Liter (₹)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={newStock.price_per_unit?.toString()}
-                  onChange={e => setNewStock({...newStock, price_per_unit: parseFloat(e.target.value)})}
-                  placeholder="Enter price per liter"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={newStock.date}
-                  onChange={e => setNewStock({...newStock, date: e.target.value})}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddStock}>Save Stock Entry</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleAddStock}>Save Stock Entry</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
       
       {isLoading ? (
@@ -240,6 +326,7 @@ const StockLevels = () => {
                   day: 'numeric'
                 })}
                 showTankIcon={true}
+                refreshTrigger={refreshTrigger}
               />
             ))}
           </div>

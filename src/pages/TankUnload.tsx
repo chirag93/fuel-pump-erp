@@ -6,11 +6,50 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Truck, Calendar, TrendingUp, Fuel, FileSpreadsheet } from 'lucide-react';
 import { useTankUnloads, TankUnload as TankUnloadType } from "@/hooks/useTankUnloads";
+import FuelTankDisplay from '@/components/fuel/FuelTankDisplay';
+import { supabase } from '@/integrations/supabase/client';
+import { useEffect } from 'react';
 
 const TankUnload = () => {
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
+  const [fuelTypes, setFuelTypes] = useState<string[]>([]);
   const { recentUnloads, isLoading } = useTankUnloads(refreshCounter);
+
+  // Fetch available fuel types
+  useEffect(() => {
+    const fetchFuelTypes = async () => {
+      try {
+        // First check fuel_settings
+        const { data: settingsData } = await supabase
+          .from('fuel_settings')
+          .select('fuel_type');
+          
+        if (settingsData && settingsData.length > 0) {
+          const types = settingsData.map(item => item.fuel_type);
+          setFuelTypes([...new Set(types)]);
+        } else {
+          // Fallback to inventory
+          const { data: inventoryData } = await supabase
+            .from('inventory')
+            .select('fuel_type');
+            
+          if (inventoryData && inventoryData.length > 0) {
+            const types = inventoryData.map(item => item.fuel_type);
+            setFuelTypes([...new Set(types)]);
+          } else {
+            // Default values if nothing is found
+            setFuelTypes(['Petrol', 'Diesel']);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching fuel types:', error);
+        setFuelTypes(['Petrol', 'Diesel']);
+      }
+    };
+    
+    fetchFuelTypes();
+  }, [refreshCounter]);
 
   const handleUnloadSuccess = () => {
     // Increment the counter to trigger a refresh in the table
@@ -84,6 +123,17 @@ const TankUnload = () => {
                 <p className="text-sm text-muted-foreground">in deliveries</p>
               </CardContent>
             </Card>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-2">
+            {fuelTypes.map((fuelType, index) => (
+              <FuelTankDisplay 
+                key={index}
+                fuelType={fuelType} 
+                refreshTrigger={refreshCounter}
+                showTankIcon={true}
+              />
+            ))}
           </div>
           
           <Card>

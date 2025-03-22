@@ -38,6 +38,7 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
       const numericQuantity = parseFloat(quantity);
       const numericAmount = parseFloat(amount);
       
+      // Insert the tank unload record
       const { error } = await supabase
         .from('tank_unloads')
         .insert({
@@ -51,6 +52,9 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
       if (error) {
         throw error;
       }
+      
+      // Update the fuel settings for this fuel type
+      await updateFuelStorage(fuelType, numericQuantity);
       
       toast({
         title: "Success",
@@ -75,6 +79,102 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // New function to update fuel storage levels
+  const updateFuelStorage = async (fuelType: string, addedQuantity: number) => {
+    try {
+      // First, check if there's an entry in fuel_settings for this fuel type
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('fuel_settings')
+        .select('current_level, tank_capacity')
+        .eq('fuel_type', fuelType)
+        .maybeSingle();
+
+      if (settingsError && settingsError.code !== 'PGRST116') {
+        throw settingsError;
+      }
+
+      if (settingsData) {
+        // Fuel settings entry exists, update the current level
+        const newLevel = Number(settingsData.current_level) + addedQuantity;
+        
+        const { error: updateError } = await supabase
+          .from('fuel_settings')
+          .update({
+            current_level: newLevel,
+            updated_at: new Date().toISOString()
+          })
+          .eq('fuel_type', fuelType);
+
+        if (updateError) {
+          throw updateError;
+        }
+        
+        console.log(`Updated ${fuelType} storage to ${newLevel} liters`);
+      } else {
+        // No fuel settings entry, check if there's a recent inventory entry
+        const { data: inventoryData, error: inventoryError } = await supabase
+          .from('inventory')
+          .select('*')
+          .eq('fuel_type', fuelType)
+          .order('date', { ascending: false })
+          .limit(1);
+          
+        if (inventoryError) {
+          throw inventoryError;
+        }
+        
+        let baseQuantity = 0;
+        let tankCapacity = fuelType === 'Petrol' ? 10000 : 12000; // Default tank capacities
+        
+        // If we have inventory data, use it as the base
+        if (inventoryData && inventoryData.length > 0) {
+          baseQuantity = Number(inventoryData[0].quantity);
+        }
+        
+        // Create a new entry in fuel_settings
+        const { error: insertError } = await supabase
+          .from('fuel_settings')
+          .insert({
+            fuel_type: fuelType,
+            current_level: baseQuantity + addedQuantity,
+            current_price: inventoryData?.[0]?.price_per_unit || 0,
+            tank_capacity: tankCapacity,
+            updated_at: new Date().toISOString()
+          });
+          
+        if (insertError) {
+          throw insertError;
+        }
+        
+        console.log(`Created new fuel settings for ${fuelType} with level ${baseQuantity + addedQuantity} liters`);
+      }
+      
+      // Also update the inventory table with a new entry
+      const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      const { error: inventoryError } = await supabase
+        .from('inventory')
+        .insert({
+          fuel_type: fuelType,
+          quantity: addedQuantity,
+          price_per_unit: parseFloat(amount) / addedQuantity, // Calculate price per unit from total amount
+          date: currentDate
+        });
+        
+      if (inventoryError) {
+        console.error('Error updating inventory:', inventoryError);
+      }
+    } catch (error) {
+      console.error('Error updating fuel storage:', error);
+      // We don't want to throw here so the tank unload still gets recorded
+      toast({
+        title: "Warning",
+        description: "Tank unload recorded, but fuel levels may not have updated correctly",
+        variant: "destructive"
+      });
     }
   };
 
@@ -113,6 +213,7 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
                 <SelectItem value="Diesel">Diesel</SelectItem>
                 <SelectItem value="Premium Petrol">Premium Petrol</SelectItem>
                 <SelectItem value="Premium Diesel">Premium Diesel</SelectItem>
+                <SelectItem value="CNG">CNG</SelectItem>
               </SelectContent>
             </Select>
           </div>

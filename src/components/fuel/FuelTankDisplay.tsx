@@ -10,14 +10,16 @@ interface FuelTankProps {
   capacity?: number;
   lastUpdated?: string;
   showTankIcon?: boolean;
+  refreshTrigger?: number;
 }
 
-const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false }: FuelTankProps) => {
+const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false, refreshTrigger = 0 }: FuelTankProps) => {
   const [currentLevel, setCurrentLevel] = useState<number>(0);
   const [pricePerUnit, setPricePerUnit] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tankCapacity, setTankCapacity] = useState<number>(capacity || 10000);
+  const [lastUpdatedTime, setLastUpdatedTime] = useState<string | undefined>(lastUpdated);
   
   // Fetch the current fuel level from the database
   useEffect(() => {
@@ -31,7 +33,7 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
         // Try to get data from fuel_settings first
         const { data: settingsData, error: settingsError } = await supabase
           .from('fuel_settings')
-          .select('current_level, current_price, tank_capacity')
+          .select('current_level, current_price, tank_capacity, updated_at')
           .eq('fuel_type', fuelType.trim())
           .maybeSingle();
 
@@ -47,6 +49,17 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
           } else if (capacity) {
             console.log(`Using capacity from props: ${capacity}`);
             setTankCapacity(Number(capacity));
+          }
+          
+          // Update last updated time if we have it from settings
+          if (settingsData.updated_at) {
+            setLastUpdatedTime(new Date(settingsData.updated_at).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            }));
           }
         } else {
           console.log('No settings data found, falling back to inventory');
@@ -71,6 +84,15 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
             if (capacity) {
               setTankCapacity(Number(capacity));
             }
+            
+            // Update last updated time from inventory if provided one isn't available
+            if (!lastUpdated && data[0].updated_at) {
+              setLastUpdatedTime(new Date(data[0].updated_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              }));
+            }
           } else {
             setError(`No data found for ${fuelType} tank`);
           }
@@ -84,7 +106,7 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
     };
     
     fetchFuelData();
-  }, [fuelType, capacity]);
+  }, [fuelType, capacity, lastUpdated, refreshTrigger]);
   
   const fillPercentage = Math.round((currentLevel / tankCapacity) * 100);
   const isLow = fillPercentage < 20;
@@ -113,6 +135,12 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
     colorText = 'text-amber-600';
     colorBg = 'bg-amber-100';
     fillColor = '#f59e0b'; // amber-500
+  } else if (fuelType.toLowerCase().includes('cng')) {
+    // CNG gets a green
+    color = 'bg-green-500';
+    colorText = 'text-green-600';
+    colorBg = 'bg-green-100';
+    fillColor = '#22c55e'; // green-500
   } else {
     // Default to green
     color = 'bg-green-500';
@@ -166,7 +194,7 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
           </div>
         </div>
         <CardDescription>
-          {lastUpdated ? `Last updated: ${lastUpdated}` : 'Current storage status'}
+          {lastUpdatedTime ? `Last updated: ${lastUpdatedTime}` : 'Current storage status'}
         </CardDescription>
       </CardHeader>
       <CardContent>
