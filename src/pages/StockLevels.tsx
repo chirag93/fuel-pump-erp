@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter, // Add back the DialogFooter import
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, TrendingUp, Calendar, BarChart3 } from 'lucide-react';
