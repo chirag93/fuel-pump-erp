@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter, // Add back the DialogFooter import
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, TrendingUp, Calendar, BarChart3 } from 'lucide-react';
@@ -281,7 +281,7 @@ const StockLevels = () => {
           processedData[month][unload.fuel_type] = 0;
         }
         
-        // Fix for the error: Ensure quantity is a number
+        // Fix for the type error: Ensure quantity is a number
         let quantity: number;
         if (typeof unload.quantity === 'string') {
           quantity = parseFloat(unload.quantity);

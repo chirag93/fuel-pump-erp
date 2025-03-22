@@ -44,7 +44,7 @@ export const getFuelPumpByEmail = async (email: string): Promise<FuelPump | null
       .from('fuel_pumps')
       .select('*')
       .eq('email', email)
-      .single();
+      .maybeSingle();
       
     if (error) {
       if (error.code === 'PGRST116') {
@@ -70,7 +70,7 @@ export const getFuelPumpById = async (id: string): Promise<FuelPump | null> => {
       .from('fuel_pumps')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
       
     if (error) {
       if (error.code === 'PGRST116') {
