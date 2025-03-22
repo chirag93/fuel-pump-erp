@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -325,15 +324,13 @@ const StockLevels = () => {
         // Add each fuel type's quantity as a numerical property
         Object.entries(data).forEach(([fuelType, quantityValue]) => {
           // Ensure we're storing a number, not a string
-          let numericValue: number;
-          
           if (typeof quantityValue === 'string') {
-            numericValue = parseFloat(quantityValue);
+            const numericValue = parseFloat(quantityValue);
             // If parsing results in NaN, use 0 instead
             chartPoint[fuelType] = !isNaN(numericValue) ? numericValue : 0;
           } else {
             // It might be a number or undefined/null, force it to be a number
-            numericValue = Number(quantityValue);
+            const numericValue = Number(quantityValue);
             chartPoint[fuelType] = !isNaN(numericValue) ? numericValue : 0;
           }
         });
