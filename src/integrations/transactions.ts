@@ -51,9 +51,12 @@ export const getTransactionsByCustomerId = async (customerId: string): Promise<T
  */
 export const createTransaction = async (transactionData: Omit<Transaction, 'id' | 'created_at'>): Promise<Transaction | null> => {
   try {
+    // Generate a UUID for the transaction ID
+    const id = crypto.randomUUID();
+    
     const { data, error } = await supabase
       .from('transactions')
-      .insert([transactionData])
+      .insert([{ id, ...transactionData }])
       .select()
       .single();
       
