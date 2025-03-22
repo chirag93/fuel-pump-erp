@@ -12,6 +12,13 @@ interface CompletedShiftsTableProps {
 }
 
 export function CompletedShiftsTable({ completedShifts, onEditShift }: CompletedShiftsTableProps) {
+  // Sort shifts by date in descending order (newest first)
+  const sortedShifts = [...completedShifts].sort((a, b) => {
+    const dateA = a.end_time ? new Date(a.end_time) : new Date(a.date);
+    const dateB = b.end_time ? new Date(b.end_time) : new Date(b.date);
+    return dateB.getTime() - dateA.getTime();
+  });
+
   return (
     <Card>
       <CardHeader>
@@ -21,7 +28,7 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
         </div>
       </CardHeader>
       <CardContent>
-        {completedShifts.length === 0 ? (
+        {sortedShifts.length === 0 ? (
           <div className="py-6 text-center text-muted-foreground">
             No completed shifts yet
           </div>
@@ -44,7 +51,7 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
               </TableRow>
             </TableHeader>
             <TableBody>
-              {completedShifts.map((shift) => {
+              {sortedShifts.map((shift) => {
                 const totalVolume = (shift.closing_reading || 0) - shift.opening_reading;
                 const testingFuel = shift.testing_fuel || 0;
                 const actualSalesVolume = totalVolume - testingFuel;
