@@ -89,7 +89,7 @@ export const getFuelPumpById = async (id: string): Promise<FuelPump | null> => {
 /**
  * Get fuel settings for a specific fuel pump
  */
-export const getFuelSettingsForPump = async (fuelPumpId: string) => {
+export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<any[]> => {
   try {
     const { data, error } = await supabase
       .from('fuel_settings')
@@ -107,7 +107,7 @@ export const getFuelSettingsForPump = async (fuelPumpId: string) => {
 /**
  * Get pump settings for a specific fuel pump
  */
-export const getPumpSettingsForFuelPump = async (fuelPumpId: string) => {
+export const getPumpSettingsForFuelPump = async (fuelPumpId: string): Promise<any[]> => {
   try {
     const { data, error } = await supabase
       .from('pump_settings')
