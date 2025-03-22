@@ -63,8 +63,24 @@ export const generateGSTInvoice = async (
     const gstAmount = totalAmount * gstRate;
     const baseAmount = totalAmount - gstAmount;
 
+    // Create an invoice record in the database
+    const invoiceDate = new Date();
+    const { data: invoiceId, error: invoiceError } = await supabase
+      .rpc('create_invoice_record', {
+        p_customer_id: customer.id,
+        p_amount: totalAmount,
+        p_date: invoiceDate.toISOString().split('T')[0]
+      });
+
+    if (invoiceError) {
+      console.error('Error creating invoice record:', invoiceError);
+      throw new Error('Failed to create invoice record');
+    }
+    
+    // Generate invoice ID if not returned from the function
+    const displayInvoiceId = invoiceId || `INV-${new Date().getTime().toString().substring(0, 10)}`;
+
     // Generate the invoice content
-    const invoiceDate = new Date().toLocaleDateString();
     const invoicePeriod = dateRange.from && dateRange.to 
       ? `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`
       : 'All time';
@@ -96,9 +112,9 @@ export const generateGSTInvoice = async (
     // Invoice details
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Invoice Date: ${invoiceDate}`, 14, 55);
+    pdf.text(`Invoice Date: ${invoiceDate.toLocaleDateString()}`, 14, 55);
     pdf.text(`Period: ${invoicePeriod}`, 14, 61);
-    pdf.text(`Invoice No: INV-${new Date().getTime().toString().substring(0, 10)}`, 14, 67);
+    pdf.text(`Invoice No: ${displayInvoiceId}`, 14, 67);
     
     // Customer details
     pdf.setFontSize(12);

@@ -42,31 +42,32 @@ const InvoiceProcessing = () => {
     const fetchInvoices = async () => {
       setIsLoading(true);
       try {
-        // Generate mock data since we don't have an actual invoices table in the schema yet
-        const mockInvoices: Invoice[] = Array(10).fill(null).map((_, index) => ({
-          id: `INV-00${index + 1}`,
-          customer_id: `cust-${index}`,
-          customer_name: `Customer ${index + 1}`,
-          date: new Date(Date.now() - index * 86400000).toISOString().split('T')[0],
-          amount: Math.floor(Math.random() * 10000) + 1000,
-          status: ['pending', 'approved', 'rejected'][Math.floor(Math.random() * 3)] as 'pending' | 'approved' | 'rejected',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }));
+        // Use the custom function to get invoices with customer names
+        const { data, error } = await supabase
+          .rpc('get_invoices_with_customer_names');
 
+        if (error) {
+          throw error;
+        }
+        
+        // Type assertion to match our Invoice interface
+        const fetchedInvoices = data as Invoice[];
+        
         // Filter based on active tab
         const filteredInvoices = activeTab === 'all' 
-          ? mockInvoices 
-          : mockInvoices.filter(invoice => invoice.status === activeTab);
+          ? fetchedInvoices 
+          : fetchedInvoices.filter(invoice => invoice.status === activeTab);
         
         setInvoices(filteredInvoices);
       } catch (error) {
-        console.error('Error generating invoices:', error);
+        console.error('Error fetching invoices:', error);
         toast({
           title: "Error",
           description: "Failed to load invoices. Please try again.",
           variant: "destructive",
         });
+        // Set empty array as fallback
+        setInvoices([]);
       } finally {
         setIsLoading(false);
       }
@@ -95,8 +96,16 @@ const InvoiceProcessing = () => {
     setIsBatchProcessing(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Update status to approved for all selected invoices
+      const { error } = await supabase
+        .from('invoices')
+        .update({ 
+          status: 'approved' as const, 
+          updated_at: new Date().toISOString() 
+        })
+        .in('id', selectedInvoices);
+      
+      if (error) throw error;
       
       // Update local state
       const updatedInvoices = invoices.map(invoice => 
@@ -126,8 +135,16 @@ const InvoiceProcessing = () => {
   
   const handleStatusUpdate = async (invoiceId: string, newStatus: 'pending' | 'approved' | 'rejected') => {
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Update the invoice status in the database
+      const { error } = await supabase
+        .from('invoices')
+        .update({ 
+          status: newStatus, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', invoiceId);
+        
+      if (error) throw error;
       
       // Update the local state with properly typed status
       setInvoices(invoices.map(invoice => 

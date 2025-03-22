@@ -444,6 +444,44 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          amount: number
+          created_at: string | null
+          customer_id: string | null
+          date: string
+          id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          customer_id?: string | null
+          date?: string
+          id: string
+          status: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          customer_id?: string | null
+          date?: string
+          id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -892,12 +930,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_invoice_record: {
+        Args: {
+          p_customer_id: string
+          p_amount: number
+          p_date?: string
+        }
+        Returns: string
+      }
       decrement_balance: {
         Args: {
           customer_id: string
           amount_value: number
         }
         Returns: number
+      }
+      get_invoices_with_customer_names: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          customer_id: string
+          customer_name: string
+          date: string
+          amount: number
+          status: string
+          created_at: string
+          updated_at: string
+        }[]
       }
       get_staff_features: {
         Args: {
