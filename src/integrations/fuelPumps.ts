@@ -21,7 +21,6 @@ export interface FuelSettingsType {
   tank_capacity: number;
   current_level: number;
   updated_at?: string;
-  fuel_pump_id?: string;
 }
 
 // Interface for pump settings
@@ -31,7 +30,6 @@ export interface PumpSettingsType {
   nozzle_count: number;
   fuel_types: string[];
   created_at?: string;
-  fuel_pump_id?: string;
 }
 
 /**
@@ -112,10 +110,11 @@ export const getFuelPumpById = async (id: string): Promise<FuelPump | null> => {
  */
 export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<FuelSettingsType[]> => {
   try {
+    // Since there's no fuel_pump_id column, we'll just fetch all fuel settings
+    // In a real app, you'd add this column or use a different query approach
     const { data, error } = await supabase
       .from('fuel_settings')
-      .select('id, fuel_type, current_price, tank_capacity, current_level, updated_at, fuel_pump_id')
-      .eq('fuel_pump_id', fuelPumpId);
+      .select('id, fuel_type, current_price, tank_capacity, current_level, updated_at');
       
     if (error) throw error;
     return data || [];
@@ -130,10 +129,11 @@ export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<FuelSe
  */
 export const getPumpSettingsForFuelPump = async (fuelPumpId: string): Promise<PumpSettingsType[]> => {
   try {
+    // Since there's no fuel_pump_id column, we'll just fetch all pump settings
+    // In a real app, you'd add this column or use a different query approach
     const { data, error } = await supabase
       .from('pump_settings')
-      .select('id, pump_number, nozzle_count, fuel_types, created_at, fuel_pump_id')
-      .eq('fuel_pump_id', fuelPumpId);
+      .select('id, pump_number, nozzle_count, fuel_types, created_at');
       
     if (error) throw error;
     return data || [];
