@@ -72,7 +72,12 @@ const BookletIndents = () => {
       if (bookletError) throw bookletError;
       
       if (bookletData) {
-        setBooklet(bookletData as IndentBooklet);
+        // Ensure status is properly typed
+        const typedBooklet: IndentBooklet = {
+          ...bookletData,
+          status: bookletData.status as 'Active' | 'Completed' | 'Cancelled'
+        };
+        setBooklet(typedBooklet);
       }
       
       // Calculate pagination range
@@ -108,10 +113,13 @@ const BookletIndents = () => {
           .in('indent_id', indentIds);
           
         if (transactionsError) throw transactionsError;
+
+        console.log('Transactions data:', transactionsData); // Debug log
         
         // Map transactions to indents
         const indentsWithTransactions = indentsData.map(indent => {
           const transaction = transactionsData?.find(t => t.indent_id === indent.id);
+          console.log(`Indent ID: ${indent.id}, Transaction:`, transaction); // Debug log
           return {
             ...indent,
             transaction: transaction,
@@ -130,7 +138,11 @@ const BookletIndents = () => {
           .eq('booklet_id', bookletId);
         
         if (allIndentsData && bookletData) {
-          const unused = findUnusedIndentNumbers(bookletData, allIndentsData);
+          const typedBooklet: IndentBooklet = {
+            ...bookletData,
+            status: bookletData.status as 'Active' | 'Completed' | 'Cancelled'
+          };
+          const unused = findUnusedIndentNumbers(typedBooklet, allIndentsData);
           setUnusedIndentNumbers(unused);
         }
       } else {
@@ -138,7 +150,11 @@ const BookletIndents = () => {
         
         // If no indents at all, all numbers in the range are unused
         if (bookletData) {
-          const unused = findUnusedIndentNumbers(bookletData, []);
+          const typedBooklet: IndentBooklet = {
+            ...bookletData,
+            status: bookletData.status as 'Active' | 'Completed' | 'Cancelled'
+          };
+          const unused = findUnusedIndentNumbers(typedBooklet, []);
           setUnusedIndentNumbers(unused);
         }
       }
