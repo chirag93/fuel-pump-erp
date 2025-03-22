@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -86,6 +85,20 @@ const BookletsTab = ({ indentBooklets, setIndentBooklets, customerId, customerNa
       console.error('Error adding indent booklet:', error);
     }
   };
+
+  const getDisplayStatus = (booklet: IndentBooklet): string => {
+    if (booklet.status === 'Completed') return 'Completed';
+    if (booklet.status === 'Active' && booklet.used_indents > 0) return 'In Progress';
+    if (booklet.status === 'Active' && booklet.used_indents === 0) return 'Unused';
+    return booklet.status;
+  }
+
+  const getStatusClassNames = (booklet: IndentBooklet): string => {
+    if (booklet.status === 'Completed') return 'bg-green-100 text-green-800';
+    if (booklet.status === 'Active' && booklet.used_indents > 0) return 'bg-blue-100 text-blue-800';
+    if (booklet.status === 'Active' && booklet.used_indents === 0) return 'bg-gray-100 text-gray-800';
+    return 'bg-red-100 text-red-800'; // Cancelled or other statuses
+  }
 
   return (
     <Card>
@@ -181,14 +194,8 @@ const BookletsTab = ({ indentBooklets, setIndentBooklets, customerId, customerNa
                   <TableCell>{new Date(booklet.issued_date).toLocaleDateString()}</TableCell>
                   <TableCell>{booklet.used_indents} / {booklet.total_indents}</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      booklet.status === 'Completed' 
-                        ? 'bg-green-100 text-green-800' 
-                        : booklet.status === 'Active' 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {booklet.status}
+                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusClassNames(booklet)}`}>
+                      {getDisplayStatus(booklet)}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
