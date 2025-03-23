@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -149,20 +150,21 @@ const MobileShiftManagement = () => {
                         <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 text-xs px-2 py-1 rounded-full">
                           Completed
                         </span>
-                    </div>
-                    <div className="space-y-1 text-sm text-muted-foreground">
-                      <p>Pump: {shift.pump_id}</p>
-                      <p>Date: {new Date(shift.start_time).toLocaleDateString()}</p>
-                      <p>Sales: ₹{calculateTotalSales(shift).toLocaleString()}</p>
-                      <p>Duration: {calculateDuration(shift)}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+                      </div>
+                      <div className="space-y-1 text-sm text-muted-foreground">
+                        <p>Pump: {shift.pump_id}</p>
+                        <p>Date: {new Date(shift.start_time).toLocaleDateString()}</p>
+                        <p>Sales: ₹{calculateTotalSales(shift).toLocaleString()}</p>
+                        <p>Duration: {calculateDuration(shift)}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
       
       {/* Dialog for ending shifts */}
       {selectedShiftData && (
