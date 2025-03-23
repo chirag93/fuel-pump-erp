@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TankReading {
   tank_number: number;
@@ -47,10 +48,12 @@ const TankReadingsForm = ({
   removeTank,
   calculatedValues
 }: TankReadingsFormProps) => {
+  const isMobile = useIsMobile();
+
   return (
-    <div className="border p-4 rounded-md">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-medium">Tank Readings</h3>
+    <div className="border p-3 rounded-md">
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="font-medium text-sm">Tank Readings</h3>
         <Button type="button" variant="outline" size="sm" onClick={addTank}>
           Add Tank
         </Button>
@@ -62,50 +65,93 @@ const TankReadingsForm = ({
         const tank = readingFormData.readings[tankNumber];
         
         return (
-          <div key={tankNumber} className="grid grid-cols-12 gap-3 mb-3 items-end">
-            <div className="col-span-2">
-              <Label>Tank {tankNumber}</Label>
-            </div>
-            <div className="col-span-4">
-              <Label htmlFor={`dip_reading_${tankNumber}`}>Dip Reading</Label>
-              <Input
-                type="number"
-                id={`dip_reading_${tankNumber}`}
-                value={tank.dip_reading === 0 && readingFormData.id ? '' : tank.dip_reading}
-                onChange={(e) => handleTankInputChange(tankNumber, 'dip_reading', e.target.value)}
-                placeholder="Enter dip reading"
-              />
-            </div>
-            <div className="col-span-4">
-              <Label htmlFor={`net_stock_${tankNumber}`}>Net Stock</Label>
-              <Input
-                type="number"
-                id={`net_stock_${tankNumber}`}
-                value={tank.net_stock === 0 && readingFormData.id ? '' : tank.net_stock}
-                onChange={(e) => handleTankInputChange(tankNumber, 'net_stock', e.target.value)}
-                placeholder="Enter net stock"
-              />
-            </div>
-            <div className="col-span-2">
-              {tankCount > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeTank(tankNumber)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  Remove
-                </Button>
-              )}
-            </div>
+          <div key={tankNumber} className={`grid ${isMobile ? 'grid-cols-1 gap-2' : 'grid-cols-12 gap-3'} mb-3 items-end`}>
+            {isMobile ? (
+              <>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-sm">Tank {tankNumber}</span>
+                  {tankCount > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeTank(tankNumber)}
+                      className="text-red-500 hover:text-red-700 h-6 px-2"
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor={`dip_reading_${tankNumber}`} className="text-xs text-muted-foreground">Dip Reading</Label>
+                  <Input
+                    type="number"
+                    id={`dip_reading_${tankNumber}`}
+                    value={tank.dip_reading === 0 && readingFormData.id ? '' : tank.dip_reading}
+                    onChange={(e) => handleTankInputChange(tankNumber, 'dip_reading', e.target.value)}
+                    placeholder="Enter dip reading"
+                    className="h-8"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor={`net_stock_${tankNumber}`} className="text-xs text-muted-foreground">Net Stock</Label>
+                  <Input
+                    type="number"
+                    id={`net_stock_${tankNumber}`}
+                    value={tank.net_stock === 0 && readingFormData.id ? '' : tank.net_stock}
+                    onChange={(e) => handleTankInputChange(tankNumber, 'net_stock', e.target.value)}
+                    placeholder="Enter net stock"
+                    className="h-8"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="col-span-2">
+                  <Label>Tank {tankNumber}</Label>
+                </div>
+                <div className="col-span-4">
+                  <Label htmlFor={`dip_reading_${tankNumber}`}>Dip Reading</Label>
+                  <Input
+                    type="number"
+                    id={`dip_reading_${tankNumber}`}
+                    value={tank.dip_reading === 0 && readingFormData.id ? '' : tank.dip_reading}
+                    onChange={(e) => handleTankInputChange(tankNumber, 'dip_reading', e.target.value)}
+                    placeholder="Enter dip reading"
+                  />
+                </div>
+                <div className="col-span-4">
+                  <Label htmlFor={`net_stock_${tankNumber}`}>Net Stock</Label>
+                  <Input
+                    type="number"
+                    id={`net_stock_${tankNumber}`}
+                    value={tank.net_stock === 0 && readingFormData.id ? '' : tank.net_stock}
+                    onChange={(e) => handleTankInputChange(tankNumber, 'net_stock', e.target.value)}
+                    placeholder="Enter net stock"
+                  />
+                </div>
+                <div className="col-span-2">
+                  {tankCount > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeTank(tankNumber)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         );
       })}
       
-      <div className="mt-4 p-3 bg-muted rounded-md">
+      <div className="mt-3 p-2 bg-muted rounded-md">
         <div className="flex items-center">
-          <span className="font-medium mr-2">Total Opening Stock =</span>
+          <span className="font-medium mr-2 text-sm">Opening Stock:</span>
           <span>{calculatedValues.opening_stock}</span>
         </div>
       </div>

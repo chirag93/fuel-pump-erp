@@ -7,42 +7,42 @@ import { CardFeature } from '@/components/ui/custom/CardFeature';
 
 const MobileHome = () => {
   return (
-    <div className="container mx-auto py-6 px-4 flex flex-col min-h-screen">
-      <div className="text-center mb-6 animate-fade-in">
-        <h1 className="text-3xl font-bold text-primary">Fuel Master</h1>
-        <p className="text-muted-foreground mt-2">Mobile Dashboard</p>
+    <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
+      <div className="text-center mb-4 animate-fade-in">
+        <h1 className="text-2xl font-bold text-primary">Fuel Master</h1>
+        <p className="text-muted-foreground text-sm mt-1">Mobile Dashboard</p>
       </div>
       
-      <div className="grid grid-cols-2 gap-4 justify-items-center mb-6">
+      <div className="grid grid-cols-2 gap-3">
         <Link to="/record-indent" className="w-full animate-fade-in delay-100">
           <CardFeature
-            title="Record Indent"
-            description="Fuel transactions"
-            icon={<CreditCard className="text-fuelmaster-blue" size={24} />}
+            title="Indent"
+            description="Record transactions"
+            icon={<CreditCard className="text-fuelmaster-blue" size={20} />}
           />
         </Link>
         
         <Link to="/shift-management" className="w-full animate-fade-in delay-200">
           <CardFeature
-            title="Shift Management"
+            title="Shifts"
             description="Manage shifts"
-            icon={<CalendarClock className="text-fuelmaster-green" size={24} />}
+            icon={<CalendarClock className="text-fuelmaster-green" size={20} />}
           />
         </Link>
         
         <Link to="/customers" className="w-full animate-fade-in delay-300">
           <CardFeature
             title="Customers"
-            description="View customers"
-            icon={<UserRound className="text-fuelmaster-orange" size={24} />}
+            description="View details"
+            icon={<UserRound className="text-fuelmaster-orange" size={20} />}
           />
         </Link>
         
         <Link to="/daily-readings" className="w-full animate-fade-in delay-400">
           <CardFeature
-            title="Daily Readings"
-            description="Fuel readings"
-            icon={<Droplets className="text-fuelmaster-teal" size={24} />}
+            title="Readings"
+            description="Daily metrics"
+            icon={<Droplets className="text-fuelmaster-teal" size={20} />}
           />
         </Link>
       </div>
