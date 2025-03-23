@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -179,16 +180,16 @@ const StockLevels = () => {
             <div>
               <Label>Start Date</Label>
               <DatePicker
-                selected={startDate}
-                onSelect={setStartDate}
+                date={startDate}
+                setDate={setStartDate}
                 className="w-full"
               />
             </div>
             <div>
               <Label>End Date</Label>
               <DatePicker
-                selected={endDate}
-                onSelect={setEndDate}
+                date={endDate}
+                setDate={setEndDate}
                 className="w-full"
               />
             </div>
