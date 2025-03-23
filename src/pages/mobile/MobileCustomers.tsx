@@ -8,12 +8,17 @@ import { ArrowLeft, Search, PhoneCall, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+// Update Customer interface to match what we're getting from Supabase database
 interface Customer {
   id: string;
   name: string;
   phone: string;
-  address: string;
-  balance: number;
+  address?: string; // Making address optional since it might not exist in database
+  balance: number | null;
+  contact?: string;
+  email?: string;
+  gst?: string;
+  created_at?: string;
 }
 
 const MobileCustomers = () => {
@@ -33,8 +38,15 @@ const MobileCustomers = () => {
           
         if (error) throw error;
         
-        setCustomers(data || []);
-        setFilteredCustomers(data || []);
+        // Map data to match our Customer interface
+        const mappedData = data?.map(customer => ({
+          ...customer,
+          address: customer.contact, // Use contact as address since we don't have address in database
+          balance: customer.balance || 0,
+        })) || [];
+        
+        setCustomers(mappedData);
+        setFilteredCustomers(mappedData);
       } catch (error) {
         console.error('Error fetching customers:', error);
         toast({
@@ -122,7 +134,7 @@ const MobileCustomers = () => {
                 <div className="flex justify-between items-center pt-2">
                   <div>
                     <span className="text-sm font-medium">Balance: </span>
-                    <span className={`${customer.balance > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                    <span className={`${(customer.balance || 0) > 0 ? 'text-red-500' : 'text-green-500'}`}>
                       ₹{Math.abs(customer.balance || 0).toLocaleString()}
                     </span>
                   </div>

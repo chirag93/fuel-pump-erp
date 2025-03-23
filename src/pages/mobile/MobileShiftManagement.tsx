@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,26 @@ import { toast } from '@/hooks/use-toast';
 import { useShiftManagement } from '@/hooks/useShiftManagement';
 import { CurrentShiftData, SelectedShiftData } from '@/types/shift';
 import { NewEndShiftDialog } from '@/components/shift/NewEndShiftDialog';
+
+// Add helper functions to calculate totals and duration
+const calculateTotalSales = (shift: any) => {
+  const cardSales = shift.card_sales || 0;
+  const upiSales = shift.upi_sales || 0;
+  const cashSales = shift.cash_sales || 0;
+  return cardSales + upiSales + cashSales;
+};
+
+const calculateDuration = (shift: any) => {
+  if (!shift.start_time || !shift.end_time) return 'N/A';
+  
+  const start = new Date(shift.start_time);
+  const end = new Date(shift.end_time);
+  const diffMs = end.getTime() - start.getTime();
+  const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  return `${diffHrs}h ${diffMins}m`;
+};
 
 const MobileShiftManagement = () => {
   const {
@@ -130,21 +149,20 @@ const MobileShiftManagement = () => {
                         <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 text-xs px-2 py-1 rounded-full">
                           Completed
                         </span>
-                      </div>
-                      <div className="space-y-1 text-sm text-muted-foreground">
-                        <p>Pump: {shift.pump_id}</p>
-                        <p>Date: {new Date(shift.start_time).toLocaleDateString()}</p>
-                        <p>Sales: ₹{shift.total_sales ? shift.total_sales.toLocaleString() : 0}</p>
-                        <p>Duration: {shift.duration || 'N/A'}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      )}
+                    </div>
+                    <div className="space-y-1 text-sm text-muted-foreground">
+                      <p>Pump: {shift.pump_id}</p>
+                      <p>Date: {new Date(shift.start_time).toLocaleDateString()}</p>
+                      <p>Sales: ₹{calculateTotalSales(shift).toLocaleString()}</p>
+                      <p>Duration: {calculateDuration(shift)}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
       
       {/* Dialog for ending shifts */}
       {selectedShiftData && (

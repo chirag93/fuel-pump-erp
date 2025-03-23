@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,7 +52,7 @@ const MobileRecordIndent = () => {
     fetchCustomers();
   }, []);
 
-  // Fetch vehicles when customer is selected
+  // Fetch vehicles when customer is selected - fixed to work with the actual column names in the vehicles table
   useEffect(() => {
     if (!selectedCustomer) {
       setVehicles([]);
@@ -65,14 +64,14 @@ const MobileRecordIndent = () => {
       try {
         const { data, error } = await supabase
           .from('vehicles')
-          .select('id, registration_number')
+          .select('id, number') // Using 'number' which is the actual column name in the DB
           .eq('customer_id', selectedCustomer)
-          .order('registration_number', { ascending: true });
+          .order('number', { ascending: true });
           
         if (error) throw error;
         
         if (data) {
-          setVehicles(data.map(v => ({ id: v.id, name: v.registration_number })));
+          setVehicles(data.map(v => ({ id: v.id, name: v.number }))); // Map to our expected format
           if (data.length > 0) {
             setSelectedVehicle(data[0].id);
           }
