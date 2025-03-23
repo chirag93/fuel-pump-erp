@@ -13,7 +13,7 @@ const MobileHome = () => {
         <p className="text-muted-foreground">Mobile Dashboard</p>
       </div>
       
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-4">
         <Link to="/record-indent">
           <CardFeature
             title="Record Indent"
