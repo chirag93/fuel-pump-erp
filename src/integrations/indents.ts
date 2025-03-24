@@ -27,9 +27,9 @@ export const getIndentsByCustomerId = async (customerId: string): Promise<Indent
         ...indent,
         vehicle_number: indent.vehicles?.number || 'Unknown',
         transaction: indent.transactions?.[0] || null,
-      }));
+      })) as Indent[];
       
-      return processedIndents as Indent[];
+      return processedIndents;
     }
     
     return [];
@@ -82,12 +82,12 @@ export const getIndentsByBookletId = async (bookletId: string): Promise<Indent[]
           transaction,
           vehicle_number: indent.vehicles?.number || 'Unknown',
         };
-      });
+      }) as Indent[];
       
-      return indentsWithTransactions as Indent[];
+      return indentsWithTransactions;
     }
     
-    return data || [];
+    return data ? (data as Indent[]) : [];
   } catch (error) {
     console.error('Error fetching indents by booklet ID:', error);
     toast({

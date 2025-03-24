@@ -44,7 +44,7 @@ export const RecentTransactionsTable = ({ refreshTrigger }: RecentTransactionsTa
           ...transaction,
           customer_name: transaction.customers?.name,
           vehicle_number: transaction.vehicles?.number
-        }));
+        })) as ExtendedTransaction[];
         
         setTransactions(processedData);
       } catch (error) {

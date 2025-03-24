@@ -132,7 +132,8 @@ export interface Indent {
   discount_amount: number | null;
   created_at?: string;
   vehicle_number?: string;
-  approval_status?: 'pending' | 'approved' | 'rejected';
+  // Fix type issue by making approval_status a string | null to match database
+  approval_status?: string | null;
   source?: 'mobile' | 'web';
   approved_by?: string | null;
   approval_date?: string | null;
@@ -155,7 +156,8 @@ export interface Transaction {
   // Extended properties for join data
   customer_name?: string;
   vehicle_number?: string;
-  approval_status?: 'pending' | 'approved' | 'rejected';
+  // Fix type issue by making approval_status a string | null to match database
+  approval_status?: string | null;
   source?: 'mobile' | 'web';
   approved_by?: string | null;
   approval_date?: string | null;
