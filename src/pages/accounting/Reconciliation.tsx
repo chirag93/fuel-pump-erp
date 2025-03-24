@@ -19,6 +19,7 @@ const Reconciliation = () => {
   const [toDate, setToDate] = useState<Date | undefined>(new Date());
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   
   const handleSelectAllChange = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
@@ -37,11 +38,59 @@ const Reconciliation = () => {
   };
   
   const handleReconcile = () => {
+    if (selectedTransactions.length === 0) {
+      toast({
+        title: "No Transactions Selected",
+        description: "Please select at least one transaction to reconcile.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     toast({
       title: "Transactions Reconciled",
       description: `Successfully reconciled ${selectedTransactions.length} transactions.`,
     });
+    
+    // In a real app, this would update the database
+    // For now, we'll just clear the selection to simulate completion
     setSelectedTransactions([]);
+  };
+  
+  const handleImportStatement = () => {
+    toast({
+      title: "Import Statement",
+      description: "The import statement functionality will be implemented in the next phase.",
+    });
+  };
+  
+  const handleExport = () => {
+    toast({
+      title: "Export Data",
+      description: "The export functionality will be implemented in the next phase.",
+    });
+  };
+  
+  const handleRefreshData = () => {
+    setRefreshing(true);
+    
+    // Simulate a data refresh
+    setTimeout(() => {
+      setRefreshing(false);
+      toast({
+        title: "Data Refreshed",
+        description: "The reconciliation data has been refreshed.",
+      });
+    }, 1000);
+  };
+  
+  const handleReconcileSingle = (transactionId: string) => {
+    toast({
+      title: "Transaction Reconciled",
+      description: `Transaction ${transactionId} has been reconciled.`,
+    });
+    
+    // In a real app, this would update the specific transaction in the database
   };
   
   // Sample transaction data for reconciliation
@@ -68,25 +117,25 @@ const Reconciliation = () => {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
               <div>
                 <CardTitle>Transaction Reconciliation</CardTitle>
                 <CardDescription>
                   Match and reconcile transactions with external records
                 </CardDescription>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline">
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                <Button variant="outline" onClick={handleImportStatement}>
                   <Upload className="h-4 w-4 mr-2" />
-                  Import Statement
+                  Import
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleExport}>
                   <DownloadCloud className="h-4 w-4 mr-2" />
                   Export
                 </Button>
                 <Button onClick={handleReconcile} disabled={selectedTransactions.length === 0}>
                   <Check className="h-4 w-4 mr-2" />
-                  Reconcile Selected
+                  Reconcile
                 </Button>
               </div>
             </div>
@@ -139,7 +188,7 @@ const Reconciliation = () => {
                     <TableRow>
                       <TableHead className="w-[50px]">
                         <Checkbox 
-                          checked={selectedTransactions.length === filteredTransactions.length && filteredTransactions.length > 0}
+                          checked={selectedTransactions.length === filteredTransactions.filter(t => t.status !== 'reconciled').length && filteredTransactions.filter(t => t.status !== 'reconciled').length > 0}
                           onCheckedChange={handleSelectAllChange}
                         />
                       </TableHead>
@@ -173,7 +222,12 @@ const Reconciliation = () => {
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" disabled={transaction.status === 'reconciled'}>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            disabled={transaction.status === 'reconciled'}
+                            onClick={() => handleReconcileSingle(transaction.id)}
+                          >
                             <Check className="h-4 w-4 mr-1" />
                             Reconcile
                           </Button>
@@ -196,9 +250,18 @@ const Reconciliation = () => {
             <div className="text-sm text-muted-foreground">
               <span className="font-medium">{transactions.filter(t => t.status === 'reconciled').length}</span> of {transactions.length} transactions reconciled
             </div>
-            <Button variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh Data
+            <Button variant="outline" onClick={handleRefreshData} disabled={refreshing}>
+              {refreshing ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Data
+                </>
+              )}
             </Button>
           </CardFooter>
         </Card>

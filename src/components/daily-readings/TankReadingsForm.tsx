@@ -65,10 +65,10 @@ const TankReadingsForm = ({
         const tank = readingFormData.readings[tankNumber];
         
         return (
-          <div key={tankNumber} className={`grid ${isMobile ? 'grid-cols-1 gap-2' : 'grid-cols-12 gap-3'} mb-3 items-end`}>
+          <div key={tankNumber} className="mb-3 border-b pb-3 last:border-b-0 last:pb-0">
             {isMobile ? (
               <>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center mb-2">
                   <span className="font-medium text-sm">Tank {tankNumber}</span>
                   {tankCount > 1 && (
                     <Button
@@ -82,31 +82,33 @@ const TankReadingsForm = ({
                     </Button>
                   )}
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor={`dip_reading_${tankNumber}`} className="text-xs text-muted-foreground">Dip Reading</Label>
-                  <Input
-                    type="number"
-                    id={`dip_reading_${tankNumber}`}
-                    value={tank.dip_reading === 0 && readingFormData.id ? '' : tank.dip_reading}
-                    onChange={(e) => handleTankInputChange(tankNumber, 'dip_reading', e.target.value)}
-                    placeholder="Enter dip reading"
-                    className="h-8"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor={`net_stock_${tankNumber}`} className="text-xs text-muted-foreground">Net Stock</Label>
-                  <Input
-                    type="number"
-                    id={`net_stock_${tankNumber}`}
-                    value={tank.net_stock === 0 && readingFormData.id ? '' : tank.net_stock}
-                    onChange={(e) => handleTankInputChange(tankNumber, 'net_stock', e.target.value)}
-                    placeholder="Enter net stock"
-                    className="h-8"
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor={`dip_reading_${tankNumber}`} className="text-xs text-muted-foreground">Dip Reading</Label>
+                    <Input
+                      type="number"
+                      id={`dip_reading_${tankNumber}`}
+                      value={tank.dip_reading === 0 && readingFormData.id ? '' : tank.dip_reading}
+                      onChange={(e) => handleTankInputChange(tankNumber, 'dip_reading', e.target.value)}
+                      placeholder="Enter dip reading"
+                      className="h-8 mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`net_stock_${tankNumber}`} className="text-xs text-muted-foreground">Net Stock</Label>
+                    <Input
+                      type="number"
+                      id={`net_stock_${tankNumber}`}
+                      value={tank.net_stock === 0 && readingFormData.id ? '' : tank.net_stock}
+                      onChange={(e) => handleTankInputChange(tankNumber, 'net_stock', e.target.value)}
+                      placeholder="Enter net stock"
+                      className="h-8 mt-1"
+                    />
+                  </div>
                 </div>
               </>
             ) : (
-              <>
+              <div className="grid grid-cols-12 gap-3 items-end">
                 <div className="col-span-2">
                   <Label>Tank {tankNumber}</Label>
                 </div>
@@ -143,7 +145,7 @@ const TankReadingsForm = ({
                     </Button>
                   )}
                 </div>
-              </>
+              </div>
             )}
           </div>
         );

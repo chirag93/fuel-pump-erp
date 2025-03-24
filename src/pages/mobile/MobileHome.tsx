@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
 import { Droplets, CreditCard, UserRound, CalendarClock } from 'lucide-react';
 import { CardFeature } from '@/components/ui/custom/CardFeature';
 
@@ -17,7 +16,7 @@ const MobileHome = () => {
         <Link to="/record-indent" className="w-full animate-fade-in delay-100">
           <CardFeature
             title="Indent"
-            description="Record transactions"
+            description="Record"
             icon={<CreditCard className="text-fuelmaster-blue" size={20} />}
           />
         </Link>
@@ -25,23 +24,23 @@ const MobileHome = () => {
         <Link to="/shift-management" className="w-full animate-fade-in delay-200">
           <CardFeature
             title="Shifts"
-            description="Manage shifts"
+            description="Manage"
             icon={<CalendarClock className="text-fuelmaster-green" size={20} />}
           />
         </Link>
         
         <Link to="/customers" className="w-full animate-fade-in delay-300">
           <CardFeature
-            title="Customers"
-            description="View details"
+            title="Clients"
+            description="View"
             icon={<UserRound className="text-fuelmaster-orange" size={20} />}
           />
         </Link>
         
         <Link to="/daily-readings" className="w-full animate-fade-in delay-400">
           <CardFeature
-            title="Readings"
-            description="Daily metrics"
+            title="Meters"
+            description="Daily"
             icon={<Droplets className="text-fuelmaster-teal" size={20} />}
           />
         </Link>

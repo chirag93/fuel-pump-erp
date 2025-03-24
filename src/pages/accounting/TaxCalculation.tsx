@@ -200,6 +200,23 @@ const TaxCalculation = () => {
     });
   };
   
+  // Function to handle viewing details button
+  const handleViewDetails = () => {
+    if (!reportData) {
+      toast({
+        title: "No Report Data",
+        description: "Please generate a report first to view details.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    toast({
+      title: "Detailed View",
+      description: "Detailed view functionality will be implemented in the next phase.",
+    });
+  };
+  
   return (
     <AccountingPageLayout 
       title="Tax Calculation" 
@@ -207,9 +224,9 @@ const TaxCalculation = () => {
     >
       <Tabs defaultValue="gst" className="w-full">
         <TabsList className="w-full grid grid-cols-3 mb-6">
-          <TabsTrigger value="gst">GST Returns</TabsTrigger>
-          <TabsTrigger value="tds">TDS Calculation</TabsTrigger>
-          <TabsTrigger value="tax-planning">Tax Planning</TabsTrigger>
+          <TabsTrigger value="gst">GST</TabsTrigger>
+          <TabsTrigger value="tds">TDS</TabsTrigger>
+          <TabsTrigger value="tax-planning">Plan</TabsTrigger>
         </TabsList>
         
         <TabsContent value="gst" className="space-y-6">
@@ -268,8 +285,8 @@ const TaxCalculation = () => {
               <CardHeader>
                 <CardTitle>GST Calculations Summary</CardTitle>
                 <CardDescription>
-                  {reportData ? 
-                    `${format(fromDate!, 'dd/MM/yyyy')} - ${format(toDate!, 'dd/MM/yyyy')}` : 
+                  {reportData && fromDate && toDate ? 
+                    `${format(fromDate, 'dd/MM/yyyy')} - ${format(toDate, 'dd/MM/yyyy')}` : 
                     'Current quarter GST calculations'}
                 </CardDescription>
               </CardHeader>
@@ -298,7 +315,7 @@ const TaxCalculation = () => {
                 </div>
                 
                 <div className="flex gap-2 mt-4">
-                  <Button className="flex-1" variant="outline">
+                  <Button className="flex-1" variant="outline" onClick={handleViewDetails}>
                     <FileText className="w-4 h-4 mr-2" />
                     View Details
                   </Button>
