@@ -55,6 +55,15 @@ const Reconciliation = () => {
     // In a real app, this would update the database
     // For now, we'll just clear the selection to simulate completion
     setSelectedTransactions([]);
+    
+    // Update the transactions to show them as reconciled
+    const updatedTransactions = [...transactions];
+    selectedTransactions.forEach(id => {
+      const transaction = updatedTransactions.find(t => t.id === id);
+      if (transaction) {
+        transaction.status = 'reconciled';
+      }
+    });
   };
   
   const handleImportStatement = () => {
@@ -90,18 +99,23 @@ const Reconciliation = () => {
       description: `Transaction ${transactionId} has been reconciled.`,
     });
     
-    // In a real app, this would update the specific transaction in the database
+    // Update the specific transaction to show it as reconciled
+    const updatedTransactions = [...transactions];
+    const transactionIndex = updatedTransactions.findIndex(t => t.id === transactionId);
+    if (transactionIndex !== -1) {
+      updatedTransactions[transactionIndex].status = 'reconciled';
+    }
   };
   
   // Sample transaction data for reconciliation
-  const transactions = [
+  const [transactions, setTransactions] = useState([
     { id: 'TX001', date: '2023-06-15', description: 'Fuel Purchase - Truck ABC123', amount: 5200, status: 'unreconciled' },
     { id: 'TX002', date: '2023-06-16', description: 'Payment - Global Logistics', amount: 8750, status: 'unreconciled' },
     { id: 'TX003', date: '2023-06-18', description: 'Service Fee', amount: 1200, status: 'reconciled' },
     { id: 'TX004', date: '2023-06-20', description: 'Fuel Purchase - Truck XYZ789', amount: 4800, status: 'unreconciled' },
     { id: 'TX005', date: '2023-06-22', description: 'Customer Payment - Acme Corp', amount: 12500, status: 'unreconciled' },
     { id: 'TX006', date: '2023-06-25', description: 'Bank Charges', amount: 350, status: 'reconciled' },
-  ];
+  ]);
   
   // Filter transactions based on search term
   const filteredTransactions = transactions.filter(transaction =>

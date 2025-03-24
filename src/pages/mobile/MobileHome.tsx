@@ -16,7 +16,7 @@ const MobileHome = () => {
         <Link to="/record-indent" className="w-full animate-fade-in delay-100">
           <CardFeature
             title="Indent"
-            description="Record"
+            description="Add"
             icon={<CreditCard className="text-fuelmaster-blue" size={20} />}
           />
         </Link>
@@ -24,7 +24,7 @@ const MobileHome = () => {
         <Link to="/shift-management" className="w-full animate-fade-in delay-200">
           <CardFeature
             title="Shifts"
-            description="Manage"
+            description="Log"
             icon={<CalendarClock className="text-fuelmaster-green" size={20} />}
           />
         </Link>
@@ -40,7 +40,7 @@ const MobileHome = () => {
         <Link to="/daily-readings" className="w-full animate-fade-in delay-400">
           <CardFeature
             title="Meters"
-            description="Daily"
+            description="Read"
             icon={<Droplets className="text-fuelmaster-teal" size={20} />}
           />
         </Link>

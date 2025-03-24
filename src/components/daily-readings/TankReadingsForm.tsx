@@ -67,8 +67,8 @@ const TankReadingsForm = ({
         return (
           <div key={tankNumber} className="mb-3 border-b pb-3 last:border-b-0 last:pb-0">
             {isMobile ? (
-              <>
-                <div className="flex justify-between items-center mb-2">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
                   <span className="font-medium text-sm">Tank {tankNumber}</span>
                   {tankCount > 1 && (
                     <Button
@@ -82,7 +82,7 @@ const TankReadingsForm = ({
                     </Button>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
                   <div>
                     <Label htmlFor={`dip_reading_${tankNumber}`} className="text-xs text-muted-foreground">Dip Reading</Label>
                     <Input
@@ -91,7 +91,7 @@ const TankReadingsForm = ({
                       value={tank.dip_reading === 0 && readingFormData.id ? '' : tank.dip_reading}
                       onChange={(e) => handleTankInputChange(tankNumber, 'dip_reading', e.target.value)}
                       placeholder="Enter dip reading"
-                      className="h-8 mt-1"
+                      className="h-9 mt-1"
                     />
                   </div>
                   <div>
@@ -102,11 +102,11 @@ const TankReadingsForm = ({
                       value={tank.net_stock === 0 && readingFormData.id ? '' : tank.net_stock}
                       onChange={(e) => handleTankInputChange(tankNumber, 'net_stock', e.target.value)}
                       placeholder="Enter net stock"
-                      className="h-8 mt-1"
+                      className="h-9 mt-1"
                     />
                   </div>
                 </div>
-              </>
+              </div>
             ) : (
               <div className="grid grid-cols-12 gap-3 items-end">
                 <div className="col-span-2">
