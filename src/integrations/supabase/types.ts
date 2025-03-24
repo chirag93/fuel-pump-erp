@@ -353,6 +353,10 @@ export type Database = {
       indents: {
         Row: {
           amount: number
+          approval_date: string | null
+          approval_notes: string | null
+          approval_status: string | null
+          approved_by: string | null
           booklet_id: string | null
           created_at: string | null
           customer_id: string
@@ -362,11 +366,16 @@ export type Database = {
           id: string
           indent_number: string | null
           quantity: number
+          source: string | null
           status: string | null
           vehicle_id: string
         }
         Insert: {
           amount: number
+          approval_date?: string | null
+          approval_notes?: string | null
+          approval_status?: string | null
+          approved_by?: string | null
           booklet_id?: string | null
           created_at?: string | null
           customer_id: string
@@ -376,11 +385,16 @@ export type Database = {
           id: string
           indent_number?: string | null
           quantity: number
+          source?: string | null
           status?: string | null
           vehicle_id: string
         }
         Update: {
           amount?: number
+          approval_date?: string | null
+          approval_notes?: string | null
+          approval_status?: string | null
+          approved_by?: string | null
           booklet_id?: string | null
           created_at?: string | null
           customer_id?: string
@@ -390,6 +404,7 @@ export type Database = {
           id?: string
           indent_number?: string | null
           quantity?: number
+          source?: string | null
           status?: string | null
           vehicle_id?: string
         }
@@ -822,6 +837,10 @@ export type Database = {
       transactions: {
         Row: {
           amount: number
+          approval_date: string | null
+          approval_notes: string | null
+          approval_status: string | null
+          approved_by: string | null
           created_at: string | null
           customer_id: string | null
           date: string
@@ -831,11 +850,16 @@ export type Database = {
           indent_id: string | null
           payment_method: string
           quantity: number
+          source: string | null
           staff_id: string
           vehicle_id: string | null
         }
         Insert: {
           amount: number
+          approval_date?: string | null
+          approval_notes?: string | null
+          approval_status?: string | null
+          approved_by?: string | null
           created_at?: string | null
           customer_id?: string | null
           date: string
@@ -845,11 +869,16 @@ export type Database = {
           indent_id?: string | null
           payment_method: string
           quantity: number
+          source?: string | null
           staff_id: string
           vehicle_id?: string | null
         }
         Update: {
           amount?: number
+          approval_date?: string | null
+          approval_notes?: string | null
+          approval_status?: string | null
+          approved_by?: string | null
           created_at?: string | null
           customer_id?: string | null
           date?: string
@@ -859,6 +888,7 @@ export type Database = {
           indent_id?: string | null
           payment_method?: string
           quantity?: number
+          source?: string | null
           staff_id?: string
           vehicle_id?: string | null
         }

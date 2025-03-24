@@ -19,6 +19,7 @@ import { supabase, Transaction, Indent } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, parseISO } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { 
   CheckCircle2, XCircle, AlertCircle, 
   FileText, Calendar, Filter, Loader2, Clock 
@@ -110,21 +111,23 @@ const ApproveMobileOperations = () => {
       if (indentError) throw indentError;
 
       // Fetch staff information
-      const staffIds = transactions?.map(t => t.staff_id) || [];
-      
       let staffMap: Record<string, string> = {};
       
-      if (staffIds.length > 0) {
-        const { data: staffData } = await supabase
-          .from('staff')
-          .select('id, name')
-          .in('id', staffIds);
-          
-        if (staffData) {
-          staffMap = staffData.reduce((acc, staff) => {
-            acc[staff.id] = staff.name;
-            return acc;
-          }, {} as Record<string, string>);
+      if (transactions && transactions.length > 0) {
+        const staffIds = transactions.map(t => t.staff_id);
+        
+        if (staffIds.length > 0) {
+          const { data: staffData } = await supabase
+            .from('staff')
+            .select('id, name')
+            .in('id', staffIds);
+            
+          if (staffData) {
+            staffMap = staffData.reduce((acc, staff) => {
+              acc[staff.id] = staff.name;
+              return acc;
+            }, {} as Record<string, string>);
+          }
         }
       }
 
