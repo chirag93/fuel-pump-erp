@@ -132,6 +132,11 @@ export interface Indent {
   discount_amount: number | null;
   created_at?: string;
   vehicle_number?: string;
+  approval_status?: 'pending' | 'approved' | 'rejected';
+  source?: 'mobile' | 'web';
+  approved_by?: string | null;
+  approval_date?: string | null;
+  approval_notes?: string | null;
 }
 
 export interface Transaction {
@@ -150,6 +155,11 @@ export interface Transaction {
   // Extended properties for join data
   customer_name?: string;
   vehicle_number?: string;
+  approval_status?: 'pending' | 'approved' | 'rejected';
+  source?: 'mobile' | 'web';
+  approved_by?: string | null;
+  approval_date?: string | null;
+  approval_notes?: string | null;
 }
 
 // New interfaces for Super Admin functionality

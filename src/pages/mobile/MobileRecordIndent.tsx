@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -252,7 +251,9 @@ const MobileRecordIndent = () => {
           indent_number: indentNumber,
           booklet_id: selectedBooklet,
           date: new Date().toISOString(),
-          status: 'Fulfilled'
+          status: 'Fulfilled',
+          approval_status: 'pending', // Mark as pending approval
+          source: 'mobile' // Indicate this came from mobile
         });
 
         const { error: indentError } = await supabase
@@ -268,7 +269,9 @@ const MobileRecordIndent = () => {
             indent_number: indentNumber,
             booklet_id: selectedBooklet,
             date: new Date().toISOString(),
-            status: 'Fulfilled'
+            status: 'Fulfilled',
+            approval_status: 'pending', // Mark as pending approval
+            source: 'mobile' // Indicate this came from mobile
           });
 
         if (indentError) {
@@ -319,7 +322,9 @@ const MobileRecordIndent = () => {
         quantity: quantity,
         discount_amount: 0,
         payment_method: 'Cash',
-        indent_id: createdIndentNumber 
+        indent_id: createdIndentNumber,
+        approval_status: 'pending', // Mark as pending approval
+        source: 'mobile' // Indicate this came from mobile
       });
 
       // Now create the transaction referencing the indent if it was created
@@ -336,7 +341,9 @@ const MobileRecordIndent = () => {
           quantity: quantity,
           discount_amount: 0,
           payment_method: 'Cash', // Default payment method
-          indent_id: createdIndentNumber // Using the indent number we just created
+          indent_id: createdIndentNumber, // Using the indent number we just created
+          approval_status: 'pending', // Mark as pending approval
+          source: 'mobile' // Indicate this came from mobile
         });
 
       if (transactionError) {
@@ -346,7 +353,7 @@ const MobileRecordIndent = () => {
 
       toast({
         title: "Success",
-        description: "Transaction recorded successfully"
+        description: "Transaction recorded and submitted for approval"
       });
       
       // Reset form
@@ -486,6 +493,10 @@ const MobileRecordIndent = () => {
                 />
               </div>
               
+              <div className="mt-2 p-3 bg-muted rounded-md">
+                <p className="text-sm text-muted-foreground">Transactions recorded on mobile require approval from a manager before they're finalized.</p>
+              </div>
+              
               <Button disabled={isSubmitting} type="submit" className="w-full">
                 {isSubmitting ? (
                   <>
@@ -493,7 +504,7 @@ const MobileRecordIndent = () => {
                     Recording...
                   </>
                 ) : (
-                  'Record Transaction'
+                  'Submit for Approval'
                 )}
               </Button>
             </form>
