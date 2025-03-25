@@ -197,73 +197,71 @@ const ApprovalRequests = () => {
   };
   
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Approval Requests</h1>
-          <p className="text-muted-foreground mt-2">
-            Review and manage pending approval requests for transactions and indents.
-          </p>
-        </div>
-        
-        <Tabs 
-          value={activeTab} 
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="indents">Indents</TabsTrigger>
-            <TabsTrigger value="all">All Requests</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="transactions" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pending Transaction Approvals</CardTitle>
-                <CardDescription>
-                  Review and approve transactions recorded via mobile app or other sources.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {renderTransactionsTable()}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="indents" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pending Indent Approvals</CardTitle>
-                <CardDescription>
-                  Review and approve indents recorded via mobile app or other sources.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {renderIndentsTable()}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="all" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>All Pending Approvals</CardTitle>
-                <CardDescription>
-                  Combined view of all pending approvals.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <h3 className="font-medium mb-2">Transactions</h3>
-                {renderTransactionsTable()}
-                
-                <h3 className="font-medium mt-6 mb-2">Indents</h3>
-                {renderIndentsTable()}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Approval Requests</h1>
+        <p className="text-muted-foreground mt-2">
+          Review and manage pending approval requests for transactions and indents.
+        </p>
       </div>
+      
+      <Tabs 
+        value={activeTab} 
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="indents">Indents</TabsTrigger>
+          <TabsTrigger value="all">All Requests</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="transactions" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Transaction Approvals</CardTitle>
+              <CardDescription>
+                Review and approve transactions recorded via mobile app or other sources.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {renderTransactionsTable()}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="indents" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Indent Approvals</CardTitle>
+              <CardDescription>
+                Review and approve indents recorded via mobile app or other sources.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {renderIndentsTable()}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="all" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>All Pending Approvals</CardTitle>
+              <CardDescription>
+                Combined view of all pending approvals.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <h3 className="font-medium mb-2">Transactions</h3>
+              {renderTransactionsTable()}
+              
+              <h3 className="font-medium mt-6 mb-2">Indents</h3>
+              {renderIndentsTable()}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
       
       {/* Approval Confirmation Dialog */}
       <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
@@ -337,7 +335,7 @@ const ApprovalRequests = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
+    </div>
   );
   
   function renderTransactionsTable() {
@@ -489,4 +487,10 @@ const ApprovalRequests = () => {
   }
 };
 
-export default ApprovalRequests;
+const WrappedApprovalRequests = () => (
+  <DashboardLayout>
+    <ApprovalRequests />
+  </DashboardLayout>
+);
+
+export default WrappedApprovalRequests;
