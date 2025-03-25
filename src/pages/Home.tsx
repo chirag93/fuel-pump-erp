@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -20,6 +21,7 @@ import FuelTankDisplay from '@/components/fuel/FuelTankDisplay';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import DashboardLayout from '@/components/layout/DashboardLayout';
 
 interface QuickActionProps {
   title: string;
@@ -312,104 +314,106 @@ const Home = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">
-          {fuelPumpName ? `${fuelPumpName} Dashboard` : 'Home'}
-        </h2>
-        <p className="text-muted-foreground">Quick access to frequent operations</p>
-      </div>
-
-      <div>
-        <h3 className="mb-4 text-xl font-semibold">Quick Actions</h3>
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          <QuickAction
-            title="Daily Readings"
-            description="Add shift-wise opening and closing readings"
-            icon={<Droplets size={20} />}
-            href="/daily-readings"
-          />
-          
-          <QuickAction
-            title="Tank Unload"
-            description="Record incoming fuel unloads and payments"
-            icon={<Truck size={20} />}
-            href="/tank-unload"
-          />
-          
-          <QuickAction
-            title="Stock Levels"
-            description="Record end-of-day stock levels"
-            icon={<Package size={20} />}
-            href="/stock-levels"
-          />
-          
-          <QuickAction
-            title="Record Transaction"
-            description="Record sales via QR, card, or cash"
-            icon={<CreditCard size={20} />}
-            href="/record-indent"
-          />
-          
-          <QuickAction
-            title="Staff Management"
-            description="Record cash provided to staff at shift start"
-            icon={<BarChart size={20} />}
-            href="/staff-management"
-          />
-          
-          <QuickAction
-            title="Consumables"
-            description="Manage station consumables and parts"
-            icon={<Wrench size={20} />}
-            href="/consumables"
-          />
-          
-          <QuickAction
-            title="Reports"
-            description="View daily and periodic reports"
-            icon={<FileText size={20} />}
-            href="/dashboard"
-          />
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {fuelPumpName ? `${fuelPumpName} Dashboard` : 'Home'}
+          </h2>
+          <p className="text-muted-foreground">Quick access to frequent operations</p>
         </div>
-      </div>
 
-      <div>
-        <h3 className="mb-4 text-xl font-semibold">Fuel Storage Status</h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          {fuelLevels.map((fuel, index) => (
-            <FuelTankDisplay 
-              key={index}
-              fuelType={fuel.fuelType} 
-              lastUpdated={fuel.lastUpdated}
-              showTankIcon={true}
+        <div>
+          <h3 className="mb-4 text-xl font-semibold">Quick Actions</h3>
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <QuickAction
+              title="Daily Readings"
+              description="Add shift-wise opening and closing readings"
+              icon={<Droplets size={20} />}
+              href="/daily-readings"
             />
-          ))}
+            
+            <QuickAction
+              title="Tank Unload"
+              description="Record incoming fuel unloads and payments"
+              icon={<Truck size={20} />}
+              href="/tank-unload"
+            />
+            
+            <QuickAction
+              title="Stock Levels"
+              description="Record end-of-day stock levels"
+              icon={<Package size={20} />}
+              href="/stock-levels"
+            />
+            
+            <QuickAction
+              title="Record Transaction"
+              description="Record sales via QR, card, or cash"
+              icon={<CreditCard size={20} />}
+              href="/record-indent"
+            />
+            
+            <QuickAction
+              title="Staff Management"
+              description="Record cash provided to staff at shift start"
+              icon={<BarChart size={20} />}
+              href="/staff-management"
+            />
+            
+            <QuickAction
+              title="Consumables"
+              description="Manage station consumables and parts"
+              icon={<Wrench size={20} />}
+              href="/consumables"
+            />
+            
+            <QuickAction
+              title="Reports"
+              description="View daily and periodic reports"
+              icon={<FileText size={20} />}
+              href="/dashboard"
+            />
+          </div>
         </div>
-      </div>
 
-      <div className="mt-8">
-        <h3 className="mb-4 text-xl font-semibold">Recent Activity</h3>
-        <div className="space-y-4">
-          {isLoadingActivities ? (
-            <div className="text-center py-4">
-              <p className="text-muted-foreground">Loading recent activities...</p>
-            </div>
-          ) : recentActivities.length === 0 ? (
-            <div className="text-center py-4">
-              <p className="text-muted-foreground">No recent activities found</p>
-            </div>
-          ) : (
-            recentActivities.map((activity) => (
-              <div key={activity.id} className="flex items-center rounded-lg border p-3">
-                <div className="mr-4 font-medium">{activity.time}</div>
-                <div>{activity.action}</div>
+        <div>
+          <h3 className="mb-4 text-xl font-semibold">Fuel Storage Status</h3>
+          <div className="grid gap-4 md:grid-cols-2">
+            {fuelLevels.map((fuel, index) => (
+              <FuelTankDisplay 
+                key={index}
+                fuelType={fuel.fuelType} 
+                lastUpdated={fuel.lastUpdated}
+                showTankIcon={true}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <h3 className="mb-4 text-xl font-semibold">Recent Activity</h3>
+          <div className="space-y-4">
+            {isLoadingActivities ? (
+              <div className="text-center py-4">
+                <p className="text-muted-foreground">Loading recent activities...</p>
               </div>
-            ))
-          )}
+            ) : recentActivities.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-muted-foreground">No recent activities found</p>
+              </div>
+            ) : (
+              recentActivities.map((activity) => (
+                <div key={activity.id} className="flex items-center rounded-lg border p-3">
+                  <div className="mr-4 font-medium">{activity.time}</div>
+                  <div>{activity.action}</div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 
