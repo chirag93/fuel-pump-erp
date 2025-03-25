@@ -48,6 +48,7 @@ interface Indent {
   booklet_id: string;
 }
 
+// Main component that contains just the content
 const ApprovalRequests = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('transactions');
