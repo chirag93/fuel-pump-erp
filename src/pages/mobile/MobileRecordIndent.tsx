@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { FuelTransactionForm } from '@/components/indent/FuelTransactionForm';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const MobileRecordIndent = () => {
   const { toast } = useToast();
@@ -18,9 +20,11 @@ const MobileRecordIndent = () => {
   const [selectedStaff, setSelectedStaff] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staff, setStaff] = useState<Array<{id: string, name: string}>>([]);
+  const [indentNumber, setIndentNumber] = useState('');
+  const [indentNumberError, setIndentNumberError] = useState('');
   
   // Fetch staff data on component mount
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchStaff = async () => {
       const { data, error } = await supabase
         .from('staff')
@@ -42,10 +46,66 @@ const MobileRecordIndent = () => {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!selectedStaff) {
+      toast({
+        title: "Error",
+        description: "Please select a staff member",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!indentNumber.trim()) {
+      setIndentNumberError('Please enter an indent number');
+      return;
+    } else {
+      setIndentNumberError('');
+    }
+    
     setIsSubmitting(true);
     
     try {
-      const { error } = await supabase
+      // First, check if this indent number already exists
+      const { data: existingIndent, error: checkError } = await supabase
+        .from('indents')
+        .select('id')
+        .eq('indent_number', indentNumber);
+        
+      if (checkError) throw checkError;
+      
+      if (existingIndent && existingIndent.length > 0) {
+        toast({
+          title: "Error",
+          description: "This indent number is already in use",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Generate a unique ID for the indent
+      const indentId = `IND-${Date.now()}`;
+      
+      // Create the indent record
+      const { error: indentError } = await supabase
+        .from('indents')
+        .insert({
+          id: indentId,
+          indent_number: indentNumber,
+          fuel_type: fuelType,
+          amount: amount,
+          quantity: quantity,
+          discount_amount: discountAmount,
+          date: date.toISOString().split('T')[0],
+          source: 'mobile',
+          approval_status: 'pending', // Set to pending for approval
+        });
+        
+      if (indentError) throw indentError;
+      
+      // Create the transaction record linked to the indent
+      const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
           id: `TR-${Date.now()}`,
@@ -56,14 +116,16 @@ const MobileRecordIndent = () => {
           quantity: quantity,
           payment_method: 'Cash',
           discount_amount: discountAmount,
-          source: 'mobile'
+          source: 'mobile',
+          indent_id: indentId,
+          approval_status: 'pending', // Set to pending for approval
         });
         
-      if (error) throw error;
+      if (transactionError) throw transactionError;
       
       toast({
         title: "Transaction recorded",
-        description: "The transaction has been saved successfully."
+        description: "The transaction has been saved and is pending approval."
       });
       
       // Reset form
@@ -71,6 +133,7 @@ const MobileRecordIndent = () => {
       setQuantity(0);
       setDiscountAmount(0);
       setSelectedStaff('');
+      setIndentNumber('');
     } catch (error) {
       console.error('Error recording transaction:', error);
       toast({
@@ -99,6 +162,20 @@ const MobileRecordIndent = () => {
           <div className="flex items-center mb-4">
             <FileText className="h-5 w-5 text-primary mr-2" />
             <h2 className="text-lg font-medium">New Transaction</h2>
+          </div>
+          
+          <div className="mb-4">
+            <Label htmlFor="indentNumber">Indent Number</Label>
+            <Input
+              id="indentNumber"
+              value={indentNumber}
+              onChange={(e) => setIndentNumber(e.target.value)}
+              className={indentNumberError ? "border-red-500" : ""}
+              placeholder="Enter indent number"
+            />
+            {indentNumberError && (
+              <p className="text-xs text-red-500 mt-1">{indentNumberError}</p>
+            )}
           </div>
           
           <FuelTransactionForm 

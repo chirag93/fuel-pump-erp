@@ -121,6 +121,40 @@ export const useApprovalRequests = (userId: string | undefined) => {
       
       if (error) throw error;
       
+      // If this is a transaction with an indent_id and we're approving it, also approve the indent
+      if (!isIndentItem(selectedItem) && selectedItem.indent_id && currentAction === 'approve') {
+        const { error: indentError } = await supabase
+          .from('indents')
+          .update({
+            approval_status: status,
+            approval_notes: approvalNotes,
+            approval_date: new Date().toISOString(),
+            approved_by: userId
+          })
+          .eq('id', selectedItem.indent_id);
+          
+        if (indentError) {
+          console.error('Error updating linked indent:', indentError);
+        }
+      }
+      
+      // If this is an indent and we're approving/rejecting it, also update any linked transactions
+      if (isIndentItem(selectedItem)) {
+        const { error: transactionError } = await supabase
+          .from('transactions')
+          .update({
+            approval_status: status,
+            approval_notes: approvalNotes,
+            approval_date: new Date().toISOString(),
+            approved_by: userId
+          })
+          .eq('indent_id', selectedItem.id);
+          
+        if (transactionError) {
+          console.error('Error updating linked transaction:', transactionError);
+        }
+      }
+      
       toast({
         title: currentAction === 'approve' ? "Approved" : "Rejected",
         description: `The ${tableName.slice(0, -1)} has been ${status} successfully.`,
