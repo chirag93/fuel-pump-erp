@@ -491,11 +491,12 @@ const ApprovalRequests = () => {
   }
 };
 
-// Create a wrapper component that applies the DashboardLayout
-const WrappedApprovalRequests = () => (
+// Create a dedicated wrapper component that applies the DashboardLayout
+// This ensures we only have one instance of DashboardLayout
+const ApprovalRequestsPage = () => (
   <DashboardLayout>
     <ApprovalRequests />
   </DashboardLayout>
 );
 
-export default WrappedApprovalRequests;
+export default ApprovalRequestsPage;
