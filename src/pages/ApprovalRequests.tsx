@@ -151,7 +151,7 @@ const ApprovalRequests = () => {
     
     try {
       const status = currentAction === 'approve' ? 'approved' : 'rejected';
-      const tableName = 'id' in selectedItem && selectedItem.id.includes('-') ? 'indents' : 'transactions';
+      const tableName = isIndentItem(selectedItem) ? 'indents' : 'transactions';
       
       // Update the item's approval status
       const { error } = await supabase
@@ -190,7 +190,9 @@ const ApprovalRequests = () => {
     }
   };
   
+  // Fixed function to safely check if an item is an Indent
   const isIndentItem = (item: any): item is Indent => {
+    if (!item) return false;
     return 'indent_number' in item;
   };
   
@@ -267,9 +269,9 @@ const ApprovalRequests = () => {
       <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Approve {isIndentItem(selectedItem as any) ? 'Indent' : 'Transaction'}</DialogTitle>
+            <DialogTitle>Approve {selectedItem ? (isIndentItem(selectedItem) ? 'Indent' : 'Transaction') : ''}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to approve this {isIndentItem(selectedItem as any) ? 'indent' : 'transaction'}?
+              Are you sure you want to approve this {selectedItem ? (isIndentItem(selectedItem) ? 'indent' : 'transaction') : 'item'}?
             </DialogDescription>
           </DialogHeader>
           
@@ -303,9 +305,9 @@ const ApprovalRequests = () => {
       <Dialog open={rejectionDialogOpen} onOpenChange={setRejectionDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject {isIndentItem(selectedItem as any) ? 'Indent' : 'Transaction'}</DialogTitle>
+            <DialogTitle>Reject {selectedItem ? (isIndentItem(selectedItem) ? 'Indent' : 'Transaction') : ''}</DialogTitle>
             <DialogDescription>
-              Please provide a reason for rejecting this {isIndentItem(selectedItem as any) ? 'indent' : 'transaction'}.
+              Please provide a reason for rejecting this {selectedItem ? (isIndentItem(selectedItem) ? 'indent' : 'transaction') : 'item'}.
             </DialogDescription>
           </DialogHeader>
           
