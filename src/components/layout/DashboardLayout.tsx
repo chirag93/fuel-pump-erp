@@ -111,7 +111,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   // Full navigation items for desktop
   const desktopNavItems = [
-    { icon: <Home size={20} />, label: 'Home', to: '/' },
+    { icon: <Home size={20} />, label: 'Home', to: '/home' },
     { icon: <BarChart4 size={20} />, label: 'Dashboard', to: '/dashboard' },
     { icon: <CalendarClock size={20} />, label: 'Daily Sales Record (DSR)', to: '/daily-readings' },
     { icon: <Droplets size={20} />, label: 'Stock Levels', to: '/stock-levels' },
