@@ -1,3 +1,4 @@
+
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
@@ -20,6 +21,9 @@ import TankUnload from '@/pages/TankUnload';
 import Consumables from '@/pages/Consumables';
 import ApproveMobileOperations from '@/pages/ApproveMobileOperations';
 
+// Use the original Home component
+import Home from '@/Home';
+
 // Settings
 import FuelPumpSettings from '@/pages/FuelPumpSettings';
 
@@ -39,7 +43,6 @@ import MobileRecordIndent from '@/pages/mobile/MobileRecordIndent';
 
 // Other pages
 import NotFound from '@/pages/NotFound';
-import Home from '@/pages/Home';
 import Login from '@/pages/Login';
 import Index from '@/pages/Index';
 
