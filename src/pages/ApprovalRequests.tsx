@@ -357,59 +357,61 @@ const ApprovalRequests = () => {
     }
     
     return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>ID</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Vehicle</TableHead>
-            <TableHead>Staff</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Fuel Type</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead>Source</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {pendingTransactions.map((transaction) => (
-            <TableRow key={transaction.id}>
-              <TableCell className="font-medium">{transaction.id.substring(0, 8)}...</TableCell>
-              <TableCell>{transaction.customer_name || 'Unknown'}</TableCell>
-              <TableCell>{transaction.vehicle_number || 'Unknown'}</TableCell>
-              <TableCell>{transaction.staff_name || 'Unknown'}</TableCell>
-              <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
-              <TableCell>{transaction.fuel_type}</TableCell>
-              <TableCell>₹{transaction.amount.toFixed(2)}</TableCell>
-              <TableCell>
-                <Badge variant="outline">{transaction.source}</Badge>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button 
-                    onClick={() => handleApprove(transaction)} 
-                    size="sm" 
-                    variant="outline"
-                    className="h-8 gap-1"
-                  >
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Approve
-                  </Button>
-                  <Button 
-                    onClick={() => handleReject(transaction)} 
-                    size="sm" 
-                    variant="outline"
-                    className="h-8 gap-1"
-                  >
-                    <XCircle className="h-4 w-4 text-red-500" />
-                    Reject
-                  </Button>
-                </div>
-              </TableCell>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Vehicle</TableHead>
+              <TableHead>Staff</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Fuel Type</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Source</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {pendingTransactions.map((transaction) => (
+              <TableRow key={transaction.id}>
+                <TableCell className="font-medium">{transaction.id.substring(0, 8)}...</TableCell>
+                <TableCell>{transaction.customer_name || 'Unknown'}</TableCell>
+                <TableCell>{transaction.vehicle_number || 'Unknown'}</TableCell>
+                <TableCell>{transaction.staff_name || 'Unknown'}</TableCell>
+                <TableCell>{format(new Date(transaction.date), 'dd/MM/yyyy')}</TableCell>
+                <TableCell>{transaction.fuel_type}</TableCell>
+                <TableCell>₹{transaction.amount.toFixed(2)}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{transaction.source}</Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button 
+                      onClick={() => handleApprove(transaction)} 
+                      size="sm" 
+                      variant="outline"
+                      className="h-8 gap-1"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      Approve
+                    </Button>
+                    <Button 
+                      onClick={() => handleReject(transaction)} 
+                      size="sm" 
+                      variant="outline"
+                      className="h-8 gap-1"
+                    >
+                      <XCircle className="h-4 w-4 text-red-500" />
+                      Reject
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     );
   }
   
@@ -432,61 +434,64 @@ const ApprovalRequests = () => {
     }
     
     return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Indent #</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Vehicle</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Fuel Type</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead>Source</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {pendingIndents.map((indent) => (
-            <TableRow key={indent.id}>
-              <TableCell className="font-medium">{indent.indent_number}</TableCell>
-              <TableCell>{indent.customer_name || 'Unknown'}</TableCell>
-              <TableCell>{indent.vehicle_number || 'Unknown'}</TableCell>
-              <TableCell>{format(new Date(indent.date), 'dd/MM/yyyy')}</TableCell>
-              <TableCell>{indent.fuel_type}</TableCell>
-              <TableCell>₹{indent.amount.toFixed(2)}</TableCell>
-              <TableCell>
-                <Badge variant="outline">{indent.source}</Badge>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button 
-                    onClick={() => handleApprove(indent)} 
-                    size="sm" 
-                    variant="outline"
-                    className="h-8 gap-1"
-                  >
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Approve
-                  </Button>
-                  <Button 
-                    onClick={() => handleReject(indent)} 
-                    size="sm" 
-                    variant="outline"
-                    className="h-8 gap-1"
-                  >
-                    <XCircle className="h-4 w-4 text-red-500" />
-                    Reject
-                  </Button>
-                </div>
-              </TableCell>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Indent #</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Vehicle</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Fuel Type</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Source</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {pendingIndents.map((indent) => (
+              <TableRow key={indent.id}>
+                <TableCell className="font-medium">{indent.indent_number}</TableCell>
+                <TableCell>{indent.customer_name || 'Unknown'}</TableCell>
+                <TableCell>{indent.vehicle_number || 'Unknown'}</TableCell>
+                <TableCell>{format(new Date(indent.date), 'dd/MM/yyyy')}</TableCell>
+                <TableCell>{indent.fuel_type}</TableCell>
+                <TableCell>₹{indent.amount.toFixed(2)}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{indent.source}</Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button 
+                      onClick={() => handleApprove(indent)} 
+                      size="sm" 
+                      variant="outline"
+                      className="h-8 gap-1"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      Approve
+                    </Button>
+                    <Button 
+                      onClick={() => handleReject(indent)} 
+                      size="sm" 
+                      variant="outline"
+                      className="h-8 gap-1"
+                    >
+                      <XCircle className="h-4 w-4 text-red-500" />
+                      Reject
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     );
   }
 };
 
+// Create a wrapper component that applies the DashboardLayout
 const WrappedApprovalRequests = () => (
   <DashboardLayout>
     <ApprovalRequests />

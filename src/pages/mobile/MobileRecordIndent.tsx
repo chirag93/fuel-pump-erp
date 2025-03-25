@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -380,7 +381,7 @@ const MobileRecordIndent = () => {
   };
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-4 w-full max-w-lg mx-auto">
       <div className="flex items-center gap-2 mb-4">
         <Link to="/">
           <Button variant="outline" size="icon">
@@ -390,7 +391,7 @@ const MobileRecordIndent = () => {
         <h1 className="text-xl font-bold">Record Indent</h1>
       </div>
       
-      <Card>
+      <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg">Search by Indent Number</CardTitle>
         </CardHeader>
@@ -431,7 +432,7 @@ const MobileRecordIndent = () => {
       </Card>
       
       {selectedCustomer && selectedVehicle && (
-        <Card>
+        <Card className="w-full">
           <CardHeader>
             <CardTitle className="text-lg">Fuel Details</CardTitle>
           </CardHeader>
