@@ -1,3 +1,4 @@
+
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
@@ -19,6 +20,7 @@ import StockLevels from '@/pages/StockLevels';
 import TankUnload from '@/pages/TankUnload';
 import Consumables from '@/pages/Consumables';
 import ApproveMobileOperations from '@/pages/ApproveMobileOperations';
+import ApprovalRequests from '@/pages/ApprovalRequests';
 
 // Settings
 import FuelPumpSettings from '@/pages/FuelPumpSettings';
@@ -75,8 +77,9 @@ function App() {
         <Route path="/tank-unload" element={<TankUnload />} />
         <Route path="/consumables" element={<Consumables />} />
         
-        {/* New Approval Process Route */}
+        {/* New Approval Routes */}
         <Route path="/mobile-approvals" element={<ApproveMobileOperations />} />
+        <Route path="/approval-requests" element={<ApprovalRequests />} />
         
         {/* Settings Routes */}
         <Route path="/settings" element={<FuelPumpSettings />} />

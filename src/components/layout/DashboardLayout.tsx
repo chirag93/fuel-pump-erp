@@ -30,7 +30,8 @@ import {
   Download,
   List,
   Folder,
-  CreditCard
+  CreditCard,
+  CheckSquare
 } from 'lucide-react';
 import {
   Collapsible,
@@ -121,6 +122,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: <Fuel size={20} />, label: 'Record Indent', to: '/record-indent' },
     { icon: <ClipboardList size={20} />, label: 'Shift Management', to: '/shift-management' },
     { icon: <Package size={20} />, label: 'Consumables', to: '/consumables' },
+    { icon: <CheckSquare size={20} />, label: 'Approval Requests', to: '/approval-requests' },
     { icon: <Settings size={20} />, label: 'Settings', to: '/settings' },
   ];
 
@@ -130,6 +132,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: <CalendarClock size={20} />, label: 'Shift Management', to: '/shift-management' },
     { icon: <Users size={20} />, label: 'Customers', to: '/customers' },
     { icon: <Droplets size={20} />, label: 'Daily Readings', to: '/daily-readings' },
+    { icon: <CheckSquare size={20} />, label: 'Approvals', to: '/approval-requests' },
   ];
 
   // Use mobile nav items if on mobile, otherwise use desktop nav items
