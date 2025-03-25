@@ -1,5 +1,5 @@
 
-import { Dispatch, SetStateAction } from 'react';
+import { Dispatch, SetStateAction, useState } from 'react';
 import { Shift, Staff } from '@/types/shift';
 import { 
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger
@@ -10,15 +10,15 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
 import { ConsumableSelection } from './ConsumableSelection';
-import { useState } from 'react';
 
-interface StartShiftFormProps {
+export interface StartShiftFormProps {
   formOpen: boolean;
   setFormOpen: Dispatch<SetStateAction<boolean>>;
   newShift: Partial<Shift>;
   setNewShift: Dispatch<SetStateAction<Partial<Shift>>>;
   handleAddShift: (selectedConsumables?: SelectedConsumable[]) => Promise<boolean>;
   staffList: Staff[];
+  isMobile?: boolean; // Added isMobile as an optional prop
 }
 
 export interface SelectedConsumable {
@@ -36,7 +36,8 @@ export function StartShiftForm({
   newShift, 
   setNewShift, 
   handleAddShift,
-  staffList 
+  staffList,
+  isMobile = false // Default value for backwards compatibility
 }: StartShiftFormProps) {
   const [selectedConsumables, setSelectedConsumables] = useState<SelectedConsumable[]>([]);
   
@@ -59,7 +60,7 @@ export function StartShiftForm({
           Start New Shift
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className={isMobile ? "w-full max-w-full sm:max-w-lg mx-auto" : undefined}>
         <DialogHeader>
           <DialogTitle>Start New Shift</DialogTitle>
           <DialogDescription>

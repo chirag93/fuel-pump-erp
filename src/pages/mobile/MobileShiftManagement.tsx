@@ -1,12 +1,22 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StartShiftForm } from '@/components/shift/StartShiftForm';
+import { useShiftManagement } from '@/hooks/useShiftManagement';
 
 const MobileShiftManagement = () => {
+  const {
+    staffList,
+    newShift,
+    setNewShift,
+    handleAddShift
+  } = useShiftManagement();
+  
+  const [formOpen, setFormOpen] = useState(false);
+  
   return (
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
       <div className="flex items-center mb-4">
@@ -29,7 +39,15 @@ const MobileShiftManagement = () => {
             Record shift details including staff and opening cash amount.
           </p>
           
-          <StartShiftForm isMobile={true} />
+          <StartShiftForm
+            formOpen={formOpen}
+            setFormOpen={setFormOpen}
+            newShift={newShift}
+            setNewShift={setNewShift}
+            handleAddShift={handleAddShift}
+            staffList={staffList}
+            isMobile={true}
+          />
         </CardContent>
       </Card>
     </div>

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import FuelTransactionForm from '@/components/indent/FuelTransactionForm';
+import { FuelTransactionForm } from '@/components/indent/FuelTransactionForm';
 
 const MobileRecordIndent = () => {
   return (
@@ -25,7 +25,23 @@ const MobileRecordIndent = () => {
             <h2 className="text-lg font-medium">New Transaction</h2>
           </div>
           
-          <FuelTransactionForm isMobile={true} />
+          <FuelTransactionForm 
+            fuelType="Petrol"
+            setFuelType={() => {}}
+            amount={0}
+            setAmount={() => {}}
+            quantity={0}
+            setQuantity={() => {}}
+            discountAmount={0}
+            setDiscountAmount={() => {}}
+            date={new Date()}
+            setDate={() => {}}
+            isSubmitting={false}
+            onSubmit={(e) => e.preventDefault()}
+            staff={[]}
+            selectedStaff=""
+            setSelectedStaff={() => {}}
+          />
         </CardContent>
       </Card>
     </div>
