@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -248,9 +247,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </aside>
       
       <main className="flex-1 md:ml-64">
-        <div className="container py-6">
-          {children}
-        </div>
+        {children}
       </main>
     </div>
   );

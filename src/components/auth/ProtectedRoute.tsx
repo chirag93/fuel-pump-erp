@@ -27,30 +27,32 @@ const ProtectedRoute = () => {
 
   return (
     <DashboardLayout>
-      {isSuperAdmin && (
-        <div className="mb-6 p-3 bg-muted rounded-md flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <span className="font-medium">Super Admin Access Available</span>
+      <div className="container py-6">
+        {isSuperAdmin && (
+          <div className="mb-6 p-3 bg-muted rounded-md flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              <span className="font-medium">Super Admin Access Available</span>
+            </div>
+            <Link to="/super-admin/dashboard">
+              <Button variant="outline" size="sm">Go to Super Admin</Button>
+            </Link>
           </div>
-          <Link to="/super-admin/dashboard">
-            <Button variant="outline" size="sm">Go to Super Admin</Button>
-          </Link>
-        </div>
-      )}
-      
-      {fuelPumpName && (
-        <div className="mb-6 p-3 bg-muted rounded-md flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Fuel className="h-5 w-5 text-primary" />
-            <span className="font-medium">
-              You are logged into: <span className="text-primary">{fuelPumpName}</span> ERP System
-            </span>
+        )}
+        
+        {fuelPumpName && (
+          <div className="mb-6 p-3 bg-muted rounded-md flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Fuel className="h-5 w-5 text-primary" />
+              <span className="font-medium">
+                You are logged into: <span className="text-primary">{fuelPumpName}</span> ERP System
+              </span>
+            </div>
           </div>
-        </div>
-      )}
-      
-      <Outlet />
+        )}
+        
+        <Outlet />
+      </div>
     </DashboardLayout>
   );
 };
