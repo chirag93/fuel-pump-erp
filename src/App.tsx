@@ -1,4 +1,3 @@
-
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
@@ -38,6 +37,7 @@ import MobileHome from '@/pages/mobile/MobileHome';
 import MobileCustomers from '@/pages/mobile/MobileCustomers';
 import MobileShiftManagement from '@/pages/mobile/MobileShiftManagement';
 import MobileRecordIndent from '@/pages/mobile/MobileRecordIndent';
+import MobileDailyReadings from '@/pages/mobile/MobileDailyReadings';
 
 // Other pages
 import NotFound from '@/pages/NotFound';
@@ -77,7 +77,7 @@ function App() {
         <Route path="/tank-unload" element={<TankUnload />} />
         <Route path="/consumables" element={<Consumables />} />
         
-        {/* New Approval Routes */}
+        {/* Approval Routes - Desktop only */}
         <Route path="/mobile-approvals" element={<ApproveMobileOperations />} />
         <Route path="/approval-requests" element={<ApprovalRequests />} />
         
@@ -102,11 +102,11 @@ function App() {
         <Route path="/super-admin/provision" element={<ProvisionPump />} />
       </Route>
       
-      {/* Mobile Routes */}
+      {/* Mobile Routes - Not protected to allow direct access */}
       <Route path="/mobile" element={<MobileHome />} />
       <Route path="/mobile/customers" element={<MobileCustomers />} />
       <Route path="/mobile/shift-management" element={<MobileShiftManagement />} />
-      <Route path="/mobile/daily-readings" element={<DailyReadings />} />
+      <Route path="/mobile/daily-readings" element={<MobileDailyReadings />} />
       <Route path="/mobile/record-indent" element={<MobileRecordIndent />} />
       
       {/* Fallback Route */}

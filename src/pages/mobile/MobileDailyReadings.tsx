@@ -1,12 +1,12 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, CalendarClock } from 'lucide-react';
+import { ChevronLeft, Droplets } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { StartShiftForm } from '@/components/shift/StartShiftForm';
+import { TankReadingsForm } from '@/components/daily-readings/TankReadingsForm';
 
-const MobileShiftManagement = () => {
+const MobileDailyReadings = () => {
   return (
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
       <div className="flex items-center mb-4">
@@ -15,25 +15,25 @@ const MobileShiftManagement = () => {
             <ChevronLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <h1 className="text-xl font-semibold">Shift Management</h1>
+        <h1 className="text-xl font-semibold">Daily Meter Readings</h1>
       </div>
       
       <Card className="mb-4">
         <CardContent className="pt-4">
           <div className="flex items-center mb-4">
-            <CalendarClock className="h-5 w-5 text-primary mr-2" />
-            <h2 className="text-lg font-medium">Start New Shift</h2>
+            <Droplets className="h-5 w-5 text-primary mr-2" />
+            <h2 className="text-lg font-medium">Record Today's Readings</h2>
           </div>
           
           <p className="text-sm text-muted-foreground mb-4">
-            Record shift details including staff and opening cash amount.
+            Enter the current meter readings for each fuel pump to track daily sales.
           </p>
           
-          <StartShiftForm isMobile={true} />
+          <TankReadingsForm />
         </CardContent>
       </Card>
     </div>
   );
 };
 
-export default MobileShiftManagement;
+export default MobileDailyReadings;
