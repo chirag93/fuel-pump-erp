@@ -87,7 +87,8 @@ const MobileRecordIndent = () => {
       // Generate a unique ID for the indent
       const indentId = `IND-${Date.now()}`;
       
-      // Create the indent record
+      // Create the indent record - Note: we need dummy customer_id and vehicle_id for the indents table
+      // For mobile indents, we'll use fixed placeholder values that can be updated later
       const { error: indentError } = await supabase
         .from('indents')
         .insert({
@@ -99,7 +100,10 @@ const MobileRecordIndent = () => {
           discount_amount: discountAmount,
           date: date.toISOString().split('T')[0],
           source: 'mobile',
-          approval_status: 'pending', // Set to pending for approval
+          approval_status: 'pending',
+          // Add the required fields that were missing
+          customer_id: '00000000-0000-0000-0000-000000000000', // Placeholder customer ID
+          vehicle_id: '00000000-0000-0000-0000-000000000000'   // Placeholder vehicle ID
         });
         
       if (indentError) throw indentError;
