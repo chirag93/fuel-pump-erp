@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/ui/custom/FadeIn";
 import { Droplets } from "lucide-react";
@@ -17,7 +16,7 @@ export function Hero() {
               <div className="flex items-center gap-3">
                 <Droplets className="h-12 w-12 text-primary" />
                 <span className="text-4xl sm:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
-                  Fuel Master
+                  Fuel Pro 360
                 </span>
               </div>
             </div>

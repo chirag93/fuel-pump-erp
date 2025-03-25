@@ -133,7 +133,7 @@ const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
         <div className="flex h-16 items-center border-b px-6">
           <div className="flex items-center gap-2">
             <Shield className="h-6 w-6 text-primary" />
-            <h2 className="text-xl font-bold">Super Admin</h2>
+            <h2 className="text-xl font-bold">Fuel Pro 360</h2>
           </div>
         </div>
         

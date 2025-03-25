@@ -41,7 +41,7 @@ export function Navbar({ className }: NavbarProps) {
           <a href="/" className="flex items-center gap-2">
             <Droplets className="h-6 w-6 text-primary" />
             <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
-              Fuel Master
+              Fuel Pro 360
             </span>
           </a>
         </div>

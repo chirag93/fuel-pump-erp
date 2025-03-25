@@ -1,4 +1,3 @@
-
 import { CardFeature } from "@/components/ui/custom/CardFeature";
 import { FadeIn } from "@/components/ui/custom/FadeIn";
 import { Hero } from "@/components/layout/Hero";
@@ -24,7 +23,7 @@ const Index = () => {
                   Designed for Business Efficiency
                 </h2>
                 <p className="mt-4 text-xl text-muted-foreground max-w-3xl mx-auto">
-                  Streamline operations, enhance collaboration, and make better decisions with our comprehensive ERP solution.
+                  Streamline operations, enhance collaboration, and make better decisions with our comprehensive solution.
                 </p>
               </div>
             </FadeIn>
@@ -49,10 +48,10 @@ const Index = () => {
             <FadeIn>
               <div className="text-center mb-16">
                 <h2 className="text-3xl font-bold sm:text-4xl">
-                  Comprehensive ERP Modules
+                  Comprehensive Management Modules
                 </h2>
                 <p className="mt-4 text-xl text-muted-foreground max-w-3xl mx-auto">
-                  Everything you need to manage your business in one integrated system.
+                  Everything you need to manage your fuel business in one integrated system.
                 </p>
               </div>
             </FadeIn>
@@ -89,7 +88,7 @@ const Index = () => {
               </FadeIn>
               <FadeIn delay="100ms">
                 <p className="text-xl text-muted-foreground mb-10">
-                  Join thousands of businesses that use FlowERP to streamline their operations.
+                  Join thousands of businesses that use Fuel Pro 360 to streamline their operations.
                 </p>
               </FadeIn>
               <FadeIn delay="200ms">
@@ -113,10 +112,10 @@ const Index = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="col-span-2 md:col-span-1">
               <div className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80 mb-4">
-                FlowERP
+                Fuel Pro 360
               </div>
               <p className="text-muted-foreground text-sm max-w-xs">
-                A beautifully designed ERP system for modern businesses.
+                A beautifully designed fuel pump management system for modern businesses.
               </p>
             </div>
             
@@ -162,7 +161,7 @@ const Index = () => {
           
           <div className="mt-12 pt-8 border-t border-border/50 flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} FlowERP. All rights reserved.
+              &copy; {new Date().getFullYear()} Fuel Pro 360. All rights reserved.
             </p>
             <div className="flex gap-6 mt-4 md:mt-0">
               {['Terms', 'Privacy', 'Cookies'].map(item => (

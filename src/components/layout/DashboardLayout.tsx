@@ -162,7 +162,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <div className="flex h-16 items-center border-b px-6">
           <div className="flex items-center gap-2">
             <Droplets className="h-6 w-6 text-primary" />
-            <h2 className="text-xl font-bold">Fuel Master</h2>
+            <h2 className="text-xl font-bold">Fuel Pro 360</h2>
           </div>
         </div>
         

@@ -318,7 +318,7 @@ const Home = () => {
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {fuelPumpName ? `${fuelPumpName} Dashboard` : 'Home'}
+            {fuelPumpName ? `${fuelPumpName} Dashboard` : 'Fuel Pro 360 Dashboard'}
           </h2>
           <p className="text-muted-foreground">Quick access to frequent operations</p>
         </div>
