@@ -220,8 +220,8 @@ const Index = () => {
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <img 
-                    src="https://images.unsplash.com/photo-1624913503273-5f9c4e980dba?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
-                    alt="Fuel Station Management" 
+                    src="/lovable-uploads/e02dcd6d-68b3-415b-9a56-b25bb9698112.png" 
+                    alt="Fuel Station Management Illustration" 
                     className="w-full h-auto"
                   />
                   <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/10 to-transparent"></div>
@@ -264,7 +264,7 @@ const Index = () => {
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <img 
-                    src="https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                    src="https://images.unsplash.com/photo-1560472355-536de3962603?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
                     alt="Customer Management Dashboard" 
                     className="w-full h-auto"
                   />
@@ -308,7 +308,7 @@ const Index = () => {
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <img 
-                    src="https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1974&q=80" 
+                    src="https://images.unsplash.com/photo-1605170439002-90845e8c0137?ixlib=rb-4.0.3&auto=format&fit=crop&w=1974&q=80" 
                     alt="Mobile Operations Interface" 
                     className="w-full h-auto"
                   />
