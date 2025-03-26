@@ -220,7 +220,7 @@ const Index = () => {
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <img 
-                    src="/lovable-uploads/e02dcd6d-68b3-415b-9a56-b25bb9698112.png" 
+                    src="https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
                     alt="Fuel Station Management Illustration" 
                     className="w-full h-auto"
                   />
