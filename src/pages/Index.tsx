@@ -114,16 +114,39 @@ const Index = () => {
         </div>
       </header>
       
-      {/* Clients Section */}
+      {/* Features Highlights Section - Replacing "Trusted by" section */}
       <section className="py-10 bg-gray-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-gray-600 font-medium mb-8">Trusted by fuel stations across the country</p>
-          <div className="flex flex-wrap justify-center gap-x-12 gap-y-8">
-            {["Indian Oil", "Hindustan Petroleum", "Bharat Petroleum", "Shell", "Reliance Petroleum"].map((client, idx) => (
-              <div key={idx} className="flex items-center justify-center">
-                <span className="text-lg font-semibold text-gray-700">{client}</span>
+          <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">Why Fuel Pro 360 Stands Out</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="flex flex-col items-center text-center p-4">
+              <div className="bg-blue-100 p-3 rounded-full mb-4">
+                <Clock className="h-6 w-6 text-blue-600" />
               </div>
-            ))}
+              <h3 className="font-medium text-gray-900">Real-time Analytics</h3>
+              <p className="text-gray-600 text-sm mt-2">Monitor your station performance in real-time</p>
+            </div>
+            <div className="flex flex-col items-center text-center p-4">
+              <div className="bg-blue-100 p-3 rounded-full mb-4">
+                <ShieldCheck className="h-6 w-6 text-blue-600" />
+              </div>
+              <h3 className="font-medium text-gray-900">Secure Platform</h3>
+              <p className="text-gray-600 text-sm mt-2">Enterprise-grade security for your business data</p>
+            </div>
+            <div className="flex flex-col items-center text-center p-4">
+              <div className="bg-blue-100 p-3 rounded-full mb-4">
+                <Users className="h-6 w-6 text-blue-600" />
+              </div>
+              <h3 className="font-medium text-gray-900">Customer Management</h3>
+              <p className="text-gray-600 text-sm mt-2">Build stronger relationships with your customers</p>
+            </div>
+            <div className="flex flex-col items-center text-center p-4">
+              <div className="bg-blue-100 p-3 rounded-full mb-4">
+                <Smartphone className="h-6 w-6 text-blue-600" />
+              </div>
+              <h3 className="font-medium text-gray-900">Mobile Operations</h3>
+              <p className="text-gray-600 text-sm mt-2">Manage your station from anywhere, anytime</p>
+            </div>
           </div>
         </div>
       </section>
@@ -190,14 +213,14 @@ const Index = () => {
                   </ul>
                   
                   <Link to="/login">
-                    <Button className="mt-2">
+                    <Button className="mt-2 bg-blue-600 hover:bg-blue-700 text-white">
                       Explore Station Management <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </Link>
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <img 
-                    src="https://images.unsplash.com/photo-1611275484845-52a71f1c4c6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                    src="https://images.unsplash.com/photo-1624913503273-5f9c4e980dba?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
                     alt="Fuel Station Management" 
                     className="w-full h-auto"
                   />
@@ -234,14 +257,14 @@ const Index = () => {
                   </ul>
                   
                   <Link to="/login">
-                    <Button className="mt-2">
+                    <Button className="mt-2 bg-blue-600 hover:bg-blue-700 text-white">
                       Explore Customer Management <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </Link>
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <img 
-                    src="https://images.unsplash.com/photo-1560472355-536de3962603?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                    src="https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
                     alt="Customer Management Dashboard" 
                     className="w-full h-auto"
                   />
@@ -278,14 +301,14 @@ const Index = () => {
                   </ul>
                   
                   <Link to="/login">
-                    <Button className="mt-2">
+                    <Button className="mt-2 bg-blue-600 hover:bg-blue-700 text-white">
                       Explore Mobile Operations <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </Link>
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <img 
-                    src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                    src="https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1974&q=80" 
                     alt="Mobile Operations Interface" 
                     className="w-full h-auto"
                   />
