@@ -112,6 +112,18 @@ const MobileRecordIndent = () => {
       // Generate a unique ID for the indent
       const indentId = `IND-${Date.now()}`;
       
+      console.log("Creating indent with data:", {
+        id: indentId,
+        indent_number: indentNumber,
+        fuel_type: fuelType,
+        amount,
+        quantity,
+        discount_amount: discountAmount,
+        date: date.toISOString().split('T')[0],
+        source: 'mobile',
+        approval_status: 'pending'
+      });
+      
       // Create the indent record
       const { error: indentError } = await supabase
         .from('indents')
@@ -134,6 +146,20 @@ const MobileRecordIndent = () => {
         console.error('Error creating indent:', indentError);
         throw indentError;
       }
+      
+      console.log("Creating transaction with data:", {
+        id: `TR-${Date.now()}`,
+        staff_id: selectedStaff,
+        date: date.toISOString().split('T')[0],
+        fuel_type: fuelType,
+        amount,
+        quantity,
+        payment_method: 'Cash',
+        discount_amount: discountAmount,
+        source: 'mobile',
+        indent_id: indentId,
+        approval_status: 'pending'
+      });
       
       // Create the transaction record linked to the indent
       const { error: transactionError } = await supabase
@@ -204,7 +230,7 @@ const MobileRecordIndent = () => {
             <h2 className="text-lg font-medium">New Transaction</h2>
           </div>
           
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="mb-4">
               <Label htmlFor="indentNumber">Indent Number</Label>
               <Input
@@ -219,23 +245,83 @@ const MobileRecordIndent = () => {
               )}
             </div>
             
-            <FuelTransactionForm 
-              fuelType={fuelType}
-              setFuelType={setFuelType}
-              amount={amount}
-              setAmount={setAmount}
-              quantity={quantity}
-              setQuantity={setQuantity}
-              discountAmount={discountAmount}
-              setDiscountAmount={setDiscountAmount}
-              date={date}
-              setDate={setDate}
-              isSubmitting={isSubmitting}
-              onSubmit={() => {}} // This is intentionally empty as we handle submit in the parent form
-              staff={staff}
-              selectedStaff={selectedStaff}
-              setSelectedStaff={setSelectedStaff}
-            />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="z-10">
+                  <Label htmlFor="staffMember">Staff Member</Label>
+                  <select 
+                    id="staffMember"
+                    value={selectedStaff}
+                    onChange={(e) => setSelectedStaff(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  >
+                    {staff.length === 0 ? (
+                      <option value="" disabled>No staff members found</option>
+                    ) : (
+                      staff.map((member) => (
+                        <option key={member.id} value={member.id}>{member.name}</option>
+                      ))
+                    )}
+                  </select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="fuelType">Fuel Type</Label>
+                  <select
+                    id="fuelType"
+                    value={fuelType}
+                    onChange={(e) => setFuelType(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  >
+                    <option value="Petrol">Petrol</option>
+                    <option value="Diesel">Diesel</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="date">Date</Label>
+                  <Input
+                    type="date"
+                    id="date"
+                    value={date.toISOString().split('T')[0]}
+                    onChange={(e) => setDate(new Date(e.target.value))}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="quantity">Quantity (L)</Label>
+                  <Input
+                    type="number"
+                    id="quantity"
+                    value={quantity === 0 ? '' : quantity}
+                    onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
+                    placeholder="Enter quantity"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="amount">Amount (₹)</Label>
+                  <Input
+                    type="number"
+                    id="amount"
+                    value={amount === 0 ? '' : amount}
+                    onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                    placeholder="Enter amount"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="discountAmount">Discount Amount (₹)</Label>
+                  <Input
+                    type="number"
+                    id="discountAmount"
+                    value={discountAmount === 0 ? '' : discountAmount}
+                    onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
+                    placeholder="Enter discount amount"
+                  />
+                </div>
+              </div>
+            </div>
             
             <Button 
               type="submit" 

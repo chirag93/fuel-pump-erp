@@ -35,10 +35,11 @@ export const useApprovalRequests = (userId: string | undefined) => {
         if (transactionError) throw transactionError;
         
         if (transactionData) {
+          console.log('Fetched pending transactions:', transactionData);
           const formattedTransactions = transactionData.map((item: any) => ({
             ...item,
-            customer_name: item.customers?.name,
-            vehicle_number: item.vehicles?.number,
+            customer_name: item.customers?.name || 'Mobile User',
+            vehicle_number: item.vehicles?.number || 'N/A',
             staff_name: item.staff?.name
           }));
           
@@ -108,6 +109,8 @@ export const useApprovalRequests = (userId: string | undefined) => {
     try {
       const status = currentAction === 'approve' ? 'approved' : 'rejected';
       const tableName = isIndentItem(selectedItem) ? 'indents' : 'transactions';
+      
+      console.log(`Processing ${currentAction} for ${tableName} with ID ${selectedItem.id}`);
       
       // Update the item's approval status
       const { error } = await supabase
