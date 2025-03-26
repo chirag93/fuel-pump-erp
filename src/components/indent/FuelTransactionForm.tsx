@@ -96,7 +96,7 @@ export const FuelTransactionForm = ({
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="z-10">
           <Label htmlFor="date">Date</Label>
@@ -187,16 +187,6 @@ export const FuelTransactionForm = ({
           />
         </div>
       </div>
-      <Button disabled={isSubmitting} type="submit">
-        {isSubmitting ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Recording...
-          </>
-        ) : (
-          'Record Indent'
-        )}
-      </Button>
-    </form>
+    </div>
   );
 };

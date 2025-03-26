@@ -63,6 +63,25 @@ const MobileRecordIndent = () => {
       setIndentNumberError('');
     }
     
+    // Additional validation to ensure amount and quantity are valid numbers
+    if (amount <= 0) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid amount",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (quantity <= 0) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid quantity",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -138,6 +157,10 @@ const MobileRecordIndent = () => {
       setDiscountAmount(0);
       setSelectedStaff('');
       setIndentNumber('');
+      
+      // Clear any existing errors
+      setIndentNumberError('');
+      
     } catch (error) {
       console.error('Error recording transaction:', error);
       toast({
@@ -168,37 +191,47 @@ const MobileRecordIndent = () => {
             <h2 className="text-lg font-medium">New Transaction</h2>
           </div>
           
-          <div className="mb-4">
-            <Label htmlFor="indentNumber">Indent Number</Label>
-            <Input
-              id="indentNumber"
-              value={indentNumber}
-              onChange={(e) => setIndentNumber(e.target.value)}
-              className={indentNumberError ? "border-red-500" : ""}
-              placeholder="Enter indent number"
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <Label htmlFor="indentNumber">Indent Number</Label>
+              <Input
+                id="indentNumber"
+                value={indentNumber}
+                onChange={(e) => setIndentNumber(e.target.value)}
+                className={indentNumberError ? "border-red-500" : ""}
+                placeholder="Enter indent number"
+              />
+              {indentNumberError && (
+                <p className="text-xs text-red-500 mt-1">{indentNumberError}</p>
+              )}
+            </div>
+            
+            <FuelTransactionForm 
+              fuelType={fuelType}
+              setFuelType={setFuelType}
+              amount={amount}
+              setAmount={setAmount}
+              quantity={quantity}
+              setQuantity={setQuantity}
+              discountAmount={discountAmount}
+              setDiscountAmount={setDiscountAmount}
+              date={date}
+              setDate={setDate}
+              isSubmitting={isSubmitting}
+              onSubmit={() => {}} // This is intentionally empty as we handle submit in the parent form
+              staff={staff}
+              selectedStaff={selectedStaff}
+              setSelectedStaff={setSelectedStaff}
             />
-            {indentNumberError && (
-              <p className="text-xs text-red-500 mt-1">{indentNumberError}</p>
-            )}
-          </div>
-          
-          <FuelTransactionForm 
-            fuelType={fuelType}
-            setFuelType={setFuelType}
-            amount={amount}
-            setAmount={setAmount}
-            quantity={quantity}
-            setQuantity={setQuantity}
-            discountAmount={discountAmount}
-            setDiscountAmount={setDiscountAmount}
-            date={date}
-            setDate={setDate}
-            isSubmitting={isSubmitting}
-            onSubmit={handleSubmit}
-            staff={staff}
-            selectedStaff={selectedStaff}
-            setSelectedStaff={setSelectedStaff}
-          />
+            
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="w-full mt-4"
+            >
+              {isSubmitting ? 'Recording...' : 'Record Indent'}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>
