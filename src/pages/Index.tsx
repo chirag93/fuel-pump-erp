@@ -1,130 +1,509 @@
-import { CardFeature } from "@/components/ui/custom/CardFeature";
-import { FadeIn } from "@/components/ui/custom/FadeIn";
-import { Hero } from "@/components/layout/Hero";
-import { Navbar } from "@/components/layout/Navbar";
+
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { 
+  Droplets,
+  ChevronRight,
+  ChevronDown,
+  Laptop,
+  ShieldCheck,
+  Users,
+  TrendingUp,
+  BarChart3,
+  Smartphone,
+  Zap,
+  FileText,
+  Clock,
+  Truck,
+  GaugeCircle
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ModuleIcons } from "@/assets/icons";
-import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState<string>("fuel-station");
+  
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      
-      <main className="flex-1">
-        <Hero />
-        
-        {/* Features Section */}
-        <section id="features" className="py-24 bg-background">
-          <div className="container px-4 sm:px-6 lg:px-8">
-            <FadeIn>
-              <div className="text-center mb-16">
-                <h2 className="text-3xl font-bold sm:text-4xl">
-                  Designed for Business Efficiency
-                </h2>
-                <p className="mt-4 text-xl text-muted-foreground max-w-3xl mx-auto">
-                  Streamline operations, enhance collaboration, and make better decisions with our comprehensive solution.
-                </p>
-              </div>
-            </FadeIn>
+    <div className="flex flex-col min-h-screen bg-white">
+      {/* Hero Section with Navbar */}
+      <header className="relative bg-gradient-to-b from-blue-900 to-blue-800 text-white overflow-hidden">
+        {/* Navigation */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-4">
+            <div className="flex items-center space-x-2">
+              <Droplets className="h-8 w-8 text-blue-400" />
+              <span className="text-2xl font-bold">Fuel Pro 360</span>
+            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {features.map((feature, index) => (
-                <FadeIn key={feature.title} delay={`${index * 100}ms`}>
-                  <CardFeature
-                    title={feature.title}
-                    description={feature.description}
-                    icon={<feature.icon className="h-6 w-6" />}
-                  />
-                </FadeIn>
-              ))}
+            <nav className="hidden md:flex items-center space-x-8">
+              <a href="#features" className="text-sm font-medium hover:text-blue-300 transition-colors">
+                Features
+              </a>
+              <a href="#modules" className="text-sm font-medium hover:text-blue-300 transition-colors">
+                Modules
+              </a>
+              <a href="#testimonials" className="text-sm font-medium hover:text-blue-300 transition-colors">
+                Testimonials
+              </a>
+              <Link to="/login" className="text-sm font-medium hover:text-blue-300 transition-colors">
+                Login
+              </Link>
+            </nav>
+            
+            <div className="flex md:hidden">
+              <button className="text-white focus:outline-none">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="hidden md:block">
+              <Link to="/login">
+                <Button className="bg-white text-blue-900 hover:bg-blue-50">
+                  Sign In
+                </Button>
+              </Link>
             </div>
           </div>
-        </section>
+        </div>
         
-        {/* Modules Section */}
-        <section id="modules" className="py-24 bg-secondary/50">
-          <div className="container px-4 sm:px-6 lg:px-8">
-            <FadeIn>
-              <div className="text-center mb-16">
-                <h2 className="text-3xl font-bold sm:text-4xl">
-                  Comprehensive Management Modules
-                </h2>
-                <p className="mt-4 text-xl text-muted-foreground max-w-3xl mx-auto">
-                  Everything you need to manage your fuel business in one integrated system.
-                </p>
-              </div>
-            </FadeIn>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {modules.map((module, index) => (
-                <FadeIn key={module.title} delay={`${index * 75}ms`}>
-                  <div className="group rounded-xl overflow-hidden border border-border/60 bg-card hover:shadow-medium transition-all">
-                    <div className="p-6">
-                      <div className="rounded-full w-12 h-12 bg-primary/10 text-primary flex items-center justify-center mb-4">
-                        <module.icon className="h-6 w-6" />
-                      </div>
-                      <h3 className="text-lg font-semibold mb-2">{module.title}</h3>
-                      <p className="text-muted-foreground text-sm mb-4">{module.description}</p>
-                      <Button variant="ghost" size="sm" className="group-hover:text-primary">
-                        Learn more <ChevronRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                      </Button>
-                    </div>
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
-          </div>
-        </section>
-        
-        {/* CTA Section */}
-        <section className="py-24 bg-gradient-to-b from-background to-secondary/10">
-          <div className="container px-4 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-4xl text-center">
-              <FadeIn>
-                <h2 className="text-3xl font-bold sm:text-4xl mb-6">
-                  Ready to Transform Your Business?
-                </h2>
-              </FadeIn>
-              <FadeIn delay="100ms">
-                <p className="text-xl text-muted-foreground mb-10">
-                  Join thousands of businesses that use Fuel Pro 360 to streamline their operations.
-                </p>
-              </FadeIn>
-              <FadeIn delay="200ms">
-                <div className="flex flex-col sm:flex-row justify-center gap-4">
-                  <Button size="lg" className="px-8 rounded-full">
+        {/* Hero Content */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 md:pt-32 md:pb-40">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
+                Transform Your Fuel Station Management
+              </h1>
+              <p className="text-xl max-w-lg text-blue-100">
+                A comprehensive system designed to streamline operations, enhance customer experiences, and improve efficiency at your fuel pump stations.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link to="/login">
+                  <Button size="lg" className="bg-white text-blue-900 hover:bg-blue-50 font-medium">
                     Get Started
                   </Button>
-                  <Button size="lg" variant="outline" className="px-8 rounded-full">
-                    Contact Sales
+                </Link>
+                <a href="#features">
+                  <Button size="lg" variant="outline" className="text-white border-white hover:bg-blue-800 font-medium">
+                    Learn More
                   </Button>
-                </div>
-              </FadeIn>
+                </a>
+              </div>
+            </div>
+            <div className="relative">
+              <div className="rounded-lg shadow-2xl overflow-hidden border border-blue-700/30">
+                <img 
+                  src="https://images.unsplash.com/photo-1611288875785-9ef0f98d45c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                  alt="Fuel Pro 360 Dashboard" 
+                  className="w-full h-auto rounded-lg"
+                />
+                <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/40 to-transparent rounded-lg"></div>
+              </div>
+              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-blue-400 rounded-full opacity-20 blur-2xl"></div>
+              <div className="absolute -top-6 -left-6 w-32 h-32 bg-blue-300 rounded-full opacity-20 blur-2xl"></div>
             </div>
           </div>
-        </section>
-      </main>
+        </div>
+        
+        {/* Wave Divider */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" className="w-full h-auto fill-white">
+            <path d="M0,96L80,85.3C160,75,320,53,480,64C640,75,800,117,960,117.3C1120,117,1280,75,1360,53.3L1440,32L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+          </svg>
+        </div>
+      </header>
+      
+      {/* Clients Section */}
+      <section className="py-10 bg-gray-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="text-center text-gray-600 font-medium mb-8">Trusted by fuel stations across the country</p>
+          <div className="flex flex-wrap justify-center gap-x-12 gap-y-8">
+            {["Indian Oil", "Hindustan Petroleum", "Bharat Petroleum", "Shell", "Reliance Petroleum"].map((client, idx) => (
+              <div key={idx} className="flex items-center justify-center">
+                <span className="text-lg font-semibold text-gray-700">{client}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      
+      {/* Tabs Section */}
+      <section id="features" className="py-20 bg-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl font-bold mb-4 text-gray-900">Comprehensive Solutions for Every Need</h2>
+            <p className="text-xl text-gray-600">
+              Designed specifically for fuel station operations, Fuel Pro 360 brings everything you need in one integrated platform.
+            </p>
+          </div>
+          
+          {/* Tabs */}
+          <div className="flex flex-wrap justify-center gap-4 mb-12">
+            {[
+              {id: "fuel-station", label: "Fuel Station Management"},
+              {id: "customer", label: "Customer Management"},
+              {id: "mobile", label: "Mobile Operations"}
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "px-6 py-3 rounded-full text-sm font-medium transition-all",
+                  activeTab === tab.id 
+                    ? "bg-blue-600 text-white shadow-lg" 
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          
+          {/* Tab Content */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            {/* Tab 1: Fuel Station Management */}
+            {activeTab === "fuel-station" && (
+              <>
+                <div className="space-y-6">
+                  <h3 className="text-2xl font-bold text-gray-900">Complete Fuel Station Operations</h3>
+                  <p className="text-gray-600">
+                    Take control of your fuel station with comprehensive management tools designed for daily operations, stock management, and sales tracking.
+                  </p>
+                  
+                  <ul className="space-y-4">
+                    {[
+                      {icon: GaugeCircle, title: "Daily Readings Management", desc: "Record and track fuel levels, sales, and reconciliation data on a daily basis."},
+                      {icon: Clock, title: "Shift Management", desc: "Manage staff shifts, track performance, and handle shift handovers seamlessly."},
+                      {icon: Truck, title: "Tank Unloading", desc: "Monitor fuel deliveries, record unloading, and maintain accurate stock levels."}
+                    ].map((feature, idx) => (
+                      <li key={idx} className="flex gap-4">
+                        <div className="flex-shrink-0 h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                          <feature.icon className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-900">{feature.title}</h4>
+                          <p className="text-gray-600">{feature.desc}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  
+                  <Link to="/login">
+                    <Button className="mt-2">
+                      Explore Station Management <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+                <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
+                  <img 
+                    src="https://images.unsplash.com/photo-1531297484001-80022131f5a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                    alt="Fuel Station Management Dashboard" 
+                    className="w-full h-auto"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/10 to-transparent"></div>
+                </div>
+              </>
+            )}
+            
+            {/* Tab 2: Customer Management */}
+            {activeTab === "customer" && (
+              <>
+                <div className="space-y-6">
+                  <h3 className="text-2xl font-bold text-gray-900">Customer & Transactions Management</h3>
+                  <p className="text-gray-600">
+                    Build better relationships with your customers while efficiently managing sales and transactions with our integrated customer management system.
+                  </p>
+                  
+                  <ul className="space-y-4">
+                    {[
+                      {icon: Users, title: "Customer Database", desc: "Maintain detailed customer records with vehicles, preferences, and transaction history."},
+                      {icon: FileText, title: "Booklet & Indent Management", desc: "Manage indent booklets for corporate customers with proper tracking and accounting."},
+                      {icon: BarChart3, title: "Transaction Records", desc: "Record, search, and analyze all transactions with comprehensive filtering options."}
+                    ].map((feature, idx) => (
+                      <li key={idx} className="flex gap-4">
+                        <div className="flex-shrink-0 h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                          <feature.icon className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-900">{feature.title}</h4>
+                          <p className="text-gray-600">{feature.desc}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  
+                  <Link to="/login">
+                    <Button className="mt-2">
+                      Explore Customer Management <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+                <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
+                  <img 
+                    src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                    alt="Customer Management Dashboard" 
+                    className="w-full h-auto"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/10 to-transparent"></div>
+                </div>
+              </>
+            )}
+            
+            {/* Tab 3: Mobile Operations */}
+            {activeTab === "mobile" && (
+              <>
+                <div className="space-y-6">
+                  <h3 className="text-2xl font-bold text-gray-900">Mobile Operations</h3>
+                  <p className="text-gray-600">
+                    Take your fuel station management on the go with our mobile-optimized interfaces for key operations.
+                  </p>
+                  
+                  <ul className="space-y-4">
+                    {[
+                      {icon: Smartphone, title: "Mobile-Friendly Interface", desc: "Access critical functions from any device with responsive design."},
+                      {icon: Zap, title: "Field Operations", desc: "Record indents, daily readings, and manage shifts directly from mobile devices."},
+                      {icon: ShieldCheck, title: "Approval Workflows", desc: "Submit operations for approval with built-in verification system."}
+                    ].map((feature, idx) => (
+                      <li key={idx} className="flex gap-4">
+                        <div className="flex-shrink-0 h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                          <feature.icon className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-900">{feature.title}</h4>
+                          <p className="text-gray-600">{feature.desc}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  
+                  <Link to="/login">
+                    <Button className="mt-2">
+                      Explore Mobile Operations <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+                <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
+                  <img 
+                    src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                    alt="Mobile Operations Interface" 
+                    className="w-full h-auto"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/10 to-transparent"></div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+      
+      {/* Key Benefits Section */}
+      <section className="py-20 bg-blue-900 text-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl font-bold mb-4">Key Benefits of Fuel Pro 360</h2>
+            <p className="text-xl text-blue-100">
+              Beyond features, our platform delivers real business value to fuel station operations.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                title: "Operational Efficiency",
+                desc: "Streamline daily processes, reduce manual errors, and save valuable time with automated workflows.",
+                icon: Zap
+              },
+              {
+                title: "Financial Control",
+                desc: "Gain complete visibility into sales, expenditures, and reconciliation to optimize financial performance.",
+                icon: TrendingUp
+              },
+              {
+                title: "Customer Satisfaction",
+                desc: "Provide faster service, accurate billing, and better overall experience for your customers.",
+                icon: Users
+              },
+              {
+                title: "Data Security",
+                desc: "Keep your business data secure with enterprise-grade security protocols and access controls.",
+                icon: ShieldCheck
+              },
+              {
+                title: "Insightful Analytics",
+                desc: "Make data-driven decisions with comprehensive reporting and analytical capabilities.",
+                icon: BarChart3
+              },
+              {
+                title: "Seamless Integrations",
+                desc: "Connect with your existing tools and systems for a unified operational environment.",
+                icon: Laptop
+              }
+            ].map((benefit, idx) => (
+              <div key={idx} className="bg-blue-800 rounded-xl p-8 shadow-lg border border-blue-700/40 hover:shadow-xl transition-shadow">
+                <div className="w-12 h-12 bg-blue-700 rounded-xl flex items-center justify-center mb-6">
+                  <benefit.icon className="h-6 w-6 text-blue-200" />
+                </div>
+                <h3 className="text-xl font-bold mb-3">{benefit.title}</h3>
+                <p className="text-blue-100">{benefit.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      
+      {/* Testimonials Section */}
+      <section id="testimonials" className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl font-bold mb-4 text-gray-900">What Our Customers Say</h2>
+            <p className="text-xl text-gray-600">
+              Hear from fuel station operators who have transformed their business with Fuel Pro 360.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                quote: "Since implementing Fuel Pro 360, we've reduced our administrative overhead by 30% while improving our customer service quality.",
+                name: "Rajesh Kumar",
+                title: "Station Manager, Pune"
+              },
+              {
+                quote: "The mobile operations feature has been a game-changer for our business. Our staff can now handle transactions efficiently even during peak hours.",
+                name: "Priya Sharma",
+                title: "Owner, Delhi NCR"
+              },
+              {
+                quote: "Customer management and indent booklet tracking has never been easier. We've eliminated billing errors and improved our cash flow significantly.",
+                name: "Amitabh Singh",
+                title: "Director, Mumbai"
+              }
+            ].map((testimonial, idx) => (
+              <div key={idx} className="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+                <div className="mb-6">
+                  {[...Array(5)].map((_, i) => (
+                    <span key={i} className="text-yellow-400">★</span>
+                  ))}
+                </div>
+                <p className="text-gray-700 mb-6">"{testimonial.quote}"</p>
+                <div className="flex items-center">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xl">
+                    {testimonial.name.charAt(0)}
+                  </div>
+                  <div className="ml-4">
+                    <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
+                    <p className="text-gray-600">{testimonial.title}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      
+      {/* FAQ Section */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl font-bold mb-4 text-gray-900">Frequently Asked Questions</h2>
+            <p className="text-xl text-gray-600">
+              Get answers to common questions about Fuel Pro 360.
+            </p>
+          </div>
+          
+          <div className="max-w-3xl mx-auto divide-y divide-gray-200">
+            {[
+              {
+                question: "How easy is it to get started with Fuel Pro 360?",
+                answer: "Getting started is simple. After signing up, our team will help you set up your account, configure your fuel types and pumps, and provide training to your staff. Most businesses are fully operational within days."
+              },
+              {
+                question: "Can I access the system from multiple devices?",
+                answer: "Yes, Fuel Pro 360 is cloud-based and can be accessed from any device with an internet connection. We also offer dedicated mobile interfaces for field operations."
+              },
+              {
+                question: "How does the indent booklet system work?",
+                answer: "Our indent booklet system allows you to issue booklets to corporate customers, track usage, and automatically generate invoices. Each indent is validated, recorded, and linked to the customer account for seamless tracking."
+              },
+              {
+                question: "Is my data secure with Fuel Pro 360?",
+                answer: "Absolutely. We implement enterprise-grade security protocols, regular backups, and strict access controls to ensure your business data remains secure and confidential at all times."
+              },
+              {
+                question: "Can I track fuel inventory and stock levels?",
+                answer: "Yes, Fuel Pro 360 provides comprehensive inventory management features including daily tank readings, stock level monitoring, and alerts for low stock situations."
+              }
+            ].map((faq, idx) => (
+              <div key={idx} className="py-6">
+                <details className="group">
+                  <summary className="flex justify-between items-center font-medium cursor-pointer list-none">
+                    <span className="text-lg font-semibold text-gray-900">{faq.question}</span>
+                    <span className="transition group-open:rotate-180">
+                      <ChevronDown className="h-5 w-5 text-blue-500" />
+                    </span>
+                  </summary>
+                  <p className="text-gray-600 mt-3 group-open:animate-fadeIn">
+                    {faq.answer}
+                  </p>
+                </details>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      
+      {/* CTA Section */}
+      <section className="py-20 bg-gradient-to-r from-blue-900 to-blue-800 text-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Fuel Station?</h2>
+            <p className="text-xl mb-10 text-blue-100">
+              Join hundreds of fuel stations already using Fuel Pro 360 to streamline operations, enhance customer experiences, and drive growth.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/login">
+                <Button size="lg" className="bg-white text-blue-900 hover:bg-blue-50 px-8">
+                  Get Started Today
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button size="lg" variant="outline" className="text-white border-white hover:bg-blue-800 px-8">
+                  Request Demo
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
       
       {/* Footer */}
-      <footer className="bg-muted py-12 border-t border-border">
-        <div className="container px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="col-span-2 md:col-span-1">
-              <div className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80 mb-4">
-                Fuel Pro 360
+      <footer className="bg-gray-900 text-gray-300">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Droplets className="h-6 w-6 text-blue-400" />
+                <span className="text-xl font-bold text-white">Fuel Pro 360</span>
               </div>
-              <p className="text-muted-foreground text-sm max-w-xs">
-                A beautifully designed fuel pump management system for modern businesses.
+              <p className="max-w-xs">
+                Comprehensive fuel station management solution for modern businesses.
               </p>
             </div>
             
             <div>
-              <h4 className="font-medium mb-4">Product</h4>
+              <h3 className="text-lg font-bold text-white mb-4">Features</h3>
               <ul className="space-y-2">
-                {['Features', 'Modules', 'Pricing', 'Updates'].map(item => (
-                  <li key={item}>
-                    <a href="#" className="text-muted-foreground hover:text-foreground text-sm">
+                {[
+                  "Daily Readings",
+                  "Shift Management",
+                  "Customer Management",
+                  "Transaction Records",
+                  "Indent Booklets",
+                  "Mobile Operations"
+                ].map((item, idx) => (
+                  <li key={idx}>
+                    <a href="#features" className="hover:text-blue-300 transition-colors">
                       {item}
                     </a>
                   </li>
@@ -133,11 +512,16 @@ const Index = () => {
             </div>
             
             <div>
-              <h4 className="font-medium mb-4">Company</h4>
+              <h3 className="text-lg font-bold text-white mb-4">Company</h3>
               <ul className="space-y-2">
-                {['About', 'Careers', 'Contact', 'Blog'].map(item => (
-                  <li key={item}>
-                    <a href="#" className="text-muted-foreground hover:text-foreground text-sm">
+                {[
+                  "About Us",
+                  "Contact",
+                  "Privacy Policy",
+                  "Terms of Service"
+                ].map((item, idx) => (
+                  <li key={idx}>
+                    <a href="#" className="hover:text-blue-300 transition-colors">
                       {item}
                     </a>
                   </li>
@@ -146,31 +530,21 @@ const Index = () => {
             </div>
             
             <div>
-              <h4 className="font-medium mb-4">Resources</h4>
+              <h3 className="text-lg font-bold text-white mb-4">Contact Us</h3>
               <ul className="space-y-2">
-                {['Documentation', 'Help Center', 'Community', 'Partners'].map(item => (
-                  <li key={item}>
-                    <a href="#" className="text-muted-foreground hover:text-foreground text-sm">
-                      {item}
-                    </a>
-                  </li>
-                ))}
+                <li>support@fuelpro360.com</li>
+                <li>+91 123 456 7890</li>
+                <li>Mumbai, India</li>
               </ul>
             </div>
           </div>
           
-          <div className="mt-12 pt-8 border-t border-border/50 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} Fuel Pro 360. All rights reserved.
-            </p>
-            <div className="flex gap-6 mt-4 md:mt-0">
-              {['Terms', 'Privacy', 'Cookies'].map(item => (
-                <a
-                  key={item}
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  {item}
+          <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <p>© {new Date().getFullYear()} Fuel Pro 360. All rights reserved.</p>
+            <div className="flex space-x-6 mt-4 md:mt-0">
+              {["Facebook", "Twitter", "LinkedIn", "Instagram"].map((social, idx) => (
+                <a key={idx} href="#" className="hover:text-blue-300 transition-colors">
+                  {social}
                 </a>
               ))}
             </div>
@@ -180,83 +554,5 @@ const Index = () => {
     </div>
   );
 };
-
-// Feature section data
-const features = [
-  {
-    title: "Intuitive Interface",
-    description: "Clean, simple design that's easy to navigate and understand at a glance.",
-    icon: ModuleIcons.Dashboard,
-  },
-  {
-    title: "Real-time Analytics",
-    description: "Monitor performance with beautiful data visualizations updated in real-time.",
-    icon: ModuleIcons.Reports,
-  },
-  {
-    title: "Cloud-based Access",
-    description: "Access your ERP system from anywhere, on any device with internet connection.",
-    icon: ModuleIcons.Documents,
-  },
-  {
-    title: "Seamless Integration",
-    description: "Connect with your existing tools and software for a unified workflow.",
-    icon: ModuleIcons.Planning,
-  },
-  {
-    title: "Data Security",
-    description: "Enterprise-grade security to protect your sensitive business information.",
-    icon: ModuleIcons.HumanResources,
-  },
-  {
-    title: "Customizable Modules",
-    description: "Tailor the system to your specific business needs and processes.",
-    icon: ModuleIcons.Sales,
-  },
-];
-
-// Modules section data
-const modules = [
-  {
-    title: "Finance Management",
-    description: "Manage accounts, budgets, and financial reporting.",
-    icon: ModuleIcons.Finance,
-  },
-  {
-    title: "Sales & CRM",
-    description: "Track leads, manage customers, and optimize sales processes.",
-    icon: ModuleIcons.Sales,
-  },
-  {
-    title: "Inventory Control",
-    description: "Monitor stock levels, manage suppliers, and optimize inventory.",
-    icon: ModuleIcons.Inventory,
-  },
-  {
-    title: "Human Resources",
-    description: "Streamline HR processes from recruitment to retirement.",
-    icon: ModuleIcons.HumanResources,
-  },
-  {
-    title: "Project Management",
-    description: "Plan, execute, and track projects with precision.",
-    icon: ModuleIcons.Planning,
-  },
-  {
-    title: "Business Intelligence",
-    description: "Turn data into actionable insights with powerful analytics.",
-    icon: ModuleIcons.Reports,
-  },
-  {
-    title: "Document Management",
-    description: "Organize, store, and share documents securely.",
-    icon: ModuleIcons.Documents,
-  },
-  {
-    title: "Executive Dashboard",
-    description: "Get a bird's-eye view of your entire business operations.",
-    icon: ModuleIcons.Dashboard,
-  },
-];
 
 export default Index;
