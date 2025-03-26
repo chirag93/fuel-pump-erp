@@ -22,6 +22,7 @@ const MobileRecordIndent = () => {
   const [staff, setStaff] = useState<Array<{id: string, name: string}>>([]);
   const [indentNumber, setIndentNumber] = useState('');
   const [indentNumberError, setIndentNumberError] = useState('');
+  const [mobileCustomerId, setMobileCustomerId] = useState('');
   
   // Fetch staff data on component mount
   useEffect(() => {
@@ -48,7 +49,58 @@ const MobileRecordIndent = () => {
     };
     
     fetchStaff();
+    createOrGetMobileCustomer();
   }, []);
+  
+  // Create or get a special "Mobile" customer
+  const createOrGetMobileCustomer = async () => {
+    try {
+      // First check if mobile customer already exists
+      const { data: existingCustomer, error: searchError } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('name', 'Mobile User')
+        .single();
+        
+      if (searchError && searchError.code !== 'PGRST116') {
+        console.error('Error searching for mobile customer:', searchError);
+        return;
+      }
+      
+      // If the customer exists, use it
+      if (existingCustomer) {
+        console.log('Found existing mobile customer:', existingCustomer.id);
+        setMobileCustomerId(existingCustomer.id);
+        return;
+      }
+      
+      // Create the mobile customer
+      console.log('Creating mobile customer...');
+      const { data: newCustomer, error: createError } = await supabase
+        .from('customers')
+        .insert({
+          name: 'Mobile User',
+          contact: 'Mobile',
+          phone: '0000000000',
+          email: 'mobile@example.com',
+          gst: 'NA'
+        })
+        .select('id')
+        .single();
+        
+      if (createError) {
+        console.error('Error creating mobile customer:', createError);
+        return;
+      }
+      
+      if (newCustomer) {
+        console.log('Created mobile customer with ID:', newCustomer.id);
+        setMobileCustomerId(newCustomer.id);
+      }
+    } catch (error) {
+      console.error('Unexpected error in createOrGetMobileCustomer:', error);
+    }
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +140,16 @@ const MobileRecordIndent = () => {
       return;
     }
     
+    // Check if we have a mobile customer ID
+    if (!mobileCustomerId) {
+      toast({
+        title: "Error",
+        description: "Mobile customer ID is not available. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -109,12 +171,55 @@ const MobileRecordIndent = () => {
         return;
       }
       
+      // Create a special 'mobile' vehicle if it doesn't exist yet
+      let mobileVehicleId = '';
+      const { data: existingVehicle, error: vehicleSearchError } = await supabase
+        .from('vehicles')
+        .select('id')
+        .eq('customer_id', mobileCustomerId)
+        .eq('number', 'Mobile')
+        .single();
+        
+      if (vehicleSearchError && vehicleSearchError.code !== 'PGRST116') {
+        console.error('Error searching for mobile vehicle:', vehicleSearchError);
+      }
+      
+      if (existingVehicle) {
+        mobileVehicleId = existingVehicle.id;
+      } else {
+        const { data: newVehicle, error: createVehicleError } = await supabase
+          .from('vehicles')
+          .insert({
+            customer_id: mobileCustomerId,
+            number: 'Mobile',
+            type: 'Other',
+            capacity: 'N/A'
+          })
+          .select('id')
+          .single();
+          
+        if (createVehicleError) {
+          console.error('Error creating mobile vehicle:', createVehicleError);
+          throw createVehicleError;
+        }
+        
+        if (newVehicle) {
+          mobileVehicleId = newVehicle.id;
+        }
+      }
+      
+      if (!mobileVehicleId) {
+        throw new Error('Could not create or find a mobile vehicle');
+      }
+      
       // Generate a unique ID for the indent
       const indentId = `IND-${Date.now()}`;
       
       console.log("Creating indent with data:", {
         id: indentId,
         indent_number: indentNumber,
+        customer_id: mobileCustomerId,
+        vehicle_id: mobileVehicleId,
         fuel_type: fuelType,
         amount,
         quantity,
@@ -130,16 +235,15 @@ const MobileRecordIndent = () => {
         .insert({
           id: indentId,
           indent_number: indentNumber,
+          customer_id: mobileCustomerId,
+          vehicle_id: mobileVehicleId,
           fuel_type: fuelType,
           amount: amount,
           quantity: quantity,
           discount_amount: discountAmount,
           date: date.toISOString().split('T')[0],
           source: 'mobile',
-          approval_status: 'pending',
-          // Using placeholder UUIDs for required fields
-          customer_id: '00000000-0000-0000-0000-000000000000',
-          vehicle_id: '00000000-0000-0000-0000-000000000000'
+          approval_status: 'pending'
         });
         
       if (indentError) {
@@ -149,6 +253,8 @@ const MobileRecordIndent = () => {
       
       console.log("Creating transaction with data:", {
         id: `TR-${Date.now()}`,
+        customer_id: mobileCustomerId,
+        vehicle_id: mobileVehicleId,
         staff_id: selectedStaff,
         date: date.toISOString().split('T')[0],
         fuel_type: fuelType,
@@ -166,6 +272,8 @@ const MobileRecordIndent = () => {
         .from('transactions')
         .insert({
           id: `TR-${Date.now()}`,
+          customer_id: mobileCustomerId,
+          vehicle_id: mobileVehicleId,
           staff_id: selectedStaff,
           date: date.toISOString().split('T')[0],
           fuel_type: fuelType,
@@ -175,10 +283,7 @@ const MobileRecordIndent = () => {
           discount_amount: discountAmount,
           source: 'mobile',
           indent_id: indentId,
-          approval_status: 'pending',
-          // Using the same placeholder UUIDs
-          customer_id: '00000000-0000-0000-0000-000000000000',
-          vehicle_id: '00000000-0000-0000-0000-000000000000'
+          approval_status: 'pending'
         });
         
       if (transactionError) {
