@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, FileText, Search } from 'lucide-react';
+import { ChevronLeft, FileText, Search, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -10,6 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const MobileRecordIndent = () => {
   const { toast } = useToast();
@@ -31,6 +38,15 @@ const MobileRecordIndent = () => {
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [selectedVehicleNumber, setSelectedVehicleNumber] = useState('');
   const [selectedBooklet, setSelectedBooklet] = useState('');
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [successDetails, setSuccessDetails] = useState({
+    indentNumber: '',
+    customerName: '',
+    vehicleNumber: '',
+    amount: 0,
+    quantity: 0,
+    fuelType: ''
+  });
   
   // Fetch staff data on component mount
   useEffect(() => {
@@ -339,10 +355,16 @@ const MobileRecordIndent = () => {
         throw transactionError;
       }
       
-      toast({
-        title: "Transaction recorded",
-        description: "The transaction has been saved and is pending approval."
+      // Set success details and open the success dialog
+      setSuccessDetails({
+        indentNumber: indentNumber,
+        customerName: selectedCustomerName,
+        vehicleNumber: selectedVehicleNumber,
+        amount: amount,
+        quantity: quantity,
+        fuelType: fuelType
       });
+      setSuccessDialogOpen(true);
       
       // Reset form
       setAmount(0);
@@ -534,6 +556,53 @@ const MobileRecordIndent = () => {
           </form>
         </CardContent>
       </Card>
+
+      {/* Success Dialog */}
+      <Dialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Check className="h-6 w-6 text-green-500 mr-2" /> 
+              Indent Recorded Successfully
+            </DialogTitle>
+            <DialogDescription>
+              The transaction has been saved and is pending approval.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="bg-slate-50 p-4 rounded-md space-y-2 my-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="text-sm font-medium text-gray-500">Indent Number:</div>
+              <div className="text-sm font-semibold">{successDetails.indentNumber}</div>
+              
+              <div className="text-sm font-medium text-gray-500">Customer:</div>
+              <div className="text-sm font-semibold">{successDetails.customerName}</div>
+              
+              <div className="text-sm font-medium text-gray-500">Vehicle:</div>
+              <div className="text-sm font-semibold">{successDetails.vehicleNumber}</div>
+              
+              <div className="text-sm font-medium text-gray-500">Fuel Type:</div>
+              <div className="text-sm font-semibold">{successDetails.fuelType}</div>
+              
+              <div className="text-sm font-medium text-gray-500">Quantity:</div>
+              <div className="text-sm font-semibold">{successDetails.quantity} L</div>
+              
+              <div className="text-sm font-medium text-gray-500">Amount:</div>
+              <div className="text-sm font-semibold">₹{successDetails.amount}</div>
+            </div>
+          </div>
+          
+          <DialogFooter className="sm:justify-center">
+            <Button 
+              variant="default" 
+              onClick={() => setSuccessDialogOpen(false)}
+              className="w-full sm:w-auto"
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
