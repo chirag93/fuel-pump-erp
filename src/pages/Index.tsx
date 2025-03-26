@@ -42,8 +42,8 @@ const Index = () => {
               <a href="#modules" className="text-sm font-medium hover:text-blue-300 transition-colors">
                 Modules
               </a>
-              <a href="#testimonials" className="text-sm font-medium hover:text-blue-300 transition-colors">
-                Testimonials
+              <a href="#faq" className="text-sm font-medium hover:text-blue-300 transition-colors">
+                FAQ
               </a>
               <Link to="/login" className="text-sm font-medium hover:text-blue-300 transition-colors">
                 Login
@@ -94,7 +94,7 @@ const Index = () => {
             <div className="relative">
               <div className="rounded-lg shadow-2xl overflow-hidden border border-blue-700/30">
                 <img 
-                  src="https://images.unsplash.com/photo-1611288875785-9ef0f98d45c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                  src="/lovable-uploads/d51426e3-7851-4864-be9c-ad91131f2236.png" 
                   alt="Fuel Pro 360 Dashboard" 
                   className="w-full h-auto rounded-lg"
                 />
@@ -197,8 +197,8 @@ const Index = () => {
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <img 
-                    src="https://images.unsplash.com/photo-1531297484001-80022131f5a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
-                    alt="Fuel Station Management Dashboard" 
+                    src="https://images.unsplash.com/photo-1611275484845-52a71f1c4c6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                    alt="Fuel Station Management" 
                     className="w-full h-auto"
                   />
                   <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/10 to-transparent"></div>
@@ -241,7 +241,7 @@ const Index = () => {
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <img 
-                    src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                    src="https://images.unsplash.com/photo-1560472355-536de3962603?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
                     alt="Customer Management Dashboard" 
                     className="w-full h-auto"
                   />
@@ -285,7 +285,7 @@ const Index = () => {
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <img 
-                    src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                    src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
                     alt="Mobile Operations Interface" 
                     className="w-full h-auto"
                   />
@@ -352,58 +352,8 @@ const Index = () => {
         </div>
       </section>
       
-      {/* Testimonials Section */}
-      <section id="testimonials" className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl font-bold mb-4 text-gray-900">What Our Customers Say</h2>
-            <p className="text-xl text-gray-600">
-              Hear from fuel station operators who have transformed their business with Fuel Pro 360.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                quote: "Since implementing Fuel Pro 360, we've reduced our administrative overhead by 30% while improving our customer service quality.",
-                name: "Rajesh Kumar",
-                title: "Station Manager, Pune"
-              },
-              {
-                quote: "The mobile operations feature has been a game-changer for our business. Our staff can now handle transactions efficiently even during peak hours.",
-                name: "Priya Sharma",
-                title: "Owner, Delhi NCR"
-              },
-              {
-                quote: "Customer management and indent booklet tracking has never been easier. We've eliminated billing errors and improved our cash flow significantly.",
-                name: "Amitabh Singh",
-                title: "Director, Mumbai"
-              }
-            ].map((testimonial, idx) => (
-              <div key={idx} className="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
-                <div className="mb-6">
-                  {[...Array(5)].map((_, i) => (
-                    <span key={i} className="text-yellow-400">★</span>
-                  ))}
-                </div>
-                <p className="text-gray-700 mb-6">"{testimonial.quote}"</p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xl">
-                    {testimonial.name.charAt(0)}
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
-                    <p className="text-gray-600">{testimonial.title}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-      
       {/* FAQ Section */}
-      <section className="py-20 bg-white">
+      <section id="faq" className="py-20 bg-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4 text-gray-900">Frequently Asked Questions</h2>
