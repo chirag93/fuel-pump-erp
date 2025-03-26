@@ -21,6 +21,7 @@ export const useApprovalRequests = (userId: string | undefined) => {
     
     try {
       if (activeTab === 'transactions' || activeTab === 'all') {
+        console.log('Fetching pending transactions...');
         // Fetch pending transactions with customer and vehicle details
         const { data: transactionData, error: transactionError } = await supabase
           .from('transactions')
@@ -35,10 +36,10 @@ export const useApprovalRequests = (userId: string | undefined) => {
         if (transactionError) throw transactionError;
         
         if (transactionData) {
-          console.log('Fetched pending transactions:', transactionData);
+          console.log('Fetched pending transactions:', transactionData.length);
           const formattedTransactions = transactionData.map((item: any) => ({
             ...item,
-            customer_name: item.customers?.name || 'Mobile User',
+            customer_name: item.customers?.name || 'Unknown',
             vehicle_number: item.vehicles?.number || 'N/A',
             staff_name: item.staff?.name
           }));
@@ -48,6 +49,7 @@ export const useApprovalRequests = (userId: string | undefined) => {
       }
       
       if (activeTab === 'indents' || activeTab === 'all') {
+        console.log('Fetching pending indents...');
         // Fetch pending indents with customer and vehicle details
         const { data: indentData, error: indentError } = await supabase
           .from('indents')
@@ -61,10 +63,10 @@ export const useApprovalRequests = (userId: string | undefined) => {
         if (indentError) throw indentError;
         
         if (indentData) {
-          console.log('Fetched pending indents:', indentData);
+          console.log('Fetched pending indents:', indentData.length);
           const formattedIndents = indentData.map((item: any) => ({
             ...item,
-            customer_name: item.customers?.name || 'Mobile User',
+            customer_name: item.customers?.name || 'Unknown',
             vehicle_number: item.vehicles?.number || 'N/A'
           }));
           

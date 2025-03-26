@@ -1,14 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, FileText } from 'lucide-react';
+import { ChevronLeft, FileText, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { FuelTransactionForm } from '@/components/indent/FuelTransactionForm';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2 } from 'lucide-react';
 
 const MobileRecordIndent = () => {
   const { toast } = useToast();
@@ -22,7 +23,14 @@ const MobileRecordIndent = () => {
   const [staff, setStaff] = useState<Array<{id: string, name: string}>>([]);
   const [indentNumber, setIndentNumber] = useState('');
   const [indentNumberError, setIndentNumberError] = useState('');
-  const [mobileCustomerId, setMobileCustomerId] = useState('');
+  const [searchIndentNumber, setSearchIndentNumber] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const [selectedCustomerName, setSelectedCustomerName] = useState('');
+  const [selectedVehicle, setSelectedVehicle] = useState('');
+  const [selectedVehicleNumber, setSelectedVehicleNumber] = useState('');
+  const [selectedBooklet, setSelectedBooklet] = useState('');
   
   // Fetch staff data on component mount
   useEffect(() => {
@@ -49,62 +57,128 @@ const MobileRecordIndent = () => {
     };
     
     fetchStaff();
-    createOrGetMobileCustomer();
   }, []);
   
-  // Create or get a special "Mobile" customer
-  const createOrGetMobileCustomer = async () => {
+  const searchByIndentNumber = async () => {
+    // Clear previous error
+    setSearchError('');
+    
+    if (!searchIndentNumber) {
+      setSearchError('Please enter an indent number to search');
+      return;
+    }
+
+    setIsSearching(true);
+    
     try {
-      // First check if mobile customer already exists
-      const { data: existingCustomer, error: searchError } = await supabase
-        .from('customers')
+      console.log('Searching for indent number:', searchIndentNumber);
+      
+      // First check if this indent number exists in any booklet
+      const { data: bookletData, error: bookletError } = await supabase
+        .from('indent_booklets')
+        .select('*')
+        .or(`start_number.lte.${searchIndentNumber},end_number.gte.${searchIndentNumber}`)
+        .order('issued_date', { ascending: false });
+
+      if (bookletError) {
+        console.error('Error searching for booklet:', bookletError);
+        throw bookletError;
+      }
+
+      if (!bookletData || bookletData.length === 0) {
+        setSearchError('No indent booklet contains this number');
+        setIsSearching(false);
+        return;
+      }
+
+      // Find the booklet where this number falls within range
+      const matchingBooklet = bookletData.find(b => 
+        parseInt(b.start_number) <= parseInt(searchIndentNumber) && 
+        parseInt(b.end_number) >= parseInt(searchIndentNumber)
+      );
+
+      if (!matchingBooklet) {
+        setSearchError('The indent number is not in any active booklet range');
+        setIsSearching(false);
+        return;
+      }
+
+      // Check if this indent number has already been used
+      const { data: indentData, error: indentError } = await supabase
+        .from('indents')
         .select('id')
-        .eq('name', 'Mobile User')
+        .eq('indent_number', searchIndentNumber);
+
+      if (indentError) {
+        console.error('Error checking if indent exists:', indentError);
+        throw indentError;
+      }
+
+      if (indentData && indentData.length > 0) {
+        setSearchError('This indent number has already been used');
+        setIsSearching(false);
+        return;
+      }
+
+      // Fetch customer details
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('id, name')
+        .eq('id', matchingBooklet.customer_id)
         .single();
         
-      if (searchError && searchError.code !== 'PGRST116') {
-        console.error('Error searching for mobile customer:', searchError);
-        return;
+      if (customerError) {
+        console.error('Error fetching customer:', customerError);
+        throw customerError;
       }
       
-      // If the customer exists, use it
-      if (existingCustomer) {
-        console.log('Found existing mobile customer:', existingCustomer.id);
-        setMobileCustomerId(existingCustomer.id);
-        return;
+      console.log('Found customer:', customerData);
+      setSelectedCustomer(customerData.id);
+      setSelectedCustomerName(customerData.name);
+
+      // Fetch vehicle data for this customer
+      const { data: vehicleData, error: vehicleError } = await supabase
+        .from('vehicles')
+        .select('id, number')
+        .eq('customer_id', customerData.id)
+        .order('number', { ascending: true });
+
+      if (vehicleError) {
+        console.error('Error fetching vehicles:', vehicleError);
+        throw vehicleError;
       }
       
-      // Create the mobile customer
-      console.log('Creating mobile customer...');
-      const { data: newCustomer, error: createError } = await supabase
-        .from('customers')
-        .insert({
-          name: 'Mobile User',
-          contact: 'Mobile',
-          phone: '0000000000',
-          email: 'mobile@example.com',
-          gst: 'NA'
-        })
-        .select('id')
-        .single();
-        
-      if (createError) {
-        console.error('Error creating mobile customer:', createError);
-        return;
+      if (vehicleData && vehicleData.length > 0) {
+        setSelectedVehicle(vehicleData[0].id);
+        setSelectedVehicleNumber(vehicleData[0].number);
+        console.log('Selected vehicle:', vehicleData[0]);
+      } else {
+        console.log('No vehicles found for customer');
+        setSelectedVehicle('');
+        setSelectedVehicleNumber('');
       }
+
+      // Set the booklet and indent number
+      setSelectedBooklet(matchingBooklet.id);
+      setIndentNumber(searchIndentNumber);
+
+      toast({
+        title: "Indent found",
+        description: `Found indent for customer: ${customerData.name}`
+      });
       
-      if (newCustomer) {
-        console.log('Created mobile customer with ID:', newCustomer.id);
-        setMobileCustomerId(newCustomer.id);
-      }
     } catch (error) {
-      console.error('Unexpected error in createOrGetMobileCustomer:', error);
+      console.error('Error searching for indent:', error);
+      setSearchError('Failed to search for indent. Please try again.');
+    } finally {
+      setIsSearching(false);
     }
   };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation
     if (!selectedStaff) {
       toast({
         title: "Error",
@@ -121,7 +195,24 @@ const MobileRecordIndent = () => {
       setIndentNumberError('');
     }
     
-    // Additional validation to ensure amount and quantity are valid numbers
+    if (!selectedCustomer) {
+      toast({
+        title: "Error",
+        description: "No customer selected. Please search for a valid indent number.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!selectedVehicle) {
+      toast({
+        title: "Error",
+        description: "No vehicle selected. Please make sure the customer has vehicles.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (amount <= 0) {
       toast({
         title: "Error",
@@ -140,93 +231,25 @@ const MobileRecordIndent = () => {
       return;
     }
     
-    // Check if we have a mobile customer ID
-    if (!mobileCustomerId) {
-      toast({
-        title: "Error",
-        description: "Mobile customer ID is not available. Please try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     setIsSubmitting(true);
     
     try {
-      // First, check if this indent number already exists
-      const { data: existingIndent, error: checkError } = await supabase
-        .from('indents')
-        .select('id')
-        .eq('indent_number', indentNumber);
-        
-      if (checkError) throw checkError;
-      
-      if (existingIndent && existingIndent.length > 0) {
-        toast({
-          title: "Error",
-          description: "This indent number is already in use",
-          variant: "destructive"
-        });
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Create a special 'mobile' vehicle if it doesn't exist yet
-      let mobileVehicleId = '';
-      const { data: existingVehicle, error: vehicleSearchError } = await supabase
-        .from('vehicles')
-        .select('id')
-        .eq('customer_id', mobileCustomerId)
-        .eq('number', 'Mobile')
-        .single();
-        
-      if (vehicleSearchError && vehicleSearchError.code !== 'PGRST116') {
-        console.error('Error searching for mobile vehicle:', vehicleSearchError);
-      }
-      
-      if (existingVehicle) {
-        mobileVehicleId = existingVehicle.id;
-      } else {
-        const { data: newVehicle, error: createVehicleError } = await supabase
-          .from('vehicles')
-          .insert({
-            customer_id: mobileCustomerId,
-            number: 'Mobile',
-            type: 'Other',
-            capacity: 'N/A'
-          })
-          .select('id')
-          .single();
-          
-        if (createVehicleError) {
-          console.error('Error creating mobile vehicle:', createVehicleError);
-          throw createVehicleError;
-        }
-        
-        if (newVehicle) {
-          mobileVehicleId = newVehicle.id;
-        }
-      }
-      
-      if (!mobileVehicleId) {
-        throw new Error('Could not create or find a mobile vehicle');
-      }
-      
       // Generate a unique ID for the indent
       const indentId = `IND-${Date.now()}`;
       
       console.log("Creating indent with data:", {
         id: indentId,
         indent_number: indentNumber,
-        customer_id: mobileCustomerId,
-        vehicle_id: mobileVehicleId,
+        customer_id: selectedCustomer,
+        vehicle_id: selectedVehicle,
         fuel_type: fuelType,
         amount,
         quantity,
         discount_amount: discountAmount,
         date: date.toISOString().split('T')[0],
         source: 'mobile',
-        approval_status: 'pending'
+        approval_status: 'pending',
+        booklet_id: selectedBooklet
       });
       
       // Create the indent record
@@ -235,15 +258,16 @@ const MobileRecordIndent = () => {
         .insert({
           id: indentId,
           indent_number: indentNumber,
-          customer_id: mobileCustomerId,
-          vehicle_id: mobileVehicleId,
+          customer_id: selectedCustomer,
+          vehicle_id: selectedVehicle,
           fuel_type: fuelType,
           amount: amount,
           quantity: quantity,
           discount_amount: discountAmount,
           date: date.toISOString().split('T')[0],
           source: 'mobile',
-          approval_status: 'pending'
+          approval_status: 'pending',
+          booklet_id: selectedBooklet
         });
         
       if (indentError) {
@@ -251,10 +275,34 @@ const MobileRecordIndent = () => {
         throw indentError;
       }
       
+      // Update the booklet used_indents count
+      if (selectedBooklet) {
+        const { data: bookletData, error: bookletFetchError } = await supabase
+          .from('indent_booklets')
+          .select('used_indents')
+          .eq('id', selectedBooklet)
+          .single();
+          
+        if (bookletFetchError) {
+          console.error('Error fetching booklet data:', bookletFetchError);
+        } else {
+          const newUsedIndents = (bookletData?.used_indents || 0) + 1;
+          
+          const { error: updateError } = await supabase
+            .from('indent_booklets')
+            .update({ used_indents: newUsedIndents })
+            .eq('id', selectedBooklet);
+
+          if (updateError) {
+            console.error('Error updating booklet:', updateError);
+          }
+        }
+      }
+      
       console.log("Creating transaction with data:", {
         id: `TR-${Date.now()}`,
-        customer_id: mobileCustomerId,
-        vehicle_id: mobileVehicleId,
+        customer_id: selectedCustomer,
+        vehicle_id: selectedVehicle,
         staff_id: selectedStaff,
         date: date.toISOString().split('T')[0],
         fuel_type: fuelType,
@@ -272,8 +320,8 @@ const MobileRecordIndent = () => {
         .from('transactions')
         .insert({
           id: `TR-${Date.now()}`,
-          customer_id: mobileCustomerId,
-          vehicle_id: mobileVehicleId,
+          customer_id: selectedCustomer,
+          vehicle_id: selectedVehicle,
           staff_id: selectedStaff,
           date: date.toISOString().split('T')[0],
           fuel_type: fuelType,
@@ -301,9 +349,16 @@ const MobileRecordIndent = () => {
       setQuantity(0);
       setDiscountAmount(0);
       setIndentNumber('');
+      setSearchIndentNumber('');
+      setSelectedCustomer('');
+      setSelectedCustomerName('');
+      setSelectedVehicle('');
+      setSelectedVehicleNumber('');
+      setSelectedBooklet('');
       
       // Clear any existing errors
       setIndentNumberError('');
+      setSearchError('');
       
     } catch (error) {
       console.error('Error recording transaction:', error);
@@ -328,109 +383,150 @@ const MobileRecordIndent = () => {
         <h1 className="text-xl font-semibold">Record Indent</h1>
       </div>
       
+      {/* Search indent number section */}
+      <Card className="mb-4">
+        <CardContent className="pt-4">
+          <div className="flex items-center mb-4">
+            <Search className="h-5 w-5 text-primary mr-2" />
+            <h2 className="text-lg font-medium">Find Indent</h2>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="searchIndentNumber">Enter Indent Number</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="searchIndentNumber"
+                  value={searchIndentNumber}
+                  onChange={(e) => setSearchIndentNumber(e.target.value)}
+                  placeholder="Enter indent number to search"
+                  className="flex-1"
+                />
+                <Button onClick={searchByIndentNumber} disabled={isSearching} className="w-24">
+                  {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+                </Button>
+              </div>
+            </div>
+            
+            {searchError && (
+              <Alert variant="destructive">
+                <AlertDescription>{searchError}</AlertDescription>
+              </Alert>
+            )}
+            
+            {selectedCustomerName && (
+              <div className="bg-slate-100 p-3 rounded-md space-y-2">
+                <div>
+                  <span className="font-semibold">Customer:</span> {selectedCustomerName}
+                </div>
+                {selectedVehicleNumber && (
+                  <div>
+                    <span className="font-semibold">Vehicle:</span> {selectedVehicleNumber}
+                  </div>
+                )}
+                <div>
+                  <span className="font-semibold">Indent Number:</span> {indentNumber}
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Transaction form section */}
       <Card className="mb-4">
         <CardContent className="pt-4">
           <div className="flex items-center mb-4">
             <FileText className="h-5 w-5 text-primary mr-2" />
-            <h2 className="text-lg font-medium">New Transaction</h2>
+            <h2 className="text-lg font-medium">Transaction Details</h2>
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="mb-4">
-              <Label htmlFor="indentNumber">Indent Number</Label>
-              <Input
-                id="indentNumber"
-                value={indentNumber}
-                onChange={(e) => setIndentNumber(e.target.value)}
-                className={indentNumberError ? "border-red-500" : ""}
-                placeholder="Enter indent number"
-              />
-              {indentNumberError && (
-                <p className="text-xs text-red-500 mt-1">{indentNumberError}</p>
-              )}
-            </div>
+            {indentNumberError && (
+              <Alert variant="destructive">
+                <AlertDescription>{indentNumberError}</AlertDescription>
+              </Alert>
+            )}
             
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="z-10">
-                  <Label htmlFor="staffMember">Staff Member</Label>
-                  <select 
-                    id="staffMember"
-                    value={selectedStaff}
-                    onChange={(e) => setSelectedStaff(e.target.value)}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  >
-                    {staff.length === 0 ? (
-                      <option value="" disabled>No staff members found</option>
-                    ) : (
-                      staff.map((member) => (
-                        <option key={member.id} value={member.id}>{member.name}</option>
-                      ))
-                    )}
-                  </select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="fuelType">Fuel Type</Label>
-                  <select
-                    id="fuelType"
-                    value={fuelType}
-                    onChange={(e) => setFuelType(e.target.value)}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  >
-                    <option value="Petrol">Petrol</option>
-                    <option value="Diesel">Diesel</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="date">Date</Label>
-                  <Input
-                    type="date"
-                    id="date"
-                    value={date.toISOString().split('T')[0]}
-                    onChange={(e) => setDate(new Date(e.target.value))}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="quantity">Quantity (L)</Label>
-                  <Input
-                    type="number"
-                    id="quantity"
-                    value={quantity === 0 ? '' : quantity}
-                    onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
-                    placeholder="Enter quantity"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="amount">Amount (₹)</Label>
-                  <Input
-                    type="number"
-                    id="amount"
-                    value={amount === 0 ? '' : amount}
-                    onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-                    placeholder="Enter amount"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="discountAmount">Discount Amount (₹)</Label>
-                  <Input
-                    type="number"
-                    id="discountAmount"
-                    value={discountAmount === 0 ? '' : discountAmount}
-                    onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
-                    placeholder="Enter discount amount"
-                  />
-                </div>
+              <div>
+                <Label htmlFor="staffMember">Staff Member</Label>
+                <select 
+                  id="staffMember"
+                  value={selectedStaff}
+                  onChange={(e) => setSelectedStaff(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                >
+                  {staff.length === 0 ? (
+                    <option value="" disabled>No staff members found</option>
+                  ) : (
+                    staff.map((member) => (
+                      <option key={member.id} value={member.id}>{member.name}</option>
+                    ))
+                  )}
+                </select>
+              </div>
+              
+              <div>
+                <Label htmlFor="fuelType">Fuel Type</Label>
+                <select
+                  id="fuelType"
+                  value={fuelType}
+                  onChange={(e) => setFuelType(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                >
+                  <option value="Petrol">Petrol</option>
+                  <option value="Diesel">Diesel</option>
+                </select>
+              </div>
+              
+              <div>
+                <Label htmlFor="date">Date</Label>
+                <Input
+                  type="date"
+                  id="date"
+                  value={date.toISOString().split('T')[0]}
+                  onChange={(e) => setDate(new Date(e.target.value))}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="quantity">Quantity (L)</Label>
+                <Input
+                  type="number"
+                  id="quantity"
+                  value={quantity === 0 ? '' : quantity}
+                  onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
+                  placeholder="Enter quantity"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="amount">Amount (₹)</Label>
+                <Input
+                  type="number"
+                  id="amount"
+                  value={amount === 0 ? '' : amount}
+                  onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                  placeholder="Enter amount"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="discountAmount">Discount Amount (₹)</Label>
+                <Input
+                  type="number"
+                  id="discountAmount"
+                  value={discountAmount === 0 ? '' : discountAmount}
+                  onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
+                  placeholder="Enter discount amount"
+                />
               </div>
             </div>
             
             <Button 
               type="submit" 
-              disabled={isSubmitting}
+              disabled={isSubmitting || !selectedCustomer}
               className="w-full mt-4"
             >
               {isSubmitting ? 'Recording...' : 'Record Indent'}
