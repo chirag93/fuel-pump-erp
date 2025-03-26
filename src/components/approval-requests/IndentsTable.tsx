@@ -56,13 +56,15 @@ const IndentsTable: React.FC<IndentsTableProps> = ({
           {indents.map((indent) => (
             <TableRow key={indent.id}>
               <TableCell className="font-medium">{indent.indent_number || 'No Number'}</TableCell>
-              <TableCell>{indent.customer_name || 'Unknown'}</TableCell>
-              <TableCell>{indent.vehicle_number || 'Unknown'}</TableCell>
+              <TableCell>{indent.customer_name || 'Mobile User'}</TableCell>
+              <TableCell>{indent.vehicle_number || 'N/A'}</TableCell>
               <TableCell>{indent.date ? format(new Date(indent.date), 'dd/MM/yyyy') : 'Unknown'}</TableCell>
               <TableCell>{indent.fuel_type}</TableCell>
               <TableCell>₹{indent.amount?.toFixed(2) || '0.00'}</TableCell>
               <TableCell>
-                <Badge variant="outline">{indent.source || 'web'}</Badge>
+                <Badge variant={indent.source === 'mobile' ? "secondary" : "outline"}>
+                  {indent.source || 'web'}
+                </Badge>
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">

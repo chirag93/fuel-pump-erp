@@ -60,10 +60,11 @@ export const useApprovalRequests = (userId: string | undefined) => {
         if (indentError) throw indentError;
         
         if (indentData) {
+          console.log('Fetched pending indents:', indentData);
           const formattedIndents = indentData.map((item: any) => ({
             ...item,
-            customer_name: item.customers?.name,
-            vehicle_number: item.vehicles?.number
+            customer_name: item.customers?.name || 'Mobile User',
+            vehicle_number: item.vehicles?.number || 'N/A'
           }));
           
           setPendingIndents(formattedIndents);

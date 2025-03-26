@@ -26,6 +26,7 @@ const MobileRecordIndent = () => {
   // Fetch staff data on component mount
   useEffect(() => {
     const fetchStaff = async () => {
+      console.info('Fetching staff data...');
       const { data, error } = await supabase
         .from('staff')
         .select('id, name')
@@ -37,7 +38,12 @@ const MobileRecordIndent = () => {
       }
       
       if (data) {
+        console.info(`Staff data fetched: ${data.length} records`);
         setStaff(data);
+        // If staff exists, select the first one by default
+        if (data.length > 0) {
+          setSelectedStaff(data[0].id);
+        }
       }
     };
     
@@ -106,8 +112,7 @@ const MobileRecordIndent = () => {
       // Generate a unique ID for the indent
       const indentId = `IND-${Date.now()}`;
       
-      // Create the indent record - Note: we need dummy customer_id and vehicle_id for the indents table
-      // For mobile indents, we'll use fixed placeholder values that can be updated later
+      // Create the indent record
       const { error: indentError } = await supabase
         .from('indents')
         .insert({
@@ -120,12 +125,15 @@ const MobileRecordIndent = () => {
           date: date.toISOString().split('T')[0],
           source: 'mobile',
           approval_status: 'pending',
-          // Add the required fields that were missing
-          customer_id: '00000000-0000-0000-0000-000000000000', // Placeholder customer ID
-          vehicle_id: '00000000-0000-0000-0000-000000000000'   // Placeholder vehicle ID
+          // Using placeholder UUIDs for required fields
+          customer_id: '00000000-0000-0000-0000-000000000000',
+          vehicle_id: '00000000-0000-0000-0000-000000000000'
         });
         
-      if (indentError) throw indentError;
+      if (indentError) {
+        console.error('Error creating indent:', indentError);
+        throw indentError;
+      }
       
       // Create the transaction record linked to the indent
       const { error: transactionError } = await supabase
@@ -141,10 +149,16 @@ const MobileRecordIndent = () => {
           discount_amount: discountAmount,
           source: 'mobile',
           indent_id: indentId,
-          approval_status: 'pending', // Set to pending for approval
+          approval_status: 'pending',
+          // Using the same placeholder UUIDs
+          customer_id: '00000000-0000-0000-0000-000000000000',
+          vehicle_id: '00000000-0000-0000-0000-000000000000'
         });
         
-      if (transactionError) throw transactionError;
+      if (transactionError) {
+        console.error('Error creating transaction:', transactionError);
+        throw transactionError;
+      }
       
       toast({
         title: "Transaction recorded",
@@ -155,7 +169,6 @@ const MobileRecordIndent = () => {
       setAmount(0);
       setQuantity(0);
       setDiscountAmount(0);
-      setSelectedStaff('');
       setIndentNumber('');
       
       // Clear any existing errors
