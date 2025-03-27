@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -86,7 +85,7 @@ const Index = () => {
                 </Link>
                 <a href="#features">
                   <Button size="lg" variant="outline" className="text-white border-white hover:bg-blue-800 font-medium">
-                    Learn More
+                    Learn More <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 </a>
               </div>
@@ -165,7 +164,7 @@ const Index = () => {
           <div className="flex flex-wrap justify-center gap-4 mb-12">
             {[
               {id: "fuel-station", label: "Fuel Station Management"},
-              {id: "customer", label: "Customer Management"},
+              {id: "customer", label: "Customer Relationship Management"},
               {id: "mobile", label: "Mobile Operations"}
             ].map((tab) => (
               <button
@@ -220,7 +219,7 @@ const Index = () => {
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <img 
-                    src="https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+                    src="/lovable-uploads/6b80c539-1a31-48ce-a52b-a11b3672909c.png" 
                     alt="Fuel Station Management Illustration" 
                     className="w-full h-auto"
                   />
@@ -233,7 +232,7 @@ const Index = () => {
             {activeTab === "customer" && (
               <>
                 <div className="space-y-6">
-                  <h3 className="text-2xl font-bold text-gray-900">Customer & Transactions Management</h3>
+                  <h3 className="text-2xl font-bold text-gray-900">Customer Relationship Management</h3>
                   <p className="text-gray-600">
                     Build better relationships with your customers while efficiently managing sales and transactions with our integrated customer management system.
                   </p>
@@ -264,8 +263,8 @@ const Index = () => {
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <img 
-                    src="https://images.unsplash.com/photo-1560472355-536de3962603?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
-                    alt="Customer Management Dashboard" 
+                    src="/lovable-uploads/d424ae0e-38d5-4001-a064-4f8df949d54b.png" 
+                    alt="Customer Relationship Management Dashboard" 
                     className="w-full h-auto"
                   />
                   <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/10 to-transparent"></div>
@@ -308,7 +307,7 @@ const Index = () => {
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
                   <img 
-                    src="https://images.unsplash.com/photo-1605170439002-90845e8c0137?ixlib=rb-4.0.3&auto=format&fit=crop&w=1974&q=80" 
+                    src="/lovable-uploads/b6fe7dc6-4252-40ed-83ad-12a5640e1d43.png" 
                     alt="Mobile Operations Interface" 
                     className="w-full h-auto"
                   />
