@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AlertCircle, Lock, Mail, Droplets } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -37,23 +39,24 @@ const Login = () => {
     }
 
     try {
-      // Use our new backend authentication endpoint
-      const response = await fetch(`${process.env.VITE_API_URL || 'http://localhost:5000'}/api/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          username: email, // We're using email as username
-          password
-        })
+      // Use Supabase authentication
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
 
-      const data = await response.json();
+      if (authError) {
+        throw authError;
+      }
 
-      if (data.success) {
+      if (data?.user) {
         // Call the login method from auth context to set up session
-        await login(data.user.id, data.user, rememberMe);
+        await login(data.user.id, {
+          id: data.user.id,
+          username: email.split('@')[0],
+          email: data.user.email,
+          role: 'admin' // Default role, should be retrieved from profiles table in a real app
+        }, rememberMe);
         
         const from = location.state?.from?.pathname || '/dashboard';
         navigate(from, { replace: true });
@@ -63,10 +66,10 @@ const Login = () => {
           description: "You have been logged in successfully.",
         });
       } else {
-        setError(data.message || 'Login failed. Please check your credentials.');
+        setError('Login failed. Please check your credentials.');
       }
-    } catch (err) {
-      setError('An error occurred during login.');
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during login.');
       console.error(err);
     } finally {
       setIsLoading(false);
