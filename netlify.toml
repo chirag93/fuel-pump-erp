@@ -8,7 +8,20 @@
   to = "/index.html"
   status = 200
 
-# Run build without tests for now
+# Run tests before build
 [build]
-  command = "npm run build"
+  command = "npm run test && npm run build"
 
+# Specify the build directory
+  publish = "dist"
+
+# Environment variables (can be overridden in Netlify dashboard)
+[build.environment]
+  NODE_VERSION = "18"
+
+# Optional: Custom headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
