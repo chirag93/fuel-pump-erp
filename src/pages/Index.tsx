@@ -1,29 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { 
-  Droplets,
-  ChevronRight,
-  ChevronDown,
-  Laptop,
-  ShieldCheck,
-  Users,
-  TrendingUp,
-  BarChart3,
-  Smartphone,
-  Zap,
-  FileText,
-  Clock,
-  Truck,
-  GaugeCircle
-} from "lucide-react";
+import { Droplets, ChevronRight, ChevronDown, Laptop, ShieldCheck, Users, TrendingUp, BarChart3, Smartphone, Zap, FileText, Clock, Truck, GaugeCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
 const Index = () => {
   const [activeTab, setActiveTab] = useState<string>("fuel-station");
-  
-  return (
-    <div className="flex flex-col min-h-screen bg-white">
+  return <div className="flex flex-col min-h-screen bg-white">
       {/* Hero Section with Navbar */}
       <header className="relative bg-gradient-to-b from-blue-900 to-blue-800 text-white overflow-hidden">
         {/* Navigation */}
@@ -84,7 +66,7 @@ const Index = () => {
                   </Button>
                 </Link>
                 <a href="#features">
-                  <Button size="lg" variant="outline" className="text-white border-white hover:bg-blue-800 font-medium">
+                  <Button size="lg" variant="outline" className="text-white border-white font-medium bg-[#000a0e]/0">
                     Learn More <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 </a>
@@ -92,11 +74,7 @@ const Index = () => {
             </div>
             <div className="relative">
               <div className="rounded-lg shadow-2xl overflow-hidden border border-blue-700/30">
-                <img 
-                  src="/lovable-uploads/d51426e3-7851-4864-be9c-ad91131f2236.png" 
-                  alt="Fuel Pro 360 Dashboard" 
-                  className="w-full h-auto rounded-lg"
-                />
+                <img src="/lovable-uploads/d51426e3-7851-4864-be9c-ad91131f2236.png" alt="Fuel Pro 360 Dashboard" className="w-full h-auto rounded-lg" />
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/40 to-transparent rounded-lg"></div>
               </div>
               <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-blue-400 rounded-full opacity-20 blur-2xl"></div>
@@ -162,31 +140,24 @@ const Index = () => {
           
           {/* Tabs */}
           <div className="flex flex-wrap justify-center gap-4 mb-12">
-            {[
-              {id: "fuel-station", label: "Fuel Station Management"},
-              {id: "customer", label: "Customer Relationship Management"},
-              {id: "mobile", label: "Mobile Operations"}
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "px-6 py-3 rounded-full text-sm font-medium transition-all",
-                  activeTab === tab.id 
-                    ? "bg-blue-600 text-white shadow-lg" 
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                )}
-              >
+            {[{
+            id: "fuel-station",
+            label: "Fuel Station Management"
+          }, {
+            id: "customer",
+            label: "Customer Relationship Management"
+          }, {
+            id: "mobile",
+            label: "Mobile Operations"
+          }].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-6 py-3 rounded-full text-sm font-medium transition-all", activeTab === tab.id ? "bg-blue-600 text-white shadow-lg" : "bg-gray-100 text-gray-700 hover:bg-gray-200")}>
                 {tab.label}
-              </button>
-            ))}
+              </button>)}
           </div>
           
           {/* Tab Content */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             {/* Tab 1: Fuel Station Management */}
-            {activeTab === "fuel-station" && (
-              <>
+            {activeTab === "fuel-station" && <>
                 <div className="space-y-6">
                   <h3 className="text-2xl font-bold text-gray-900">Complete Fuel Station Operations</h3>
                   <p className="text-gray-600">
@@ -194,12 +165,19 @@ const Index = () => {
                   </p>
                   
                   <ul className="space-y-4">
-                    {[
-                      {icon: GaugeCircle, title: "Daily Readings Management", desc: "Record and track fuel levels, sales, and reconciliation data on a daily basis."},
-                      {icon: Clock, title: "Shift Management", desc: "Manage staff shifts, track performance, and handle shift handovers seamlessly."},
-                      {icon: Truck, title: "Tank Unloading", desc: "Monitor fuel deliveries, record unloading, and maintain accurate stock levels."}
-                    ].map((feature, idx) => (
-                      <li key={idx} className="flex gap-4">
+                    {[{
+                  icon: GaugeCircle,
+                  title: "Daily Readings Management",
+                  desc: "Record and track fuel levels, sales, and reconciliation data on a daily basis."
+                }, {
+                  icon: Clock,
+                  title: "Shift Management",
+                  desc: "Manage staff shifts, track performance, and handle shift handovers seamlessly."
+                }, {
+                  icon: Truck,
+                  title: "Tank Unloading",
+                  desc: "Monitor fuel deliveries, record unloading, and maintain accurate stock levels."
+                }].map((feature, idx) => <li key={idx} className="flex gap-4">
                         <div className="flex-shrink-0 h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
                           <feature.icon className="h-6 w-6 text-blue-600" />
                         </div>
@@ -207,8 +185,7 @@ const Index = () => {
                           <h4 className="text-lg font-medium text-gray-900">{feature.title}</h4>
                           <p className="text-gray-600">{feature.desc}</p>
                         </div>
-                      </li>
-                    ))}
+                      </li>)}
                   </ul>
                   
                   <Link to="/login">
@@ -218,19 +195,13 @@ const Index = () => {
                   </Link>
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
-                  <img 
-                    src="/lovable-uploads/6b80c539-1a31-48ce-a52b-a11b3672909c.png" 
-                    alt="Fuel Station Management Illustration" 
-                    className="w-full h-auto"
-                  />
+                  <img src="/lovable-uploads/6b80c539-1a31-48ce-a52b-a11b3672909c.png" alt="Fuel Station Management Illustration" className="w-full h-auto" />
                   <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/10 to-transparent"></div>
                 </div>
-              </>
-            )}
+              </>}
             
             {/* Tab 2: Customer Management */}
-            {activeTab === "customer" && (
-              <>
+            {activeTab === "customer" && <>
                 <div className="space-y-6">
                   <h3 className="text-2xl font-bold text-gray-900">Customer Relationship Management</h3>
                   <p className="text-gray-600">
@@ -238,12 +209,19 @@ const Index = () => {
                   </p>
                   
                   <ul className="space-y-4">
-                    {[
-                      {icon: Users, title: "Customer Database", desc: "Maintain detailed customer records with vehicles, preferences, and transaction history."},
-                      {icon: FileText, title: "Booklet & Indent Management", desc: "Manage indent booklets for corporate customers with proper tracking and accounting."},
-                      {icon: BarChart3, title: "Transaction Records", desc: "Record, search, and analyze all transactions with comprehensive filtering options."}
-                    ].map((feature, idx) => (
-                      <li key={idx} className="flex gap-4">
+                    {[{
+                  icon: Users,
+                  title: "Customer Database",
+                  desc: "Maintain detailed customer records with vehicles, preferences, and transaction history."
+                }, {
+                  icon: FileText,
+                  title: "Booklet & Indent Management",
+                  desc: "Manage indent booklets for corporate customers with proper tracking and accounting."
+                }, {
+                  icon: BarChart3,
+                  title: "Transaction Records",
+                  desc: "Record, search, and analyze all transactions with comprehensive filtering options."
+                }].map((feature, idx) => <li key={idx} className="flex gap-4">
                         <div className="flex-shrink-0 h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
                           <feature.icon className="h-6 w-6 text-blue-600" />
                         </div>
@@ -251,8 +229,7 @@ const Index = () => {
                           <h4 className="text-lg font-medium text-gray-900">{feature.title}</h4>
                           <p className="text-gray-600">{feature.desc}</p>
                         </div>
-                      </li>
-                    ))}
+                      </li>)}
                   </ul>
                   
                   <Link to="/login">
@@ -262,19 +239,13 @@ const Index = () => {
                   </Link>
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
-                  <img 
-                    src="/lovable-uploads/d424ae0e-38d5-4001-a064-4f8df949d54b.png" 
-                    alt="Customer Relationship Management Dashboard" 
-                    className="w-full h-auto"
-                  />
+                  <img src="/lovable-uploads/d424ae0e-38d5-4001-a064-4f8df949d54b.png" alt="Customer Relationship Management Dashboard" className="w-full h-auto" />
                   <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/10 to-transparent"></div>
                 </div>
-              </>
-            )}
+              </>}
             
             {/* Tab 3: Mobile Operations */}
-            {activeTab === "mobile" && (
-              <>
+            {activeTab === "mobile" && <>
                 <div className="space-y-6">
                   <h3 className="text-2xl font-bold text-gray-900">Mobile Operations</h3>
                   <p className="text-gray-600">
@@ -282,12 +253,19 @@ const Index = () => {
                   </p>
                   
                   <ul className="space-y-4">
-                    {[
-                      {icon: Smartphone, title: "Mobile-Friendly Interface", desc: "Access critical functions from any device with responsive design."},
-                      {icon: Zap, title: "Field Operations", desc: "Record indents, daily readings, and manage shifts directly from mobile devices."},
-                      {icon: ShieldCheck, title: "Approval Workflows", desc: "Submit operations for approval with built-in verification system."}
-                    ].map((feature, idx) => (
-                      <li key={idx} className="flex gap-4">
+                    {[{
+                  icon: Smartphone,
+                  title: "Mobile-Friendly Interface",
+                  desc: "Access critical functions from any device with responsive design."
+                }, {
+                  icon: Zap,
+                  title: "Field Operations",
+                  desc: "Record indents, daily readings, and manage shifts directly from mobile devices."
+                }, {
+                  icon: ShieldCheck,
+                  title: "Approval Workflows",
+                  desc: "Submit operations for approval with built-in verification system."
+                }].map((feature, idx) => <li key={idx} className="flex gap-4">
                         <div className="flex-shrink-0 h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
                           <feature.icon className="h-6 w-6 text-blue-600" />
                         </div>
@@ -295,8 +273,7 @@ const Index = () => {
                           <h4 className="text-lg font-medium text-gray-900">{feature.title}</h4>
                           <p className="text-gray-600">{feature.desc}</p>
                         </div>
-                      </li>
-                    ))}
+                      </li>)}
                   </ul>
                   
                   <Link to="/login">
@@ -306,15 +283,10 @@ const Index = () => {
                   </Link>
                 </div>
                 <div className="relative rounded-xl overflow-hidden shadow-2xl border border-gray-200">
-                  <img 
-                    src="/lovable-uploads/b6fe7dc6-4252-40ed-83ad-12a5640e1d43.png" 
-                    alt="Mobile Operations Interface" 
-                    className="w-full h-auto"
-                  />
+                  <img src="/lovable-uploads/b6fe7dc6-4252-40ed-83ad-12a5640e1d43.png" alt="Mobile Operations Interface" className="w-full h-auto" />
                   <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/10 to-transparent"></div>
                 </div>
-              </>
-            )}
+              </>}
           </div>
         </div>
       </section>
@@ -330,46 +302,37 @@ const Index = () => {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Operational Efficiency",
-                desc: "Streamline daily processes, reduce manual errors, and save valuable time with automated workflows.",
-                icon: Zap
-              },
-              {
-                title: "Financial Control",
-                desc: "Gain complete visibility into sales, expenditures, and reconciliation to optimize financial performance.",
-                icon: TrendingUp
-              },
-              {
-                title: "Customer Satisfaction",
-                desc: "Provide faster service, accurate billing, and better overall experience for your customers.",
-                icon: Users
-              },
-              {
-                title: "Data Security",
-                desc: "Keep your business data secure with enterprise-grade security protocols and access controls.",
-                icon: ShieldCheck
-              },
-              {
-                title: "Insightful Analytics",
-                desc: "Make data-driven decisions with comprehensive reporting and analytical capabilities.",
-                icon: BarChart3
-              },
-              {
-                title: "Seamless Integrations",
-                desc: "Connect with your existing tools and systems for a unified operational environment.",
-                icon: Laptop
-              }
-            ].map((benefit, idx) => (
-              <div key={idx} className="bg-blue-800 rounded-xl p-8 shadow-lg border border-blue-700/40 hover:shadow-xl transition-shadow">
+            {[{
+            title: "Operational Efficiency",
+            desc: "Streamline daily processes, reduce manual errors, and save valuable time with automated workflows.",
+            icon: Zap
+          }, {
+            title: "Financial Control",
+            desc: "Gain complete visibility into sales, expenditures, and reconciliation to optimize financial performance.",
+            icon: TrendingUp
+          }, {
+            title: "Customer Satisfaction",
+            desc: "Provide faster service, accurate billing, and better overall experience for your customers.",
+            icon: Users
+          }, {
+            title: "Data Security",
+            desc: "Keep your business data secure with enterprise-grade security protocols and access controls.",
+            icon: ShieldCheck
+          }, {
+            title: "Insightful Analytics",
+            desc: "Make data-driven decisions with comprehensive reporting and analytical capabilities.",
+            icon: BarChart3
+          }, {
+            title: "Seamless Integrations",
+            desc: "Connect with your existing tools and systems for a unified operational environment.",
+            icon: Laptop
+          }].map((benefit, idx) => <div key={idx} className="bg-blue-800 rounded-xl p-8 shadow-lg border border-blue-700/40 hover:shadow-xl transition-shadow">
                 <div className="w-12 h-12 bg-blue-700 rounded-xl flex items-center justify-center mb-6">
                   <benefit.icon className="h-6 w-6 text-blue-200" />
                 </div>
                 <h3 className="text-xl font-bold mb-3">{benefit.title}</h3>
                 <p className="text-blue-100">{benefit.desc}</p>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
       </section>
@@ -385,29 +348,22 @@ const Index = () => {
           </div>
           
           <div className="max-w-3xl mx-auto divide-y divide-gray-200">
-            {[
-              {
-                question: "How easy is it to get started with Fuel Pro 360?",
-                answer: "Getting started is simple. After signing up, our team will help you set up your account, configure your fuel types and pumps, and provide training to your staff. Most businesses are fully operational within days."
-              },
-              {
-                question: "Can I access the system from multiple devices?",
-                answer: "Yes, Fuel Pro 360 is cloud-based and can be accessed from any device with an internet connection. We also offer dedicated mobile interfaces for field operations."
-              },
-              {
-                question: "How does the indent booklet system work?",
-                answer: "Our indent booklet system allows you to issue booklets to corporate customers, track usage, and automatically generate invoices. Each indent is validated, recorded, and linked to the customer account for seamless tracking."
-              },
-              {
-                question: "Is my data secure with Fuel Pro 360?",
-                answer: "Absolutely. We implement enterprise-grade security protocols, regular backups, and strict access controls to ensure your business data remains secure and confidential at all times."
-              },
-              {
-                question: "Can I track fuel inventory and stock levels?",
-                answer: "Yes, Fuel Pro 360 provides comprehensive inventory management features including daily tank readings, stock level monitoring, and alerts for low stock situations."
-              }
-            ].map((faq, idx) => (
-              <div key={idx} className="py-6">
+            {[{
+            question: "How easy is it to get started with Fuel Pro 360?",
+            answer: "Getting started is simple. After signing up, our team will help you set up your account, configure your fuel types and pumps, and provide training to your staff. Most businesses are fully operational within days."
+          }, {
+            question: "Can I access the system from multiple devices?",
+            answer: "Yes, Fuel Pro 360 is cloud-based and can be accessed from any device with an internet connection. We also offer dedicated mobile interfaces for field operations."
+          }, {
+            question: "How does the indent booklet system work?",
+            answer: "Our indent booklet system allows you to issue booklets to corporate customers, track usage, and automatically generate invoices. Each indent is validated, recorded, and linked to the customer account for seamless tracking."
+          }, {
+            question: "Is my data secure with Fuel Pro 360?",
+            answer: "Absolutely. We implement enterprise-grade security protocols, regular backups, and strict access controls to ensure your business data remains secure and confidential at all times."
+          }, {
+            question: "Can I track fuel inventory and stock levels?",
+            answer: "Yes, Fuel Pro 360 provides comprehensive inventory management features including daily tank readings, stock level monitoring, and alerts for low stock situations."
+          }].map((faq, idx) => <div key={idx} className="py-6">
                 <details className="group">
                   <summary className="flex justify-between items-center font-medium cursor-pointer list-none">
                     <span className="text-lg font-semibold text-gray-900">{faq.question}</span>
@@ -419,8 +375,7 @@ const Index = () => {
                     {faq.answer}
                   </p>
                 </details>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
       </section>
@@ -466,38 +421,22 @@ const Index = () => {
             <div>
               <h3 className="text-lg font-bold text-white mb-4">Features</h3>
               <ul className="space-y-2">
-                {[
-                  "Daily Readings",
-                  "Shift Management",
-                  "Customer Management",
-                  "Transaction Records",
-                  "Indent Booklets",
-                  "Mobile Operations"
-                ].map((item, idx) => (
-                  <li key={idx}>
+                {["Daily Readings", "Shift Management", "Customer Management", "Transaction Records", "Indent Booklets", "Mobile Operations"].map((item, idx) => <li key={idx}>
                     <a href="#features" className="hover:text-blue-300 transition-colors">
                       {item}
                     </a>
-                  </li>
-                ))}
+                  </li>)}
               </ul>
             </div>
             
             <div>
               <h3 className="text-lg font-bold text-white mb-4">Company</h3>
               <ul className="space-y-2">
-                {[
-                  "About Us",
-                  "Contact",
-                  "Privacy Policy",
-                  "Terms of Service"
-                ].map((item, idx) => (
-                  <li key={idx}>
+                {["About Us", "Contact", "Privacy Policy", "Terms of Service"].map((item, idx) => <li key={idx}>
                     <a href="#" className="hover:text-blue-300 transition-colors">
                       {item}
                     </a>
-                  </li>
-                ))}
+                  </li>)}
               </ul>
             </div>
             
@@ -514,17 +453,13 @@ const Index = () => {
           <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p>© {new Date().getFullYear()} Fuel Pro 360. All rights reserved.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              {["Facebook", "Twitter", "LinkedIn", "Instagram"].map((social, idx) => (
-                <a key={idx} href="#" className="hover:text-blue-300 transition-colors">
+              {["Facebook", "Twitter", "LinkedIn", "Instagram"].map((social, idx) => <a key={idx} href="#" className="hover:text-blue-300 transition-colors">
                   {social}
-                </a>
-              ))}
+                </a>)}
             </div>
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
