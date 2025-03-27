@@ -11,7 +11,7 @@ const MobileHome = () => {
   return (
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
       <div className="text-center mb-4 animate-fade-in">
-        <h1 className="text-2xl font-bold text-primary">{fuelPumpName || 'Fuel Master'}</h1>
+        <h1 className="text-2xl font-bold text-primary">{fuelPumpName || 'Fuel Pro 360'}</h1>
         <p className="text-muted-foreground text-sm mt-1">Mobile Dashboard</p>
       </div>
       
@@ -27,7 +27,7 @@ const MobileHome = () => {
           <CardFeature
             title="Indent"
             description="Record"
-            icon={<CreditCard className="text-fuelmaster-blue" size={20} />}
+            icon={<CreditCard className="text-primary" size={20} />}
           />
         </Link>
         
@@ -35,7 +35,7 @@ const MobileHome = () => {
           <CardFeature
             title="Shift"
             description="Log"
-            icon={<CalendarClock className="text-fuelmaster-green" size={20} />}
+            icon={<CalendarClock className="text-green-500" size={20} />}
           />
         </Link>
         
@@ -43,7 +43,7 @@ const MobileHome = () => {
           <CardFeature
             title="Client"
             description="View"
-            icon={<UserRound className="text-fuelmaster-orange" size={20} />}
+            icon={<UserRound className="text-orange-500" size={20} />}
           />
         </Link>
         
@@ -51,7 +51,7 @@ const MobileHome = () => {
           <CardFeature
             title="Meter"
             description="Read"
-            icon={<Droplets className="text-fuelmaster-teal" size={20} />}
+            icon={<Droplets className="text-blue-500" size={20} />}
           />
         </Link>
       </div>

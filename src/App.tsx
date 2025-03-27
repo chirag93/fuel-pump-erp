@@ -1,3 +1,4 @@
+
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
@@ -109,10 +110,13 @@ function App() {
       <Route path="/mobile/daily-readings" element={<MobileDailyReadings />} />
       <Route path="/mobile/record-indent" element={<MobileRecordIndent />} />
       
+      {/* Customer Details route should be accessible on mobile too */}
+      <Route path="/customers/:id" element={<CustomerDetails />} />
+      
       {/* Fallback Route */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
-}
+};
 
 export default App;

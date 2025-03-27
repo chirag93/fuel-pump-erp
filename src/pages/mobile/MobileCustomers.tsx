@@ -105,7 +105,7 @@ const MobileCustomers = () => {
                       )}
                     </p>
                   </div>
-                  <Link to={`/customer/${customer.id}`}>
+                  <Link to={`/customers/${customer.id}`}>
                     <Button variant="ghost" size="sm">View</Button>
                   </Link>
                 </div>
