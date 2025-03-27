@@ -12,16 +12,6 @@ import { AlertCircle, ChevronLeft, User, Mail, MapPin, Phone, Shield } from 'luc
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Define an interface for the user object returned from Supabase Auth
-interface SupabaseUser {
-  id: string;
-  email?: string | null;
-  created_at?: string;
-  last_sign_in_at?: string;
-  app_metadata?: any;
-  user_metadata?: any;
-}
-
 const FuelPumpUserPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -90,8 +80,8 @@ const FuelPumpUserPage = () => {
         throw new Error('Fuel pump email not found');
       }
 
-      // Call our secure edge function to reset the password by email
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-password`, {
+      // Call our backend API to reset the password
+      const response = await fetch(`${process.env.VITE_API_URL || 'http://localhost:5000'}/api/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -105,7 +95,7 @@ const FuelPumpUserPage = () => {
 
       const result = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || !result.success) {
         throw new Error(result.error || 'Error resetting password');
       }
 

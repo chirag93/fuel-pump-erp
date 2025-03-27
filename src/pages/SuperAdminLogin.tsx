@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,10 +62,26 @@ const SuperAdminLogin = () => {
     }
 
     try {
-      const success = await login(email, password, rememberMe);
-      if (success) {
-        // Check if the logged-in user is a super admin before redirecting
-        if (isSuperAdmin) {
+      // Use our new backend authentication endpoint
+      const response = await fetch(`${process.env.VITE_API_URL || 'http://localhost:5000'}/api/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          username: email, // We're using email as username
+          password
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Check if the user is a super admin
+        if (data.user.role === 'super_admin') {
+          // Call the login method from auth context to set up session
+          await login(data.user.id, data.user, rememberMe);
+          
           navigate('/super-admin/dashboard', { replace: true });
           toast({
             title: "Login successful",
@@ -76,7 +91,7 @@ const SuperAdminLogin = () => {
           setError('You do not have Super Admin access.');
         }
       } else {
-        setError('Login failed. Please check your credentials.');
+        setError(data.message || 'Login failed. Please check your credentials.');
       }
     } catch (err) {
       setError('An error occurred during login.');

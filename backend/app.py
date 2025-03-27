@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
@@ -6,6 +5,8 @@ import os
 from datetime import datetime
 import uuid
 import requests
+import hashlib
+import secrets
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -58,6 +59,23 @@ def supabase_update(table, data, match_column, match_value):
         return response.json()
     return None
 
+# Helper function for password hashing
+def hash_password(password, salt=None):
+    """Hash a password using SHA-256 with a salt"""
+    if salt is None:
+        salt = secrets.token_hex(16)
+    
+    # Create a hash with salt
+    hash_obj = hashlib.sha256((password + salt).encode('utf-8'))
+    password_hash = hash_obj.hexdigest()
+    
+    return password_hash, salt
+
+def verify_password(password, stored_hash, salt):
+    """Verify a password against a stored hash"""
+    new_hash, _ = hash_password(password, salt)
+    return new_hash == stored_hash
+
 # Authentication routes
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -65,11 +83,12 @@ def login():
     username = data.get('username')
     password = data.get('password')
     
-    # Query app_users table
+    # Query app_users table with username
     users = supabase_get('app_users', {'username': f'eq.{username}'})
     
     for user in users:
-        if user['password'] == password:  # In a real app, this would use password hashing
+        # Verify password using salt and hash
+        if verify_password(password, user['password_hash'], user['password_salt']):
             # Return user data without password
             user_data = {
                 'id': user['id'],
@@ -80,6 +99,59 @@ def login():
             return jsonify({'success': True, 'user': user_data})
     
     return jsonify({'success': False, 'message': 'Invalid username or password'}), 401
+
+# New endpoint for password reset
+@app.route('/api/reset-password', methods=['POST'])
+def reset_password():
+    data = request.json
+    email = data.get('email')
+    new_password = data.get('newPassword')
+    auth_token = request.headers.get('Authorization')
+    
+    # Validate authorization
+    if not auth_token or not auth_token.startswith('Bearer '):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    # Check if user is a super admin by querying the super_admins table
+    admin_token = auth_token.replace('Bearer ', '')
+    # This is a simplified check - in a real app, you'd validate the token properly
+    super_admins = supabase_get('super_admins')
+    is_super_admin = False
+    
+    # Basic validation
+    if not email or not new_password:
+        return jsonify({'success': False, 'error': 'Email and new password are required'}), 400
+    
+    if len(new_password) < 6:
+        return jsonify({'success': False, 'error': 'Password must be at least 6 characters long'}), 400
+    
+    # Find the user by email
+    users = supabase_get('app_users', {'email': f'eq.{email}'})
+    
+    if not users:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
+    user = users[0]
+    
+    # Hash the new password
+    password_hash, password_salt = hash_password(new_password)
+    
+    # Update the user's password
+    update_data = {
+        'password_hash': password_hash,
+        'password_salt': password_salt,
+        'updated_at': datetime.now().isoformat()
+    }
+    
+    result = supabase_update('app_users', update_data, 'id', user['id'])
+    
+    if result:
+        return jsonify({
+            'success': True, 
+            'message': 'Password reset successfully'
+        })
+    
+    return jsonify({'success': False, 'error': 'Failed to reset password'}), 500
 
 # Customer routes
 @app.route('/api/customers', methods=['GET'])

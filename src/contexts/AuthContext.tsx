@@ -1,6 +1,5 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 interface UserProfile {
@@ -12,13 +11,18 @@ interface UserProfile {
   fuelPumpName?: string; // Associated fuel pump name
 }
 
+interface Session {
+  access_token: string;
+  user: UserProfile;
+}
+
 interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
   fuelPumpId: string | null;
   fuelPumpName: string | null;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
+  login: (userId: string, userData: any, rememberMe?: boolean) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
   session: Session | null;
@@ -34,85 +38,57 @@ export const useAuth = () => {
   return context;
 };
 
+// Helper function to get stored session from localStorage
+const getStoredSession = (): Session | null => {
+  const storedSession = localStorage.getItem('fuel_pro_session');
+  if (storedSession) {
+    try {
+      return JSON.parse(storedSession);
+    } catch (e) {
+      console.error('Error parsing stored session:', e);
+      localStorage.removeItem('fuel_pro_session');
+    }
+  }
+  return null;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<Session | null>(getStoredSession());
   const [isLoading, setIsLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
   const [fuelPumpName, setFuelPumpName] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        const userProfile = mapUserToProfile(session.user);
-        setUser(userProfile);
-        
-        // Check if the user is a super admin
-        checkIsSuperAdmin(session.user.id);
-        
-        // If not a super admin, fetch associated fuel pump
-        if (!userProfile.role.includes('super_admin')) {
-          fetchAssociatedFuelPump(session.user.email);
-        }
-      } else {
-        setUser(null);
+    // Check if there's a stored session
+    const storedSession = getStoredSession();
+    
+    if (storedSession) {
+      setSession(storedSession);
+      setUser(storedSession.user);
+      
+      // Check if user is a super admin
+      setIsSuperAdmin(storedSession.user.role === 'super_admin');
+      
+      // If not a super admin, fetch associated fuel pump
+      if (storedSession.user.role !== 'super_admin') {
+        fetchAssociatedFuelPump(storedSession.user.email);
       }
-      
-      setIsLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      
-      if (session) {
-        const userProfile = mapUserToProfile(session.user);
-        setUser(userProfile);
-        
-        // Check if the user is a super admin
-        checkIsSuperAdmin(session.user.id);
-        
-        // If not a super admin, fetch associated fuel pump
-        if (!userProfile.role.includes('super_admin')) {
-          fetchAssociatedFuelPump(session.user.email);
-        }
-      } else {
-        setUser(null);
-        setFuelPumpId(null);
-        setFuelPumpName(null);
-        setIsSuperAdmin(false);
-      }
-      
-      setIsLoading(false);
-    });
-
-    return () => {
-      subscription?.unsubscribe();
-    };
+    }
+    
+    setIsLoading(false);
   }, []);
 
   // Fetch the fuel pump associated with a user's email
   const fetchAssociatedFuelPump = async (email: string) => {
     try {
-      const { data, error } = await supabase
-        .from('fuel_pumps')
-        .select('id, name')
-        .eq('email', email)
-        .single();
+      const response = await fetch(`${process.env.VITE_API_URL || 'http://localhost:5000'}/api/fuel-pumps?email=${email}`);
+      const data = await response.json();
       
-      if (error) {
-        console.error('Error fetching associated fuel pump:', error);
-        setFuelPumpId(null);
-        setFuelPumpName(null);
-        return;
-      }
-      
-      if (data) {
-        setFuelPumpId(data.id);
-        setFuelPumpName(data.name);
+      if (data && data.length > 0) {
+        setFuelPumpId(data[0].id);
+        setFuelPumpName(data[0].name);
       } else {
         setFuelPumpId(null);
         setFuelPumpName(null);
@@ -124,85 +100,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Check if a user is a super admin
-  const checkIsSuperAdmin = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('super_admins')
-        .select('id')
-        .eq('id', userId)
-        .single();
-      
-      if (error) {
-        console.error('Error checking super admin status:', error);
-        setIsSuperAdmin(false);
-        return;
-      }
-      
-      setIsSuperAdmin(data ? true : false);
-    } catch (error) {
-      console.error('Error checking super admin status:', error);
-      setIsSuperAdmin(false);
-    }
-  };
-
-  // Helper function to map Supabase user to our UserProfile format
-  const mapUserToProfile = (supabaseUser: User): UserProfile => {
-    return {
-      id: supabaseUser.id,
-      username: supabaseUser.email?.split('@')[0] || 'user',
-      email: supabaseUser.email || '',
-      // Default to 'staff' role - this would ideally come from a profiles table
-      role: (supabaseUser.app_metadata.role as 'admin' | 'staff' | 'super_admin') || 'staff'
-    };
-  };
-
-  const login = async (email: string, password: string, rememberMe: boolean = false): Promise<boolean> => {
+  const login = async (userId: string, userData: any, rememberMe: boolean = false): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Create user profile from user data
+      const userProfile: UserProfile = {
+        id: userId,
+        username: userData.username || userData.email?.split('@')[0] || 'user',
+        email: userData.email || '',
+        role: userData.role || 'staff'
+      };
+      
+      // Create session
+      const newSession: Session = {
+        access_token: `token_${userId}`,  // In a real app, this would be a JWT
+        user: userProfile
+      };
+      
+      // Store session if rememberMe is true
+      if (rememberMe) {
+        localStorage.setItem('fuel_pro_session', JSON.stringify(newSession));
+      }
+      
+      // Update state
+      setUser(userProfile);
+      setSession(newSession);
+      
+      // Check if user is a super admin
+      setIsSuperAdmin(userProfile.role === 'super_admin');
+      
+      // If not a super admin, fetch associated fuel pump
+      if (userProfile.role !== 'super_admin') {
+        await fetchAssociatedFuelPump(userProfile.email);
+      }
+      
+      toast({
+        title: "Login successful",
+        description: `Welcome back, ${userProfile.username}!`,
       });
-
-      if (error) {
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return false;
-      }
-
-      if (data.user) {
-        // If rememberMe is true, update the session expiry time
-        if (rememberMe) {
-          // We can use refreshSession instead of setSession to create a new session with a longer expiry
-          // This is a workaround as setSession with expires_in doesn't work properly with TypeScript
-          const { error: refreshError } = await supabase.auth.refreshSession();
-          
-          if (refreshError) {
-            console.error('Session refresh error:', refreshError);
-          }
-        }
-        
-        toast({
-          title: "Login successful",
-          description: `Welcome back, ${data.user.email?.split('@')[0] || 'user'}!`,
-        });
-        
-        // Check if the user is a super admin
-        await checkIsSuperAdmin(data.user.id);
-        
-        // If not a super admin, fetch associated fuel pump
-        const userProfile = mapUserToProfile(data.user);
-        if (!userProfile.role.includes('super_admin')) {
-          await fetchAssociatedFuelPump(data.user.email);
-        }
-        
-        return true;
-      }
-      return false;
+      
+      return true;
     } catch (error) {
       console.error('Login error:', error);
       toast({
@@ -217,22 +154,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Logout error:', error);
-      toast({
-        title: "Logout failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
+    try {
+      // Clear session from localStorage
+      localStorage.removeItem('fuel_pro_session');
+      
+      // Reset state
       setUser(null);
+      setSession(null);
       setIsSuperAdmin(false);
       setFuelPumpId(null);
       setFuelPumpName(null);
+      
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout failed",
+        description: "An error occurred during logout",
+        variant: "destructive",
       });
     }
   };
