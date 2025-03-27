@@ -233,6 +233,7 @@ export type Database = {
         Row: {
           current_level: number
           current_price: number
+          fuel_pump_id: string | null
           fuel_type: string
           id: string
           tank_capacity: number
@@ -241,6 +242,7 @@ export type Database = {
         Insert: {
           current_level: number
           current_price: number
+          fuel_pump_id?: string | null
           fuel_type: string
           id?: string
           tank_capacity: number
@@ -249,12 +251,21 @@ export type Database = {
         Update: {
           current_level?: number
           current_price?: number
+          fuel_pump_id?: string | null
           fuel_type?: string
           id?: string
           tank_capacity?: number
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fuel_settings_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fuel_tests: {
         Row: {
@@ -524,6 +535,7 @@ export type Database = {
       pump_settings: {
         Row: {
           created_at: string | null
+          fuel_pump_id: string | null
           fuel_types: string[]
           id: string
           nozzle_count: number
@@ -531,6 +543,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          fuel_pump_id?: string | null
           fuel_types?: string[]
           id?: string
           nozzle_count?: number
@@ -538,12 +551,21 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          fuel_pump_id?: string | null
           fuel_types?: string[]
           id?: string
           nozzle_count?: number
           pump_number?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pump_settings_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       readings: {
         Row: {
@@ -978,6 +1000,50 @@ export type Database = {
         }
         Returns: number
       }
+      get_fuel_pump_by_email: {
+        Args: {
+          email_param: string
+        }
+        Returns: {
+          address: string | null
+          contact_number: string | null
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+          name: string
+          status: string
+        }[]
+      }
+      get_fuel_pump_by_id: {
+        Args: {
+          id_param: string
+        }
+        Returns: {
+          address: string | null
+          contact_number: string | null
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+          name: string
+          status: string
+        }[]
+      }
+      get_fuel_settings_for_pump: {
+        Args: {
+          pump_id_param: string
+        }
+        Returns: {
+          current_level: number
+          current_price: number
+          fuel_pump_id: string | null
+          fuel_type: string
+          id: string
+          tank_capacity: number
+          updated_at: string | null
+        }[]
+      }
       get_invoices_with_customer_names: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -989,6 +1055,19 @@ export type Database = {
           status: string
           created_at: string
           updated_at: string
+        }[]
+      }
+      get_pump_settings_for_fuel_pump: {
+        Args: {
+          pump_id_param: string
+        }
+        Returns: {
+          created_at: string | null
+          fuel_pump_id: string | null
+          fuel_types: string[]
+          id: string
+          nozzle_count: number
+          pump_number: string
         }[]
       }
       get_staff_features: {

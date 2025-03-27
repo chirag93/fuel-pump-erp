@@ -65,7 +65,6 @@ export const getFuelPumpByEmail = async (email: string): Promise<FuelPump | null
   try {
     console.log(`Checking if fuel pump exists with email: ${email}`);
     
-    // Use raw SQL to avoid TypeScript deep instantiation errors
     const { data, error } = await supabase
       .rpc('get_fuel_pump_by_email', { email_param: email.toLowerCase() });
     
@@ -74,7 +73,7 @@ export const getFuelPumpByEmail = async (email: string): Promise<FuelPump | null
       throw error;
     }
     
-    if (data && data.length > 0) {
+    if (data && Array.isArray(data) && data.length > 0) {
       console.log(`Found existing fuel pump with email: ${email}`);
       return data[0] as FuelPump;
     }
@@ -92,7 +91,6 @@ export const getFuelPumpByEmail = async (email: string): Promise<FuelPump | null
  */
 export const getFuelPumpById = async (id: string): Promise<FuelPump | null> => {
   try {
-    // Use raw SQL to avoid TypeScript deep instantiation errors
     const { data, error } = await supabase
       .rpc('get_fuel_pump_by_id', { id_param: id });
     
@@ -101,7 +99,7 @@ export const getFuelPumpById = async (id: string): Promise<FuelPump | null> => {
       throw error;
     }
     
-    if (data && data.length > 0) {
+    if (data && Array.isArray(data) && data.length > 0) {
       return data[0] as FuelPump;
     }
     
@@ -117,7 +115,6 @@ export const getFuelPumpById = async (id: string): Promise<FuelPump | null> => {
  */
 export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<FuelSettingsType[]> => {
   try {
-    // Use raw SQL to avoid TypeScript deep instantiation errors
     const { data, error } = await supabase
       .rpc('get_fuel_settings_for_pump', { pump_id_param: fuelPumpId });
     
@@ -126,7 +123,11 @@ export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<FuelSe
       throw error;
     }
     
-    return data as FuelSettingsType[] || [];
+    if (data && Array.isArray(data)) {
+      return data as FuelSettingsType[];
+    }
+    
+    return [];
   } catch (error) {
     console.error('Error fetching fuel settings for pump:', error);
     return [];
@@ -138,7 +139,6 @@ export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<FuelSe
  */
 export const getPumpSettingsForFuelPump = async (fuelPumpId: string): Promise<PumpSettingsType[]> => {
   try {
-    // Use raw SQL to avoid TypeScript deep instantiation errors
     const { data, error } = await supabase
       .rpc('get_pump_settings_for_fuel_pump', { pump_id_param: fuelPumpId });
     
@@ -147,7 +147,11 @@ export const getPumpSettingsForFuelPump = async (fuelPumpId: string): Promise<Pu
       throw error;
     }
     
-    return data as PumpSettingsType[] || [];
+    if (data && Array.isArray(data)) {
+      return data as PumpSettingsType[];
+    }
+    
+    return [];
   } catch (error) {
     console.error('Error fetching pump settings for fuel pump:', error);
     return [];
