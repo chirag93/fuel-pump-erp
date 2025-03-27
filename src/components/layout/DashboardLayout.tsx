@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -83,6 +82,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   };
 
   const mainNavigation = [
+    { href: "/home", icon: <Home className="h-4 w-4" />, label: "Home" },
     { href: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" />, label: "Dashboard" },
     { href: "/customers", icon: <Users className="h-4 w-4" />, label: "Customers" },
     { href: "/record-indent", icon: <CreditCard className="h-4 w-4" />, label: "Record Indent" },
