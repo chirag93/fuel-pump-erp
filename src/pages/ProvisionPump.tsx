@@ -11,7 +11,9 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2, AlertCircle } from 'lucide-react';
+import { getFuelPumpByEmail } from '@/integrations/fuelPumps';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Pump name must be at least 2 characters long' }),
@@ -31,6 +33,7 @@ const ProvisionPump = () => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -47,8 +50,18 @@ const ProvisionPump = () => {
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     setSuccessMessage(null);
+    setErrorMessage(null);
     
     try {
+      // Check if email already exists in fuel_pumps table
+      const existingPump = await getFuelPumpByEmail(values.email);
+      
+      if (existingPump) {
+        setErrorMessage(`A fuel pump with email "${values.email}" already exists. Please use a different email address.`);
+        setIsLoading(false);
+        return;
+      }
+      
       // 1. Create the fuel pump record first with active status
       const { data: pumpData, error: pumpError } = await supabase
         .from('fuel_pumps')
@@ -70,6 +83,7 @@ const ProvisionPump = () => {
           description: pumpError.message,
           variant: 'destructive',
         });
+        setErrorMessage(pumpError.message || "Failed to create fuel pump");
         return;
       }
 
@@ -79,6 +93,7 @@ const ProvisionPump = () => {
           description: 'No data returned from fuel pump creation',
           variant: 'destructive',
         });
+        setErrorMessage("No data returned from fuel pump creation");
         return;
       }
 
@@ -109,6 +124,7 @@ const ProvisionPump = () => {
           description: authError.message,
           variant: 'destructive',
         });
+        setErrorMessage(authError.message || "Failed to create user account");
         return;
       }
 
@@ -171,13 +187,14 @@ const ProvisionPump = () => {
         password: '',
         confirmPassword: '',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error provisioning pump:', error);
       toast({
         title: 'Error',
         description: 'An unexpected error occurred while provisioning the fuel pump.',
         variant: 'destructive',
       });
+      setErrorMessage(error.message || 'An unexpected error occurred while provisioning the fuel pump.');
     } finally {
       setIsLoading(false);
     }
@@ -200,6 +217,14 @@ const ProvisionPump = () => {
               <Check className="mt-1 mr-2 h-5 w-5 flex-shrink-0" />
               <p>{successMessage}</p>
             </div>
+          )}
+          
+          {errorMessage && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
           )}
           
           <Form {...form}>

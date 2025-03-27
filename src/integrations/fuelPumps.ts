@@ -59,19 +59,14 @@ export const getAllFuelPumps = async (): Promise<FuelPump[]> => {
  */
 export const getFuelPumpByEmail = async (email: string): Promise<FuelPump | null> => {
   try {
+    // Use maybeSingle instead of single to avoid throwing errors when no result is found
     const { data, error } = await supabase
       .from('fuel_pumps')
       .select('*')
       .eq('email', email)
       .maybeSingle();
       
-    if (error) {
-      if (error.code === 'PGRST116') {
-        // No rows returned - not an error for this function
-        return null;
-      }
-      throw error;
-    }
+    if (error) throw error;
     
     return data;
   } catch (error) {
