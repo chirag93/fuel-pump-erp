@@ -15,6 +15,7 @@ CORS(app)  # Enable CORS for all routes without restriction during development
 # Supabase API details
 SUPABASE_URL = os.environ.get('SUPABASE_URL', "https://svuritdhlgaonfefphkz.supabase.co")
 SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2dXJpdGRobGdhb25mZWZwaGt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEzMzIxOTQsImV4cCI6MjA1NjkwODE5NH0.vJ7t3i8QEA0pJLPG5j78u4qOt4eF_KoNC8_VOx_OoMo")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', "")
 
 # Supabase API helper functions
 def supabase_get(table, params=None):
@@ -60,6 +61,37 @@ def supabase_update(table, data, match_column, match_value):
         return response.json()
     return None
 
+# Supabase Auth API functions
+def supabase_admin_update_user_password(user_id, new_password):
+    """Update user password using service role key"""
+    url = f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}"
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "password": new_password
+    }
+    response = requests.put(url, headers=headers, json=data)
+    return response.status_code == 200, response.json()
+
+def supabase_get_user_by_email(email):
+    """Get user by email using service role key"""
+    url = f"{SUPABASE_URL}/auth/v1/admin/users"
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}"
+    }
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        users = response.json()
+        for user in users:
+            if user.get('email') == email:
+                return user
+    return None
+
 # Helper function for password hashing
 def hash_password(password, salt=None):
     """Hash a password using SHA-256 with a salt"""
@@ -100,6 +132,54 @@ def login():
             return jsonify({'success': True, 'user': user_data})
     
     return jsonify({'success': False, 'message': 'Invalid username or password'}), 401
+
+# Admin password reset endpoint
+@app.route('/api/admin-reset-password', methods=['POST'])
+def admin_reset_password():
+    print("Admin reset password endpoint called")
+    
+    # Verify content type
+    if not request.is_json:
+        print("Error: Request content-type is not application/json")
+        return jsonify({'success': False, 'error': 'Expected JSON data'}), 400
+    
+    data = request.json
+    if not data:
+        print("Error: No JSON data in request")
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+    email = data.get('email')
+    new_password = data.get('newPassword')
+    
+    if not email or not new_password:
+        return jsonify({'success': False, 'error': 'Email and new password are required'}), 400
+    
+    print(f"Processing admin password reset for email: {email}")
+    
+    try:
+        # Find the user in Supabase Auth
+        user = supabase_get_user_by_email(email)
+        
+        if not user:
+            print(f"Error: User not found with email {email}")
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        # Update the password using Supabase Admin API
+        success, response = supabase_admin_update_user_password(user['id'], new_password)
+        
+        if not success:
+            print(f"Error: Failed to update password: {response}")
+            return jsonify({'success': False, 'error': 'Failed to update password'}), 500
+        
+        print(f"Password reset successful for user with email {email}")
+        return jsonify({
+            'success': True, 
+            'message': 'Password reset successfully'
+        })
+    
+    except Exception as e:
+        print(f"Error: Exception in admin password reset: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # Updated endpoint for password reset with improved logging and error handling
 @app.route('/api/reset-password', methods=['POST'])
@@ -447,6 +527,7 @@ if __name__ == '__main__':
     print("Available endpoints:")
     print("  - /api/login")
     print("  - /api/reset-password")
+    print("  - /api/admin-reset-password (NEW)")
     print("  - /api/customers")
     print("  - /api/shifts")
     print("  - /api/readings")

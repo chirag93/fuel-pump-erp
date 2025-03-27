@@ -1,3 +1,4 @@
+
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
@@ -21,6 +22,7 @@ import Consumables from '@/pages/Consumables';
 import ApproveMobileOperations from '@/pages/ApproveMobileOperations';
 import ApprovalRequests from '@/pages/ApprovalRequests';
 import UserProfile from '@/pages/UserProfile';
+import ResetPasswordConfirm from '@/pages/ResetPasswordConfirm';
 
 // Settings
 import FuelPumpSettings from '@/pages/FuelPumpSettings';
@@ -63,6 +65,7 @@ function App() {
       <Route path="/home" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+      <Route path="/reset-password-confirm" element={<ResetPasswordConfirm />} />
       
       {/* Protected Routes */}
       <Route element={<ProtectedRoute />}>
