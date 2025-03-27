@@ -1,254 +1,246 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  BarChart4, 
-  Home, 
-  Users, 
-  Package, 
-  ClipboardList, 
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertTriangle,
+  BarChart3,
+  CreditCard,
+  FileText,
+  Home,
+  Layers,
+  LayoutDashboard,
   LogOut,
   Menu,
-  X,
-  Droplets,
-  UserCircle,
+  Package,
   Settings,
-  CalendarClock,
-  Fuel,
+  ShoppingBasket,
+  TrendingUp,
   Truck,
-  Camera,
-  Calculator,
-  FileText,
-  FileSpreadsheet,
-  Receipt,
-  DollarSign,
-  Percent,
-  Search,
-  Upload,
-  Download,
-  List,
-  Folder,
-  CreditCard,
-  CheckSquare
+  Users,
+  X,
+  User,
 } from 'lucide-react';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SidebarItemProps {
+  href: string;
   icon: React.ReactNode;
   label: string;
-  to: string;
-  active: boolean;
 }
 
-const SidebarItem = ({ icon, label, to, active }: SidebarItemProps) => (
-  <Link
-    to={to}
-    className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
-      active 
-        ? 'bg-primary text-primary-foreground' 
-        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-    }`}
-  >
-    {icon}
-    <span>{label}</span>
-  </Link>
-);
-
-interface SubmenuItemProps {
-  icon: React.ReactNode;
-  label: string;
-  to: string;
-  active: boolean;
-}
-
-const SubmenuItem = ({ icon, label, to, active }: SubmenuItemProps) => (
-  <Link
-    to={to}
-    className={`flex items-center gap-3 rounded-lg px-3 py-2 ml-6 text-sm transition-all ${
-      active 
-        ? 'bg-primary text-primary-foreground' 
-        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-    }`}
-  >
-    {icon}
-    <span>{label}</span>
-  </Link>
-);
-
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-}
-
-const DashboardLayout = ({ children }: DashboardLayoutProps) => {
-  const { pathname } = useLocation();
+const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const { user, logout } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [accountingOpen, setAccountingOpen] = useState(false);
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    // Check if current path is under accounting to auto-expand the menu
-    if (pathname.startsWith('/accounting')) {
-      setAccountingOpen(true);
+    if (isMobile) {
+      setIsCollapsed(false);
     }
-  }, [pathname]);
+  }, [isMobile]);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+  const toggleMobileMenu = () => {
+    setShowMobileMenu(!showMobileMenu);
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
+  const navigation = [
+    { href: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" />, label: "Dashboard" },
+    { href: "/customers", icon: <Users className="h-4 w-4" />, label: "Customers" },
+    { href: "/record-indent", icon: <CreditCard className="h-4 w-4" />, label: "Record Indent" },
+    { href: "/all-transactions", icon: <TrendingUp className="h-4 w-4" />, label: "All Transactions" },
+    { href: "/shift-management", icon: <BarChart3 className="h-4 w-4" />, label: "Shift Management" },
+    { href: "/daily-readings", icon: <FileText className="h-4 w-4" />, label: "Daily Readings" },
+    { href: "/staff-management", icon: <Users className="h-4 w-4" />, label: "Staff Management" },
+    { href: "/stock-levels", icon: <Layers className="h-4 w-4" />, label: "Stock Levels" },
+    { href: "/tank-unload", icon: <Truck className="h-4 w-4" />, label: "Tank Unload" },
+    { href: "/consumables", icon: <Package className="h-4 w-4" />, label: "Consumables" },
+    { href: "/approval-requests", icon: <AlertTriangle className="h-4 w-4" />, label: "Approval Requests" },
+    { href: "/settings", icon: <Settings className="h-4 w-4" />, label: "Settings" },
+  ];
+
+  // Function to derive initials
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase();
   };
-
-  // Full navigation items for desktop
-  const desktopNavItems = [
-    { icon: <Home size={20} />, label: 'Home', to: '/home' },
-    { icon: <BarChart4 size={20} />, label: 'Dashboard', to: '/dashboard' },
-    { icon: <CalendarClock size={20} />, label: 'Daily Sales Record (DSR)', to: '/daily-readings' },
-    { icon: <Droplets size={20} />, label: 'Stock Levels', to: '/stock-levels' },
-    { icon: <Truck size={20} />, label: 'Tank Unload', to: '/tank-unload' },
-    { icon: <Users size={20} />, label: 'Customers', to: '/customers' },
-    { icon: <Users size={20} />, label: 'Staff', to: '/staff-management' },
-    { icon: <Fuel size={20} />, label: 'Record Indent', to: '/record-indent' },
-    { icon: <ClipboardList size={20} />, label: 'Shift Management', to: '/shift-management' },
-    { icon: <Package size={20} />, label: 'Consumables', to: '/consumables' },
-    { icon: <CheckSquare size={20} />, label: 'Approval Requests', to: '/approval-requests' },
-    { icon: <Settings size={20} />, label: 'Settings', to: '/settings' },
-  ];
-
-  // Mobile navigation items (only 4 options)
-  const mobileNavItems = [
-    { icon: <CreditCard size={20} />, label: 'Record Indent', to: '/record-indent' },
-    { icon: <CalendarClock size={20} />, label: 'Shift Management', to: '/shift-management' },
-    { icon: <Users size={20} />, label: 'Customers', to: '/customers' },
-    { icon: <Droplets size={20} />, label: 'Daily Readings', to: '/daily-readings' },
-    { icon: <CheckSquare size={20} />, label: 'Approvals', to: '/approval-requests' },
-  ];
-
-  // Use mobile nav items if on mobile, otherwise use desktop nav items
-  const navItems = isMobile ? mobileNavItems : desktopNavItems;
-
-  // Accounting submenu items
-  const accountingItems = [
-    { icon: <FileText size={18} />, label: 'Financial Reports', to: '/accounting/financial-reports' },
-    { icon: <Percent size={18} />, label: 'Tax Calculation', to: '/accounting/tax-calculation' },
-    { icon: <FileSpreadsheet size={18} />, label: 'Export Data', to: '/accounting/export-data' },
-    { icon: <Receipt size={18} />, label: 'Invoice Processing', to: '/accounting/invoice-processing' },
-    { icon: <Search size={18} />, label: 'Reconciliation', to: '/accounting/reconciliation' },
-    { icon: <Folder size={18} />, label: 'Expense Categories', to: '/accounting/expense-categories' }
-  ];
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <button
-        className="fixed left-4 top-4 z-50 md:hidden"
-        onClick={toggleSidebar}
-      >
-        {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
-      
+    <div className="flex h-screen overflow-hidden">
+      {/* Sidebar for larger screens */}
       <aside
-        className={`${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } fixed inset-y-0 z-30 w-64 border-r bg-card transition-transform duration-200 md:translate-x-0`}
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r border-muted bg-background transition-transform md:flex",
+          isCollapsed && "w-16"
+        )}
       >
-        <div className="flex h-16 items-center border-b px-6">
-          <div className="flex items-center gap-2">
-            <Droplets className="h-6 w-6 text-primary" />
-            <h2 className="text-xl font-bold">Fuel Pro 360</h2>
-          </div>
-        </div>
-        
-        <div className="flex flex-col gap-1 p-4 h-[calc(100vh-64px-80px)] overflow-y-auto">
-          {navItems.map((item) => (
-            <SidebarItem
-              key={item.to}
-              icon={item.icon}
-              label={item.label}
-              to={item.to}
-              active={pathname === item.to}
-            />
-          ))}
-
-          {/* Only show Accounting section on desktop */}
-          {!isMobile && (
-            <Collapsible
-              open={accountingOpen}
-              onOpenChange={setAccountingOpen}
-              className="w-full"
-            >
-              <CollapsibleTrigger className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-all
-                ${pathname.startsWith('/accounting') 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`}>
-                <Calculator size={20} />
-                <span className="flex-1 text-left">Accounting</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className={`h-4 w-4 transition-transform ${
-                    accountingOpen ? "rotate-180" : ""
-                  }`}
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-1">
-                {accountingItems.map((item) => (
-                  <SubmenuItem
-                    key={item.to}
-                    icon={item.icon}
-                    label={item.label}
-                    to={item.to}
-                    active={pathname === item.to}
-                  />
-                ))}
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-        </div>
-        
-        <div className="absolute bottom-0 w-full border-t p-4">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-              <UserCircle />
-            </div>
-            <div>
-              <p className="font-medium">{user?.username || 'User'}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role || 'User'}</p>
-            </div>
-          </div>
-          <Button 
-            variant="outline" 
-            className="w-full justify-start" 
-            onClick={handleLogout}
+        <div className="flex h-16 items-center px-4">
+          <Link to="/dashboard" className="font-semibold text-2xl flex items-center gap-2">
+            <Home className="h-6 w-6" />
+            <span className={cn("transition-opacity", isCollapsed ? "opacity-0" : "opacity-100")}>
+              Fuel Pro 360
+            </span>
+          </Link>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="ml-auto md:hidden"
+            onClick={() => setIsCollapsed(!isCollapsed)}
           >
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
+            {isCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
           </Button>
         </div>
+        <div className="flex-1 overflow-y-auto px-2 py-4">
+          <nav className="grid items-start gap-2">
+            {navigation.map((item) => (
+              <Link
+                key={item.href}
+                to={item.href}
+                className={cn(
+                  "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                  location.pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                )}
+              >
+                {item.icon}
+                <span className={cn("transition-opacity", isCollapsed ? "opacity-0" : "opacity-100")}>
+                  {item.label}
+                </span>
+              </Link>
+            ))}
+          </nav>
+        </div>
       </aside>
-      
-      <main className="flex-1 md:ml-64">
-        {children}
-      </main>
+
+      {/* Main content area */}
+      <div className="flex flex-1 flex-col md:pl-64 md:pl-16">
+        {/* Top navigation for mobile and user controls */}
+        <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-4 shadow-sm sm:px-6 md:px-6">
+          <Button
+            type="button"
+            variant="ghost"
+            className="mr-2 md:hidden"
+            onClick={toggleMobileMenu}
+          >
+            {showMobileMenu ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </Button>
+          <div className="font-semibold text-2xl">
+            {navigation.find((item) => item.href === location.pathname)?.label || "Dashboard"}
+          </div>
+
+          <div className="ml-auto flex items-center gap-4">
+            {/* User dropdown menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className="relative h-9 w-9 rounded-full" 
+                  aria-label="User menu"
+                >
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {user?.username ? getInitials(user.username) : "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user?.username}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user?.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="flex items-center cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="flex items-center cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="cursor-pointer text-destructive focus:text-destructive" 
+                  onClick={logout}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+
+        {/* Mobile sidebar */}
+        {showMobileMenu && (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
+            <aside className="flex h-full w-64 flex-col border-r border-muted bg-background">
+              <div className="flex h-16 items-center px-4">
+                <Link to="/dashboard" className="font-semibold text-2xl flex items-center gap-2">
+                  <Home className="h-6 w-6" />
+                  Fuel Pro 360
+                </Link>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto"
+                  onClick={toggleMobileMenu}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-2 py-4">
+                <nav className="grid items-start gap-2">
+                  {navigation.map((item) => (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      className={cn(
+                        "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                        location.pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                      )}
+                      onClick={toggleMobileMenu}
+                    >
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </Link>
+                  ))}
+                </nav>
+              </div>
+            </aside>
+          </div>
+        )}
+
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
     </div>
   );
 };

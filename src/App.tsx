@@ -21,6 +21,7 @@ import TankUnload from '@/pages/TankUnload';
 import Consumables from '@/pages/Consumables';
 import ApproveMobileOperations from '@/pages/ApproveMobileOperations';
 import ApprovalRequests from '@/pages/ApprovalRequests';
+import UserProfile from '@/pages/UserProfile';
 
 // Settings
 import FuelPumpSettings from '@/pages/FuelPumpSettings';
@@ -77,6 +78,7 @@ function App() {
         <Route path="/stock-levels" element={<StockLevels />} />
         <Route path="/tank-unload" element={<TankUnload />} />
         <Route path="/consumables" element={<Consumables />} />
+        <Route path="/profile" element={<UserProfile />} />
         
         {/* Approval Routes - Desktop only */}
         <Route path="/mobile-approvals" element={<ApproveMobileOperations />} />
