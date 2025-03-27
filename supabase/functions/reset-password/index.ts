@@ -55,12 +55,12 @@ serve(async (req) => {
     }
 
     // Get request body
-    const { userId, newPassword } = await req.json()
+    const { userId, email, newPassword } = await req.json()
 
     // Validate required fields
-    if (!userId || !newPassword) {
+    if ((!userId && !email) || !newPassword) {
       return new Response(
-        JSON.stringify({ error: 'User ID and new password are required' }),
+        JSON.stringify({ error: 'User ID or email, and new password are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -73,9 +73,38 @@ serve(async (req) => {
       )
     }
 
+    let userIdToReset = userId;
+
+    // If email is provided instead of userId, find the user by email
+    if (!userIdToReset && email) {
+      console.log('Searching for user by email:', email);
+      const { data: usersByEmail, error: emailLookupError } = await supabase.auth.admin.listUsers()
+      
+      if (emailLookupError) {
+        return new Response(
+          JSON.stringify({ error: `Error finding user by email: ${emailLookupError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      const matchingUser = usersByEmail.users.find(u => 
+        u.email && u.email.toLowerCase() === email.toLowerCase()
+      );
+      
+      if (!matchingUser) {
+        return new Response(
+          JSON.stringify({ error: 'User with this email not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      userIdToReset = matchingUser.id;
+      console.log('Found user ID by email:', userIdToReset);
+    }
+
     // Reset the user's password using the admin API
     const { error: resetError } = await supabase.auth.admin.updateUserById(
-      userId,
+      userIdToReset,
       { password: newPassword }
     )
 
@@ -92,6 +121,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
+    console.error('Error in reset-password function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

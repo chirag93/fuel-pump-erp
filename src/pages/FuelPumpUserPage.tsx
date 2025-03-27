@@ -86,56 +86,27 @@ const FuelPumpUserPage = () => {
       setIsResettingPassword(true);
       setError(null);
 
-      // First, get the list of users and find the one with matching email
-      const { data: emailUsers, error: emailError } = await supabase
-        .from('auth.users')
-        .select('id, email')
-        .eq('email', fuelPump.email)
-        .single();
+      if (!fuelPump || !fuelPump.email) {
+        throw new Error('Fuel pump email not found');
+      }
 
-      let userId;
+      // Call our secure edge function to reset the password by email
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({ 
+          email: fuelPump.email,
+          newPassword 
+        })
+      });
 
-      if (emailError) {
-        // If admin API fails, we need to find the user ID via our edge function
-        // Call our secure edge function to find the user
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-password`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`
-          },
-          body: JSON.stringify({ 
-            userId: userId, 
-            newPassword 
-          })
-        });
+      const result = await response.json();
 
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || 'Error resetting password');
-        }
-      } else {
-        userId = emailUsers.id;
-        
-        // Call our secure edge function to reset the password
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-password`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`
-          },
-          body: JSON.stringify({ 
-            userId: userId, 
-            newPassword 
-          })
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || 'Error resetting password');
-        }
+      if (!response.ok) {
+        throw new Error(result.error || 'Error resetting password');
       }
 
       // Clear password fields
