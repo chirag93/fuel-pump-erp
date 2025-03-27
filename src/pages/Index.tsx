@@ -395,7 +395,7 @@ const Index = () => {
                 </Button>
               </Link>
               <Link to="/login">
-                <Button size="lg" variant="outline" className="text-white border-white hover:bg-blue-800 px-8">
+                <Button size="lg" variant="outline" className="border-white px-8 text-blue-900 bg-white">
                   Request Demo
                 </Button>
               </Link>
@@ -444,8 +444,9 @@ const Index = () => {
               <h3 className="text-lg font-bold text-white mb-4">Contact Us</h3>
               <ul className="space-y-2">
                 <li>support@fuelpro360.com</li>
-                <li>+91 123 456 7890</li>
-                <li>Mumbai, India</li>
+                <li>Bangalore, India</li>
+                <li>
+              </li>
               </ul>
             </div>
           </div>
@@ -453,9 +454,7 @@ const Index = () => {
           <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p>© {new Date().getFullYear()} Fuel Pro 360. All rights reserved.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              {["Facebook", "Twitter", "LinkedIn", "Instagram"].map((social, idx) => <a key={idx} href="#" className="hover:text-blue-300 transition-colors">
-                  {social}
-                </a>)}
+              {["Facebook", "Twitter", "LinkedIn", "Instagram"].map((social, idx) => {})}
             </div>
           </div>
         </div>
