@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase, FuelPump } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
+import { getAllFuelPumps } from '@/integrations/fuelPumps';
 import {
   Card,
   CardContent,
@@ -18,10 +19,12 @@ import {
   Loader2,
   Mail, 
   MapPin,
-  Phone
+  Phone,
+  KeyRound
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
+import { FuelPump } from '@/integrations/fuelPumps';
 
 const FuelPumpsPage = () => {
   const [fuelPumps, setFuelPumps] = useState<FuelPump[]>([]);
@@ -33,17 +36,9 @@ const FuelPumpsPage = () => {
   const fetchFuelPumps = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('fuel_pumps')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (error) {
-        throw error;
-      }
-      
-      setFuelPumps(data || []);
-      setFilteredPumps(data || []);
+      const pumps = await getAllFuelPumps();
+      setFuelPumps(pumps);
+      setFilteredPumps(pumps);
     } catch (error) {
       console.error('Error fetching fuel pumps:', error);
       toast({
@@ -199,9 +194,12 @@ const FuelPumpsPage = () => {
                 )}
                 
                 <div className="flex justify-end gap-2 mt-4">
-                  <Button variant="outline" size="sm">
-                    View Details
-                  </Button>
+                  <Link to={`/super-admin/fuel-pumps/${pump.id}`}>
+                    <Button variant="outline" size="sm">
+                      <KeyRound className="mr-2 h-3 w-3" />
+                      Manage User
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>

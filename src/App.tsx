@@ -1,4 +1,3 @@
-
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
@@ -54,6 +53,7 @@ import SuperAdminSettings from '@/pages/SuperAdminSettings';
 import SuperAdminAnalytics from '@/pages/SuperAdminAnalytics';
 import FuelPumpsPage from '@/pages/FuelPumpsPage';
 import ProvisionPump from '@/pages/ProvisionPump';
+import FuelPumpUserPage from '@/pages/FuelPumpUserPage';
 
 function App() {
   return (
@@ -104,6 +104,7 @@ function App() {
         <Route path="/super-admin/fuel-pumps" element={<FuelPumpsPage />} />
         <Route path="/super-admin/pumps" element={<FuelPumpsPage />} />
         <Route path="/super-admin/provision" element={<ProvisionPump />} />
+        <Route path="/super-admin/fuel-pumps/:id" element={<FuelPumpUserPage />} />
       </Route>
       
       {/* Mobile Routes - Not protected to allow direct access */}
