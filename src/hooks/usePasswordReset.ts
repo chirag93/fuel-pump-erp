@@ -59,8 +59,7 @@ export const usePasswordReset = () => {
       const { error: updateError } = await supabase
         .from('fuel_pumps')
         .update({
-          status: statusMessage,
-          updated_at: new Date().toISOString()
+          status: statusMessage
         })
         .eq('id', fuelPump.id);
 
