@@ -7,6 +7,8 @@ import { CustomerVehicleSelection } from '@/components/indent/CustomerVehicleSel
 import { IndentBookletSelection } from '@/components/indent/IndentBookletSelection';
 import { FuelTransactionForm } from '@/components/indent/FuelTransactionForm';
 import { RecentTransactionsTable } from '@/components/indent/RecentTransactionsTable';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 const RecordIndent = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
@@ -292,6 +294,22 @@ const RecordIndent = () => {
                 selectedStaff={selectedStaff}
                 setSelectedStaff={setSelectedStaff}
               />
+            )}
+
+            {/* Add submit button here directly if we have all required information */}
+            {selectedCustomer && selectedVehicle && amount > 0 && quantity > 0 && date && selectedStaff && (
+              <Button 
+                className="w-full mt-4" 
+                onClick={handleSubmit} 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Recording Indent...
+                  </>
+                ) : 'Record Indent'}
+              </Button>
             )}
           </div>
         </CardContent>
