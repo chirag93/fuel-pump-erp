@@ -21,7 +21,7 @@ export interface FuelSettingsType {
   tank_capacity: number;
   current_level: number;
   updated_at?: string;
-  fuel_pump_id?: string; // Adding this field for association
+  fuel_pump_id?: string;
 }
 
 // Interface for pump settings
@@ -31,7 +31,7 @@ export interface PumpSettingsType {
   nozzle_count: number;
   fuel_types: string[];
   created_at?: string;
-  fuel_pump_id?: string; // Adding this field for association
+  fuel_pump_id?: string;
 }
 
 /**
@@ -65,28 +65,22 @@ export const getFuelPumpByEmail = async (email: string): Promise<FuelPump | null
   try {
     console.log(`Checking if fuel pump exists with email: ${email}`);
     
-    // Fix: Using explicit typing to avoid deep type instantiation
+    // Use raw SQL to avoid TypeScript deep instantiation errors
     const { data, error } = await supabase
-      .from('fuel_pumps')
-      .select('*')
-      .ilike('email', email)
-      .single();
+      .rpc('get_fuel_pump_by_email', { email_param: email.toLowerCase() });
     
     if (error) {
-      // If no match is found, return null instead of throwing an error
-      if (error.code === 'PGRST116') {
-        console.log(`No fuel pump found with email: ${email}`);
-        return null;
-      }
       console.error('Error checking for fuel pump by email:', error);
       throw error;
     }
     
-    if (data) {
+    if (data && data.length > 0) {
       console.log(`Found existing fuel pump with email: ${email}`);
+      return data[0] as FuelPump;
     }
     
-    return data;
+    console.log(`No fuel pump found with email: ${email}`);
+    return null;
   } catch (error) {
     console.error('Error fetching fuel pump by email:', error);
     return null;
@@ -98,21 +92,20 @@ export const getFuelPumpByEmail = async (email: string): Promise<FuelPump | null
  */
 export const getFuelPumpById = async (id: string): Promise<FuelPump | null> => {
   try {
-    // Fix: Using explicit typing to avoid deep type instantiation
+    // Use raw SQL to avoid TypeScript deep instantiation errors
     const { data, error } = await supabase
-      .from('fuel_pumps')
-      .select('*')
-      .eq('id', id)
-      .single();
-      
+      .rpc('get_fuel_pump_by_id', { id_param: id });
+    
     if (error) {
-      if (error.code === 'PGRST116') {
-        return null;
-      }
+      console.error('Error checking for fuel pump by ID:', error);
       throw error;
     }
     
-    return data;
+    if (data && data.length > 0) {
+      return data[0] as FuelPump;
+    }
+    
+    return null;
   } catch (error) {
     console.error('Error fetching fuel pump by ID:', error);
     return null;
@@ -124,14 +117,16 @@ export const getFuelPumpById = async (id: string): Promise<FuelPump | null> => {
  */
 export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<FuelSettingsType[]> => {
   try {
-    // Fix: Using explicit typing to avoid deep type instantiation
+    // Use raw SQL to avoid TypeScript deep instantiation errors
     const { data, error } = await supabase
-      .from('fuel_settings')
-      .select<string, FuelSettingsType>('id, fuel_type, current_price, tank_capacity, current_level, updated_at')
-      .eq('fuel_pump_id', fuelPumpId);
-      
-    if (error) throw error;
-    return data || [];
+      .rpc('get_fuel_settings_for_pump', { pump_id_param: fuelPumpId });
+    
+    if (error) {
+      console.error('Error fetching fuel settings for pump:', error);
+      throw error;
+    }
+    
+    return data as FuelSettingsType[] || [];
   } catch (error) {
     console.error('Error fetching fuel settings for pump:', error);
     return [];
@@ -143,14 +138,16 @@ export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<FuelSe
  */
 export const getPumpSettingsForFuelPump = async (fuelPumpId: string): Promise<PumpSettingsType[]> => {
   try {
-    // Fix: Using explicit typing to avoid deep type instantiation
+    // Use raw SQL to avoid TypeScript deep instantiation errors
     const { data, error } = await supabase
-      .from('pump_settings')
-      .select<string, PumpSettingsType>('id, pump_number, nozzle_count, fuel_types, created_at')
-      .eq('fuel_pump_id', fuelPumpId);
-      
-    if (error) throw error;
-    return data || [];
+      .rpc('get_pump_settings_for_fuel_pump', { pump_id_param: fuelPumpId });
+    
+    if (error) {
+      console.error('Error fetching pump settings for fuel pump:', error);
+      throw error;
+    }
+    
+    return data as PumpSettingsType[] || [];
   } catch (error) {
     console.error('Error fetching pump settings for fuel pump:', error);
     return [];
