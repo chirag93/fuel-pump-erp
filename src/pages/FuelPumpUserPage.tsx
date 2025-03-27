@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -80,8 +81,11 @@ const FuelPumpUserPage = () => {
         throw new Error('Fuel pump email not found');
       }
 
+      // Use the deployed API URL instead of hardcoded localhost
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://api.fuelmasterapp.com';
+      
       // Call our backend API to reset the password
-      const response = await fetch(`${process.env.VITE_API_URL || 'http://localhost:5000'}/api/reset-password`, {
+      const response = await fetch(`${apiUrl}/api/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
