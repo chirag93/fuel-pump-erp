@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, CalendarClock } from 'lucide-react';
+import { ChevronLeft, CalendarClock, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { StartShiftForm } from '@/components/shift/StartShiftForm';
 import { useShiftManagement } from '@/hooks/useShiftManagement';
 import { supabase } from '@/integrations/supabase/client';
@@ -45,23 +45,32 @@ const MobileShiftManagement = () => {
       </div>
       
       <Card className="mb-4">
-        <CardContent className="pt-4">
-          <div className="flex items-center mb-4">
+        <CardHeader className="pb-2">
+          <div className="flex items-center mb-2">
             <CalendarClock className="h-5 w-5 text-primary mr-2" />
-            <h2 className="text-lg font-medium">Start New Shift</h2>
+            <CardTitle>Start New Shift</CardTitle>
           </div>
-          
-          <p className="text-sm text-muted-foreground mb-4">
+          <CardDescription>
             Record shift details including staff and opening cash amount.
-          </p>
-          
-          <Button 
-            onClick={handleOpenForm} 
-            className="w-full"
-            disabled={isLoading}
-          >
-            Start New Shift
-          </Button>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+              <span>Loading staff data...</span>
+            </div>
+          ) : (
+            <Button 
+              onClick={handleOpenForm} 
+              className="w-full"
+              variant="default"
+              size="lg"
+              disabled={isLoading}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Start New Shift
+            </Button>
+          )}
           
           <StartShiftForm
             formOpen={formOpen}

@@ -27,7 +27,8 @@ const MobileHome = () => {
           <CardFeature
             title="Indent"
             description="Record"
-            icon={<CreditCard className="text-primary" size={20} />}
+            icon={<CreditCard className="text-primary" size={28} />}
+            className="p-4"
           />
         </Link>
         
@@ -35,7 +36,8 @@ const MobileHome = () => {
           <CardFeature
             title="Shift"
             description="Log"
-            icon={<CalendarClock className="text-green-500" size={20} />}
+            icon={<CalendarClock className="text-green-500" size={28} />}
+            className="p-4"
           />
         </Link>
         
@@ -43,7 +45,8 @@ const MobileHome = () => {
           <CardFeature
             title="Client"
             description="View"
-            icon={<UserRound className="text-orange-500" size={20} />}
+            icon={<UserRound className="text-orange-500" size={28} />}
+            className="p-4"
           />
         </Link>
         
@@ -51,7 +54,8 @@ const MobileHome = () => {
           <CardFeature
             title="Meter"
             description="Read"
-            icon={<Droplets className="text-blue-500" size={20} />}
+            icon={<Droplets className="text-blue-500" size={28} />}
+            className="p-4"
           />
         </Link>
       </div>

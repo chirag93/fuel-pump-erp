@@ -17,12 +17,12 @@ export function CardFeature({ title, description, icon, className }: CardFeature
     )}>
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
       
-      <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110">
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110">
         {icon}
       </div>
       
-      <h3 className="mb-0.5 text-sm font-semibold transition-colors duration-300">{title}</h3>
-      <p className="text-xs text-muted-foreground">{description}</p>
+      <h3 className="mb-0.5 text-base font-semibold transition-colors duration-300">{title}</h3>
+      <p className="text-sm text-muted-foreground">{description}</p>
     </div>
   );
 }

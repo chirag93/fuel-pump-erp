@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, UserRound, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { getAllCustomers } from '@/integrations/customers';
 
 const MobileCustomers = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,6 +53,10 @@ const MobileCustomers = () => {
       setFilteredCustomers(filtered);
     }
   }, [searchTerm, customers]);
+
+  const handleViewCustomer = (customerId: string) => {
+    navigate(`/customers/${customerId}`);
+  };
 
   return (
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
@@ -105,9 +110,13 @@ const MobileCustomers = () => {
                       )}
                     </p>
                   </div>
-                  <Link to={`/customers/${customer.id}`}>
-                    <Button variant="ghost" size="sm">View</Button>
-                  </Link>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleViewCustomer(customer.id)}
+                  >
+                    View
+                  </Button>
                 </div>
               ))}
             </div>
