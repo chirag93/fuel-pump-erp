@@ -124,10 +124,10 @@ export const getFuelPumpById = async (id: string): Promise<FuelPump | null> => {
  */
 export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<FuelSettingsType[]> => {
   try {
-    // Using the fuel_pump_id column to fetch related settings
+    // Fix: Using explicit typing to avoid deep type instantiation
     const { data, error } = await supabase
       .from('fuel_settings')
-      .select('id, fuel_type, current_price, tank_capacity, current_level, updated_at')
+      .select<string, FuelSettingsType>('id, fuel_type, current_price, tank_capacity, current_level, updated_at')
       .eq('fuel_pump_id', fuelPumpId);
       
     if (error) throw error;
@@ -143,10 +143,10 @@ export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<FuelSe
  */
 export const getPumpSettingsForFuelPump = async (fuelPumpId: string): Promise<PumpSettingsType[]> => {
   try {
-    // Using the fuel_pump_id column to fetch related settings
+    // Fix: Using explicit typing to avoid deep type instantiation
     const { data, error } = await supabase
       .from('pump_settings')
-      .select('id, pump_number, nozzle_count, fuel_types, created_at')
+      .select<string, PumpSettingsType>('id, pump_number, nozzle_count, fuel_types, created_at')
       .eq('fuel_pump_id', fuelPumpId);
       
     if (error) throw error;
