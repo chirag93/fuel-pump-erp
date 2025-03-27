@@ -81,10 +81,10 @@ const FuelPumpUserPage = () => {
         throw new Error('Fuel pump email not found');
       }
 
-      // Use the deployed API URL instead of hardcoded localhost
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://api.fuelmasterapp.com';
+      // Use the API URL from environment or fallback to the relative URL which will work in any environment
+      const apiUrl = import.meta.env.VITE_API_URL || '';
       
-      // Call our backend API to reset the password
+      // Call our backend API to reset the password using relative URL if no API URL is specified
       const response = await fetch(`${apiUrl}/api/reset-password`, {
         method: 'POST',
         headers: {
