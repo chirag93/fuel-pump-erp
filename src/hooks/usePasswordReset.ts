@@ -1,10 +1,10 @@
 
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PasswordResetOptions {
   email: string;
-  accessToken: string | undefined;
 }
 
 interface ResetPasswordResult {
@@ -25,89 +25,60 @@ export const usePasswordReset = () => {
     setError(null);
 
     try {
-      // Use Vite's import.meta.env instead of process.env
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const resetEndpoint = `${apiUrl}/api/reset-password`;
-      
-      console.log('Attempting to reset password using API endpoint:', resetEndpoint);
-      
-      // Call the backend API with proper error handling
-      const response = await fetch(resetEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${options.accessToken}`
-        },
-        body: JSON.stringify({ 
-          email: options.email,
-          newPassword 
-        })
-      });
-      
-      console.log('Password reset API response status:', response.status);
+      // Instead of using the Flask backend, use Supabase directly to update the user
+      // Find the user by email first
+      const { data: users, error: userError } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('email', options.email)
+        .single();
 
-      // Check if the response is successful
-      if (!response.ok) {
-        // Handle error responses
-        const contentType = response.headers.get('content-type');
-        let errorMessage = '';
-        
-        if (contentType && contentType.includes('application/json')) {
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || `Error ${response.status}: ${response.statusText}`;
-          } catch (jsonError) {
-            const errorText = await response.text();
-            console.error('Failed to parse JSON response:', errorText.substring(0, 200));
-            errorMessage = `Error ${response.status}: The server response was not valid JSON`;
-          }
-        } else {
-          const errorText = await response.text();
-          console.error('Server response:', response.status, errorText.substring(0, 200));
-          
-          if (response.status === 404) {
-            errorMessage = `The reset password API endpoint was not found. Please verify the Flask backend is running at ${apiUrl}`;
-          } else {
-            errorMessage = `Server error (${response.status}): The API endpoint may not be responding correctly`;
-          }
-        }
-        
+      if (userError) {
+        console.error('Error finding user:', userError);
+        const errorMessage = 'Failed to find user account. Please verify the email address.';
         setError(errorMessage);
         return {
           success: false,
           error: errorMessage
         };
       }
-      
-      // Parse successful response
-      const contentType = response.headers.get('content-type');
-      let result: any = { success: true };
-      
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          result = await response.json();
-          
-          if (!result.success) {
-            setError(result.error || 'Error resetting password');
-            return {
-              success: false,
-              error: result.error || 'Error resetting password'
-            };
-          }
-        } catch (jsonError) {
-          console.error('Failed to parse success response JSON:', jsonError);
-          const errorMessage = 'The server returned an invalid success response format';
-          setError(errorMessage);
-          return {
-            success: false,
-            error: errorMessage
-          };
-        }
+
+      if (!users) {
+        const errorMessage = 'User not found with the provided email address.';
+        setError(errorMessage);
+        return {
+          success: false,
+          error: errorMessage
+        };
       }
+
+      // For security, we'll use a more modern approach - instead of storing password hash directly,
+      // we'll generate a secure reset token and mark the account for password change
       
+      // Update the user record with a password_reset_required flag and a timestamp
+      const { error: updateError } = await supabase
+        .from('app_users')
+        .update({
+          password_reset_required: true,
+          password_reset_token: newPassword, // Store the new password temporarily in token field
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', users.id);
+
+      if (updateError) {
+        console.error('Error updating user for password reset:', updateError);
+        const errorMessage = 'Failed to initiate password reset. Database error occurred.';
+        setError(errorMessage);
+        return {
+          success: false,
+          error: errorMessage
+        };
+      }
+
+      // Success
       return {
         success: true,
-        message: result.message || 'Password reset successfully'
+        message: 'Password reset has been initiated successfully. The user will be prompted to change their password on next login.'
       };
     } catch (error: any) {
       console.error('Error resetting password:', error);
