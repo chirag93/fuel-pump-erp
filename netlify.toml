@@ -8,9 +8,9 @@
   to = "/index.html"
   status = 200
 
-# Run tests before build
+# Run build with CI=true to ensure tests don't hang and exit on failure
 [build]
-  command = "npm run test && npm run build"
+  command = "CI=true npm run test && npm run build"
 
 # Specify the build directory
   publish = "dist"
