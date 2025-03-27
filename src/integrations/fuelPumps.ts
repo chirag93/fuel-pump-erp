@@ -30,6 +30,7 @@ export interface PumpSettingsType {
   nozzle_count: number;
   fuel_types: string[];
   created_at?: string;
+  fuel_pump_id?: string; // Adding this field for association
 }
 
 /**
@@ -55,18 +56,31 @@ export const getAllFuelPumps = async (): Promise<FuelPump[]> => {
 };
 
 /**
- * Fetch a fuel pump by email
+ * Fetch a fuel pump by email - improved to handle case insensitive search
  */
 export const getFuelPumpByEmail = async (email: string): Promise<FuelPump | null> => {
+  if (!email) return null;
+  
   try {
-    // Use maybeSingle instead of single to avoid throwing errors when no result is found
+    console.log(`Checking if fuel pump exists with email: ${email}`);
+    
+    // Using ilike for case-insensitive matching
     const { data, error } = await supabase
       .from('fuel_pumps')
       .select('*')
-      .eq('email', email)
+      .ilike('email', email)
       .maybeSingle();
-      
-    if (error) throw error;
+    
+    if (error) {
+      console.error('Error checking for fuel pump by email:', error);
+      throw error;
+    }
+    
+    if (data) {
+      console.log(`Found existing fuel pump with email: ${email}`);
+    } else {
+      console.log(`No fuel pump found with email: ${email}`);
+    }
     
     return data;
   } catch (error) {
@@ -105,11 +119,11 @@ export const getFuelPumpById = async (id: string): Promise<FuelPump | null> => {
  */
 export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<FuelSettingsType[]> => {
   try {
-    // Since there's no fuel_pump_id column, we'll just fetch all fuel settings
-    // In a real app, you'd add this column or use a different query approach
+    // Using the fuel_pump_id column to fetch related settings
     const { data, error } = await supabase
       .from('fuel_settings')
-      .select('id, fuel_type, current_price, tank_capacity, current_level, updated_at');
+      .select('id, fuel_type, current_price, tank_capacity, current_level, updated_at')
+      .eq('fuel_pump_id', fuelPumpId);
       
     if (error) throw error;
     return data || [];
@@ -124,11 +138,11 @@ export const getFuelSettingsForPump = async (fuelPumpId: string): Promise<FuelSe
  */
 export const getPumpSettingsForFuelPump = async (fuelPumpId: string): Promise<PumpSettingsType[]> => {
   try {
-    // Since there's no fuel_pump_id column, we'll just fetch all pump settings
-    // In a real app, you'd add this column or use a different query approach
+    // Using the fuel_pump_id column to fetch related settings
     const { data, error } = await supabase
       .from('pump_settings')
-      .select('id, pump_number, nozzle_count, fuel_types, created_at');
+      .select('id, pump_number, nozzle_count, fuel_types, created_at')
+      .eq('fuel_pump_id', fuelPumpId);
       
     if (error) throw error;
     return data || [];

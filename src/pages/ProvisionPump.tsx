@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -53,11 +52,29 @@ const ProvisionPump = () => {
     setErrorMessage(null);
     
     try {
+      // Trim the email to avoid whitespace issues
+      const email = values.email.trim();
+      console.log(`Attempting to provision pump with email: ${email}`);
+      
       // Check if email already exists in fuel_pumps table
-      const existingPump = await getFuelPumpByEmail(values.email);
+      const existingPump = await getFuelPumpByEmail(email);
       
       if (existingPump) {
-        setErrorMessage(`A fuel pump with email "${values.email}" already exists. Please use a different email address.`);
+        setErrorMessage(`A fuel pump with email "${email}" already exists. Please use a different email address.`);
+        setIsLoading(false);
+        return;
+      }
+      
+      // As a double-check, perform a direct query to check unique constraint
+      const { data: emailCheck, error: emailCheckError } = await supabase
+        .from('fuel_pumps')
+        .select('id, email')
+        .ilike('email', email);
+      
+      if (emailCheckError) {
+        console.error('Error checking email uniqueness:', emailCheckError);
+      } else if (emailCheck && emailCheck.length > 0) {
+        setErrorMessage(`A fuel pump with email "${email}" already exists (case-insensitive match). Please use a different email address.`);
         setIsLoading(false);
         return;
       }
@@ -68,7 +85,7 @@ const ProvisionPump = () => {
         .insert([
           {
             name: values.name,
-            email: values.email,
+            email: email,
             address: values.address,
             contact_number: values.contactNumber,
             status: 'active',
@@ -78,6 +95,7 @@ const ProvisionPump = () => {
         .select();
         
       if (pumpError) {
+        console.error('Error creating fuel pump:', pumpError);
         toast({
           title: 'Error creating fuel pump',
           description: pumpError.message,
@@ -98,10 +116,11 @@ const ProvisionPump = () => {
       }
 
       const pumpId = pumpData[0].id;
+      console.log(`Successfully created fuel pump with ID: ${pumpId}`);
 
       // 2. Sign up a new user with the pump manager role and metadata about their fuel pump
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: values.email,
+        email: email,
         password: values.password,
         options: {
           data: {
@@ -119,6 +138,7 @@ const ProvisionPump = () => {
           .delete()
           .eq('id', pumpId);
         
+        console.error('Error creating user:', authError);
         toast({
           title: 'Error creating user',
           description: authError.message,
@@ -128,7 +148,9 @@ const ProvisionPump = () => {
         return;
       }
 
-      // 3. Initialize default pump settings for this new fuel pump
+      console.log('Successfully created auth user for fuel pump');
+
+      // 3. Initialize default fuel settings for this new fuel pump
       const { error: settingsError } = await supabase
         .from('fuel_settings')
         .insert([
