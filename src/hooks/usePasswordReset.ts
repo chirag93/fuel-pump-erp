@@ -29,7 +29,7 @@ export const usePasswordReset = () => {
         .from('fuel_pumps')
         .select('*')
         .eq('email', options.email)
-        .single();
+        .maybeSingle();
 
       if (fuelPumpError) {
         console.error('Error finding fuel pump:', fuelPumpError);
@@ -101,7 +101,7 @@ export const usePasswordReset = () => {
     }
   };
 
-  // New function for admin-initiated forced password reset
+  // Function for admin-initiated forced password reset
   const adminForcePasswordReset = async (
     email: string,
     tempPassword: string
@@ -115,7 +115,7 @@ export const usePasswordReset = () => {
         .from('fuel_pumps')
         .select('*')
         .eq('email', email)
-        .single();
+        .maybeSingle();
 
       if (fuelPumpError || !fuelPump) {
         const errorMessage = 'Fuel pump not found with the provided email address.';
@@ -125,30 +125,39 @@ export const usePasswordReset = () => {
           error: errorMessage
         };
       }
-
-      // Make API call to the backend to handle the password update
-      const apiUrl = `${process.env.VITE_API_URL || 'http://localhost:5000'}/api/admin-reset-password`;
       
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.auth.getSession()}`
-        },
-        body: JSON.stringify({
-          email,
-          newPassword: tempPassword
-        })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        const errorMessage = result.error || 'Failed to reset password. Server error occurred.';
-        setError(errorMessage);
+      // Find the user in Supabase Auth
+      const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers();
+      
+      if (usersError) {
+        console.error('Error listing users:', usersError);
         return {
           success: false,
-          error: errorMessage
+          error: 'Failed to list users. Admin access might be required.'
+        };
+      }
+      
+      // Find the user with matching email
+      const user = users.find(u => u.email === email);
+      
+      if (!user) {
+        return {
+          success: false,
+          error: 'User not found in authentication system.'
+        };
+      }
+      
+      // Update user password using Supabase Auth Admin API
+      const { error: updateUserError } = await supabase.auth.admin.updateUserById(
+        user.id,
+        { password: tempPassword }
+      );
+      
+      if (updateUserError) {
+        console.error('Error updating user password:', updateUserError);
+        return {
+          success: false,
+          error: 'Failed to update password. Admin role required.'
         };
       }
 

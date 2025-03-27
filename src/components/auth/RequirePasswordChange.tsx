@@ -45,7 +45,18 @@ const RequirePasswordChange = ({ onComplete, userEmail }: RequirePasswordChangeP
     }
 
     try {
-      // Update password using Supabase
+      // First try to sign in with temporary password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: 'admin123' // Use the default temporary password
+      });
+      
+      if (signInError) {
+        console.error('Error signing in with temporary password:', signInError);
+        throw new Error('Unable to authenticate with temporary password. Please contact your administrator.');
+      }
+      
+      // Now update the password using Supabase
       const { error: updateError } = await supabase.auth.updateUser({
         password
       });

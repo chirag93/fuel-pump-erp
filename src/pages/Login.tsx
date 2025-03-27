@@ -43,6 +43,8 @@ const Login = () => {
     }
 
     try {
+      console.log(`Attempting login with email: ${email}`);
+      
       // First check if this fuel pump account has a password reset pending
       const { data: fuelPump, error: fuelPumpError } = await supabase
         .from('fuel_pumps')
@@ -61,13 +63,26 @@ const Login = () => {
       });
 
       if (authError) {
+        console.error('Auth error during login:', authError);
+        
+        // Special handling for users with status "password_change_required"
+        if (fuelPump && fuelPump.status === 'password_change_required' && authError.message.includes('Invalid login credentials')) {
+          setError(`This account requires a password reset. Please contact your administrator for assistance.`);
+          setIsLoading(false);
+          return;
+        }
+        
         throw authError;
       }
 
       if (data?.user) {
+        console.log('Login successful, checking fuel pump status');
+        
         // Check if user needs to change password
         if (fuelPump && fuelPump.status === 'password_change_required') {
+          console.log('User needs to change password');
           setPasswordChangeRequired(true);
+          setIsLoading(false);
           return;
         }
 
@@ -90,8 +105,8 @@ const Login = () => {
         setError('Login failed. Please check your credentials.');
       }
     } catch (err: any) {
+      console.error('Error during login:', err);
       setError(err.message || 'An error occurred during login.');
-      console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -198,9 +213,60 @@ const Login = () => {
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4 pt-0">
-            <div className="text-sm text-center text-muted-foreground mt-2">
-              Don't have an account? Contact your administrator.
+          <CardFooter className="flex justify-between gap-2">
+            <Button 
+              variant="link" 
+              className="px-0 text-sm"
+              onClick={async () => {
+                if (!email) {
+                  setError('Please enter your email address to reset your password');
+                  return;
+                }
+                
+                try {
+                  setIsLoading(true);
+                  // Check if email exists in fuel_pumps
+                  const { data: fuelPump, error: fuelPumpError } = await supabase
+                    .from('fuel_pumps')
+                    .select('*')
+                    .eq('email', email)
+                    .maybeSingle();
+
+                  if (fuelPumpError) throw fuelPumpError;
+                  
+                  if (!fuelPump) {
+                    setError('No account found with this email address');
+                    return;
+                  }
+                  
+                  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/reset-password-confirm`,
+                  });
+                  
+                  if (error) throw error;
+                  
+                  // Update the fuel pump status to pending_reset
+                  await supabase
+                    .from('fuel_pumps')
+                    .update({ status: 'pending_reset' })
+                    .eq('id', fuelPump.id);
+                  
+                  toast({
+                    title: "Password reset email sent",
+                    description: "Check your inbox for the password reset link",
+                  });
+                } catch (error: any) {
+                  console.error('Password reset error:', error);
+                  setError(error.message || 'Failed to send password reset email');
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+            >
+              Forgot password?
+            </Button>
+            <div className="text-sm text-center text-muted-foreground">
+              Contact admin for new account
             </div>
           </CardFooter>
         </Card>
