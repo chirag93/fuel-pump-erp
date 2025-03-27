@@ -103,7 +103,7 @@ export const usePasswordReset = () => {
 
   // Function for admin-initiated forced password reset
   const adminForcePasswordReset = async (
-    email: string,
+    userEmail: string,  // Renamed parameter to be more explicit
     tempPassword: string
   ): Promise<ResetPasswordResult> => {
     setIsResetting(true);
@@ -114,7 +114,7 @@ export const usePasswordReset = () => {
       const { data: fuelPump, error: fuelPumpError } = await supabase
         .from('fuel_pumps')
         .select('*')
-        .eq('email', email)
+        .eq('email', userEmail)  // Using renamed parameter
         .maybeSingle();
 
       if (fuelPumpError || !fuelPump) {
@@ -138,7 +138,7 @@ export const usePasswordReset = () => {
       }
       
       // Find the user with matching email
-      const user = users.find(u => u.email === email);
+      const user = users.find(u => u.email === userEmail);  // Using renamed parameter
       
       if (!user) {
         return {
