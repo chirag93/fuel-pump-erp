@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -88,22 +87,17 @@ const FuelPumpUserPage = () => {
       setError(null);
 
       // First, get the list of users and find the one with matching email
-      const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
+      const { data: emailUsers, error: emailError } = await supabase
+        .from('auth.users')
+        .select('id, email')
+        .eq('email', fuelPump.email)
+        .single();
 
-      if (usersError) {
+      let userId;
+
+      if (emailError) {
         // If admin API fails, we need to find the user ID via our edge function
-        // First try to get the user ID via email
-        const { data: emailData, error: emailError } = await supabase
-          .from('fuel_pumps')
-          .select('email')
-          .eq('id', id)
-          .single();
-
-        if (emailError) {
-          throw new Error('Failed to retrieve fuel pump email');
-        }
-
-        // Call our secure edge function to reset the password
+        // Call our secure edge function to find the user
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-password`, {
           method: 'POST',
           headers: {
@@ -111,7 +105,7 @@ const FuelPumpUserPage = () => {
             'Authorization': `Bearer ${session?.access_token}`
           },
           body: JSON.stringify({ 
-            email: emailData.email, 
+            userId: userId, 
             newPassword 
           })
         });
@@ -122,16 +116,8 @@ const FuelPumpUserPage = () => {
           throw new Error(result.error || 'Error resetting password');
         }
       } else {
-        // Find the user with the matching email (case insensitive)
-        const user = usersData?.users.find(
-          (u: SupabaseUser) => u.email?.toLowerCase() === fuelPump.email.toLowerCase()
-        );
-
-        // If no user found with this email, display error
-        if (!user) {
-          throw new Error('No user account found for this fuel pump');
-        }
-
+        userId = emailUsers.id;
+        
         // Call our secure edge function to reset the password
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-password`, {
           method: 'POST',
@@ -140,7 +126,7 @@ const FuelPumpUserPage = () => {
             'Authorization': `Bearer ${session?.access_token}`
           },
           body: JSON.stringify({ 
-            userId: user.id, 
+            userId: userId, 
             newPassword 
           })
         });
