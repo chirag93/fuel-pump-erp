@@ -13,6 +13,16 @@ import { AlertCircle, ChevronLeft, User, Mail, MapPin, Phone, Shield } from 'luc
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Define an interface for the user object returned from Supabase Auth
+interface SupabaseUser {
+  id: string;
+  email?: string | null;
+  created_at?: string;
+  last_sign_in_at?: string;
+  app_metadata?: any;
+  user_metadata?: any;
+}
+
 const FuelPumpUserPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -86,7 +96,7 @@ const FuelPumpUserPage = () => {
 
       // Find the user with the matching email (case insensitive)
       const user = usersData?.users.find(
-        u => u.email?.toLowerCase() === fuelPump.email.toLowerCase()
+        (u: SupabaseUser) => u.email?.toLowerCase() === fuelPump.email.toLowerCase()
       );
 
       // If no user found with this email, display error
