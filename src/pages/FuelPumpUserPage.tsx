@@ -77,23 +77,24 @@ const FuelPumpUserPage = () => {
       setIsResettingPassword(true);
       setError(null);
 
-      // First, check if the user exists in auth.users table by email
-      const { data: userData, error: userError } = await supabase.auth.admin.listUsers({
-        filter: {
-          email: fuelPump.email.toLowerCase()
-        }
-      });
+      // First, get the list of users and find the one with matching email
+      const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
 
-      if (userError) {
-        throw userError;
+      if (usersError) {
+        throw usersError;
       }
 
+      // Find the user with the matching email (case insensitive)
+      const user = usersData?.users.find(
+        u => u.email?.toLowerCase() === fuelPump.email.toLowerCase()
+      );
+
       // If no user found with this email, display error
-      if (!userData || userData.users.length === 0) {
+      if (!user) {
         throw new Error('No user account found for this fuel pump');
       }
 
-      const userId = userData.users[0].id;
+      const userId = user.id;
 
       // Update the user's password
       const { error: resetError } = await supabase.auth.admin.updateUserById(
