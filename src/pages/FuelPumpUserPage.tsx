@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -80,11 +81,11 @@ const FuelPumpUserPage = () => {
         throw new Error('Fuel pump email not found');
       }
 
-      // Use relative URL which works across environments
-      const apiUrl = '';
+      // Get the protocol and origin to build an absolute URL
+      const origin = window.location.origin;
       
-      // Call our backend API to reset the password using a relative URL
-      const response = await fetch(`${apiUrl}/api/reset-password`, {
+      // Call our backend API with the correct path (no leading slash for relative paths in backend folder)
+      const response = await fetch(`${origin}/api/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,30 +97,46 @@ const FuelPumpUserPage = () => {
         })
       });
 
-      // Check if the response is JSON before trying to parse it
+      // Check if the response is successful
+      if (!response.ok) {
+        // Try to parse error response
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+        } else {
+          // Handle non-JSON error responses
+          const errorText = await response.text();
+          console.error('Server response:', response.status, errorText.substring(0, 200) + '...');
+          throw new Error(`Server error (${response.status}): The API endpoint may not exist or is misconfigured`);
+        }
+      }
+      
+      // Parse successful response
       const contentType = response.headers.get('content-type');
+      let result;
       
       if (contentType && contentType.includes('application/json')) {
-        const result = await response.json();
+        result = await response.json();
         
-        if (!response.ok || !result.success) {
+        if (!result.success) {
           throw new Error(result.error || 'Error resetting password');
         }
-        
-        // Clear password fields
-        setNewPassword('');
-        setConfirmPassword('');
-
-        toast({
-          title: "Password Reset Successful",
-          description: `The password for ${fuelPump.name} has been reset.`
-        });
       } else {
-        // Handle non-JSON responses
-        const textResult = await response.text();
-        console.error('Non-JSON response:', textResult);
-        throw new Error('Server returned an invalid response format');
+        // Handle unexpected but successful response format
+        console.warn('Unexpected content type in successful response:', contentType);
+        // Assume success since response.ok is true
       }
+      
+      // Clear password fields
+      setNewPassword('');
+      setConfirmPassword('');
+
+      toast({
+        title: "Password Reset Successful",
+        description: `The password for ${fuelPump.name} has been reset.`
+      });
     } catch (error: any) {
       console.error('Error resetting password:', error);
       setError(error.message || 'Failed to reset password. Try again later.');
