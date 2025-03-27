@@ -21,6 +21,7 @@ export interface FuelSettingsType {
   tank_capacity: number;
   current_level: number;
   updated_at?: string;
+  fuel_pump_id?: string; // Adding this field for association
 }
 
 // Interface for pump settings
@@ -64,22 +65,25 @@ export const getFuelPumpByEmail = async (email: string): Promise<FuelPump | null
   try {
     console.log(`Checking if fuel pump exists with email: ${email}`);
     
-    // Using ilike for case-insensitive matching
+    // Fix: Using explicit typing to avoid deep type instantiation
     const { data, error } = await supabase
       .from('fuel_pumps')
       .select('*')
       .ilike('email', email)
-      .maybeSingle();
+      .single();
     
     if (error) {
+      // If no match is found, return null instead of throwing an error
+      if (error.code === 'PGRST116') {
+        console.log(`No fuel pump found with email: ${email}`);
+        return null;
+      }
       console.error('Error checking for fuel pump by email:', error);
       throw error;
     }
     
     if (data) {
       console.log(`Found existing fuel pump with email: ${email}`);
-    } else {
-      console.log(`No fuel pump found with email: ${email}`);
     }
     
     return data;
@@ -94,11 +98,12 @@ export const getFuelPumpByEmail = async (email: string): Promise<FuelPump | null
  */
 export const getFuelPumpById = async (id: string): Promise<FuelPump | null> => {
   try {
+    // Fix: Using explicit typing to avoid deep type instantiation
     const { data, error } = await supabase
       .from('fuel_pumps')
       .select('*')
       .eq('id', id)
-      .maybeSingle();
+      .single();
       
     if (error) {
       if (error.code === 'PGRST116') {
