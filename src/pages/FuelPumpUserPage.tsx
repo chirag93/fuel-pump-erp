@@ -26,7 +26,7 @@ interface SupabaseUser {
 const FuelPumpUserPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, session } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [fuelPump, setFuelPump] = useState<any>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -91,28 +91,66 @@ const FuelPumpUserPage = () => {
       const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
 
       if (usersError) {
-        throw usersError;
+        // If admin API fails, we need to find the user ID via our edge function
+        // First try to get the user ID via email
+        const { data: emailData, error: emailError } = await supabase
+          .from('fuel_pumps')
+          .select('email')
+          .eq('id', id)
+          .single();
+
+        if (emailError) {
+          throw new Error('Failed to retrieve fuel pump email');
+        }
+
+        // Call our secure edge function to reset the password
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({ 
+            email: emailData.email, 
+            newPassword 
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Error resetting password');
+        }
+      } else {
+        // Find the user with the matching email (case insensitive)
+        const user = usersData?.users.find(
+          (u: SupabaseUser) => u.email?.toLowerCase() === fuelPump.email.toLowerCase()
+        );
+
+        // If no user found with this email, display error
+        if (!user) {
+          throw new Error('No user account found for this fuel pump');
+        }
+
+        // Call our secure edge function to reset the password
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({ 
+            userId: user.id, 
+            newPassword 
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Error resetting password');
+        }
       }
-
-      // Find the user with the matching email (case insensitive)
-      const user = usersData?.users.find(
-        (u: SupabaseUser) => u.email?.toLowerCase() === fuelPump.email.toLowerCase()
-      );
-
-      // If no user found with this email, display error
-      if (!user) {
-        throw new Error('No user account found for this fuel pump');
-      }
-
-      const userId = user.id;
-
-      // Update the user's password
-      const { error: resetError } = await supabase.auth.admin.updateUserById(
-        userId,
-        { password: newPassword }
-      );
-
-      if (resetError) throw resetError;
 
       // Clear password fields
       setNewPassword('');
@@ -234,9 +272,9 @@ const FuelPumpUserPage = () => {
                 <User className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium leading-none">{fuelPump.name}</p>
+                <p className="text-sm font-medium leading-none">{fuelPump?.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {fuelPump.status === 'active' ? 'Active' : 'Inactive'}
+                  {fuelPump?.status === 'active' ? 'Active' : 'Inactive'}
                 </p>
               </div>
             </div>
@@ -248,26 +286,26 @@ const FuelPumpUserPage = () => {
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">Email</span>
               </div>
-              <p className="text-sm">{fuelPump.email}</p>
+              <p className="text-sm">{fuelPump?.email}</p>
             </div>
             
-            {fuelPump.contact_number && (
+            {fuelPump?.contact_number && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">Contact Number</span>
                 </div>
-                <p className="text-sm">{fuelPump.contact_number}</p>
+                <p className="text-sm">{fuelPump?.contact_number}</p>
               </div>
             )}
             
-            {fuelPump.address && (
+            {fuelPump?.address && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">Address</span>
                 </div>
-                <p className="text-sm">{fuelPump.address}</p>
+                <p className="text-sm">{fuelPump?.address}</p>
               </div>
             )}
           </CardContent>
