@@ -25,17 +25,16 @@ export const usePasswordReset = () => {
     setError(null);
 
     try {
-      // Instead of using the Flask backend, use Supabase directly to update the user
-      // Find the user by email first
-      const { data: users, error: userError } = await supabase
-        .from('app_users')
+      // Find the fuel pump by email
+      const { data: fuelPump, error: fuelPumpError } = await supabase
+        .from('fuel_pumps')
         .select('*')
         .eq('email', options.email)
         .single();
 
-      if (userError) {
-        console.error('Error finding user:', userError);
-        const errorMessage = 'Failed to find user account. Please verify the email address.';
+      if (fuelPumpError) {
+        console.error('Error finding fuel pump:', fuelPumpError);
+        const errorMessage = 'Failed to find fuel pump account. Please verify the email address.';
         setError(errorMessage);
         return {
           success: false,
@@ -43,8 +42,8 @@ export const usePasswordReset = () => {
         };
       }
 
-      if (!users) {
-        const errorMessage = 'User not found with the provided email address.';
+      if (!fuelPump) {
+        const errorMessage = 'Fuel pump not found with the provided email address.';
         setError(errorMessage);
         return {
           success: false,
@@ -52,21 +51,18 @@ export const usePasswordReset = () => {
         };
       }
 
-      // For security, we'll use a more modern approach - instead of storing password hash directly,
-      // we'll generate a secure reset token and mark the account for password change
-      
-      // Update the user record with a password_reset_required flag and a timestamp
+      // Update the fuel pump record with a password_reset_required flag and a timestamp
       const { error: updateError } = await supabase
-        .from('app_users')
+        .from('fuel_pumps')
         .update({
           password_reset_required: true,
           password_reset_token: newPassword, // Store the new password temporarily in token field
           updated_at: new Date().toISOString()
         })
-        .eq('id', users.id);
+        .eq('id', fuelPump.id);
 
       if (updateError) {
-        console.error('Error updating user for password reset:', updateError);
+        console.error('Error updating fuel pump for password reset:', updateError);
         const errorMessage = 'Failed to initiate password reset. Database error occurred.';
         setError(errorMessage);
         return {
