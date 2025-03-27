@@ -25,7 +25,8 @@ export const usePasswordReset = () => {
     setError(null);
 
     try {
-      const apiUrl = process.env.VITE_API_URL || 'http://localhost:5000';
+      // Use Vite's import.meta.env instead of process.env
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const resetEndpoint = `${apiUrl}/api/reset-password`;
       
       console.log('Attempting to reset password using API endpoint:', resetEndpoint);

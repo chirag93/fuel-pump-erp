@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +11,7 @@ import { getFuelPumpById } from '@/integrations/fuelPumps';
 import { AlertCircle, ChevronLeft, User, Mail, MapPin, Phone, Shield } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePasswordReset } from '@/hooks/usePasswordReset';
 
 const FuelPumpUserPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,8 +21,7 @@ const FuelPumpUserPage = () => {
   const [fuelPump, setFuelPump] = useState<any>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { resetPassword, isResetting, error, setError } = usePasswordReset();
 
   useEffect(() => {
     if (!isSuperAdmin) {
@@ -74,94 +73,35 @@ const FuelPumpUserPage = () => {
     }
 
     try {
-      setIsResettingPassword(true);
-      setError(null);
-
       if (!fuelPump || !fuelPump.email) {
         throw new Error('Fuel pump email not found');
       }
 
-      // Updated API endpoint approach - use API URL from environment or fallback to localhost
-      const apiUrl = process.env.VITE_API_URL || 'http://localhost:5000';
-      const resetEndpoint = `${apiUrl}/api/reset-password`;
-      
-      console.log('Attempting to reset password using API endpoint:', resetEndpoint);
-      
-      // Call our backend API with proper error handling
-      const response = await fetch(resetEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({ 
+      const result = await resetPassword(
+        {
           email: fuelPump.email,
-          newPassword 
-        })
-      });
-      
-      console.log('Password reset API response status:', response.status);
+          accessToken: session?.access_token
+        },
+        newPassword
+      );
 
-      // Check if the response is successful
-      if (!response.ok) {
-        // Try to parse error response
-        const contentType = response.headers.get('content-type');
-        let errorMessage = '';
-        
-        if (contentType && contentType.includes('application/json')) {
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || `Error ${response.status}: ${response.statusText}`;
-          } catch (jsonError) {
-            // Handle JSON parsing error
-            const errorText = await response.text();
-            console.error('Failed to parse JSON response:', errorText.substring(0, 200));
-            errorMessage = `Error ${response.status}: The server response was not valid JSON`;
-          }
-        } else {
-          // Handle non-JSON error responses
-          const errorText = await response.text();
-          console.error('Server response:', response.status, errorText.substring(0, 200));
-          
-          if (response.status === 404) {
-            errorMessage = 'The reset password API endpoint was not found. Please verify the Flask backend is running at ' + apiUrl;
-          } else {
-            errorMessage = `Server error (${response.status}): The API endpoint may not be responding correctly`;
-          }
-        }
-        
-        throw new Error(errorMessage);
-      }
-      
-      // Parse successful response
-      const contentType = response.headers.get('content-type');
-      let result;
-      
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          result = await response.json();
-          
-          if (!result.success) {
-            throw new Error(result.error || 'Error resetting password');
-          }
-        } catch (jsonError) {
-          console.error('Failed to parse success response JSON:', jsonError);
-          throw new Error('The server returned an invalid success response format');
-        }
+      if (result.success) {
+        // Clear password fields
+        setNewPassword('');
+        setConfirmPassword('');
+
+        toast({
+          title: "Password Reset Successful",
+          description: `The password for ${fuelPump.name} has been reset.`
+        });
       } else {
-        // Handle unexpected but successful response format
-        console.warn('Unexpected content type in successful response:', contentType);
-        // Assume success since response.ok is true
+        // Error is already set by the hook
+        toast({
+          title: "Password Reset Failed",
+          description: result.error || 'An unexpected error occurred',
+          variant: "destructive"
+        });
       }
-      
-      // Clear password fields
-      setNewPassword('');
-      setConfirmPassword('');
-
-      toast({
-        title: "Password Reset Successful",
-        description: `The password for ${fuelPump.name} has been reset.`
-      });
     } catch (error: any) {
       console.error('Error resetting password:', error);
       setError(error.message || 'Failed to reset password. Try again later.');
@@ -171,8 +111,6 @@ const FuelPumpUserPage = () => {
         description: error.message || 'An unexpected error occurred',
         variant: "destructive"
       });
-    } finally {
-      setIsResettingPassword(false);
     }
   };
 
@@ -365,10 +303,10 @@ const FuelPumpUserPage = () => {
           <CardFooter>
             <Button 
               onClick={handleResetPassword} 
-              disabled={isResettingPassword}
+              disabled={isResetting}
               className="w-full"
             >
-              {isResettingPassword ? 'Resetting Password...' : 'Reset Password'}
+              {isResetting ? 'Resetting Password...' : 'Reset Password'}
             </Button>
           </CardFooter>
         </Card>
