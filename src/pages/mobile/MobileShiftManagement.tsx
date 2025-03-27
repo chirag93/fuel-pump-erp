@@ -6,16 +6,32 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StartShiftForm } from '@/components/shift/StartShiftForm';
 import { useShiftManagement } from '@/hooks/useShiftManagement';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const MobileShiftManagement = () => {
   const {
     staffList,
     newShift,
     setNewShift,
-    handleAddShift
+    handleAddShift,
+    isLoading
   } = useShiftManagement();
   
   const [formOpen, setFormOpen] = useState(false);
+  const { toast } = useToast();
+  
+  const handleOpenForm = () => {
+    if (staffList.length === 0) {
+      toast({
+        title: "No Staff Available",
+        description: "There are no active staff members available to assign shifts.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setFormOpen(true);
+  };
   
   return (
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
@@ -38,6 +54,14 @@ const MobileShiftManagement = () => {
           <p className="text-sm text-muted-foreground mb-4">
             Record shift details including staff and opening cash amount.
           </p>
+          
+          <Button 
+            onClick={handleOpenForm} 
+            className="w-full"
+            disabled={isLoading}
+          >
+            Start New Shift
+          </Button>
           
           <StartShiftForm
             formOpen={formOpen}

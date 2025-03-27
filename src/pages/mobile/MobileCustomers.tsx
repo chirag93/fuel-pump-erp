@@ -1,12 +1,58 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, UserRound, Search } from 'lucide-react';
+import { ChevronLeft, UserRound, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from '@/hooks/use-toast';
+import { Customer } from '@/integrations/supabase/client';
+import { getAllCustomers } from '@/integrations/customers';
 
 const MobileCustomers = () => {
+  const { toast } = useToast();
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch customers from the database
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      setIsLoading(true);
+      try {
+        const customerData = await getAllCustomers();
+        setCustomers(customerData);
+        setFilteredCustomers(customerData);
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load customers. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchCustomers();
+  }, [toast]);
+
+  // Handle search
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredCustomers(customers);
+    } else {
+      const filtered = customers.filter(customer => 
+        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (customer.phone && customer.phone.includes(searchTerm))
+      );
+      setFilteredCustomers(filtered);
+    }
+  }, [searchTerm, customers]);
+
   return (
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
       <div className="flex items-center mb-4">
@@ -23,27 +69,53 @@ const MobileCustomers = () => {
         <Input 
           placeholder="Search customers..." 
           className="pl-9"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
       
       <Card className="mb-4">
         <CardContent className="pt-4">
-          <div className="flex items-center mb-4">
-            <UserRound className="h-5 w-5 text-primary mr-2" />
-            <h2 className="text-lg font-medium">Recent Customers</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <UserRound className="h-5 w-5 text-primary mr-2" />
+              <h2 className="text-lg font-medium">Customers</h2>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {filteredCustomers.length} {filteredCustomers.length === 1 ? 'customer' : 'customers'}
+            </div>
           </div>
           
-          <div className="space-y-3">
-            {[1, 2, 3].map((_, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-md">
-                <div>
-                  <p className="font-medium">Customer {index + 1}</p>
-                  <p className="text-sm text-muted-foreground">Vehicle: XYZ-{1000 + index}</p>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filteredCustomers.length > 0 ? (
+            <div className="space-y-3">
+              {filteredCustomers.map((customer) => (
+                <div key={customer.id} className="flex items-center justify-between p-3 border rounded-md">
+                  <div>
+                    <p className="font-medium">{customer.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {customer.phone}
+                      {customer.balance && customer.balance > 0 && (
+                        <span className="ml-2 text-red-500">
+                          Balance: ₹{customer.balance.toLocaleString()}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <Link to={`/customer/${customer.id}`}>
+                    <Button variant="ghost" size="sm">View</Button>
+                  </Link>
                 </div>
-                <Button variant="ghost" size="sm">View</Button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              {searchTerm ? 'No customers found matching your search' : 'No customers found'}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

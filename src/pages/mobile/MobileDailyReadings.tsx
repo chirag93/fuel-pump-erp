@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, Droplets } from 'lucide-react';
+import { ChevronLeft, Droplets, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import TankReadingsForm from '@/components/daily-readings/TankReadingsForm';
@@ -9,6 +9,14 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
 import { ReadingFormData } from '@/components/daily-readings/TankReadingsForm';
 import { calculateValues } from '@/components/daily-readings/readingUtils';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const MobileDailyReadings = () => {
   const { toast } = useToast();
@@ -27,6 +35,86 @@ const MobileDailyReadings = () => {
     closing_stock: 0,
     actual_meter_sales: 0
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previousReadingData, setPreviousReadingData] = useState<any>(null);
+  const [fuelTypes, setFuelTypes] = useState<string[]>(['Petrol', 'Diesel', 'Premium']);
+
+  // Fetch fuel types from settings
+  useEffect(() => {
+    const fetchFuelTypes = async () => {
+      const { data, error } = await supabase
+        .from('fuel_settings')
+        .select('fuel_type');
+        
+      if (error) {
+        console.error('Error fetching fuel types:', error);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        const types = data.map(item => item.fuel_type);
+        setFuelTypes(types);
+        // Set default fuel type
+        setReadingFormData(prev => ({
+          ...prev,
+          fuel_type: types[0]
+        }));
+      }
+    };
+    
+    fetchFuelTypes();
+  }, []);
+
+  // Fetch previous reading when fuel type changes
+  useEffect(() => {
+    const fetchPreviousReading = async () => {
+      const { data, error } = await supabase
+        .from('daily_readings')
+        .select('*')
+        .eq('fuel_type', readingFormData.fuel_type)
+        .order('date', { ascending: false })
+        .limit(1);
+        
+      if (error) {
+        console.error('Error fetching previous reading:', error);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        setPreviousReadingData(data[0]);
+        
+        // Use previous closing stock as today's opening stock
+        const calculatedValues = calculateValues({
+          ...readingFormData,
+          readings: {
+            ...readingFormData.readings,
+            1: {
+              ...readingFormData.readings[1],
+              net_stock: data[0].closing_stock
+            }
+          }
+        });
+        
+        // Update form data with previous data
+        setReadingFormData(prev => ({
+          ...prev,
+          readings: {
+            ...prev.readings,
+            1: {
+              ...prev.readings[1],
+              net_stock: data[0].closing_stock
+            }
+          }
+        }));
+      } else {
+        setPreviousReadingData(null);
+      }
+    };
+    
+    if (readingFormData.fuel_type) {
+      fetchPreviousReading();
+    }
+  }, [readingFormData.fuel_type]);
 
   // Calculate dependent values based on form data
   const calculatedValues = calculateValues(readingFormData);
@@ -88,6 +176,26 @@ const MobileDailyReadings = () => {
 
   // Save reading to database
   const handleSaveReading = async () => {
+    if (readingFormData.closing_stock === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Closing stock cannot be zero",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (readingFormData.actual_meter_sales === 0) {
+      toast({
+        title: "Validation Error", 
+        description: "Actual meter sales cannot be zero",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
     try {
       const tanksToInsert = Object.values(readingFormData.readings).map(tank => ({
         date: readingFormData.date,
@@ -109,6 +217,15 @@ const MobileDailyReadings = () => {
 
       if (error) throw error;
 
+      // Update fuel settings with new stock level
+      await supabase
+        .from('fuel_settings')
+        .update({
+          current_level: readingFormData.closing_stock,
+          updated_at: new Date().toISOString()
+        })
+        .eq('fuel_type', readingFormData.fuel_type);
+
       toast({
         title: "Reading saved",
         description: "The daily reading has been recorded successfully."
@@ -117,7 +234,7 @@ const MobileDailyReadings = () => {
       // Reset form after successful save
       setReadingFormData({
         date: new Date().toISOString().split('T')[0],
-        fuel_type: 'Petrol',
+        fuel_type: readingFormData.fuel_type,
         readings: {
           1: {
             tank_number: 1,
@@ -130,6 +247,19 @@ const MobileDailyReadings = () => {
         actual_meter_sales: 0
       });
       setTankCount(1);
+      
+      // Re-fetch the previous reading
+      const { data } = await supabase
+        .from('daily_readings')
+        .select('*')
+        .eq('fuel_type', readingFormData.fuel_type)
+        .order('date', { ascending: false })
+        .limit(1);
+        
+      if (data && data.length > 0) {
+        setPreviousReadingData(data[0]);
+      }
+      
     } catch (error) {
       console.error("Error saving reading:", error);
       toast({
@@ -137,6 +267,8 @@ const MobileDailyReadings = () => {
         description: "Failed to save reading. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -161,6 +293,44 @@ const MobileDailyReadings = () => {
           <p className="text-sm text-muted-foreground mb-4">
             Enter the current meter readings for each fuel pump to track daily sales.
           </p>
+          
+          <div className="mb-4">
+            <label htmlFor="fuelType" className="text-sm font-medium mb-1 block">
+              Fuel Type
+            </label>
+            <Select
+              value={readingFormData.fuel_type}
+              onValueChange={(value) => handleInputChange('fuel_type', value)}
+            >
+              <SelectTrigger id="fuelType">
+                <SelectValue placeholder="Select fuel type" />
+              </SelectTrigger>
+              <SelectContent>
+                {fuelTypes.map((type) => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {previousReadingData && (
+            <div className="mb-4 p-3 bg-primary/10 rounded-md">
+              <div className="flex items-center mb-2">
+                <Info className="h-4 w-4 text-primary mr-1" />
+                <span className="text-sm font-medium">Previous Reading ({new Date(previousReadingData.date).toLocaleDateString()})</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Opening:</span>
+                  <span className="ml-1">{previousReadingData.opening_stock.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Closing:</span>
+                  <span className="ml-1">{previousReadingData.closing_stock.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          )}
           
           <TankReadingsForm 
             readingFormData={readingFormData}
@@ -217,8 +387,9 @@ const MobileDailyReadings = () => {
             <Button 
               className="w-full mt-4" 
               onClick={handleSaveReading}
+              disabled={isSubmitting}
             >
-              Save Reading
+              {isSubmitting ? 'Saving...' : 'Save Reading'}
             </Button>
           </div>
         </CardContent>
