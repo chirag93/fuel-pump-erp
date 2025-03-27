@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Droplets, ChevronRight, ChevronDown, Laptop, ShieldCheck, Users, TrendingUp, BarChart3, Smartphone, Zap, FileText, Clock, Truck, GaugeCircle } from "lucide-react";
@@ -445,8 +446,6 @@ const Index = () => {
               <ul className="space-y-2">
                 <li>support@fuelpro360.com</li>
                 <li>Bangalore, India</li>
-                <li>
-              </li>
               </ul>
             </div>
           </div>
@@ -454,7 +453,12 @@ const Index = () => {
           <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p>© {new Date().getFullYear()} Fuel Pro 360. All rights reserved.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              {["Facebook", "Twitter", "LinkedIn", "Instagram"].map((social, idx) => {})}
+              {/* Fix: This is the problematic line - returning null for each social item rather than void */}
+              {["Facebook", "Twitter", "LinkedIn", "Instagram"].map((social, idx) => (
+                <a key={idx} href="#" className="hover:text-blue-300 transition-colors">
+                  {social}
+                </a>
+              ))}
             </div>
           </div>
         </div>
@@ -462,3 +466,4 @@ const Index = () => {
     </div>;
 };
 export default Index;
+
