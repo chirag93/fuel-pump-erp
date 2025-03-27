@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,13 +70,13 @@ const FuelPumpDetails = ({ fuelPump }: { fuelPump: any }) => (
 // Extract PasswordResetForm into a separate component
 const PasswordResetForm = ({ 
   fuelPump, 
-  resetPassword, 
+  adminForcePasswordReset, 
   isResetting, 
   error, 
   setError 
 }: { 
   fuelPump: any;
-  resetPassword: (options: any, newPassword: string) => Promise<any>;
+  adminForcePasswordReset: (email: string, tempPassword: string) => Promise<any>;
   isResetting: boolean;
   error: string | null;
   setError: (error: string | null) => void;
@@ -107,8 +106,8 @@ const PasswordResetForm = ({
         throw new Error('Fuel pump email not found');
       }
 
-      const result = await resetPassword(
-        { email: fuelPump.email },
+      const result = await adminForcePasswordReset(
+        fuelPump.email,
         newPassword
       );
 
@@ -210,7 +209,7 @@ const FuelPumpUserPage = () => {
   const { isSuperAdmin } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [fuelPump, setFuelPump] = useState<any>(null);
-  const { resetPassword, isResetting, error, setError } = usePasswordReset();
+  const { adminForcePasswordReset, isResetting, error, setError } = usePasswordReset();
 
   useEffect(() => {
     if (!isSuperAdmin) {
@@ -332,7 +331,7 @@ const FuelPumpUserPage = () => {
         <FuelPumpDetails fuelPump={fuelPump} />
         <PasswordResetForm 
           fuelPump={fuelPump}
-          resetPassword={resetPassword}
+          adminForcePasswordReset={adminForcePasswordReset}
           isResetting={isResetting}
           error={error}
           setError={setError}
