@@ -51,12 +51,15 @@ export const usePasswordReset = () => {
         };
       }
 
-      // Update the fuel pump record with a password_reset_required flag and a timestamp
+      // Instead of using password_reset_required field (which doesn't exist),
+      // we'll set a note in the status field to indicate password reset
+      // Store the new password as a temporary status message
+      const statusMessage = `pending_reset:${newPassword}`;
+      
       const { error: updateError } = await supabase
         .from('fuel_pumps')
         .update({
-          password_reset_required: true,
-          password_reset_token: newPassword, // Store the new password temporarily in token field
+          status: statusMessage,
           updated_at: new Date().toISOString()
         })
         .eq('id', fuelPump.id);

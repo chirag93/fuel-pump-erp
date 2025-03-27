@@ -129,22 +129,29 @@ def reset_password():
         print("Error: Unauthorized request - invalid auth token")
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     
-    # Check if user is a super admin by querying the super_admins table
-    admin_token = auth_token.replace('Bearer ', '')
-    # This is a simplified check - in a real app, you'd validate the token properly
-    super_admins = supabase_get('super_admins')
-    is_super_admin = False
+    # Check for fuel pumps with status containing pending_reset
+    fuel_pumps = supabase_get('fuel_pumps', {'email': f'eq.{email}'})
     
-    # Basic validation
-    if not email or not new_password:
-        print("Error: Missing email or password")
-        return jsonify({'success': False, 'error': 'Email and new password are required'}), 400
+    if not fuel_pumps:
+        print(f"Error: Fuel pump not found with email {email}")
+        return jsonify({'success': False, 'error': 'Fuel pump not found'}), 404
     
-    if len(new_password) < 6:
-        print("Error: Password too short")
-        return jsonify({'success': False, 'error': 'Password must be at least 6 characters long'}), 400
+    fuel_pump = fuel_pumps[0]
     
-    # Find the user by email
+    # Check if status indicates a pending password reset
+    status = fuel_pump.get('status', '')
+    if not status.startswith('pending_reset:'):
+        print(f"Error: No pending password reset for fuel pump with email {email}")
+        return jsonify({'success': False, 'error': 'No pending password reset'}), 400
+    
+    # Extract the new password from the status
+    stored_password = status.split(':', 1)[1] if ':' in status else ''
+    
+    if stored_password != new_password:
+        print("Error: Password mismatch")
+        return jsonify({'success': False, 'error': 'Password verification failed'}), 400
+    
+    # Find the user in app_users table
     users = supabase_get('app_users', {'email': f'eq.{email}'})
     
     if not users:
@@ -164,6 +171,9 @@ def reset_password():
     }
     
     result = supabase_update('app_users', update_data, 'id', user['id'])
+    
+    # Reset the fuel pump status back to active
+    fuel_pump_update = supabase_update('fuel_pumps', {'status': 'active'}, 'id', fuel_pump['id'])
     
     if result:
         print(f"Password reset successful for user with email {email}")
