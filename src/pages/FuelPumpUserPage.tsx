@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -81,10 +80,10 @@ const FuelPumpUserPage = () => {
         throw new Error('Fuel pump email not found');
       }
 
-      // Use the API URL from environment or fallback to the relative URL which will work in any environment
-      const apiUrl = import.meta.env.VITE_API_URL || '';
+      // Use relative URL which works across environments
+      const apiUrl = '';
       
-      // Call our backend API to reset the password using relative URL if no API URL is specified
+      // Call our backend API to reset the password using a relative URL
       const response = await fetch(`${apiUrl}/api/reset-password`, {
         method: 'POST',
         headers: {
@@ -97,20 +96,30 @@ const FuelPumpUserPage = () => {
         })
       });
 
-      const result = await response.json();
+      // Check if the response is JSON before trying to parse it
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        const result = await response.json();
+        
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Error resetting password');
+        }
+        
+        // Clear password fields
+        setNewPassword('');
+        setConfirmPassword('');
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Error resetting password');
+        toast({
+          title: "Password Reset Successful",
+          description: `The password for ${fuelPump.name} has been reset.`
+        });
+      } else {
+        // Handle non-JSON responses
+        const textResult = await response.text();
+        console.error('Non-JSON response:', textResult);
+        throw new Error('Server returned an invalid response format');
       }
-
-      // Clear password fields
-      setNewPassword('');
-      setConfirmPassword('');
-
-      toast({
-        title: "Password Reset Successful",
-        description: `The password for ${fuelPump.name} has been reset.`
-      });
     } catch (error: any) {
       console.error('Error resetting password:', error);
       setError(error.message || 'Failed to reset password. Try again later.');
