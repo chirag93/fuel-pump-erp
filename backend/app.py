@@ -9,7 +9,8 @@ import hashlib
 import secrets
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})  # Enable CORS for all /api routes
+# Update CORS configuration to be more permissive for development
+CORS(app)  # Enable CORS for all routes without restriction during development
 
 # Supabase API details
 SUPABASE_URL = os.environ.get('SUPABASE_URL', "https://svuritdhlgaonfefphkz.supabase.co")
@@ -100,10 +101,18 @@ def login():
     
     return jsonify({'success': False, 'message': 'Invalid username or password'}), 401
 
-# New endpoint for password reset
+# Updated endpoint for password reset with improved logging and error handling
 @app.route('/api/reset-password', methods=['POST'])
 def reset_password():
     print("Reset password endpoint called")
+    print(f"Request headers: {request.headers}")
+    print(f"Request method: {request.method}")
+    
+    # Verify content type
+    if not request.is_json:
+        print("Error: Request content-type is not application/json")
+        return jsonify({'success': False, 'error': 'Expected JSON data'}), 400
+    
     data = request.json
     if not data:
         print("Error: No JSON data in request")
@@ -433,4 +442,7 @@ if __name__ == '__main__':
     print("  - /api/readings")
     print("  - /api/indents")
     print("  - /api/transactions")
-    app.run(debug=True, port=5000)
+    # Print the full URL to make it clear where the API is running
+    print(f"API running at: http://localhost:5000")
+    print("Make sure this is accessible from your frontend application")
+    app.run(debug=True, port=5000, host='0.0.0.0')  # Use host='0.0.0.0' to make it accessible outside localhost

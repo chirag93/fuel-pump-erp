@@ -81,13 +81,14 @@ const FuelPumpUserPage = () => {
         throw new Error('Fuel pump email not found');
       }
 
-      // Try direct path to Flask backend
-      const baseURL = '/api/reset-password';
+      // Updated API endpoint approach - use API URL from environment or fallback to localhost
+      const apiUrl = process.env.VITE_API_URL || 'http://localhost:5000';
+      const resetEndpoint = `${apiUrl}/api/reset-password`;
       
-      console.log('Attempting to reset password using API endpoint:', baseURL);
+      console.log('Attempting to reset password using API endpoint:', resetEndpoint);
       
       // Call our backend API with proper error handling
-      const response = await fetch(baseURL, {
+      const response = await fetch(resetEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -123,7 +124,7 @@ const FuelPumpUserPage = () => {
           console.error('Server response:', response.status, errorText.substring(0, 200));
           
           if (response.status === 404) {
-            errorMessage = 'The reset password API endpoint was not found. This could be because the Flask backend is not running or the endpoint path is incorrect.';
+            errorMessage = 'The reset password API endpoint was not found. Please verify the Flask backend is running at ' + apiUrl;
           } else {
             errorMessage = `Server error (${response.status}): The API endpoint may not be responding correctly`;
           }
