@@ -9,7 +9,7 @@ import hashlib
 import secrets
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app, resources={r"/api/*": {"origins": "*"}})  # Enable CORS for all /api routes
 
 # Supabase API details
 SUPABASE_URL = os.environ.get('SUPABASE_URL', "https://svuritdhlgaonfefphkz.supabase.co")
@@ -103,13 +103,21 @@ def login():
 # New endpoint for password reset
 @app.route('/api/reset-password', methods=['POST'])
 def reset_password():
+    print("Reset password endpoint called")
     data = request.json
+    if not data:
+        print("Error: No JSON data in request")
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
     email = data.get('email')
     new_password = data.get('newPassword')
     auth_token = request.headers.get('Authorization')
     
+    print(f"Processing reset password for email: {email}")
+    
     # Validate authorization
     if not auth_token or not auth_token.startswith('Bearer '):
+        print("Error: Unauthorized request - invalid auth token")
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     
     # Check if user is a super admin by querying the super_admins table
@@ -120,15 +128,18 @@ def reset_password():
     
     # Basic validation
     if not email or not new_password:
+        print("Error: Missing email or password")
         return jsonify({'success': False, 'error': 'Email and new password are required'}), 400
     
     if len(new_password) < 6:
+        print("Error: Password too short")
         return jsonify({'success': False, 'error': 'Password must be at least 6 characters long'}), 400
     
     # Find the user by email
     users = supabase_get('app_users', {'email': f'eq.{email}'})
     
     if not users:
+        print(f"Error: User not found with email {email}")
         return jsonify({'success': False, 'error': 'User not found'}), 404
     
     user = users[0]
@@ -146,11 +157,13 @@ def reset_password():
     result = supabase_update('app_users', update_data, 'id', user['id'])
     
     if result:
+        print(f"Password reset successful for user with email {email}")
         return jsonify({
             'success': True, 
             'message': 'Password reset successfully'
         })
     
+    print("Error: Failed to reset password in database")
     return jsonify({'success': False, 'error': 'Failed to reset password'}), 500
 
 # Customer routes
@@ -411,4 +424,13 @@ def create_transaction():
     return jsonify({'success': False, 'message': 'Failed to create transaction'}), 500
 
 if __name__ == '__main__':
+    print("Starting Flask server on port 5000...")
+    print("Available endpoints:")
+    print("  - /api/login")
+    print("  - /api/reset-password")
+    print("  - /api/customers")
+    print("  - /api/shifts")
+    print("  - /api/readings")
+    print("  - /api/indents")
+    print("  - /api/transactions")
     app.run(debug=True, port=5000)

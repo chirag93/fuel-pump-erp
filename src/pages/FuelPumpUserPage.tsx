@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -80,14 +81,13 @@ const FuelPumpUserPage = () => {
         throw new Error('Fuel pump email not found');
       }
 
-      // Get the protocol and origin to build the correct URL for the backend API
-      // Using the absolute path to ensure we target the Flask backend properly
-      const url = `${window.location.protocol}//${window.location.host}/api/reset-password`;
+      // Try direct path to Flask backend
+      const baseURL = '/api/reset-password';
       
-      console.log('Attempting to reset password using API endpoint:', url);
+      console.log('Attempting to reset password using API endpoint:', baseURL);
       
       // Call our backend API with proper error handling
-      const response = await fetch(url, {
+      const response = await fetch(baseURL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -123,7 +123,7 @@ const FuelPumpUserPage = () => {
           console.error('Server response:', response.status, errorText.substring(0, 200));
           
           if (response.status === 404) {
-            errorMessage = 'The reset password API endpoint was not found. Please contact support.';
+            errorMessage = 'The reset password API endpoint was not found. This could be because the Flask backend is not running or the endpoint path is incorrect.';
           } else {
             errorMessage = `Server error (${response.status}): The API endpoint may not be responding correctly`;
           }
