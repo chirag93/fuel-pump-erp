@@ -13,13 +13,6 @@
   command = "npm run build"
   publish = "dist"
 
-# Specify the build directory
-  publish = "dist"
-
-# Environment variables (can be overridden in Netlify dashboard)
-[build.environment]
-  NODE_VERSION = "18"
-
 # Optional: Custom headers
 [[headers]]
   for = "/*"
