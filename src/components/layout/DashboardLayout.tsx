@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,6 +30,11 @@ import {
   Users,
   X,
   User,
+  DollarSign,
+  Receipt,
+  Calculator,
+  FileSpreadsheet,
+  DownloadCloud,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -69,6 +75,13 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     { href: "/tank-unload", icon: <Truck className="h-4 w-4" />, label: "Tank Unload" },
     { href: "/consumables", icon: <Package className="h-4 w-4" />, label: "Consumables" },
     { href: "/approval-requests", icon: <AlertTriangle className="h-4 w-4" />, label: "Approval Requests" },
+    // Accounting Section Navigation Items
+    { href: "/accounting", icon: <DollarSign className="h-4 w-4" />, label: "Financial Reports" },
+    { href: "/accounting/reconciliation", icon: <Calculator className="h-4 w-4" />, label: "Reconciliation" },
+    { href: "/accounting/invoices", icon: <Receipt className="h-4 w-4" />, label: "Invoice Processing" },
+    { href: "/accounting/tax", icon: <FileSpreadsheet className="h-4 w-4" />, label: "Tax Calculation" },
+    { href: "/accounting/export", icon: <DownloadCloud className="h-4 w-4" />, label: "Export Data" },
+    { href: "/accounting/expense-categories", icon: <FileText className="h-4 w-4" />, label: "Expense Categories" },
     { href: "/settings", icon: <Settings className="h-4 w-4" />, label: "Settings" },
   ];
 
