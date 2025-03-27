@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -81,11 +80,14 @@ const FuelPumpUserPage = () => {
         throw new Error('Fuel pump email not found');
       }
 
-      // Get the protocol and origin to build an absolute URL
-      const origin = window.location.origin;
+      // Get the protocol and origin to build the correct URL for the backend API
+      // Using the absolute path to ensure we target the Flask backend properly
+      const url = `${window.location.protocol}//${window.location.host}/api/reset-password`;
       
-      // Call our backend API with the correct path (no leading slash for relative paths in backend folder)
-      const response = await fetch(`${origin}/api/reset-password`, {
+      console.log('Attempting to reset password using API endpoint:', url);
+      
+      // Call our backend API with proper error handling
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,21 +98,38 @@ const FuelPumpUserPage = () => {
           newPassword 
         })
       });
+      
+      console.log('Password reset API response status:', response.status);
 
       // Check if the response is successful
       if (!response.ok) {
         // Try to parse error response
         const contentType = response.headers.get('content-type');
+        let errorMessage = '';
         
         if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || `Error ${response.status}: ${response.statusText}`;
+          } catch (jsonError) {
+            // Handle JSON parsing error
+            const errorText = await response.text();
+            console.error('Failed to parse JSON response:', errorText.substring(0, 200));
+            errorMessage = `Error ${response.status}: The server response was not valid JSON`;
+          }
         } else {
           // Handle non-JSON error responses
           const errorText = await response.text();
-          console.error('Server response:', response.status, errorText.substring(0, 200) + '...');
-          throw new Error(`Server error (${response.status}): The API endpoint may not exist or is misconfigured`);
+          console.error('Server response:', response.status, errorText.substring(0, 200));
+          
+          if (response.status === 404) {
+            errorMessage = 'The reset password API endpoint was not found. Please contact support.';
+          } else {
+            errorMessage = `Server error (${response.status}): The API endpoint may not be responding correctly`;
+          }
         }
+        
+        throw new Error(errorMessage);
       }
       
       // Parse successful response
@@ -118,10 +137,15 @@ const FuelPumpUserPage = () => {
       let result;
       
       if (contentType && contentType.includes('application/json')) {
-        result = await response.json();
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Error resetting password');
+        try {
+          result = await response.json();
+          
+          if (!result.success) {
+            throw new Error(result.error || 'Error resetting password');
+          }
+        } catch (jsonError) {
+          console.error('Failed to parse success response JSON:', jsonError);
+          throw new Error('The server returned an invalid success response format');
         }
       } else {
         // Handle unexpected but successful response format
