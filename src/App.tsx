@@ -102,6 +102,7 @@ function App() {
         <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
         <Route path="/super-admin/analytics" element={<SuperAdminAnalytics />} />
         <Route path="/super-admin/fuel-pumps" element={<FuelPumpsPage />} />
+        <Route path="/super-admin/pumps" element={<FuelPumpsPage />} />
         <Route path="/super-admin/provision" element={<ProvisionPump />} />
       </Route>
       

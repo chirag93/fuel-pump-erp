@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { FuelPump } from '@/integrations/supabase/client';
+import { FuelPump } from '@/integrations/fuelPumps';
 import { 
   BarChart4, 
   Home, 
@@ -111,7 +110,7 @@ const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
   const navItems = [
     { icon: <Home size={20} />, label: 'Dashboard', to: '/super-admin/dashboard' },
     { icon: <PlusCircle size={20} />, label: 'Provision Pump', to: '/super-admin/provision' },
-    { icon: <Fuel size={20} />, label: 'Fuel Pumps', to: '/super-admin/pumps' },
+    { icon: <Fuel size={20} />, label: 'Fuel Pumps', to: '/super-admin/fuel-pumps' },
     { icon: <BarChart4 size={20} />, label: 'Analytics', to: '/super-admin/analytics' },
     { icon: <Settings size={20} />, label: 'Settings', to: '/super-admin/settings' },
   ];
