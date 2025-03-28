@@ -102,7 +102,7 @@ export const usePasswordReset = () => {
     }
   };
 
-  // Function for admin-initiated forced password reset using the backend API
+  // Function for admin-initiated forced password reset directly using Supabase
   const adminForcePasswordReset = async (
     userEmail: string,  
     tempPassword: string
@@ -127,31 +127,53 @@ export const usePasswordReset = () => {
         };
       }
       
-      console.log('Making admin reset password API call for email:', userEmail);
+      console.log('Attempting to reset password for email:', userEmail);
       
-      // Use our backend API endpoint instead of direct Supabase admin calls
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin-reset-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Check if the user already exists in auth
+      const { data: userData, error: userCheckError } = await supabase.auth.admin.getUserByEmail(userEmail);
+      
+      let userId;
+      
+      if (userCheckError || !userData?.user) {
+        console.log('User does not exist in auth, creating a new user');
+        
+        // User doesn't exist, so create one
+        const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
           email: userEmail,
-          newPassword: tempPassword
-        })
-      });
-      
-      const data = await response.json();
-      console.log('Admin reset password API response:', data);
-      
-      if (!response.ok || !data.success) {
-        const errorMessage = data.error || 'Failed to reset password. Please try again.';
-        console.error('Error from admin reset API:', errorMessage);
-        setError(errorMessage);
-        return {
-          success: false,
-          error: errorMessage
-        };
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: {
+            email_verified: true
+          }
+        });
+        
+        if (createError) {
+          console.error('Error creating user:', createError);
+          setError(createError.message);
+          return {
+            success: false,
+            error: createError.message
+          };
+        }
+        
+        userId = newUser.user.id;
+      } else {
+        // User exists, update their password
+        userId = userData.user.id;
+        
+        const { error: updateError } = await supabase.auth.admin.updateUserById(
+          userId,
+          { password: tempPassword }
+        );
+        
+        if (updateError) {
+          console.error('Error updating user password:', updateError);
+          setError(updateError.message);
+          return {
+            success: false,
+            error: updateError.message
+          };
+        }
       }
 
       // Mark the fuel pump as requiring password change
