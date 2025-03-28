@@ -59,6 +59,11 @@ export const superAdminApi = {
                           fuelPumpData.created_by.toString().startsWith('sa-') ? 
                           null : fuelPumpData.created_by;
       
+      console.log('Creating fuel pump with data:', {
+        ...fuelPumpData,
+        created_by: createdById,
+      });
+      
       // 1. Create the fuel pump record
       const { data: newPump, error: pumpError } = await supabase
         .from('fuel_pumps')
@@ -74,6 +79,7 @@ export const superAdminApi = {
         .single();
         
       if (pumpError) {
+        console.error('Error creating fuel pump:', pumpError);
         throw new Error(pumpError.message);
       }
       

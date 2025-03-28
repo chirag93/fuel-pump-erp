@@ -82,8 +82,7 @@ export const SuperAdminAuthProvider: React.FC<{ children: React.ReactNode }> = (
           console.error('Error checking for existing super admin:', checkError);
         }
         
-        // Use a UUID format ID instead of a timestamp-based one
-        // This prevents the "invalid input syntax for type uuid" error
+        // Use crypto.randomUUID() to generate a valid UUID
         let superAdminId: string;
         
         // If super admin doesn't exist yet, create the record with a valid UUID
@@ -91,7 +90,6 @@ export const SuperAdminAuthProvider: React.FC<{ children: React.ReactNode }> = (
           console.log('Creating super admin record...');
           try {
             // Generate a valid UUID for the super admin
-            // Instead of using RPC, use the built-in crypto API or a fallback
             superAdminId = crypto.randomUUID();
             
             const { data, error } = await supabase
