@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { User } from '@supabase/supabase-js';
 
 interface PasswordResetOptions {
   email: string;
@@ -114,7 +115,7 @@ export const usePasswordReset = () => {
       const { data: fuelPump, error: fuelPumpError } = await supabase
         .from('fuel_pumps')
         .select('*')
-        .eq('email', userEmail)  // Using renamed parameter
+        .eq('email', userEmail)
         .maybeSingle();
 
       if (fuelPumpError || !fuelPump) {
@@ -127,7 +128,8 @@ export const usePasswordReset = () => {
       }
       
       // Find the user in Supabase Auth
-      const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers();
+      // Properly type the result from listUsers to fix the TypeScript error
+      const { data, error: usersError } = await supabase.auth.admin.listUsers();
       
       if (usersError) {
         console.error('Error listing users:', usersError);
@@ -137,8 +139,11 @@ export const usePasswordReset = () => {
         };
       }
       
+      // Properly type the users array and safely access the email property
+      const users: User[] = data?.users || [];
+      
       // Find the user with matching email
-      const user = users.find(u => u.email === userEmail);  // Using renamed parameter
+      const user = users.find(u => u.email === userEmail);
       
       if (!user) {
         return {
