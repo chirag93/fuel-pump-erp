@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -68,6 +69,9 @@ const StockLevels = () => {
       const formattedStartDate = startDate ? format(startDate, 'yyyy-MM-dd') : '';
       const formattedEndDate = endDate ? format(endDate, 'yyyy-MM-dd') : '';
       const fuelPumpId = await getFuelPumpId();
+      
+      console.log(`StockLevels - Fetching data with fuel pump ID: ${fuelPumpId || 'none'}`);
+      console.log(`Date range: ${formattedStartDate} to ${formattedEndDate}`);
 
       // Fetch Tank Unload Data for both fuel types
       const tankUnloadQuery = supabase
@@ -78,7 +82,10 @@ const StockLevels = () => {
         
       // Apply fuel pump filter if available
       if (fuelPumpId) {
+        console.log(`Filtering tank unloads by fuel_pump_id: ${fuelPumpId}`);
         tankUnloadQuery.eq('fuel_pump_id', fuelPumpId);
+      } else {
+        console.log('No fuel pump ID available, fetching all tank unloads');
       }
 
       const { data: tankUnload, error: tankUnloadError } = await tankUnloadQuery;
@@ -86,7 +93,8 @@ const StockLevels = () => {
       if (tankUnloadError) {
         throw tankUnloadError;
       }
-
+      
+      console.log(`Retrieved ${tankUnload?.length || 0} tank unloads`);
       setTankUnloadData(tankUnload || []);
 
       // Fetch Daily Reading Data for both fuel types
@@ -98,7 +106,10 @@ const StockLevels = () => {
         
       // Apply fuel pump filter if available
       if (fuelPumpId) {
+        console.log(`Filtering daily readings by fuel_pump_id: ${fuelPumpId}`);
         dailyReadingsQuery.eq('fuel_pump_id', fuelPumpId);
+      } else {
+        console.log('No fuel pump ID available, fetching all daily readings');
       }
 
       const { data: dailyReadings, error: dailyReadingsError } = await dailyReadingsQuery;
@@ -106,7 +117,8 @@ const StockLevels = () => {
       if (dailyReadingsError) {
         throw dailyReadingsError;
       }
-
+      
+      console.log(`Retrieved ${dailyReadings?.length || 0} daily readings`);
       setDailyReadingData(dailyReadings || []);
 
       // Process the data for charts

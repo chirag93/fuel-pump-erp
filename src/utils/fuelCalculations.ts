@@ -21,7 +21,10 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
     
   // Apply fuel pump filter if available
   if (fuelPumpId) {
+    console.log(`Filtering fuel settings by fuel_pump_id: ${fuelPumpId}`);
     query.eq('fuel_pump_id', fuelPumpId);
+  } else {
+    console.log('No fuel pump ID available, fetching all fuel settings');
   }
     
   const { data: fuelTypesData, error: fuelTypesError } = await query;
@@ -30,6 +33,8 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
     console.error("Error fetching fuel types:", fuelTypesError);
     return {};
   }
+  
+  console.log(`Retrieved ${fuelTypesData?.length || 0} fuel types`);
   
   // Initialize fuel usage for each fuel type to 0
   const fuelTypes = fuelTypesData?.map(f => f.fuel_type) || ['Petrol', 'Diesel'];
@@ -44,7 +49,10 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
     
   // Apply fuel pump filter if available
   if (fuelPumpId) {
+    console.log(`Filtering pump settings by fuel_pump_id: ${fuelPumpId}`);
     pumpQuery.eq('fuel_pump_id', fuelPumpId);
+  } else {
+    console.log('No fuel pump ID available, fetching all pump settings');
   }
     
   const { data: pumpData, error: pumpError } = await pumpQuery;
@@ -53,6 +61,8 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
     console.error("Error fetching pump settings:", pumpError);
     return fuelUsage;
   }
+  
+  console.log(`Retrieved ${pumpData?.length || 0} pump settings`);
   
   // Map pump IDs to fuel types
   const pumpFuelTypeMap: { [key: string]: string } = {};
@@ -64,6 +74,7 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
   
   // Fallback to default mapping if no pumps are configured
   if (Object.keys(pumpFuelTypeMap).length === 0) {
+    console.log('No pump settings found, using default mapping');
     pumpFuelTypeMap['P001'] = 'Petrol';
     pumpFuelTypeMap['P002'] = 'Diesel';
     pumpFuelTypeMap['P003'] = 'Petrol';
@@ -95,7 +106,10 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
     
   // Apply fuel pump filter if available
   if (fuelPumpId) {
+    console.log(`Filtering fuel settings by fuel_pump_id: ${fuelPumpId}`);
     query.eq('fuel_pump_id', fuelPumpId);
+  } else {
+    console.log('No fuel pump ID available, fetching all fuel settings');
   }
     
   const { data, error } = await query;
@@ -116,6 +130,8 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
       }
     };
   }
+  
+  console.log(`Retrieved ${data?.length || 0} fuel settings`);
   
   // Convert data to the expected format
   const fuelLevels: { [key: string]: { capacity: number, current: number, price: number } } = {};
@@ -143,6 +159,7 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
           .eq('fuel_type', fuelType);
           
         if (fuelPumpId) {
+          console.log(`Filtering fuel settings by fuel_pump_id: ${fuelPumpId} and fuel_type: ${fuelType}`);
           settingsQuery.eq('fuel_pump_id', fuelPumpId);
         }
         
@@ -174,6 +191,7 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
           .limit(1);
           
         if (fuelPumpId) {
+          console.log(`Filtering inventory by fuel_pump_id: ${fuelPumpId} and fuel_type: ${fuelType}`);
           inventoryQuery.eq('fuel_pump_id', fuelPumpId);
         }
         
@@ -191,6 +209,7 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
             price: inventory.price_per_unit || 0
           };
         } else {
+          console.log(`No data found for ${fuelType}, using default values`);
           // Default values if no data found
           fuelLevels[fuelType] = {
             capacity: fuelType === 'Petrol' ? 20000 : 15000,
@@ -211,16 +230,17 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
   }
   
   // Update tank levels based on the latest daily readings
-  await updateTankLevelsFromReadings(fuelLevels);
+  await updateTankLevelsFromReadings(fuelLevels, fuelPumpId);
   
   return fuelLevels;
 };
 
 // New function to update tank levels based on daily readings
-const updateTankLevelsFromReadings = async (fuelLevels: { [key: string]: { capacity: number, current: number, price: number } }) => {
+const updateTankLevelsFromReadings = async (
+  fuelLevels: { [key: string]: { capacity: number, current: number, price: number } },
+  fuelPumpId: string | null
+) => {
   try {
-    const fuelPumpId = await getFuelPumpId();
-    
     // For each fuel type, get the latest daily reading
     for (const fuelType of Object.keys(fuelLevels)) {
       const query = supabase
@@ -232,6 +252,7 @@ const updateTankLevelsFromReadings = async (fuelLevels: { [key: string]: { capac
         
       // Apply fuel pump filter if available
       if (fuelPumpId) {
+        console.log(`Filtering daily readings by fuel_pump_id: ${fuelPumpId} and fuel_type: ${fuelType}`);
         query.eq('fuel_pump_id', fuelPumpId);
       }
         
@@ -244,6 +265,7 @@ const updateTankLevelsFromReadings = async (fuelLevels: { [key: string]: { capac
       
       if (data && data.length > 0) {
         const latestReading = data[0];
+        console.log(`Found latest reading for ${fuelType} from ${latestReading.date} with closing stock: ${latestReading.closing_stock}`);
         
         // If we have a valid closing stock, use it as the current level
         if (latestReading.closing_stock !== null && latestReading.closing_stock !== undefined) {
@@ -268,8 +290,12 @@ const updateTankLevelsFromReadings = async (fuelLevels: { [key: string]: { capac
             
           if (updateError) {
             console.error(`Error updating fuel settings for ${fuelType}:`, updateError);
+          } else {
+            console.log(`Updated fuel settings for ${fuelType} with current level: ${latestReading.closing_stock}`);
           }
         }
+      } else {
+        console.log(`No daily readings found for ${fuelType}`);
       }
     }
   } catch (error) {

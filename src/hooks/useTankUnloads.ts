@@ -32,7 +32,10 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
         
       // Apply fuel pump filter if available
       if (fuelPumpId) {
+        console.log(`Filtering tank unloads by fuel_pump_id: ${fuelPumpId}`);
         query = query.eq('fuel_pump_id', fuelPumpId);
+      } else {
+        console.log('No fuel pump ID available, fetching all records');
       }
       
       // Only apply limit if not showing all records

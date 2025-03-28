@@ -70,6 +70,7 @@ const DailyReadings = () => {
   const fetchFuelTypes = async () => {
     try {
       const fuelPumpId = await getFuelPumpId();
+      console.log(`DailyReadings - Fetching fuel types with fuel pump ID: ${fuelPumpId || 'none'}`);
       
       const query = supabase
         .from('fuel_settings')
@@ -77,12 +78,17 @@ const DailyReadings = () => {
         
       // Apply fuel pump filter if available
       if (fuelPumpId) {
+        console.log(`Filtering fuel types by fuel_pump_id: ${fuelPumpId}`);
         query.eq('fuel_pump_id', fuelPumpId);
+      } else {
+        console.log('No fuel pump ID available, fetching all fuel types');
       }
       
       const { data, error } = await query;
         
       if (error) throw error;
+      
+      console.log(`Retrieved ${data?.length || 0} fuel types`);
       
       if (data && data.length > 0) {
         const types = data.map(item => item.fuel_type);
@@ -94,6 +100,9 @@ const DailyReadings = () => {
             fuel_type: types[0]
           }));
         }
+      } else {
+        console.log('No fuel types found, using defaults');
+        setFuelTypes(['Petrol', 'Diesel']);
       }
     } catch (error) {
       console.error('Error fetching fuel types:', error);
@@ -104,6 +113,7 @@ const DailyReadings = () => {
     setIsLoading(true);
     try {
       const fuelPumpId = await getFuelPumpId();
+      console.log(`DailyReadings - Fetching readings with fuel pump ID: ${fuelPumpId || 'none'}`);
       
       const query = supabase
         .from('daily_readings')
@@ -112,12 +122,17 @@ const DailyReadings = () => {
         
       // Apply fuel pump filter if available
       if (fuelPumpId) {
+        console.log(`Filtering readings by fuel_pump_id: ${fuelPumpId}`);
         query.eq('fuel_pump_id', fuelPumpId);
+      } else {
+        console.log('No fuel pump ID available, fetching all readings');
       }
       
       const { data, error } = await query;
         
       if (error) throw error;
+      
+      console.log(`Retrieved ${data?.length || 0} daily readings`);
       
       if (data) {
         // Group readings by date and fuel type to display them properly

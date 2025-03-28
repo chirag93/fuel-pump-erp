@@ -52,7 +52,10 @@ const MobileDailyReadings = () => {
         
       // Apply fuel pump filter if available
       if (fuelPumpId) {
+        console.log(`Filtering fuel settings by fuel_pump_id: ${fuelPumpId}`);
         query.eq('fuel_pump_id', fuelPumpId);
+      } else {
+        console.log('No fuel pump ID available, fetching all fuel settings');
       }
         
       const { data, error } = await query;
@@ -73,6 +76,8 @@ const MobileDailyReadings = () => {
         }));
       } else {
         console.log('No fuel types found, using defaults');
+        // Use default fuel types if none found
+        setFuelTypes(['Petrol', 'Diesel']);
       }
     };
     
@@ -94,7 +99,10 @@ const MobileDailyReadings = () => {
         
       // Apply fuel pump filter if available
       if (fuelPumpId) {
+        console.log(`Filtering daily readings by fuel_pump_id: ${fuelPumpId} and fuel_type: ${readingFormData.fuel_type}`);
         query.eq('fuel_pump_id', fuelPumpId);
+      } else {
+        console.log('No fuel pump ID available, fetching all readings');
       }
         
       const { data, error } = await query;
@@ -225,6 +233,10 @@ const MobileDailyReadings = () => {
     try {
       const fuelPumpId = await getFuelPumpId();
       console.log(`Saving reading with fuel pump ID: ${fuelPumpId || 'none'}`);
+      
+      if (!fuelPumpId) {
+        console.warn('No fuel pump ID available, record might not be filtered correctly');
+      }
       
       const tanksToInsert = Object.values(readingFormData.readings).map(tank => ({
         date: readingFormData.date,
