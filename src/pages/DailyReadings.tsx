@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Download } from 'lucide-react';
+import { Loader2, Plus, Download, RefreshCw } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getFuelPumpId } from '@/integrations/utils';
@@ -38,7 +38,7 @@ import { ReadingFormData } from '@/components/daily-readings/TankReadingsForm';
 import { calculateValues, processReadingsData, exportReadingsAsCSV } from '@/components/daily-readings/readingUtils';
 
 const DailyReadings = () => {
-  const { fuelPumpId: contextFuelPumpId } = useAuth();
+  const { fuelPumpId: contextFuelPumpId, isAuthenticated } = useAuth();
   const [readings, setReadings] = useState<DailyReading[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,6 +52,7 @@ const DailyReadings = () => {
   const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [lastTriedFuelPumpId, setLastTriedFuelPumpId] = useState<string | null>(null);
+  const [refreshCounter, setRefreshCounter] = useState(0);
   
   const [readingFormData, setReadingFormData] = useState<ReadingFormData>({
     date: new Date().toISOString().split('T')[0],
@@ -71,6 +72,19 @@ const DailyReadings = () => {
     const initializeData = async () => {
       setIsInitializing(true);
       try {
+        // Check if user is authenticated
+        if (!isAuthenticated) {
+          console.log('User is not authenticated. Please sign in to fetch data.');
+          setIsLoading(false);
+          setIsInitializing(false);
+          toast({
+            title: "Authentication required",
+            description: "Please sign in to view and manage daily readings",
+            variant: "destructive"
+          });
+          return;
+        }
+        
         // First try to get the fuel pump ID from the context (most reliable)
         let pumpId = contextFuelPumpId;
         console.log(`DailyReadings initialization - Context fuel pump ID: ${pumpId || 'none'}`);
@@ -117,7 +131,7 @@ const DailyReadings = () => {
     };
     
     initializeData();
-  }, [contextFuelPumpId]);
+  }, [contextFuelPumpId, isAuthenticated, refreshCounter]);
 
   const fetchFuelTypes = async (pumpId: string | null = fuelPumpId) => {
     try {
@@ -169,6 +183,13 @@ const DailyReadings = () => {
     }
     
     try {
+      // Check if user is authenticated
+      if (!isAuthenticated) {
+        console.log('User is not authenticated. Please sign in to fetch data.');
+        setIsLoading(false);
+        return;
+      }
+      
       // If no pumpId provided, try to get it first
       if (!pumpId) {
         if (contextFuelPumpId) {
@@ -638,11 +659,19 @@ const DailyReadings = () => {
     }
   };
 
+  const handleManualRefresh = () => {
+    setRefreshCounter(prev => prev + 1);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Daily Readings</h1>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleManualRefresh} disabled={isLoading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           {readings.length > 0 && (
             <Button variant="outline" onClick={() => exportReadingsAsCSV(readings)}>
               <Download className="mr-2 h-4 w-4" />
@@ -668,6 +697,13 @@ const DailyReadings = () => {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Loading readings...
             </div>
+          ) : !isAuthenticated ? (
+            <div className="flex flex-col items-center justify-center py-10 space-y-4">
+              <div className="text-muted-foreground text-center">
+                <p className="mb-2">You need to be logged in to view daily readings.</p>
+                <p className="text-sm text-muted-foreground">Please sign in to access this feature.</p>
+              </div>
+            </div>
           ) : readings.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 space-y-4">
               <div className="text-muted-foreground text-center">
@@ -688,6 +724,10 @@ const DailyReadings = () => {
               <Button onClick={() => handleOpenDialog()} variant="outline">
                 <Plus className="mr-2 h-4 w-4" />
                 Add First Reading
+              </Button>
+              <Button onClick={handleManualRefresh} variant="secondary" className="mt-2">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Try Again
               </Button>
             </div>
           ) : (

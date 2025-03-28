@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { getFuelPumpId } from '@/integrations/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 export interface TankUnload {
   id: string;
@@ -14,7 +15,7 @@ export interface TankUnload {
 }
 
 export function useTankUnloads(refreshTrigger?: number, limit: number = 10, showAll: boolean = false) {
-  const { fuelPumpId: contextFuelPumpId } = useAuth();
+  const { fuelPumpId: contextFuelPumpId, isAuthenticated } = useAuth();
   const [recentUnloads, setRecentUnloads] = useState<TankUnload[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -23,6 +24,19 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
   const fetchRecentUnloads = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    
+    // If not authenticated, don't try to fetch data
+    if (!isAuthenticated) {
+      console.log('User is not authenticated. Please sign in to fetch data.');
+      setIsLoading(false);
+      setRecentUnloads([]);
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to view tank unload data",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
       // First try to get the fuel pump ID from the context (most reliable)
@@ -60,7 +74,7 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
       // Track the ID we're using
       setCurrentFuelPumpId(fuelPumpId);
       
-      console.log(`useTankUnloads - Fetching tank unloads with fuel pump ID: ${fuelPumpId}`);
+      console.log(`useTankUnloads - Fetching tank unloads with fuel pump ID: ${fuelPumpId || 'none'}`);
       
       let query = supabase
         .from('tank_unloads')
@@ -145,29 +159,6 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
         }
       }
       
-      // Try using a direct query instead of RPC - removing the RPC approach that was causing errors
-      // This section replaces the previous RPC code that was causing type errors
-      try {
-        console.log("Using direct query as final attempt");
-        const { data: directData, error: directError } = await supabase
-          .from('tank_unloads')
-          .select('*')
-          .eq('fuel_pump_id', '2c762f9c-f89b-4084-9ebe-b6902fdf4311')
-          .order('date', { ascending: false })
-          .limit(limit);
-          
-        if (!directError && directData && directData.length > 0) {
-          console.log(`Retrieved ${directData.length} tank unloads with direct query`);
-          setRecentUnloads(directData as TankUnload[]);
-          return; // Success with direct query! Early return
-        } else {
-          console.log('No data found with direct query');
-          if (directError) console.error('Direct query error:', directError);
-        }
-      } catch (queryError) {
-        console.error('Error with direct query:', queryError);
-      }
-      
       // If we reach here, we couldn't find any data
       console.log('No tank unload data could be found through any method');
       setRecentUnloads([]);
@@ -176,10 +167,16 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
       console.error('Error fetching unloads:', err);
       setError(err instanceof Error ? err : new Error('Unknown error occurred'));
       setRecentUnloads([]);
+      
+      toast({
+        title: "Error loading data",
+        description: err instanceof Error ? err.message : "Failed to fetch tank unload data",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [limit, showAll, contextFuelPumpId]);
+  }, [limit, showAll, contextFuelPumpId, isAuthenticated]);
   
   useEffect(() => {
     fetchRecentUnloads();

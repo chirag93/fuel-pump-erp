@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,10 +18,11 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { format, subMonths } from "date-fns";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Calendar, Filter } from 'lucide-react';
+import { Loader2, Calendar, Filter, RefreshCw } from 'lucide-react';
 import ChartPlaceholder from '@/components/shared/ChartPlaceholder';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getFuelPumpId } from '@/integrations/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TankUnloadData {
   id: string;
@@ -50,6 +50,7 @@ interface DailyReadingData {
 
 const StockLevels = () => {
   const isMobile = useIsMobile();
+  const { isAuthenticated } = useAuth();
   const [startDate, setStartDate] = useState<Date | undefined>(subMonths(new Date(), 1));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [tankUnloadData, setTankUnloadData] = useState<TankUnloadData[]>([]);
@@ -58,12 +59,26 @@ const StockLevels = () => {
   const [levelChartData, setLevelChartData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState<'daily' | 'monthly'>('daily');
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    fetchData();
-  }, [startDate, endDate, view]);
+    if (isAuthenticated) {
+      fetchData();
+    } else {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to view stock level data",
+        variant: "destructive"
+      });
+    }
+  }, [startDate, endDate, view, isAuthenticated, retryCount]);
 
   const fetchData = async () => {
+    if (!isAuthenticated) {
+      console.log('User is not authenticated. Please sign in to fetch data.');
+      return;
+    }
+    
     setIsLoading(true);
     try {
       const formattedStartDate = startDate ? format(startDate, 'yyyy-MM-dd') : '';
@@ -282,6 +297,32 @@ const StockLevels = () => {
     setLevelChartData(levelChartData);
   };
 
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    toast({
+      title: "Retrying",
+      description: "Attempting to fetch data again..."
+    });
+  };
+
+  // Show authentication message if user is not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="container mx-auto py-6 px-4">
+        <h1 className="text-2xl font-bold mb-6">Stock Levels</h1>
+        
+        <Card className="mb-6">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="text-center space-y-4">
+              <h2 className="text-xl font-semibold">Authentication Required</h2>
+              <p className="text-muted-foreground">Please sign in to view stock level data.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-6 px-4">
       <h1 className="text-2xl font-bold mb-6">Stock Levels</h1>
@@ -300,6 +341,10 @@ const StockLevels = () => {
                   <SelectItem value="monthly">Monthly</SelectItem>
                 </SelectContent>
               </Select>
+              <Button variant="outline" onClick={handleRetry} disabled={isLoading}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
               <Button variant="outline" onClick={fetchData} disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Filter className="mr-2 h-4 w-4" />}
                 Filter
