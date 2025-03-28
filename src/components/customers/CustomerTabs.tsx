@@ -19,6 +19,7 @@ interface CustomerTabsProps {
   setIndentBooklets: React.Dispatch<React.SetStateAction<IndentBooklet[]>>;
   customerId: string;
   refreshData?: () => void;
+  isLoadingBooklets?: boolean;
 }
 
 const CustomerTabs = ({ 
@@ -29,7 +30,8 @@ const CustomerTabs = ({
   setVehicles, 
   setIndentBooklets,
   customerId,
-  refreshData
+  refreshData,
+  isLoadingBooklets
 }: CustomerTabsProps) => {
   return (
     <Tabs defaultValue="details" className="space-y-4">
@@ -56,6 +58,8 @@ const CustomerTabs = ({
           customerId={customer.id}
           customerName={customer.name}
           setIndentBooklets={setIndentBooklets}
+          isLoading={isLoadingBooklets}
+          onRefresh={refreshData}
         />
       </TabsContent>
       <TabsContent value="transactions" className="space-y-4">

@@ -15,6 +15,7 @@ export const useCustomerData = (customerId: string) => {
   const [indentBooklets, setIndentBooklets] = useState<IndentBooklet[]>([]);
   const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingBooklets, setIsLoadingBooklets] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
@@ -81,12 +82,20 @@ export const useCustomerData = (customerId: string) => {
 
   const fetchIndentBooklets = async (id: string) => {
     try {
+      setIsLoadingBooklets(true);
       console.log('Fetching indent booklets for customer ID:', id);
       const data = await getIndentBookletsByCustomerId(id);
-      console.log(`Found ${data.length} indent booklets`);
+      console.log(`Found ${data.length} indent booklets:`, data);
       setIndentBooklets(data);
     } catch (error) {
       console.error('Error fetching indent booklets:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load indent booklets",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingBooklets(false);
     }
   };
 
@@ -123,6 +132,7 @@ export const useCustomerData = (customerId: string) => {
     indentBooklets,
     transactions,
     isLoading,
+    isLoadingBooklets,
     setVehicles,
     setIndentBooklets,
     updateBalance,

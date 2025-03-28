@@ -17,6 +17,7 @@ const CustomerDetails = () => {
     indentBooklets,
     transactions,
     isLoading,
+    isLoadingBooklets,
     setVehicles,
     setIndentBooklets,
     refreshData
@@ -36,6 +37,7 @@ const CustomerDetails = () => {
           transactions={transactions}
           customerId={customerId}
           refreshData={refreshData}
+          isLoadingBooklets={isLoadingBooklets}
         />
       )}
     </div>
