@@ -106,3 +106,62 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
     return null;
   }
 };
+
+/**
+ * Get all transactions filtered by fuel pump ID with pagination
+ */
+export const getAllTransactions = async (
+  page: number = 1, 
+  pageSize: number = 10, 
+  startDate?: string, 
+  endDate?: string
+): Promise<{ transactions: Transaction[], totalCount: number }> => {
+  try {
+    const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.log('No fuel pump ID available, cannot fetch all transactions');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to view transactions",
+        variant: "destructive"
+      });
+      return { transactions: [], totalCount: 0 };
+    }
+    
+    // Calculate pagination
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    
+    // Build query
+    let query = supabase
+      .from('transactions')
+      .select(`
+        *,
+        customers(name),
+        vehicles(number)
+      `, { count: 'exact' })
+      .eq('fuel_pump_id', fuelPumpId);
+    
+    // Add date filtering
+    if (startDate) query = query.gte('date', startDate);
+    if (endDate) query = query.lte('date', endDate);
+    
+    // Execute query with pagination
+    const { data, error, count } = await query
+      .order('date', { ascending: false })
+      .range(from, to);
+      
+    if (error) {
+      throw error;
+    }
+    
+    return { 
+      transactions: data || [], 
+      totalCount: count || 0 
+    };
+  } catch (error) {
+    console.error('Error fetching all transactions:', error);
+    return { transactions: [], totalCount: 0 };
+  }
+};

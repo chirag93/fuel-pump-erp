@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +8,8 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Download, Calendar, Loader2, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getFuelPumpId } from '@/integrations/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Transaction {
   id: string;
@@ -33,17 +34,56 @@ const AllTransactions = () => {
     endDate: ''
   });
   const [isFiltering, setIsFiltering] = useState(false);
+  const { fuelPumpId } = useAuth(); // Use fuel pump ID from auth context
   
   const PAGE_SIZE = 10;
 
   useEffect(() => {
-    fetchTransactions();
-  }, [currentPage]);
+    if (fuelPumpId) {
+      console.log(`AllTransactions: Using fuel pump ID from auth context: ${fuelPumpId}`);
+      fetchTransactions();
+    } else {
+      console.log('AllTransactions: No fuel pump ID available, fetching from utils');
+      // If not in context, try to get it using the utility function
+      const initializeFuelPumpId = async () => {
+        const pumpId = await getFuelPumpId();
+        if (pumpId) {
+          console.log(`AllTransactions: Retrieved fuel pump ID: ${pumpId}`);
+          fetchTransactions();
+        } else {
+          console.error('AllTransactions: Failed to get fuel pump ID');
+          toast({
+            title: "Authentication Required",
+            description: "Please sign in to view transactions",
+            variant: "destructive"
+          });
+        }
+      };
+      
+      initializeFuelPumpId();
+    }
+  }, [currentPage, fuelPumpId]);
 
   const fetchTransactions = async (start?: string, end?: string) => {
     setIsLoading(true);
     
     try {
+      // Get current fuel pump ID if not provided by context
+      const currentFuelPumpId = fuelPumpId || await getFuelPumpId();
+      
+      if (!currentFuelPumpId) {
+        console.error('AllTransactions: No fuel pump ID available for fetching transactions');
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to view transactions",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log(`AllTransactions: Fetching transactions for pump ID: ${currentFuelPumpId}`);
+      
       // Calculate pagination range
       const from = (currentPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -55,7 +95,8 @@ const AllTransactions = () => {
           *,
           customers(name),
           vehicles(number)
-        `, { count: 'exact' });
+        `, { count: 'exact' })
+        .eq('fuel_pump_id', currentFuelPumpId); // Add fuel pump filter
       
       // Add date filtering if provided
       if (start && end) {
@@ -72,6 +113,8 @@ const AllTransactions = () => {
       }
       
       if (data) {
+        console.log(`AllTransactions: Retrieved ${data.length} transactions for fuel pump ${currentFuelPumpId}`);
+        
         // Format the data to include joined fields
         const formattedData = data.map(item => ({
           id: item.id,
@@ -92,6 +135,11 @@ const AllTransactions = () => {
           setTotalCount(count);
           setTotalPages(Math.ceil(count / PAGE_SIZE));
         }
+      } else {
+        console.log('AllTransactions: No transactions found');
+        setTransactions([]);
+        setTotalCount(0);
+        setTotalPages(1);
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
@@ -100,6 +148,7 @@ const AllTransactions = () => {
         description: "Failed to load transactions",
         variant: "destructive"
       });
+      setTransactions([]);
     } finally {
       setIsLoading(false);
     }
@@ -139,6 +188,20 @@ const AllTransactions = () => {
     try {
       setIsLoading(true);
       
+      // Get current fuel pump ID if not provided by context
+      const currentFuelPumpId = fuelPumpId || await getFuelPumpId();
+      
+      if (!currentFuelPumpId) {
+        console.error('AllTransactions: No fuel pump ID available for exporting transactions');
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to export transactions",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       // Fetch all data for export (no pagination)
       let query = supabase
         .from('transactions')
@@ -146,7 +209,8 @@ const AllTransactions = () => {
           *,
           customers(name),
           vehicles(number)
-        `);
+        `)
+        .eq('fuel_pump_id', currentFuelPumpId); // Add fuel pump filter
       
       // Add date filtering if requested
       if (filtered && dateRange.startDate && dateRange.endDate) {
@@ -161,6 +225,8 @@ const AllTransactions = () => {
       }
       
       if (data) {
+        console.log(`AllTransactions: Exporting ${data.length} transactions for fuel pump ${currentFuelPumpId}`);
+        
         // Format the data
         const csvData = data.map(item => ({
           date: new Date(item.date).toLocaleDateString(),

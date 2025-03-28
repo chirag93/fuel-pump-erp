@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth, parseISO, isValid } from "date-fns";
+import { getFuelPumpId } from "@/integrations/utils";
 
 interface ChartDataPoint {
   name: string;
@@ -25,10 +26,21 @@ interface DashboardMetrics {
 // Function to get sales data for bar chart
 export const getSalesData = async (startDate: Date, endDate: Date): Promise<ChartDataPoint[]> => {
   try {
-    // Fetch transactions between the selected dates
+    // Get the current fuel pump ID
+    const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.log('getSalesData: No fuel pump ID available, cannot fetch sales data');
+      return [];
+    }
+    
+    console.log(`getSalesData: Fetching for fuel pump ${fuelPumpId}`);
+    
+    // Fetch transactions between the selected dates for this fuel pump
     const { data, error } = await supabase
       .from('transactions')
       .select('date, amount, fuel_type')
+      .eq('fuel_pump_id', fuelPumpId)
       .gte('date', format(startDate, 'yyyy-MM-dd'))
       .lte('date', format(endDate, 'yyyy-MM-dd'))
       .order('date', { ascending: true });
@@ -36,8 +48,11 @@ export const getSalesData = async (startDate: Date, endDate: Date): Promise<Char
     if (error) throw error;
     
     if (!data || data.length === 0) {
+      console.log(`getSalesData: No data found for fuel pump ${fuelPumpId}`);
       return [];
     }
+    
+    console.log(`getSalesData: Found ${data.length} transactions for fuel pump ${fuelPumpId}`);
     
     // Group data by date
     const groupedByDate: Record<string, number> = {};
@@ -69,10 +84,21 @@ export const getSalesData = async (startDate: Date, endDate: Date): Promise<Char
 // Function to get fuel volume data for line chart
 export const getFuelVolumeData = async (startDate: Date, endDate: Date): Promise<FuelVolume[]> => {
   try {
-    // Get daily readings data for the chart
+    // Get the current fuel pump ID
+    const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.log('getFuelVolumeData: No fuel pump ID available, cannot fetch fuel data');
+      return [];
+    }
+    
+    console.log(`getFuelVolumeData: Fetching for fuel pump ${fuelPumpId}`);
+    
+    // Get daily readings data for the chart, filtered by fuel pump
     const { data, error } = await supabase
       .from('daily_readings')
       .select('date, fuel_type, sales_per_tank_stock')
+      .eq('fuel_pump_id', fuelPumpId)
       .gte('date', format(startDate, 'yyyy-MM-dd'))
       .lte('date', format(endDate, 'yyyy-MM-dd'))
       .order('date', { ascending: true });
@@ -80,8 +106,11 @@ export const getFuelVolumeData = async (startDate: Date, endDate: Date): Promise
     if (error) throw error;
     
     if (!data || data.length === 0) {
+      console.log(`getFuelVolumeData: No data found for fuel pump ${fuelPumpId}`);
       return [];
     }
+    
+    console.log(`getFuelVolumeData: Found ${data.length} readings for fuel pump ${fuelPumpId}`);
     
     // Group data by date and fuel type
     const groupedByDate: Record<string, { petrol: number, diesel: number }> = {};
@@ -120,15 +149,32 @@ export const getFuelVolumeData = async (startDate: Date, endDate: Date): Promise
 // Function to get recent transactions
 export const getRecentTransactions = async (limit: number = 3): Promise<any[]> => {
   try {
+    // Get the current fuel pump ID
+    const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.log('getRecentTransactions: No fuel pump ID available, cannot fetch transactions');
+      return [];
+    }
+    
+    console.log(`getRecentTransactions: Fetching for fuel pump ${fuelPumpId}`);
+    
     const { data, error } = await supabase
       .from('transactions')
       .select('id, fuel_type, amount, created_at, quantity')
+      .eq('fuel_pump_id', fuelPumpId)
       .order('created_at', { ascending: false })
       .limit(limit);
       
     if (error) throw error;
     
-    return data || [];
+    if (!data) {
+      console.log(`getRecentTransactions: No transactions found for fuel pump ${fuelPumpId}`);
+      return [];
+    }
+    
+    console.log(`getRecentTransactions: Found ${data.length} transactions for fuel pump ${fuelPumpId}`);
+    return data;
   } catch (error) {
     console.error('Error fetching recent transactions:', error);
     return [];
@@ -138,15 +184,28 @@ export const getRecentTransactions = async (limit: number = 3): Promise<any[]> =
 // Function to get current fuel levels
 export const getCurrentFuelLevels = async (): Promise<Record<string, number>> => {
   try {
+    // Get the current fuel pump ID
+    const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.log('getCurrentFuelLevels: No fuel pump ID available, cannot fetch fuel levels');
+      return {};
+    }
+    
+    console.log(`getCurrentFuelLevels: Fetching for fuel pump ${fuelPumpId}`);
+    
     const { data, error } = await supabase
       .from('fuel_settings')
-      .select('fuel_type, current_level, tank_capacity');
+      .select('fuel_type, current_level, tank_capacity')
+      .eq('fuel_pump_id', fuelPumpId);
       
     if (error) throw error;
     
     const fuelLevels: Record<string, number> = {};
     
-    if (data) {
+    if (data && data.length > 0) {
+      console.log(`getCurrentFuelLevels: Found ${data.length} fuel types for fuel pump ${fuelPumpId}`);
+      
       data.forEach(fuel => {
         if (fuel.current_level !== null && fuel.tank_capacity !== null && fuel.tank_capacity > 0) {
           const percentage = (fuel.current_level / fuel.tank_capacity) * 100;
@@ -155,6 +214,8 @@ export const getCurrentFuelLevels = async (): Promise<Record<string, number>> =>
           fuelLevels[fuel.fuel_type] = 0;
         }
       });
+    } else {
+      console.log(`getCurrentFuelLevels: No fuel settings found for fuel pump ${fuelPumpId}`);
     }
     
     return fuelLevels;
@@ -167,10 +228,26 @@ export const getCurrentFuelLevels = async (): Promise<Record<string, number>> =>
 // Function to get dashboard metrics
 export const getDashboardMetrics = async (startDate: Date, endDate: Date): Promise<DashboardMetrics> => {
   try {
+    // Get the current fuel pump ID
+    const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.log('getDashboardMetrics: No fuel pump ID available, cannot fetch metrics');
+      return {
+        totalSales: '₹0',
+        customers: '0',
+        fuelVolume: '0 L',
+        growth: '0%'
+      };
+    }
+    
+    console.log(`getDashboardMetrics: Fetching for fuel pump ${fuelPumpId}`);
+    
     // Get total sales amount
     const { data: salesData, error: salesError } = await supabase
       .from('transactions')
       .select('amount')
+      .eq('fuel_pump_id', fuelPumpId)
       .gte('date', format(startDate, 'yyyy-MM-dd'))
       .lte('date', format(endDate, 'yyyy-MM-dd'));
       
@@ -179,7 +256,8 @@ export const getDashboardMetrics = async (startDate: Date, endDate: Date): Promi
     // Get customer count
     const { data: customerData, error: customerError } = await supabase
       .from('customers')
-      .select('id');
+      .select('id')
+      .eq('fuel_pump_id', fuelPumpId);
       
     if (customerError) throw customerError;
     
@@ -187,6 +265,7 @@ export const getDashboardMetrics = async (startDate: Date, endDate: Date): Promi
     const { data: fuelData, error: fuelError } = await supabase
       .from('daily_readings')
       .select('sales_per_tank_stock')
+      .eq('fuel_pump_id', fuelPumpId)
       .gte('date', format(startDate, 'yyyy-MM-dd'))
       .lte('date', format(endDate, 'yyyy-MM-dd'));
       
@@ -208,6 +287,7 @@ export const getDashboardMetrics = async (startDate: Date, endDate: Date): Promi
     const { data: prevSalesData, error: prevSalesError } = await supabase
       .from('transactions')
       .select('amount')
+      .eq('fuel_pump_id', fuelPumpId)
       .gte('date', format(previousPeriodStart, 'yyyy-MM-dd'))
       .lte('date', format(previousPeriodEnd, 'yyyy-MM-dd'));
       
@@ -221,6 +301,13 @@ export const getDashboardMetrics = async (startDate: Date, endDate: Date): Promi
     if (prevTotalSales > 0) {
       growthPercentage = ((totalSales - prevTotalSales) / prevTotalSales) * 100;
     }
+    
+    console.log(`getDashboardMetrics: Metrics for fuel pump ${fuelPumpId}:`, {
+      totalSales,
+      customerCount: customerData?.length || 0,
+      fuelVolume: totalFuelVolume,
+      growth: growthPercentage
+    });
     
     return {
       totalSales: `₹${totalSales.toLocaleString()}`,

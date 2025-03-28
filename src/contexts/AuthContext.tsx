@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { getFuelPumpId } from '@/integrations/utils';
 
 interface UserProfile {
   id: string;
@@ -28,6 +29,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (userId: string, userData: any, rememberMe?: boolean) => Promise<boolean>;
   logout: () => Promise<void>;
+  refreshFuelPumpId: () => Promise<string | null>; // New method to refresh fuel pump ID
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -41,6 +43,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: false,
   login: async () => false,
   logout: async () => {},
+  refreshFuelPumpId: async () => null,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -50,6 +53,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
   const [fuelPumpName, setFuelPumpName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  
+  // Method to refresh fuel pump ID from backend
+  const refreshFuelPumpId = async (): Promise<string | null> => {
+    try {
+      console.log('AuthContext: Refreshing fuel pump ID...');
+      
+      // Check if user is authenticated via Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        console.log('AuthContext: No authenticated session found during refresh');
+        return null;
+      }
+      
+      // Try to get from database
+      const freshFuelPumpId = await getFuelPumpId();
+      
+      if (freshFuelPumpId) {
+        console.log(`AuthContext: Retrieved fresh fuel pump ID: ${freshFuelPumpId}`);
+        
+        // Update state
+        setFuelPumpId(freshFuelPumpId);
+        
+        // Get fuel pump name
+        const { data: fuelPumpData } = await supabase
+          .from('fuel_pumps')
+          .select('name')
+          .eq('id', freshFuelPumpId)
+          .single();
+          
+        if (fuelPumpData) {
+          setFuelPumpName(fuelPumpData.name);
+          console.log(`AuthContext: Retrieved fuel pump name: ${fuelPumpData.name}`);
+        }
+        
+        // Update user metadata with this pump ID for future use
+        await supabase.auth.updateUser({
+          data: { 
+            fuelPumpId: freshFuelPumpId,
+            fuelPumpName: fuelPumpData?.name
+          }
+        });
+        
+        // Update local storage
+        try {
+          const storedSession = localStorage.getItem('fuel_pro_session');
+          if (storedSession) {
+            const parsedSession = JSON.parse(storedSession);
+            if (parsedSession.user) {
+              parsedSession.user.fuelPumpId = freshFuelPumpId;
+              parsedSession.user.fuelPumpName = fuelPumpData?.name;
+              localStorage.setItem('fuel_pro_session', JSON.stringify(parsedSession));
+            }
+          }
+        } catch (parseError) {
+          console.error('Error updating stored session:', parseError);
+        }
+        
+        return freshFuelPumpId;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error refreshing fuel pump ID:', error);
+      return null;
+    }
+  };
   
   // Initialize auth state from localStorage if available
   useEffect(() => {
@@ -123,6 +193,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Store for future use
           localStorage.setItem('fuel_pro_session', JSON.stringify({ user: userProfile }));
+          
+          // If we don't have a fuel pump ID yet, try to get it from the backend
+          if (!metadataFuelPumpId) {
+            console.log("Auth initialization - No fuel pump ID in metadata, trying to fetch from backend");
+            await refreshFuelPumpId();
+          }
         } else {
           console.log("Auth initialization - No authenticated session found");
           setUser(null);
@@ -140,7 +216,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log(`Auth state changed: ${event}`);
         
         if (event === 'SIGNED_IN' && session) {
@@ -164,6 +240,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Store for future use
           localStorage.setItem('fuel_pro_session', JSON.stringify({ user: userProfile }));
+          
+          // If we don't have a fuel pump ID, try to get it
+          if (!metadataFuelPumpId) {
+            // Use setTimeout to avoid deadlock with auth state change
+            setTimeout(async () => {
+              await refreshFuelPumpId();
+            }, 0);
+          }
         } else if (event === 'SIGNED_OUT') {
           console.log("User signed out");
           localStorage.removeItem('fuel_pro_session');
@@ -211,6 +295,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userData);
       setFuelPumpId(userData.fuelPumpId || null);
       setFuelPumpName(userData.fuelPumpName || null);
+      
+      // If we don't have a fuel pump ID, try to get it
+      if (!userData.fuelPumpId) {
+        await refreshFuelPumpId();
+      }
       
       // Store in local storage for persistence
       if (rememberMe) {
@@ -267,7 +356,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isStaff,
     isLoading,
     login,
-    logout
+    logout,
+    refreshFuelPumpId
   };
   
   return (
