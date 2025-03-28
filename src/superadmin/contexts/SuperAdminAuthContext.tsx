@@ -82,12 +82,18 @@ export const SuperAdminAuthProvider: React.FC<{ children: React.ReactNode }> = (
           console.error('Error checking for existing super admin:', checkError);
         }
         
-        let superAdminId = 'sa-' + new Date().getTime();
+        // Use a UUID format ID instead of a timestamp-based one
+        // This prevents the "invalid input syntax for type uuid" error
+        let superAdminId: string;
         
-        // If super admin doesn't exist yet, create the record
+        // If super admin doesn't exist yet, create the record with a valid UUID
         if (!existingAdmin) {
           console.log('Creating super admin record...');
           try {
+            // Generate a valid UUID for the super admin
+            const { data: uuidData } = await supabase.rpc('generate_uuid');
+            superAdminId = uuidData || crypto.randomUUID();
+            
             const { data, error } = await supabase
               .from('super_admins')
               .insert({
@@ -100,11 +106,15 @@ export const SuperAdminAuthProvider: React.FC<{ children: React.ReactNode }> = (
               
             if (error) {
               console.error('Error creating super admin record:', error);
+              // Fall back to using a hardcoded ID prefix that won't be stored in DB
+              superAdminId = 'sa-special-admin';
             } else if (data) {
               superAdminId = data.id;
             }
           } catch (error) {
             console.error('Error creating super admin record:', error);
+            // Fall back to using a hardcoded ID prefix that won't be stored in DB
+            superAdminId = 'sa-special-admin';
           }
         } else {
           superAdminId = existingAdmin.id;

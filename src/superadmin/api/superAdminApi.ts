@@ -53,6 +53,12 @@ export const superAdminApi = {
         };
       }
       
+      // Handle special case for super admin IDs that start with "sa-"
+      // We need to avoid sending these to the database as creator_id
+      const createdById = fuelPumpData.created_by && 
+                          fuelPumpData.created_by.toString().startsWith('sa-') ? 
+                          null : fuelPumpData.created_by;
+      
       // 1. Create the fuel pump record
       const { data: newPump, error: pumpError } = await supabase
         .from('fuel_pumps')
@@ -62,7 +68,7 @@ export const superAdminApi = {
           address: fuelPumpData.address,
           contact_number: fuelPumpData.contact_number,
           status: 'active',
-          created_by: fuelPumpData.created_by
+          created_by: createdById // Use the properly handled ID
         }])
         .select()
         .single();
