@@ -8,18 +8,24 @@ export const superAdminApi = {
   // Check if a user has super admin access
   async checkSuperAdminAccess(token: string): Promise<boolean> {
     try {
-      // Special case for hardcoded admin
-      if (token.startsWith('sa-')) {
+      // Special case for hardcoded admin token - don't query the database
+      if (token && token.startsWith('sa-')) {
         return true;
       }
       
-      const { data: superAdmins, error } = await supabase
-        .from('super_admins')
-        .select('id')
-        .eq('id', token)
-        .maybeSingle();
-        
-      return !error && !!superAdmins;
+      // Only query the database if we have a UUID format token
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (token && uuidRegex.test(token)) {
+        const { data: superAdmins, error } = await supabase
+          .from('super_admins')
+          .select('id')
+          .eq('id', token)
+          .maybeSingle();
+          
+        return !error && !!superAdmins;
+      }
+      
+      return false;
     } catch (error) {
       console.error('Error checking super admin access:', error);
       return false;
