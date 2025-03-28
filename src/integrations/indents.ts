@@ -12,8 +12,7 @@ export const getIndentsByCustomerId = async (customerId: string): Promise<Indent
       .from('indents')
       .select(`
         *,
-        vehicles:vehicle_id (number),
-        transactions:id (*)
+        vehicles:vehicle_id (number)
       `)
       .eq('customer_id', customerId);
       
@@ -26,8 +25,26 @@ export const getIndentsByCustomerId = async (customerId: string): Promise<Indent
       const processedIndents = data.map((indent: any) => ({
         ...indent,
         vehicle_number: indent.vehicles?.number || 'Unknown',
-        transaction: indent.transactions?.[0] || null,
       })) as Indent[];
+      
+      // Now fetch transactions separately instead of using a nested join
+      if (processedIndents.length > 0) {
+        const indentIds = processedIndents.map(indent => indent.id);
+        
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('transactions')
+          .select('*')
+          .in('indent_id', indentIds);
+          
+        if (transactionsError) {
+          console.error('Error fetching transactions for indents:', transactionsError);
+        } else if (transactionsData) {
+          // Map transactions to their respective indents
+          processedIndents.forEach(indent => {
+            indent.transaction = transactionsData.find(tx => tx.indent_id === indent.id) || null;
+          });
+        }
+      }
       
       return processedIndents;
     }

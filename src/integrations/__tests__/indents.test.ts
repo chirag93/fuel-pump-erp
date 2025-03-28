@@ -6,10 +6,7 @@ import { toast } from '@/hooks/use-toast';
 // Mock Supabase client
 jest.mock('../supabase/client', () => ({
   supabase: {
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    in: jest.fn().mockReturnThis()
+    from: jest.fn(),
   }
 }));
 
@@ -33,24 +30,50 @@ describe('Indents Integration Functions', () => {
           fuel_type: 'Petrol',
           amount: 1000,
           quantity: 10,
-          vehicles: { number: 'ABC123' },
-          transactions: []
+          vehicles: { number: 'ABC123' }
         }
       ];
 
-      // Mock Supabase response
-      (supabase.from as jest.Mock).mockImplementation(() => ({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnValue({
-          data: mockIndents,
-          error: null
-        })
-      }));
+      const mockTransactions = [
+        {
+          id: 'trx-1',
+          indent_id: 'indent-1',
+          amount: 1000,
+          quantity: 10
+        }
+      ];
+
+      // Mock Supabase responses
+      (supabase.from as jest.Mock).mockImplementation((table) => {
+        if (table === 'indents') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnValue({
+              data: mockIndents,
+              error: null
+            })
+          };
+        } else if (table === 'transactions') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            in: jest.fn().mockReturnValue({
+              data: mockTransactions,
+              error: null
+            })
+          };
+        }
+        return {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          in: jest.fn().mockReturnThis()
+        };
+      });
 
       const result = await getIndentsByCustomerId('customer-1');
       
       expect(result).toHaveLength(1);
       expect(result[0].vehicle_number).toBe('ABC123');
+      expect(result[0].transaction).toEqual(mockTransactions[0]);
     });
 
     it('handles errors when fetching indents', async () => {
@@ -71,6 +94,50 @@ describe('Indents Integration Functions', () => {
         description: "Failed to load indents data",
         variant: "destructive"
       }));
+    });
+
+    it('handles errors when fetching transactions', async () => {
+      const mockIndents = [
+        {
+          id: 'indent-1',
+          customer_id: 'customer-1',
+          vehicle_id: 'vehicle-1',
+          vehicles: { number: 'ABC123' }
+        }
+      ];
+
+      // Mock Supabase responses
+      (supabase.from as jest.Mock).mockImplementation((table) => {
+        if (table === 'indents') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnValue({
+              data: mockIndents,
+              error: null
+            })
+          };
+        } else if (table === 'transactions') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            in: jest.fn().mockReturnValue({
+              data: null,
+              error: { message: 'Transaction error' }
+            })
+          };
+        }
+        return {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          in: jest.fn().mockReturnThis()
+        };
+      });
+
+      const result = await getIndentsByCustomerId('customer-1');
+      
+      // Should still return indents even if transactions fail
+      expect(result).toHaveLength(1);
+      expect(result[0].vehicle_number).toBe('ABC123');
+      expect(result[0].transaction).toBeUndefined();
     });
   });
 
@@ -129,6 +196,7 @@ describe('Indents Integration Functions', () => {
       expect(result).toHaveLength(1);
       expect(result[0].vehicle_number).toBe('ABC123');
       expect(result[0]).toHaveProperty('transaction');
+      expect(result[0].transaction).toEqual(mockTransactions[0]);
     });
 
     it('handles errors when fetching indents by booklet', async () => {

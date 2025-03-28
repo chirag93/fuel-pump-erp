@@ -13,6 +13,7 @@ const CustomerDetails = () => {
   const {
     customer,
     vehicles,
+    indents,
     indentBooklets,
     transactions,
     isLoading,
