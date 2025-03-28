@@ -141,20 +141,34 @@ const createDefaultFuelPumpIfNeeded = async (): Promise<string | null> => {
     if (createError) {
       console.error('Error creating default fuel pump:', createError);
       
-      // If we can't create due to RLS, try using RPC if available
+      // If we can't create due to RLS, try using direct method without RPC
+      // We won't use RPC since the function doesn't exist in the database
       try {
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('create_default_fuel_pump', {
-          user_email: userEmail
-        });
+        // Attempt to create directly again with a different approach
+        const { data: secondAttempt, error: secondError } = await supabase
+          .from('fuel_pumps')
+          .insert([{
+            name: 'Default Fuel Pump (emergency)',
+            email: userEmail,
+            address: '123 Default St',
+            contact_number: '555-1234',
+            status: 'active'
+          }])
+          .select();
+          
+        if (secondError) throw secondError;
         
-        if (rpcError) throw rpcError;
-        
-        if (rpcResult) {
-          console.log(`Created default fuel pump via RPC: ${rpcResult}`);
-          return rpcResult;
+        if (secondAttempt && secondAttempt.length > 0) {
+          const pumpId = secondAttempt[0].id as string;
+          console.log(`Created default fuel pump via second attempt: ${pumpId}`);
+          
+          // Create default fuel settings
+          await createDefaultFuelSettings(pumpId);
+          
+          return pumpId;
         }
-      } catch (rpcIssue) {
-        console.error('Failed to create fuel pump via RPC:', rpcIssue);
+      } catch (secondIssue) {
+        console.error('Failed to create fuel pump via second attempt:', secondIssue);
       }
       
       // If still no success, try one more fallback
@@ -162,7 +176,7 @@ const createDefaultFuelPumpIfNeeded = async (): Promise<string | null> => {
     }
     
     if (newPump && newPump.length > 0) {
-      const pumpId = newPump[0].id;
+      const pumpId = newPump[0].id as string;
       console.log(`Created default fuel pump with ID: ${pumpId}`);
       
       // Create default fuel settings

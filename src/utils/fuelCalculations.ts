@@ -62,8 +62,6 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
       .select('pump_number, fuel_types');
       
     // Apply fuel pump filter if available
-    let firstPumpData = null;
-    
     if (fuelPumpId) {
       console.log(`Filtering pump settings by fuel_pump_id: ${fuelPumpId}`);
       pumpQuery.eq('fuel_pump_id', fuelPumpId);
@@ -71,17 +69,15 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
       console.log('No fuel pump ID available for pump settings, trying to get first fuel pump');
       
       // Try to get the first fuel pump as fallback
-      const { data: firstPump } = await supabase
+      const { data: firstPumpData } = await supabase
         .from('fuel_pumps')
         .select('id')
         .limit(1)
-        .single();
+        .maybeSingle();
         
-      firstPumpData = firstPump;
-      
-      if (firstPump?.id) {
-        console.log(`Fallback: Using first fuel pump ID for pump settings: ${firstPump.id}`);
-        pumpQuery.eq('fuel_pump_id', firstPump.id);
+      if (firstPumpData?.id) {
+        console.log(`Fallback: Using first fuel pump ID for pump settings: ${firstPumpData.id}`);
+        pumpQuery.eq('fuel_pump_id', firstPumpData.id);
       } else {
         console.log('No fuel pumps found, fetching all pump settings');
       }
