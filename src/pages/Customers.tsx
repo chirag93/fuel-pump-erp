@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +19,7 @@ import { Loader2, Users, FileText, Plus, Search, Download } from 'lucide-react';
 import { getAllCustomers, createCustomer } from '@/integrations/customers';
 import { Customer } from '@/integrations/supabase/client';
 import { getFuelPumpId } from '@/integrations/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 const Customers = () => {
   const navigate = useNavigate();

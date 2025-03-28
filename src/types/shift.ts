@@ -1,4 +1,3 @@
-
 export interface Shift {
   id: string;
   staff_id: string;
@@ -19,6 +18,7 @@ export interface Shift {
   cash_sales: number | null;
   testing_fuel: number | null;
   created_at?: string | null;
+  fuel_pump_id?: string; // Add this property
 }
 
 export interface Staff {
