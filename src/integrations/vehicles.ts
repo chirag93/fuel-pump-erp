@@ -11,6 +11,16 @@ export const getVehiclesByCustomerId = async (customerId: string): Promise<Vehic
     console.log('API getVehiclesByCustomerId called for customer ID:', customerId);
     const fuelPumpId = await getFuelPumpId();
     
+    if (!fuelPumpId) {
+      console.log('No fuel pump ID available, cannot fetch vehicles');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to view vehicles",
+        variant: "destructive"
+      });
+      return [];
+    }
+    
     const { data, error } = await supabase
       .from('vehicles')
       .select('*')
@@ -36,6 +46,16 @@ export const getVehiclesByCustomerId = async (customerId: string): Promise<Vehic
 export const createVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'created_at'>): Promise<Vehicle | null> => {
   try {
     const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.log('No fuel pump ID available, cannot create vehicle');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to add vehicles",
+        variant: "destructive"
+      });
+      return null;
+    }
     
     const { data, error } = await supabase
       .from('vehicles')
@@ -67,10 +87,24 @@ export const createVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'created_a
  */
 export const updateVehicle = async (id: string, vehicleData: Partial<Vehicle>): Promise<Vehicle | null> => {
   try {
+    const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.log('No fuel pump ID available, cannot update vehicle');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to update vehicles",
+        variant: "destructive"
+      });
+      return null;
+    }
+    
+    // Make sure we're only updating vehicles for the current fuel pump
     const { data, error } = await supabase
       .from('vehicles')
       .update(vehicleData)
       .eq('id', id)
+      .eq('fuel_pump_id', fuelPumpId)
       .select()
       .single();
       

@@ -17,9 +17,11 @@ import {
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getFuelPumpId } from '@/integrations/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 const MobileDailyReadings = () => {
   const { toast } = useToast();
+  const { fuelPumpId: contextFuelPumpId, isAuthenticated } = useAuth();
   const [tankCount, setTankCount] = useState(1);
   const [readingFormData, setReadingFormData] = useState<ReadingFormData>({
     date: new Date().toISOString().split('T')[0],
@@ -42,20 +44,30 @@ const MobileDailyReadings = () => {
   // Fetch fuel types from settings
   useEffect(() => {
     const fetchFuelTypes = async () => {
-      const fuelPumpId = await getFuelPumpId();
-      console.log(`Mobile Daily Readings - Fetching fuel types with fuel pump ID: ${fuelPumpId || 'none'}`);
+      // First try to get the fuel pump ID from the context
+      let fuelPumpId = contextFuelPumpId;
+      
+      // If not available in context, try to get it from the utility function
+      if (!fuelPumpId) {
+        fuelPumpId = await getFuelPumpId();
+      }
+      
+      if (!fuelPumpId) {
+        console.log('No fuel pump ID available, cannot fetch fuel types');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to view data",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log(`Mobile Daily Readings - Fetching fuel types with fuel pump ID: ${fuelPumpId}`);
       
       const query = supabase
         .from('fuel_settings')
-        .select('fuel_type');
-        
-      // Apply fuel pump filter if available
-      if (fuelPumpId) {
-        console.log(`Filtering fuel settings by fuel_pump_id: ${fuelPumpId}`);
-        query.eq('fuel_pump_id', fuelPumpId);
-      } else {
-        console.log('No fuel pump ID available, fetching all fuel settings');
-      }
+        .select('fuel_type')
+        .eq('fuel_pump_id', fuelPumpId);
         
       const { data, error } = await query;
         
@@ -81,28 +93,33 @@ const MobileDailyReadings = () => {
     };
     
     fetchFuelTypes();
-  }, []);
+  }, [contextFuelPumpId, toast]);
 
   // Fetch previous reading when fuel type changes
   useEffect(() => {
     const fetchPreviousReading = async () => {
-      const fuelPumpId = await getFuelPumpId();
-      console.log(`Fetching previous reading for ${readingFormData.fuel_type} with fuel pump ID: ${fuelPumpId || 'none'}`);
+      // First try to get the fuel pump ID from the context
+      let fuelPumpId = contextFuelPumpId;
+      
+      // If not available in context, try to get it from the utility function
+      if (!fuelPumpId) {
+        fuelPumpId = await getFuelPumpId();
+      }
+      
+      if (!fuelPumpId) {
+        console.log('No fuel pump ID available, cannot fetch previous readings');
+        return;
+      }
+      
+      console.log(`Fetching previous reading for ${readingFormData.fuel_type} with fuel pump ID: ${fuelPumpId}`);
       
       const query = supabase
         .from('daily_readings')
         .select('*')
         .eq('fuel_type', readingFormData.fuel_type)
+        .eq('fuel_pump_id', fuelPumpId)
         .order('date', { ascending: false })
         .limit(1);
-        
-      // Apply fuel pump filter if available
-      if (fuelPumpId) {
-        console.log(`Filtering daily readings by fuel_pump_id: ${fuelPumpId} and fuel_type: ${readingFormData.fuel_type}`);
-        query.eq('fuel_pump_id', fuelPumpId);
-      } else {
-        console.log('No fuel pump ID available, fetching all readings');
-      }
         
       const { data, error } = await query;
         
@@ -144,10 +161,10 @@ const MobileDailyReadings = () => {
       }
     };
     
-    if (readingFormData.fuel_type) {
+    if (readingFormData.fuel_type && isAuthenticated) {
       fetchPreviousReading();
     }
-  }, [readingFormData.fuel_type]);
+  }, [readingFormData.fuel_type, contextFuelPumpId, isAuthenticated]);
 
   // Calculate dependent values based on form data
   const calculatedValues = calculateValues(readingFormData);
@@ -209,6 +226,15 @@ const MobileDailyReadings = () => {
 
   // Save reading to database
   const handleSaveReading = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to save readings",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (readingFormData.closing_stock === 0) {
       toast({
         title: "Validation Error",
@@ -230,18 +256,26 @@ const MobileDailyReadings = () => {
     setIsSubmitting(true);
     
     try {
-      const fuelPumpId = await getFuelPumpId();
-      console.log(`Saving reading with fuel pump ID: ${fuelPumpId || 'none'}`);
+      // First try to get the fuel pump ID from the context
+      let fuelPumpId = contextFuelPumpId;
+      
+      // If not available in context, try to get it from the utility function
+      if (!fuelPumpId) {
+        fuelPumpId = await getFuelPumpId();
+      }
       
       if (!fuelPumpId) {
-        console.warn('No fuel pump ID available, record might not be filtered correctly');
+        console.warn('No fuel pump ID available, cannot save reading');
         toast({
-          title: "Warning",
+          title: "Authentication Required",
           description: "Could not identify your fuel pump. Please contact administrator.",
           variant: "destructive"
         });
+        setIsSubmitting(false);
         return;
       }
+      
+      console.log(`Saving reading with fuel pump ID: ${fuelPumpId}`);
       
       const tanksToInsert = Object.values(readingFormData.readings).map(tank => ({
         date: readingFormData.date,
@@ -271,12 +305,8 @@ const MobileDailyReadings = () => {
           current_level: readingFormData.closing_stock,
           updated_at: new Date().toISOString()
         })
-        .eq('fuel_type', readingFormData.fuel_type);
-        
-      // Apply fuel pump filter if available
-      if (fuelPumpId) {
-        updateQuery.eq('fuel_pump_id', fuelPumpId);
-      }
+        .eq('fuel_type', readingFormData.fuel_type)
+        .eq('fuel_pump_id', fuelPumpId);
         
       await updateQuery;
 
@@ -307,13 +337,9 @@ const MobileDailyReadings = () => {
         .from('daily_readings')
         .select('*')
         .eq('fuel_type', readingFormData.fuel_type)
+        .eq('fuel_pump_id', fuelPumpId)
         .order('date', { ascending: false })
         .limit(1);
-        
-      // Apply fuel pump filter if available
-      if (fuelPumpId) {
-        fetchQuery.eq('fuel_pump_id', fuelPumpId);
-      }
         
       const { data } = await fetchQuery;
         

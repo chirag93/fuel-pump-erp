@@ -158,7 +158,7 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
   }
 };
 
-// New function to update tank levels based on daily readings
+// Function to update tank levels based on daily readings
 const updateTankLevelsFromReadings = async (
   fuelLevels: { [key: string]: { capacity: number, current: number, price: number } },
   fuelPumpId: string

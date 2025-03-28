@@ -15,6 +15,16 @@ export const getTransactionsByCustomerId = async (customerId: string): Promise<T
     console.log('API getTransactionsByCustomerId called for customer ID:', customerId);
     const fuelPumpId = await getFuelPumpId();
     
+    if (!fuelPumpId) {
+      console.log('No fuel pump ID available, cannot fetch transactions');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to view transactions",
+        variant: "destructive"
+      });
+      return [];
+    }
+    
     const { data, error } = await supabase
       .from('transactions')
       .select(`
@@ -55,9 +65,20 @@ export const getTransactionsByCustomerId = async (customerId: string): Promise<T
  */
 export const createTransaction = async (transactionData: Omit<Transaction, 'id' | 'created_at'>): Promise<Transaction | null> => {
   try {
+    const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.log('No fuel pump ID available, cannot create transaction');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to create transactions",
+        variant: "destructive"
+      });
+      return null;
+    }
+    
     // Generate a UUID for the transaction ID
     const id = crypto.randomUUID();
-    const fuelPumpId = await getFuelPumpId();
     
     const { data, error } = await supabase
       .from('transactions')

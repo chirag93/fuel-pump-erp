@@ -30,7 +30,6 @@ interface DailyReading {
   tanks?: TankReading[];
 }
 
-// Import the new components
 import ReadingsTable from '@/components/daily-readings/ReadingsTable';
 import ReadingFormDialog from '@/components/daily-readings/ReadingFormDialog';
 import DeleteReadingDialog from '@/components/daily-readings/DeleteReadingDialog';
@@ -51,7 +50,6 @@ const DailyReadings = () => {
   const [fuelTypes, setFuelTypes] = useState<string[]>([]);
   const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [lastTriedFuelPumpId, setLastTriedFuelPumpId] = useState<string | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
   
   const [readingFormData, setReadingFormData] = useState<ReadingFormData>({
@@ -95,12 +93,6 @@ const DailyReadings = () => {
           console.log(`DailyReadings initialization - Utility function fuel pump ID: ${pumpId || 'none'}`);
         }
         
-        // Default to the specific ID if still not available
-        if (!pumpId) {
-          pumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
-          console.log(`DailyReadings initialization - Using default ID: ${pumpId}`);
-        }
-        
         if (pumpId) {
           setFuelPumpId(pumpId);
           // Fetch data
@@ -137,16 +129,16 @@ const DailyReadings = () => {
     try {
       console.log(`DailyReadings - Fetching fuel types with fuel pump ID: ${pumpId || 'none'}`);
       
-      let query = supabase
-        .from('fuel_settings')
-        .select('fuel_type');
-        
-      // Apply fuel pump filter if available
-      if (pumpId) {
-        console.log(`Filtering fuel types by fuel_pump_id: ${pumpId}`);
-        query = query.eq('fuel_pump_id', pumpId);
+      if (!pumpId) {
+        console.log('No fuel pump ID available, cannot fetch fuel types');
+        return;
       }
       
+      let query = supabase
+        .from('fuel_settings')
+        .select('fuel_type')
+        .eq('fuel_pump_id', pumpId);
+        
       const { data, error } = await query;
         
       if (error) throw error;
@@ -177,11 +169,6 @@ const DailyReadings = () => {
   const fetchReadings = async (pumpId: string | null = fuelPumpId) => {
     setIsLoading(true);
     
-    // Store the last tried ID to avoid duplicate error messages
-    if (pumpId) {
-      setLastTriedFuelPumpId(pumpId);
-    }
-    
     try {
       // Check if user is authenticated
       if (!isAuthenticated) {
@@ -200,16 +187,16 @@ const DailyReadings = () => {
           console.log(`Using fuel pump ID from utility function: ${pumpId || 'none'}`);
         }
         
-        // If still no ID, use the specific one we're trying to match
         if (!pumpId) {
-          pumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
-          console.log(`No fuel pump ID available, using specific ID: ${pumpId}`);
+          console.log('No fuel pump ID available, cannot fetch readings');
+          setIsLoading(false);
+          setReadings([]);
+          return;
         }
       }
       
       console.log(`DailyReadings - Fetching readings with fuel pump ID: ${pumpId || 'none'}`);
       
-      // Try direct ID match first
       let query = supabase
         .from('daily_readings')
         .select('*')
@@ -221,7 +208,7 @@ const DailyReadings = () => {
       const { data, error } = await query;
         
       if (error) {
-        console.error('Error in first attempt:', error);
+        console.error('Error fetching readings:', error);
         throw error;
       }
       
@@ -235,74 +222,6 @@ const DailyReadings = () => {
         setReadings(processedData);
       } else {
         console.log(`No daily readings found for fuel pump ID: ${pumpId}`);
-        
-        // If no results, try with the specific ID we're looking for
-        if (pumpId !== '2c762f9c-f89b-4084-9ebe-b6902fdf4311') {
-          const specificId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
-          console.log(`Trying with specific ID: ${specificId}`);
-          
-          const fallbackQuery = supabase
-            .from('daily_readings')
-            .select('*')
-            .eq('fuel_pump_id', specificId)
-            .order('date', { ascending: false });
-            
-          const { data: fallbackData, error: fallbackError } = await fallbackQuery;
-          
-          if (fallbackError) {
-            console.error('Error in fallback attempt:', fallbackError);
-          } else {
-            const fallbackCount = fallbackData?.length || 0;
-            console.log(`Retrieved ${fallbackCount} daily readings with fallback ID`);
-            
-            if (fallbackData && fallbackData.length > 0) {
-              const processedFallbackData = processReadingsData(fallbackData);
-              console.log('Processed fallback data:', processedFallbackData);
-              setReadings(processedFallbackData);
-              
-              // Update the fuel pump ID to use going forward
-              setFuelPumpId(specificId);
-              
-              toast({
-                title: "Using alternate fuel pump",
-                description: `Found ${fallbackCount} readings with ID: ${specificId.substring(0, 8)}...`
-              });
-              
-              return;
-            }
-          }
-        }
-        
-        // If still no results, try without any filter as last resort
-        console.log('Trying without fuel pump ID filter as last resort');
-        const unfilteredQuery = supabase
-          .from('daily_readings')
-          .select('*')
-          .order('date', { ascending: false })
-          .limit(50);
-          
-        const { data: unfilteredData, error: unfilteredError } = await unfilteredQuery;
-        
-        if (unfilteredError) {
-          console.error('Error in unfiltered attempt:', unfilteredError);
-        } else {
-          const unfilteredCount = unfilteredData?.length || 0;
-          console.log(`Retrieved ${unfilteredCount} daily readings without filter`);
-          
-          if (unfilteredData && unfilteredData.length > 0) {
-            const processedUnfilteredData = processReadingsData(unfilteredData);
-            setReadings(processedUnfilteredData);
-            
-            toast({
-              title: "Showing all readings",
-              description: `Found ${unfilteredCount} readings across all fuel pumps`
-            });
-            
-            return;
-          }
-        }
-        
-        // If we get here, we really have no readings to show
         setReadings([]);
       }
     } catch (error) {
@@ -715,11 +634,6 @@ const DailyReadings = () => {
                       'Initializing fuel pump connection...' :
                       'No fuel pump ID available'}
                 </p>
-                {lastTriedFuelPumpId && lastTriedFuelPumpId === '2c762f9c-f89b-4084-9ebe-b6902fdf4311' && (
-                  <p className="text-xs text-amber-500 mt-2">
-                    Tried with specific ID 2c762f9c-f89b-4084-9ebe-b6902fdf4311 but found no records
-                  </p>
-                )}
               </div>
               <Button onClick={() => handleOpenDialog()} variant="outline">
                 <Plus className="mr-2 h-4 w-4" />

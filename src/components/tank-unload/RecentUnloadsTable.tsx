@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { useTankUnloads } from "@/hooks/useTankUnloads";
+import { useAuth } from '@/contexts/AuthContext';
 
 interface RecentUnloadsTableProps {
   refreshTrigger?: number;
@@ -10,7 +11,8 @@ interface RecentUnloadsTableProps {
 }
 
 const RecentUnloadsTable = ({ refreshTrigger, showAll = false }: RecentUnloadsTableProps) => {
-  const { recentUnloads, isLoading } = useTankUnloads(refreshTrigger);
+  const { isAuthenticated } = useAuth();
+  const { recentUnloads, isLoading } = useTankUnloads(refreshTrigger, showAll ? 100 : 5, showAll);
 
   // If showAll is true, display all records, otherwise only show the first 5
   const displayedUnloads = showAll ? recentUnloads : recentUnloads.slice(0, 5);
@@ -40,6 +42,12 @@ const RecentUnloadsTable = ({ refreshTrigger, showAll = false }: RecentUnloadsTa
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-4">
                     Loading...
+                  </TableCell>
+                </TableRow>
+              ) : !isAuthenticated ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                    Please sign in to view unload data
                   </TableCell>
                 </TableRow>
               ) : displayedUnloads.length === 0 ? (
