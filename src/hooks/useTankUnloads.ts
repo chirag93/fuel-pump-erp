@@ -18,6 +18,7 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
   const [recentUnloads, setRecentUnloads] = useState<TankUnload[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [currentFuelPumpId, setCurrentFuelPumpId] = useState<string | null>(null);
 
   const fetchRecentUnloads = useCallback(async () => {
     setIsLoading(true);
@@ -34,13 +35,32 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
         console.log(`useTankUnloads - Utility function fuel pump ID: ${fuelPumpId || 'none'}`);
       }
       
+      // Use localStorage as another fallback
+      if (!fuelPumpId) {
+        const storedSession = localStorage.getItem('fuel_pro_session');
+        if (storedSession) {
+          try {
+            const parsedSession = JSON.parse(storedSession);
+            if (parsedSession.user && parsedSession.user.fuelPumpId) {
+              fuelPumpId = parsedSession.user.fuelPumpId;
+              console.log(`useTankUnloads - localStorage fuel pump ID: ${fuelPumpId}`);
+            }
+          } catch (parseError) {
+            console.error('Error parsing stored session:', parseError);
+          }
+        }
+      }
+      
       // Default to the specific ID if still not available
       if (!fuelPumpId) {
         fuelPumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
         console.log(`useTankUnloads - Using default ID: ${fuelPumpId}`);
       }
       
-      console.log(`Fetching tank unloads with fuel pump ID: ${fuelPumpId || 'none'}`);
+      // Track the ID we're using
+      setCurrentFuelPumpId(fuelPumpId);
+      
+      console.log(`useTankUnloads - Fetching tank unloads with fuel pump ID: ${fuelPumpId}`);
       
       let query = supabase
         .from('tank_unloads')
@@ -70,61 +90,87 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
       }
       
       if (data && data.length > 0) {
-        console.log(`Retrieved ${data.length} tank unloads`);
+        console.log(`Retrieved ${data.length} tank unloads for ID ${fuelPumpId}`);
         setRecentUnloads(data as TankUnload[]);
-      } else {
-        console.log('No tank unloads data returned');
+        return; // Success! Early return
+      } 
+      
+      console.log('No tank unloads data returned for initial query');
+      
+      // If no results with the provided fuel pump ID, try with our specific ID
+      // if it's not already the one we used
+      if (fuelPumpId !== '2c762f9c-f89b-4084-9ebe-b6902fdf4311' && !showAll) {
+        const specificId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
+        console.log(`Trying with specific ID: ${specificId}`);
         
-        // If no results with the provided fuel pump ID, try with the specific ID we're looking for
-        if (fuelPumpId !== '2c762f9c-f89b-4084-9ebe-b6902fdf4311' && !showAll) {
-          const specificId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
-          console.log(`Trying with specific ID: ${specificId}`);
+        const fallbackQuery = supabase
+          .from('tank_unloads')
+          .select('*')
+          .eq('fuel_pump_id', specificId)
+          .order('date', { ascending: false })
+          .limit(limit);
           
-          const fallbackQuery = supabase
-            .from('tank_unloads')
-            .select('*')
-            .eq('fuel_pump_id', specificId)
-            .order('date', { ascending: false })
-            .limit(limit);
-            
-          const { data: fallbackData, error: fallbackError } = await fallbackQuery;
-          
-          if (fallbackError) {
-            console.error('Error in fallback attempt:', fallbackError);
-          } else if (fallbackData && fallbackData.length > 0) {
-            console.log(`Retrieved ${fallbackData.length} tank unloads with fallback ID`);
-            setRecentUnloads(fallbackData as TankUnload[]);
-            return;
-          }
+        const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+        
+        if (fallbackError) {
+          console.error('Error in fallback attempt:', fallbackError);
+        } else if (fallbackData && fallbackData.length > 0) {
+          console.log(`Retrieved ${fallbackData.length} tank unloads with fallback ID ${specificId}`);
+          setRecentUnloads(fallbackData as TankUnload[]);
+          return; // Success with fallback! Early return
+        } else {
+          console.log(`No data found with fallback ID ${specificId}`);
         }
-        
-        // If still no results and not showing all, try without filter as last resort
-        if (!showAll) {
-          console.log('Trying without fuel pump ID filter as last resort');
-          const unfilteredQuery = supabase
-            .from('tank_unloads')
-            .select('*')
-            .order('date', { ascending: false })
-            .limit(limit);
-            
-          const { data: unfilteredData, error: unfilteredError } = await unfilteredQuery;
-          
-          if (unfilteredError) {
-            console.error('Error in unfiltered attempt:', unfilteredError);
-          } else if (unfilteredData && unfilteredData.length > 0) {
-            console.log(`Retrieved ${unfilteredData.length} tank unloads without filter`);
-            setRecentUnloads(unfilteredData as TankUnload[]);
-            return;
-          }
-        }
-        
-        // Return empty array if all attempts failed
-        setRecentUnloads([]);
       }
+      
+      // If still no results and not showing all, try without filter as last resort
+      if (!showAll) {
+        console.log('Trying without fuel pump ID filter as last resort');
+        const unfilteredQuery = supabase
+          .from('tank_unloads')
+          .select('*')
+          .order('date', { ascending: false })
+          .limit(limit);
+          
+        const { data: unfilteredData, error: unfilteredError } = await unfilteredQuery;
+        
+        if (unfilteredError) {
+          console.error('Error in unfiltered attempt:', unfilteredError);
+        } else if (unfilteredData && unfilteredData.length > 0) {
+          console.log(`Retrieved ${unfilteredData.length} tank unloads without filter`);
+          setRecentUnloads(unfilteredData as TankUnload[]);
+          return; // Success with unfiltered! Early return
+        } else {
+          console.log('No data found without filter');
+        }
+      }
+      
+      // Try a completely different approach - direct SQL query
+      try {
+        const { data: directData, error: directError } = await supabase.rpc(
+          'get_tank_unloads_for_pump',
+          { pump_id_param: '2c762f9c-f89b-4084-9ebe-b6902fdf4311' }
+        );
+        
+        if (!directError && directData && directData.length > 0) {
+          console.log(`Retrieved ${directData.length} tank unloads with direct SQL query`);
+          setRecentUnloads(directData as TankUnload[]);
+          return; // Success with direct query! Early return
+        } else {
+          console.log('No data found with direct SQL query');
+          if (directError) console.error('Direct query error:', directError);
+        }
+      } catch (rpcError) {
+        console.error('RPC function error or not available:', rpcError);
+      }
+      
+      // If we reach here, we couldn't find any data
+      console.log('No tank unload data could be found through any method');
+      setRecentUnloads([]);
+      
     } catch (err) {
       console.error('Error fetching unloads:', err);
       setError(err instanceof Error ? err : new Error('Unknown error occurred'));
-      // Return empty array instead of sample data
       setRecentUnloads([]);
     } finally {
       setIsLoading(false);
@@ -139,6 +185,7 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
     recentUnloads,
     isLoading,
     error,
-    refetch: fetchRecentUnloads
+    refetch: fetchRecentUnloads,
+    currentFuelPumpId
   };
 }

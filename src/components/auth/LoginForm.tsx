@@ -66,20 +66,30 @@ const LoginForm = ({
         return;
       }
       
+      console.log('Authentication successful, user data:', data.user);
+      
       // Check if the user exists in the fuel_pumps table (admin)
-      const { data: fuelPump } = await supabase
+      let matchedFuelPump = null;
+      
+      // Try RPC function first (case-insensitive match)
+      const { data: fuelPump, error: rpcError } = await supabase
         .rpc('get_fuel_pump_by_email', { email_param: email.toLowerCase() });
       
-      let matchedFuelPump = null;
       if (fuelPump && Array.isArray(fuelPump) && fuelPump.length > 0) {
         matchedFuelPump = fuelPump[0];
         console.log('Found fuel pump via RPC:', matchedFuelPump);
       } else {
         console.log(`No fuel pump found via RPC for email: ${email.toLowerCase()}`);
+        if (rpcError) {
+          console.error('RPC error:', rpcError);
+        }
       }
       
       // If no match via RPC, try direct query as fallback
       if (!matchedFuelPump) {
+        console.log('Trying direct query fallback for fuel pump');
+        
+        // First try case-insensitive match
         const { data: directFuelPump, error: directError } = await supabase
           .from('fuel_pumps')
           .select('*')
@@ -88,9 +98,23 @@ const LoginForm = ({
           
         if (!directError && directFuelPump) {
           matchedFuelPump = directFuelPump;
-          console.log('Found fuel pump via direct query:', matchedFuelPump);
+          console.log('Found fuel pump via direct query (ilike):', matchedFuelPump);
         } else {
           console.log(`No fuel pump found via direct query for email: ${email}`);
+          
+          // Try exact match as final attempt
+          const { data: exactFuelPump, error: exactError } = await supabase
+            .from('fuel_pumps')
+            .select('*')
+            .eq('email', email)
+            .maybeSingle();
+            
+          if (!exactError && exactFuelPump) {
+            matchedFuelPump = exactFuelPump;
+            console.log('Found fuel pump via exact email match:', matchedFuelPump);
+          } else {
+            console.log('No fuel pump found via exact email match');
+          }
         }
       }
       
@@ -105,12 +129,14 @@ const LoginForm = ({
       // Determine user role based on email pattern or profiles
       let userRole = 'staff';
       let fuelPumpId = null;
+      let fuelPumpName = null;
       
       // If the email matches the fuel pump email, they're an admin
       if (matchedFuelPump && data.user.email.toLowerCase() === matchedFuelPump.email.toLowerCase()) {
         userRole = 'admin';
         fuelPumpId = matchedFuelPump.id;
-        console.log(`User is an admin for fuel pump: ${fuelPumpId}`);
+        fuelPumpName = matchedFuelPump.name;
+        console.log(`User is an admin for fuel pump: ${fuelPumpId} (${fuelPumpName})`);
       } else {
         // Check if this user is in the staff table
         try {
@@ -124,18 +150,44 @@ const LoginForm = ({
             userRole = staffData.role;
             fuelPumpId = staffData.fuel_pump_id;
             console.log(`User is staff with role ${userRole} for fuel pump: ${fuelPumpId}`);
+            
+            // Get fuel pump name if we have the ID
+            if (fuelPumpId) {
+              const { data: pumpData } = await supabase
+                .from('fuel_pumps')
+                .select('name')
+                .eq('id', fuelPumpId)
+                .maybeSingle();
+                
+              if (pumpData) {
+                fuelPumpName = pumpData.name;
+              }
+            }
           }
         } catch (err) {
           console.error('Error checking staff role:', err);
         }
       }
       
-      // Special handling for testing: forcing a specific fuel pump ID to match your desired ID
+      // Special handling for testing accounts
       if (!fuelPumpId) {
         // Check if it's a test or special user
         if (email === 'test@example.com' || email === 'admin@example.com') {
           fuelPumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
+          fuelPumpName = 'Test Fuel Pump';
           console.log(`Setting test/admin user to specific fuel pump ID: ${fuelPumpId}`);
+          
+          // Verify this fuel pump exists
+          const { data: verifyPump } = await supabase
+            .from('fuel_pumps')
+            .select('name')
+            .eq('id', fuelPumpId)
+            .maybeSingle();
+            
+          if (verifyPump) {
+            fuelPumpName = verifyPump.name;
+            console.log(`Verified test fuel pump exists with name: ${fuelPumpName}`);
+          }
         }
       }
 
@@ -158,26 +210,69 @@ const LoginForm = ({
       // If we still don't have a fuel pump ID, let's use the specific one as a fallback
       if (!fuelPumpId) {
         fuelPumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
+        fuelPumpName = 'Default Fuel Pump';
         console.log(`No fuel pump ID found, using fallback ID: ${fuelPumpId}`);
+        
+        // Verify this fuel pump exists
+        const { data: verifyPump } = await supabase
+          .from('fuel_pumps')
+          .select('name')
+          .eq('id', fuelPumpId)
+          .maybeSingle();
+          
+        if (verifyPump) {
+          fuelPumpName = verifyPump.name;
+          console.log(`Verified fallback fuel pump exists with name: ${fuelPumpName}`);
+        }
       }
 
+      // Update Supabase user metadata with fuel pump ID
+      await supabase.auth.updateUser({
+        data: { 
+          fuelPumpId: fuelPumpId,
+          fuelPumpName: fuelPumpName,
+          role: userRole
+        }
+      });
+      
+      console.log(`Updated user metadata with fuelPumpId: ${fuelPumpId}`);
+
       // Call the login method from auth context to set up session
-      await regularLogin(data.user.id, {
+      const loginSuccess = await regularLogin(data.user.id, {
         id: data.user.id,
         username: email.split('@')[0],
         email: data.user.email,
         role: userRole,
         fuelPumpId: fuelPumpId,
-        fuelPumpName: matchedFuelPump?.name || 'Default Fuel Pump'
+        fuelPumpName: fuelPumpName || 'Default Fuel Pump'
       }, rememberMe);
       
-      const from = location.state?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
-      
-      toast({
-        title: "Login successful",
-        description: "You have been logged in successfully.",
-      });
+      if (loginSuccess) {
+        console.log('Login successful, storing session data with fuel pump info');
+        
+        // Store in localStorage for persistence and backup
+        const sessionData = {
+          user: {
+            id: data.user.id,
+            email: data.user.email,
+            role: userRole,
+            fuelPumpId: fuelPumpId,
+            fuelPumpName: fuelPumpName || 'Default Fuel Pump'
+          }
+        };
+        
+        localStorage.setItem('fuel_pro_session', JSON.stringify(sessionData));
+        
+        const from = location.state?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
+        
+        toast({
+          title: "Login successful",
+          description: `You have been logged in successfully to ${fuelPumpName || 'your fuel pump'}.`,
+        });
+      } else {
+        setError('Failed to initialize session. Please try again.');
+      }
     } catch (err: any) {
       console.error('Error during login:', err);
       setError(err.message || 'An error occurred during login.');

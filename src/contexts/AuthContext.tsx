@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,355 +19,246 @@ interface Session {
 
 interface AuthContextType {
   user: UserProfile | null;
+  fuelPumpId: string | null; // Added explicit fuel pump ID
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
   isAdmin: boolean;
   isStaff: boolean;
-  fuelPumpId: string | null;
-  fuelPumpName: string | null;
   login: (userId: string, userData: any, rememberMe?: boolean) => Promise<boolean>;
-  logout: () => void;
-  isLoading: boolean;
-  session: Session | null;
+  logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  fuelPumpId: null, // Default to null
+  isAuthenticated: false,
+  isSuperAdmin: false,
+  isAdmin: false,
+  isStaff: false,
+  login: async () => false,
+  logout: async () => {},
+});
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-// Helper function to get stored session from localStorage
-const getStoredSession = (): Session | null => {
-  const storedSession = localStorage.getItem('fuel_pro_session');
-  if (storedSession) {
-    try {
-      return JSON.parse(storedSession);
-    } catch (e) {
-      console.error('Error parsing stored session:', e);
-      localStorage.removeItem('fuel_pro_session');
-    }
-  }
-  return null;
-};
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [session, setSession] = useState<Session | null>(getStoredSession());
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isStaff, setIsStaff] = useState(false);
   const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
-  const [fuelPumpName, setFuelPumpName] = useState<string | null>(null);
-
+  
+  // Initialize auth state from localStorage if available
   useEffect(() => {
-    // Check if there's a stored session
-    const storedSession = getStoredSession();
-    
-    if (storedSession) {
-      console.log('Found stored session:', storedSession);
-      setSession(storedSession);
-      setUser(storedSession.user);
-      
-      // Set role states
-      setIsSuperAdmin(storedSession.user.role === 'super_admin');
-      setIsAdmin(storedSession.user.role === 'admin');
-      setIsStaff(storedSession.user.role === 'staff');
-      
-      // Set fuel pump ID and name from stored session
-      if (storedSession.user.fuelPumpId) {
-        console.log(`Setting fuel pump ID from stored session: ${storedSession.user.fuelPumpId}`);
-        setFuelPumpId(storedSession.user.fuelPumpId);
-        setFuelPumpName(storedSession.user.fuelPumpName || null);
-      } else {
-        // If not a super admin and no fuel pump ID in session, fetch it
-        if (storedSession.user.role !== 'super_admin') {
-          fetchAssociatedFuelPump(storedSession.user.email);
-        }
-      }
-    } else {
-      console.log('No stored session found');
-    }
-    
-    setIsLoading(false);
-  }, []);
-
-  // Fetch the fuel pump associated with a user's email
-  const fetchAssociatedFuelPump = async (email: string) => {
-    try {
-      // First try the RPC function for case-insensitive matching
-      const { data: fuelPumpData, error: rpcError } = await supabase
-        .rpc('get_fuel_pump_by_email', { email_param: email.toLowerCase() });
-        
-      if (!rpcError && fuelPumpData && fuelPumpData.length > 0) {
-        const fuelPump = fuelPumpData[0];
-        console.log(`Found fuel pump via RPC: ${fuelPump.id} (${fuelPump.name})`);
-        setFuelPumpId(fuelPump.id);
-        setFuelPumpName(fuelPump.name);
-        
-        // Update user with fuelPumpId
-        if (user) {
-          const updatedUser = {
-            ...user,
-            fuelPumpId: fuelPump.id,
-            fuelPumpName: fuelPump.name
-          };
-          setUser(updatedUser);
-          
-          // Update session in localStorage
-          if (session) {
-            const updatedSession = {
-              ...session,
-              user: updatedUser
-            };
-            setSession(updatedSession);
-            localStorage.setItem('fuel_pro_session', JSON.stringify(updatedSession));
-          }
-        }
-        return;
-      }
-      
-      if (rpcError) {
-        console.error('Error using RPC function:', rpcError);
-      }
-      
-      // Fallback to direct query if RPC fails
-      const { data: fuelPump, error } = await supabase
-        .from('fuel_pumps')
-        .select('id, name')
-        .ilike('email', email)
-        .maybeSingle();
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (fuelPump) {
-        console.log(`Found fuel pump via direct query: ${fuelPump.id} (${fuelPump.name})`);
-        setFuelPumpId(fuelPump.id);
-        setFuelPumpName(fuelPump.name);
-        
-        // Update user with fuelPumpId
-        if (user) {
-          const updatedUser = {
-            ...user,
-            fuelPumpId: fuelPump.id,
-            fuelPumpName: fuelPump.name
-          };
-          setUser(updatedUser);
-          
-          // Update session in localStorage
-          if (session) {
-            const updatedSession = {
-              ...session,
-              user: updatedUser
-            };
-            setSession(updatedSession);
-            localStorage.setItem('fuel_pro_session', JSON.stringify(updatedSession));
-          }
-        }
-      } else {
-        console.log(`No fuel pump found for email: ${email}, using hardcoded fallback`);
-        const fallbackId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
-        const fallbackName = 'Default Fuel Pump';
-        
-        setFuelPumpId(fallbackId);
-        setFuelPumpName(fallbackName);
-        
-        // Update user with fallback fuelPumpId
-        if (user) {
-          const updatedUser = {
-            ...user,
-            fuelPumpId: fallbackId,
-            fuelPumpName: fallbackName
-          };
-          setUser(updatedUser);
-          
-          // Update session in localStorage
-          if (session) {
-            const updatedSession = {
-              ...session,
-              user: updatedUser
-            };
-            setSession(updatedSession);
-            localStorage.setItem('fuel_pro_session', JSON.stringify(updatedSession));
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching associated fuel pump:', error);
-      
-      // Use fallback fuel pump ID
-      const fallbackId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
-      const fallbackName = 'Default Fuel Pump';
-      
-      setFuelPumpId(fallbackId);
-      setFuelPumpName(fallbackName);
-      
-      // Update user with fallback fuelPumpId
-      if (user) {
-        const updatedUser = {
-          ...user,
-          fuelPumpId: fallbackId,
-          fuelPumpName: fallbackName
-        };
-        setUser(updatedUser);
-        
-        // Update session in localStorage
-        if (session) {
-          const updatedSession = {
-            ...session,
-            user: updatedUser
-          };
-          setSession(updatedSession);
-          localStorage.setItem('fuel_pro_session', JSON.stringify(updatedSession));
-        }
-      }
-    }
-  };
-
-  const login = async (userId: string, userData: any, rememberMe: boolean = false): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      // Ensure valid role is set
-      if (!['admin', 'staff', 'super_admin'].includes(userData.role)) {
-        userData.role = 'staff'; // Default to staff if no valid role
-      }
-      
-      // Ensure fuelPumpId is set
-      if (!userData.fuelPumpId) {
-        userData.fuelPumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
-        userData.fuelPumpName = 'Default Fuel Pump';
-        console.log(`No fuel pump ID provided during login, using default: ${userData.fuelPumpId}`);
-      }
-      
-      console.log('Login with user data:', userData);
-      
-      // Create user profile from user data
-      const userProfile: UserProfile = {
-        id: userId,
-        username: userData.username || userData.email?.split('@')[0] || 'user',
-        email: userData.email || '',
-        role: userData.role,
-        fuelPumpId: userData.fuelPumpId,
-        fuelPumpName: userData.fuelPumpName
-      };
-      
-      // Create session
-      const newSession: Session = {
-        access_token: `token_${userId}`,  // In a real app, this would be a JWT
-        user: userProfile
-      };
-      
-      // Store session if rememberMe is true
-      if (rememberMe) {
-        localStorage.setItem('fuel_pro_session', JSON.stringify(newSession));
-        console.log('Session stored in localStorage with fuel pump ID:', userProfile.fuelPumpId);
-      }
-      
-      // Update state
-      setUser(userProfile);
-      setSession(newSession);
-      
-      // Set role states
-      setIsSuperAdmin(userProfile.role === 'super_admin');
-      setIsAdmin(userProfile.role === 'admin');
-      setIsStaff(userProfile.role === 'staff');
-      
-      // Set fuel pump ID and name
-      if (userProfile.fuelPumpId) {
-        setFuelPumpId(userProfile.fuelPumpId);
-        setFuelPumpName(userProfile.fuelPumpName || null);
-        console.log(`Fuel pump ID set in context: ${userProfile.fuelPumpId}`);
-      }
-      
-      // Also update the Supabase user metadata to store the fuel pump ID
+    const initializeAuth = async () => {
       try {
-        const { error: updateError } = await supabase.auth.updateUser({
-          data: {
-            fuelPumpId: userProfile.fuelPumpId,
-            fuelPumpName: userProfile.fuelPumpName
-          }
-        });
+        // Check if user is authenticated via Supabase
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (updateError) {
-          console.error('Error updating user metadata:', updateError);
+        console.log("Auth initialization - Supabase session:", session ? "Found" : "Not found");
+        
+        if (session?.user) {
+          console.log("Auth initialization - User authenticated via Supabase");
+          
+          // Extract fuel pump ID from user metadata
+          const metadataFuelPumpId = session.user.user_metadata?.fuelPumpId;
+          
+          if (metadataFuelPumpId) {
+            console.log(`Auth initialization - Fuel pump ID from metadata: ${metadataFuelPumpId}`);
+            setFuelPumpId(metadataFuelPumpId);
+          }
+          
+          // Check if we have stored user data
+          const storedSession = localStorage.getItem('fuel_pro_session');
+          if (storedSession) {
+            try {
+              const parsedSession = JSON.parse(storedSession);
+              
+              if (parsedSession.user) {
+                console.log("Auth initialization - Using stored user data");
+                
+                setUser(parsedSession.user);
+                
+                // If no fuel pump ID from metadata, try from stored session
+                if (!metadataFuelPumpId && parsedSession.user.fuelPumpId) {
+                  console.log(`Auth initialization - Fuel pump ID from storage: ${parsedSession.user.fuelPumpId}`);
+                  setFuelPumpId(parsedSession.user.fuelPumpId);
+                }
+                
+                return; // Exit early if we restored from storage
+              }
+            } catch (error) {
+              console.error("Error parsing stored session:", error);
+            }
+          }
+          
+          // If we couldn't restore from storage, create minimal user object
+          const userProfile: UserProfile = {
+            id: session.user.id,
+            username: session.user.email?.split('@')[0] || 'user',
+            email: session.user.email || '',
+            role: session.user.user_metadata?.role || 'staff',
+            fuelPumpId: metadataFuelPumpId,
+            fuelPumpName: session.user.user_metadata?.fuelPumpName,
+          };
+          
+          setUser(userProfile);
+          
+          // Store for future use
+          localStorage.setItem('fuel_pro_session', JSON.stringify({ user: userProfile }));
         } else {
-          console.log('User metadata updated with fuel pump ID:', userProfile.fuelPumpId);
+          console.log("Auth initialization - No authenticated session found");
+          // Check if we have stored session
+          const storedSession = localStorage.getItem('fuel_pro_session');
+          
+          if (storedSession) {
+            console.log("Auth initialization - Found stored session, checking if valid");
+            
+            try {
+              const parsedSession = JSON.parse(storedSession);
+              
+              if (parsedSession.user) {
+                console.log("Auth initialization - Has stored user, attempting to restore session");
+                
+                // Try to restore Supabase session before using stored data
+                const { data, error } = await supabase.auth.refreshSession();
+                
+                if (!error && data.session) {
+                  console.log("Auth initialization - Successfully refreshed Supabase session");
+                  
+                  setUser(parsedSession.user);
+                  setFuelPumpId(parsedSession.user.fuelPumpId || null);
+                } else {
+                  console.log("Auth initialization - Failed to refresh session, clearing stored data");
+                  localStorage.removeItem('fuel_pro_session');
+                  setUser(null);
+                  setFuelPumpId(null);
+                }
+              }
+            } catch (error) {
+              console.error("Error parsing stored session:", error);
+              localStorage.removeItem('fuel_pro_session');
+            }
+          }
         }
-      } catch (metadataError) {
-        console.error('Error updating user metadata:', metadataError);
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      }
+    };
+    
+    initializeAuth();
+    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log(`Auth state changed: ${event}`);
+        
+        if (event === 'SIGNED_IN' && session) {
+          console.log("User signed in");
+          
+          const metadataFuelPumpId = session.user.user_metadata?.fuelPumpId;
+          
+          const userProfile: UserProfile = {
+            id: session.user.id,
+            username: session.user.email?.split('@')[0] || 'user',
+            email: session.user.email || '',
+            role: session.user.user_metadata?.role || 'staff',
+            fuelPumpId: metadataFuelPumpId,
+            fuelPumpName: session.user.user_metadata?.fuelPumpName,
+          };
+          
+          setUser(userProfile);
+          setFuelPumpId(metadataFuelPumpId || null);
+          
+          // Store for future use
+          localStorage.setItem('fuel_pro_session', JSON.stringify({ user: userProfile }));
+        } else if (event === 'SIGNED_OUT') {
+          console.log("User signed out");
+          localStorage.removeItem('fuel_pro_session');
+          setUser(null);
+          setFuelPumpId(null);
+        }
+      }
+    );
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+  
+  const login = async (userId: string, userData: any, rememberMe: boolean = false): Promise<boolean> => {
+    try {
+      if (!userData) {
+        console.error("Login failed: No user data provided");
+        return false;
       }
       
-      toast({
-        title: "Login successful",
-        description: `Welcome back, ${userProfile.username}!`,
-      });
+      console.log("Login - Received user data:", userData);
+      
+      // Always include the default fuel pump ID if none provided
+      if (!userData.fuelPumpId) {
+        console.log("Login - No fuel pump ID provided, using default");
+        userData.fuelPumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
+      }
+      
+      setUser(userData);
+      setFuelPumpId(userData.fuelPumpId || null);
+      
+      // Store in local storage for persistence
+      if (rememberMe) {
+        console.log("Login - Storing session with 'remember me'");
+        localStorage.setItem('fuel_pro_session', JSON.stringify({ user: userData }));
+      } else {
+        console.log("Login - Storing session without 'remember me'");
+        // Still store the session, but with a session cookie
+        localStorage.setItem('fuel_pro_session', JSON.stringify({ user: userData }));
+      }
       
       return true;
     } catch (error) {
-      console.error('Login error:', error);
-      toast({
-        title: "Login failed",
-        description: "An error occurred during login",
-        variant: "destructive",
-      });
+      console.error("Error during login:", error);
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
-
-  const logout = async () => {
+  
+  const logout = async (): Promise<void> => {
     try {
-      // Clear session from localStorage
+      await supabase.auth.signOut();
       localStorage.removeItem('fuel_pro_session');
-      
-      // Reset state
       setUser(null);
-      setSession(null);
-      setIsSuperAdmin(false);
-      setIsAdmin(false);
-      setIsStaff(false);
       setFuelPumpId(null);
-      setFuelPumpName(null);
       
       toast({
         title: "Logged out",
-        description: "You have been successfully logged out.",
+        description: "You have been logged out successfully",
       });
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Error during logout:", error);
       toast({
-        title: "Logout failed",
-        description: "An error occurred during logout",
-        variant: "destructive",
+        title: "Error",
+        description: "Failed to logout. Please try again.",
+        variant: "destructive"
       });
     }
   };
-
+  
+  // Derive authentication status and roles from user object
+  const isAuthenticated = !!user;
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isAdmin = user?.role === 'admin' || isSuperAdmin;
+  const isStaff = user?.role === 'staff' || isAdmin;
+  
+  const value = {
+    user,
+    fuelPumpId, // Expose fuel pump ID directly
+    isAuthenticated,
+    isSuperAdmin,
+    isAdmin,
+    isStaff,
+    login,
+    logout
+  };
+  
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated: !!user, 
-      isSuperAdmin,
-      isAdmin,
-      isStaff,
-      fuelPumpId,
-      fuelPumpName,
-      login, 
-      logout, 
-      isLoading, 
-      session 
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
-
-export default AuthContext;
