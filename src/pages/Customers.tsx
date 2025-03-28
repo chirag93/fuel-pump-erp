@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,29 +17,9 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Users, FileText, Plus, Search, Download } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-
-interface Customer {
-  id: string;
-  name: string;
-  gst: string;
-  email: string;
-  phone: string;
-  contact: string;
-  balance: number;
-  created_at?: string;
-}
-
-interface IndentBooklet {
-  id: string;
-  customer_id: string;
-  start_number: string;
-  end_number: string;
-  issued_date: string;
-  total_indents: number;
-  used_indents: number;
-  status: 'Active' | 'Completed' | 'Cancelled';
-}
+import { getAllCustomers, createCustomer } from '@/integrations/customers';
+import { Customer } from '@/integrations/supabase/client';
+import { getFuelPumpId } from '@/integrations/utils';
 
 const Customers = () => {
   const navigate = useNavigate();
@@ -46,7 +27,8 @@ const Customers = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [booklets, setBooklets] = useState<IndentBooklet[]>([]);
+  const [booklets, setBooklets] = useState<any[]>([]);
+  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
   
   const [newCustomer, setNewCustomer] = useState<Partial<Customer>>({
     name: '',
@@ -58,55 +40,61 @@ const Customers = () => {
   });
   
   useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        setIsLoading(true);
-        
-        const { data, error } = await supabase
-          .from('customers')
-          .select('*')
-          .order('name');
-          
-        if (error) {
-          throw error;
-        }
-        
-        if (data) {
-          setCustomers(data as Customer[]);
-        }
-      } catch (error) {
-        console.error('Error fetching customers:', error);
+    const initFuelPumpId = async () => {
+      const id = await getFuelPumpId();
+      setFuelPumpId(id);
+      if (id) {
+        fetchCustomers();
+        fetchBooklets(id);
+      } else {
+        console.log('No fuel pump ID available');
         toast({
-          title: "Error",
-          description: "Failed to load customer data. Please try again.",
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to view customers",
           variant: "destructive"
         });
-      } finally {
         setIsLoading(false);
       }
     };
     
-    const fetchBooklets = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('indent_booklets')
-          .select('*');
-          
-        if (error) {
-          throw error;
-        }
-        
-        if (data) {
-          setBooklets(data as IndentBooklet[]);
-        }
-      } catch (error) {
-        console.error('Error fetching booklets:', error);
-      }
-    };
-    
-    fetchCustomers();
-    fetchBooklets();
+    initFuelPumpId();
   }, []);
+  
+  const fetchCustomers = async () => {
+    try {
+      setIsLoading(true);
+      const customerData = await getAllCustomers();
+      setCustomers(customerData);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load customer data. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const fetchBooklets = async (pumpId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('indent_booklets')
+        .select('*')
+        .eq('fuel_pump_id', pumpId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setBooklets(data);
+      }
+    } catch (error) {
+      console.error('Error fetching booklets:', error);
+    }
+  };
   
   const handleAddCustomer = async () => {
     try {
@@ -120,28 +108,18 @@ const Customers = () => {
         return;
       }
       
-      const { data, error } = await supabase
-        .from('customers')
-        .insert([{
-          name: newCustomer.name,
-          gst: newCustomer.gst,
-          email: newCustomer.email,
-          phone: newCustomer.phone,
-          contact: newCustomer.contact,
-          balance: newCustomer.balance || 0
-        }])
-        .select();
-        
-      if (error) {
-        throw error;
-      }
+      const createdCustomer = await createCustomer({
+        name: newCustomer.name,
+        gst: newCustomer.gst,
+        email: newCustomer.email,
+        phone: newCustomer.phone,
+        contact: newCustomer.contact,
+        balance: newCustomer.balance || 0,
+        fuel_pump_id: fuelPumpId as string
+      });
       
-      if (data) {
-        setCustomers([...customers, data[0] as Customer]);
-        toast({
-          title: "Success",
-          description: "Customer added successfully"
-        });
+      if (createdCustomer) {
+        setCustomers([...customers, createdCustomer]);
         setIsDialogOpen(false);
         setNewCustomer({
           name: '',
@@ -341,7 +319,6 @@ const Customers = () => {
           />
         </div>
       </div>
-      
       
       {isLoading ? (
         <div className="flex items-center justify-center h-64">

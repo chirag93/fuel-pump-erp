@@ -5,10 +5,10 @@ import { ChevronLeft, UserRound, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { Customer } from '@/integrations/supabase/client';
 import { getAllCustomers } from '@/integrations/customers';
+import { getFuelPumpId } from '@/integrations/utils';
 
 const MobileCustomers = () => {
   const { toast } = useToast();
@@ -17,29 +17,46 @@ const MobileCustomers = () => {
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
 
   // Fetch customers from the database
   useEffect(() => {
-    const fetchCustomers = async () => {
-      setIsLoading(true);
-      try {
-        const customerData = await getAllCustomers();
-        setCustomers(customerData);
-        setFilteredCustomers(customerData);
-      } catch (error) {
-        console.error('Error fetching customers:', error);
+    const initFuelPumpId = async () => {
+      const id = await getFuelPumpId();
+      setFuelPumpId(id);
+      if (id) {
+        fetchCustomers();
+      } else {
+        console.log('No fuel pump ID available');
         toast({
-          title: "Error",
-          description: "Failed to load customers. Please try again.",
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to view customers",
           variant: "destructive"
         });
-      } finally {
         setIsLoading(false);
       }
     };
     
-    fetchCustomers();
+    initFuelPumpId();
   }, [toast]);
+
+  const fetchCustomers = async () => {
+    setIsLoading(true);
+    try {
+      const customerData = await getAllCustomers();
+      setCustomers(customerData);
+      setFilteredCustomers(customerData);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load customers. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Handle search
   useEffect(() => {

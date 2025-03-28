@@ -10,6 +10,16 @@ export const getAllCustomers = async (): Promise<Customer[]> => {
   try {
     const fuelPumpId = await getFuelPumpId();
     
+    if (!fuelPumpId) {
+      console.warn('No fuel pump ID available, cannot fetch customers');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to view customers",
+        variant: "destructive"
+      });
+      return [];
+    }
+    
     const { data, error } = await supabase
       .from('customers')
       .select('*')
@@ -37,6 +47,16 @@ export const getCustomerById = async (id: string): Promise<Customer | null> => {
     console.log('API getCustomerById called for ID:', id);
     const fuelPumpId = await getFuelPumpId();
     
+    if (!fuelPumpId) {
+      console.warn('No fuel pump ID available, cannot fetch customer');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to view customer details",
+        variant: "destructive"
+      });
+      return null;
+    }
+    
     const { data, error } = await supabase
       .from('customers')
       .select('*')
@@ -63,6 +83,16 @@ export const getCustomerById = async (id: string): Promise<Customer | null> => {
 export const createCustomer = async (customerData: Omit<Customer, 'id' | 'created_at'>): Promise<Customer | null> => {
   try {
     const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.warn('No fuel pump ID available, cannot create customer');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to add customers",
+        variant: "destructive"
+      });
+      return null;
+    }
     
     const { data, error } = await supabase
       .from('customers')
@@ -94,10 +124,23 @@ export const createCustomer = async (customerData: Omit<Customer, 'id' | 'create
  */
 export const updateCustomer = async (id: string, customerData: Partial<Customer>): Promise<Customer | null> => {
   try {
+    const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.warn('No fuel pump ID available, cannot update customer');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to update customers",
+        variant: "destructive"
+      });
+      return null;
+    }
+    
     const { data, error } = await supabase
       .from('customers')
       .update(customerData)
       .eq('id', id)
+      .eq('fuel_pump_id', fuelPumpId)
       .select()
       .single();
       
@@ -125,10 +168,23 @@ export const updateCustomer = async (id: string, customerData: Partial<Customer>
  */
 export const updateCustomerBalance = async (id: string, newBalance: number): Promise<boolean> => {
   try {
+    const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.warn('No fuel pump ID available, cannot update customer balance');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to update customer balance",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
     const { error } = await supabase
       .from('customers')
       .update({ balance: newBalance })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('fuel_pump_id', fuelPumpId);
       
     if (error) throw error;
     return true;

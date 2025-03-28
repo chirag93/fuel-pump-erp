@@ -4,11 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Shift, Staff } from '@/types/shift';
 import { SelectedConsumable } from '@/components/shift/StartShiftForm';
+import { getFuelPumpId } from '@/integrations/utils';
 
 export function useShiftManagement() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
   const [newShift, setNewShift] = useState<Partial<Shift>>({
     date: new Date().toISOString().split('T')[0],
     start_time: new Date().toISOString(),
@@ -21,38 +23,66 @@ export function useShiftManagement() {
   });
 
   useEffect(() => {
-    const fetchStaff = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('staff')
-          .select('id, name, staff_numeric_id, role');
-          
-        if (error) {
-          throw error;
-        }
-        
-        if (data) {
-          setStaffList(data);
-        }
-      } catch (error) {
-        console.error('Error fetching staff:', error);
+    const initFuelPumpId = async () => {
+      const id = await getFuelPumpId();
+      setFuelPumpId(id);
+      if (id) {
+        fetchStaffList(id);
+      } else {
+        console.log('No fuel pump ID available');
         toast({
-          title: "Error loading staff data",
-          description: "Failed to load staff data from the database.",
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to manage shifts",
           variant: "destructive"
         });
       }
     };
     
-    fetchStaff();
+    initFuelPumpId();
   }, []);
 
-  useEffect(() => {
-    fetchShifts();
-  }, []);
+  const fetchStaffList = async (pumpId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('id, name, staff_numeric_id, role')
+        .eq('fuel_pump_id', pumpId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setStaffList(data);
+      }
+      
+      // After fetching staff, fetch shifts
+      fetchShifts(pumpId);
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+      toast({
+        title: "Error loading staff data",
+        description: "Failed to load staff data from the database.",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+    }
+  };
   
-  const fetchShifts = async () => {
+  const fetchShifts = async (pumpId: string = fuelPumpId || '') => {
     setIsLoading(true);
+    
+    if (!pumpId) {
+      console.warn('No fuel pump ID available, cannot fetch shifts');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to view shifts",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       const { data: shiftsData, error: shiftsError } = await supabase
         .from('shifts')
@@ -64,7 +94,8 @@ export function useShiftManagement() {
           end_time,
           status,
           created_at
-        `);
+        `)
+        .eq('fuel_pump_id', pumpId);
         
       if (shiftsError) {
         throw shiftsError;
@@ -82,12 +113,14 @@ export function useShiftManagement() {
             .from('staff')
             .select('name, staff_numeric_id')
             .eq('id', shift.staff_id)
+            .eq('fuel_pump_id', pumpId)
             .single();
             
           const { data: readingsData } = await supabase
             .from('readings')
             .select('*')
             .eq('shift_id', shift.id)
+            .eq('fuel_pump_id', pumpId)
             .single();
             
           return {
@@ -103,7 +136,8 @@ export function useShiftManagement() {
             card_sales: readingsData?.card_sales || null,
             upi_sales: readingsData?.upi_sales || null,
             cash_sales: readingsData?.cash_sales || null,
-            testing_fuel: readingsData?.testing_fuel || null
+            testing_fuel: readingsData?.testing_fuel || null,
+            fuel_pump_id: pumpId
           } as Shift;
         })
       );
@@ -125,6 +159,15 @@ export function useShiftManagement() {
 
   const handleAddShift = async (selectedConsumables: SelectedConsumable[] = []) => {
     try {
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to manage shifts",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
       if (!newShift.staff_id || !newShift.pump_id || !newShift.opening_reading) {
         toast({
           title: "Missing information",
@@ -142,7 +185,8 @@ export function useShiftManagement() {
           staff_id: newShift.staff_id,
           shift_type: newShift.shift_type || 'day',
           start_time: new Date().toISOString(),
-          status: 'active'
+          status: 'active',
+          fuel_pump_id: fuelPumpId
         }])
         .select();
         
@@ -163,7 +207,8 @@ export function useShiftManagement() {
           date: newShift.date,
           opening_reading: newShift.opening_reading,
           closing_reading: null,
-          cash_given: newShift.starting_cash_balance || 0
+          cash_given: newShift.starting_cash_balance || 0,
+          fuel_pump_id: fuelPumpId
         }]);
         
       if (readingError) {
@@ -178,6 +223,7 @@ export function useShiftManagement() {
             .from('consumables')
             .select('quantity')
             .eq('id', consumable.id)
+            .eq('fuel_pump_id', fuelPumpId)
             .single();
             
           if (inventoryError) throw inventoryError;
@@ -202,7 +248,8 @@ export function useShiftManagement() {
           const { error: updateError } = await supabase
             .from('consumables')
             .update({ quantity: inventoryData.quantity - consumable.quantity })
-            .eq('id', consumable.id);
+            .eq('id', consumable.id)
+            .eq('fuel_pump_id', fuelPumpId);
             
           if (updateError) throw updateError;
         }
@@ -221,7 +268,8 @@ export function useShiftManagement() {
         upi_sales: null,
         cash_sales: null,
         testing_fuel: null,
-        status: 'active'
+        status: 'active',
+        fuel_pump_id: fuelPumpId
       };
       
       setShifts([...shifts, newShiftWithName]);
@@ -265,6 +313,7 @@ export function useShiftManagement() {
     fetchShifts,
     handleAddShift,
     activeShifts,
-    completedShifts
+    completedShifts,
+    fuelPumpId
   };
 }

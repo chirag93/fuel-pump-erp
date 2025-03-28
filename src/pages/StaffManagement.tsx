@@ -10,6 +10,7 @@ import { toast } from '@/components/ui/use-toast';
 import StaffForm from '@/components/staff/StaffForm';
 import { supabase } from '@/integrations/supabase/client';
 import { Json } from '@/integrations/supabase/types';
+import { getFuelPumpId } from '@/integrations/utils';
 
 // Staff interface reflecting the Supabase schema
 interface Staff {
@@ -22,6 +23,7 @@ interface Staff {
   joining_date: string;
   assigned_pumps: string[];
   features?: string[];
+  fuel_pump_id?: string;
 }
 
 const StaffManagement = () => {
@@ -30,6 +32,7 @@ const StaffManagement = () => {
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
   
   // Helper function to safely convert Json to string array
   const convertJsonToStringArray = (jsonValue: Json | null): string[] => {
@@ -54,15 +57,36 @@ const StaffManagement = () => {
     
     return [];
   };
+
+  useEffect(() => {
+    const initFuelPumpId = async () => {
+      const id = await getFuelPumpId();
+      setFuelPumpId(id);
+      if (id) {
+        fetchStaff(id);
+      } else {
+        console.log('No fuel pump ID available');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to view staff",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+      }
+    };
+    
+    initFuelPumpId();
+  }, []);
   
   // Fetch staff data from Supabase
-  const fetchStaff = useCallback(async () => {
+  const fetchStaff = useCallback(async (pumpId: string) => {
     setIsLoading(true);
     try {
-      console.log("Fetching staff data...");
+      console.log("Fetching staff data for fuel pump ID:", pumpId);
       const { data, error } = await supabase
         .from('staff')
-        .select('*');
+        .select('*')
+        .eq('fuel_pump_id', pumpId);
       
       if (error) {
         throw error;
@@ -91,10 +115,6 @@ const StaffManagement = () => {
     }
   }, []);
   
-  useEffect(() => {
-    fetchStaff();
-  }, [fetchStaff]);
-  
   // Filter staff based on search term
   const filteredStaff = staff.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,14 +134,27 @@ const StaffManagement = () => {
 
   const handleSaveStaff = async (staffData: any) => {
     try {
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to manage staff",
+          variant: "destructive"
+        });
+        return;
+      }
+
       console.log("Saving staff data via API:", staffData);
+      
+      // Ensure fuel_pump_id is set
+      staffData.fuel_pump_id = fuelPumpId;
       
       if (editingStaff) {
         // Update existing staff
         const { error } = await supabase
           .from('staff')
           .update(staffData)
-          .eq('id', editingStaff.id);
+          .eq('id', editingStaff.id)
+          .eq('fuel_pump_id', fuelPumpId);
           
         if (error) throw error;
         
@@ -149,7 +182,9 @@ const StaffManagement = () => {
       }
       setFormOpen(false);
       // Refresh the staff list to ensure it's up to date with the latest data from the API
-      fetchStaff();
+      if (fuelPumpId) {
+        fetchStaff(fuelPumpId);
+      }
     } catch (error: any) {
       console.error('Error saving staff:', error);
       toast({
@@ -161,12 +196,22 @@ const StaffManagement = () => {
   };
 
   const handleDeleteStaff = async (id: string) => {
+    if (!fuelPumpId) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to manage staff",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (confirm("Are you sure you want to remove this staff member?")) {
       try {
         const { error } = await supabase
           .from('staff')
           .delete()
-          .eq('id', id);
+          .eq('id', id)
+          .eq('fuel_pump_id', fuelPumpId);
           
         if (error) throw error;
         
@@ -175,8 +220,10 @@ const StaffManagement = () => {
           description: "Staff member has been removed" 
         });
         
-        // Fetch updated staff list from the API instead of manipulating local state
-        fetchStaff();
+        // Fetch updated staff list from the API
+        if (fuelPumpId) {
+          fetchStaff(fuelPumpId);
+        }
       } catch (error) {
         console.error('Error deleting staff:', error);
         toast({
