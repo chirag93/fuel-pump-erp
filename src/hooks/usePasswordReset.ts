@@ -129,12 +129,25 @@ export const usePasswordReset = () => {
       
       console.log('Attempting to reset password for email:', userEmail);
       
-      // Check if the user already exists in auth
-      const { data: userData, error: userCheckError } = await supabase.auth.admin.getUserByEmail(userEmail);
+      // Check if the user exists in auth by listing users and filtering by email
+      // This is a workaround since getUserByEmail is not available
+      const { data: userList, error: listError } = await supabase.auth.admin.listUsers();
+      
+      if (listError) {
+        console.error('Error listing users:', listError);
+        setError(listError.message);
+        return {
+          success: false,
+          error: listError.message
+        };
+      }
+      
+      // Find the user with matching email
+      const existingUser = userList.users.find(user => user.email === userEmail);
       
       let userId;
       
-      if (userCheckError || !userData?.user) {
+      if (!existingUser) {
         console.log('User does not exist in auth, creating a new user');
         
         // User doesn't exist, so create one
@@ -159,7 +172,7 @@ export const usePasswordReset = () => {
         userId = newUser.user.id;
       } else {
         // User exists, update their password
-        userId = userData.user.id;
+        userId = existingUser.id;
         
         const { error: updateError } = await supabase.auth.admin.updateUserById(
           userId,
