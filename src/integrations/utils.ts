@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -13,7 +12,7 @@ export const getFuelPumpId = async (): Promise<string | null> => {
     
     if (!session?.user) {
       console.error('No authenticated user found');
-      return createDefaultFuelPumpIfNeeded();
+      return await getFallbackFuelPumpId();
     }
     
     console.log(`Getting fuel pump ID for user: ${session.user.email}`);
@@ -40,7 +39,7 @@ export const getFuelPumpId = async (): Promise<string | null> => {
         return firstPump.id;
       }
       
-      return await createDefaultFuelPumpIfNeeded();
+      return await getFallbackFuelPumpId();
     }
     
     // Get the fuel pump ID associated with this user's email
@@ -52,7 +51,7 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       
     if (error) {
       console.error('Error fetching fuel pump ID:', error);
-      return await createDefaultFuelPumpIfNeeded();
+      return await getFallbackFuelPumpId();
     }
     
     if (fuelPump?.id) {
@@ -60,11 +59,12 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       return fuelPump.id;
     } else {
       console.log(`No fuel pump found for email: ${session.user.email}`);
-      return await createDefaultFuelPumpIfNeeded();
+      // Create a default fuel pump for this user
+      return await createDefaultFuelPumpIfNeeded(session.user.email);
     }
   } catch (error) {
     console.error('Error getting fuel pump ID:', error);
-    return await createDefaultFuelPumpIfNeeded();
+    return await getFallbackFuelPumpId();
   }
 };
 
@@ -105,7 +105,7 @@ const getFallbackFuelPumpId = async (): Promise<string | null> => {
  * Create a default fuel pump if none exists
  * This ensures that there is always at least one fuel pump to work with
  */
-const createDefaultFuelPumpIfNeeded = async (): Promise<string | null> => {
+const createDefaultFuelPumpIfNeeded = async (userEmail: string): Promise<string | null> => {
   try {
     // First check if any fuel pumps exist
     const { data: existingPumps, error: checkError } = await supabase
@@ -121,10 +121,6 @@ const createDefaultFuelPumpIfNeeded = async (): Promise<string | null> => {
     }
     
     console.log('No fuel pumps found, attempting to create a default one');
-    
-    // Get the current user's email
-    const { data: { session } } = await supabase.auth.getSession();
-    const userEmail = session?.user?.email || 'default@fuelpump.com';
     
     // Create a default fuel pump
     const { data: newPump, error: createError } = await supabase

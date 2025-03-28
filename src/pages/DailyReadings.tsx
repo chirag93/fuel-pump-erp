@@ -82,22 +82,17 @@ const DailyReadings = () => {
             description: `Successfully connected to fuel pump ID: ${pumpId.substring(0, 8)}...`
           });
         } else {
-          console.warn("No fuel pump ID available, displaying sample data");
-          // Show sample data if no pump ID
-          setReadings(getSampleReadings());
-          setFuelTypes(['Petrol', 'Diesel']);
+          console.warn("No fuel pump ID available");
           toast({
-            title: "Using sample data",
-            description: "No fuel pump configured. Displaying sample data for demonstration."
+            title: "No fuel pump configured",
+            description: "Could not find or create a fuel pump. Please check your account settings."
           });
         }
       } catch (error) {
         console.error("Error during initialization:", error);
-        setReadings(getSampleReadings());
-        setFuelTypes(['Petrol', 'Diesel']);
         toast({
           title: "Error connecting to fuel pump",
-          description: "Using sample data for demonstration",
+          description: "Failed to connect to the database",
           variant: "destructive"
         });
       } finally {
@@ -108,44 +103,6 @@ const DailyReadings = () => {
     
     initializeData();
   }, []);
-
-  // Function to generate sample readings data for demonstration
-  const getSampleReadings = (): DailyReading[] => {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    return [
-      {
-        id: 'sample-1',
-        date: today.toISOString().split('T')[0],
-        fuel_type: 'Petrol',
-        dip_reading: 120,
-        net_stock: 12000,
-        opening_stock: 15000,
-        receipt_quantity: 0,
-        closing_stock: 12000,
-        sales_per_tank_stock: 3000,
-        actual_meter_sales: 2950,
-        stock_variation: -50,
-        tank_number: 1
-      },
-      {
-        id: 'sample-2',
-        date: yesterday.toISOString().split('T')[0],
-        fuel_type: 'Diesel',
-        dip_reading: 85,
-        net_stock: 8500,
-        opening_stock: 10000,
-        receipt_quantity: 0,
-        closing_stock: 8500,
-        sales_per_tank_stock: 1500,
-        actual_meter_sales: 1480,
-        stock_variation: -20,
-        tank_number: 1
-      }
-    ];
-  };
 
   const fetchFuelTypes = async (pumpId: string | null = fuelPumpId) => {
     try {
@@ -159,8 +116,6 @@ const DailyReadings = () => {
       if (pumpId) {
         console.log(`Filtering fuel types by fuel_pump_id: ${pumpId}`);
         query = query.eq('fuel_pump_id', pumpId);
-      } else {
-        console.log('No fuel pump ID available, fetching all fuel settings');
       }
       
       const { data, error } = await query;
@@ -196,8 +151,8 @@ const DailyReadings = () => {
       console.log(`DailyReadings - Fetching readings with fuel pump ID: ${pumpId || 'none'}`);
       
       if (!pumpId) {
-        console.log('No fuel pump ID available, using sample data');
-        setReadings(getSampleReadings());
+        console.log('No fuel pump ID available');
+        setReadings([]);
         return;
       }
       
@@ -228,10 +183,10 @@ const DailyReadings = () => {
       console.error('Error fetching readings:', error);
       toast({
         title: "Error",
-        description: "Failed to load readings. Using sample data instead.",
+        description: "Failed to load readings from database.",
         variant: "destructive"
       });
-      setReadings(getSampleReadings());
+      setReadings([]);
     } finally {
       setIsLoading(false);
     }
@@ -617,7 +572,7 @@ const DailyReadings = () => {
                     `Using fuel pump ID: ${fuelPumpId.substring(0, 8)}...` : 
                     isInitializing ? 
                       'Initializing fuel pump connection...' :
-                      'Using sample data for demonstration'}
+                      'No fuel pump ID available'}
                 </p>
               </div>
               <Button onClick={() => handleOpenDialog()} variant="outline">

@@ -34,38 +34,6 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
       if (fuelPumpId) {
         console.log(`Filtering tank unloads by fuel_pump_id: ${fuelPumpId}`);
         query = query.eq('fuel_pump_id', fuelPumpId);
-      } else {
-        console.log('No fuel pump ID available, attempting to fetch fallback data');
-        
-        // If no data is found with null fuel_pump_id, try to get sample data
-        const { data: testData, error: testError } = await query;
-        
-        if (testError || !testData || testData.length === 0) {
-          console.log('No tank unloads found, creating sample data for display');
-          // Create some sample data
-          const sampleData: TankUnload[] = [
-            {
-              id: 'sample-1',
-              vehicle_number: 'TN01AB1234',
-              fuel_type: 'Petrol',
-              quantity: 5000,
-              amount: 500000,
-              date: new Date().toISOString()
-            },
-            {
-              id: 'sample-2',
-              vehicle_number: 'TN02CD5678',
-              fuel_type: 'Diesel',
-              quantity: 8000,
-              amount: 720000,
-              date: new Date(Date.now() - 86400000).toISOString() // Yesterday
-            }
-          ];
-          
-          setRecentUnloads(sampleData);
-          setIsLoading(false);
-          return;
-        }
       }
       
       // Only apply limit if not showing all records
@@ -83,54 +51,15 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
         console.log(`Retrieved ${data.length} tank unloads`);
         setRecentUnloads(data as TankUnload[]);
       } else {
-        console.log('No tank unloads data returned, creating sample data');
-        // Create some sample data if none exists
-        const sampleData: TankUnload[] = [
-          {
-            id: 'sample-1',
-            vehicle_number: 'TN01AB1234',
-            fuel_type: 'Petrol',
-            quantity: 5000,
-            amount: 500000,
-            date: new Date().toISOString()
-          },
-          {
-            id: 'sample-2',
-            vehicle_number: 'TN02CD5678',
-            fuel_type: 'Diesel',
-            quantity: 8000,
-            amount: 720000,
-            date: new Date(Date.now() - 86400000).toISOString() // Yesterday
-          }
-        ];
-        
-        setRecentUnloads(sampleData);
+        console.log('No tank unloads data returned');
+        // Only show empty array instead of sample data
+        setRecentUnloads([]);
       }
     } catch (err) {
       console.error('Error fetching unloads:', err);
       setError(err instanceof Error ? err : new Error('Unknown error occurred'));
-      
-      // Set fallback sample data
-      const sampleData: TankUnload[] = [
-        {
-          id: 'sample-1',
-          vehicle_number: 'TN01AB1234',
-          fuel_type: 'Petrol',
-          quantity: 5000,
-          amount: 500000,
-          date: new Date().toISOString()
-        },
-        {
-          id: 'sample-2',
-          vehicle_number: 'TN02CD5678',
-          fuel_type: 'Diesel',
-          quantity: 8000,
-          amount: 720000,
-          date: new Date(Date.now() - 86400000).toISOString() // Yesterday
-        }
-      ];
-      
-      setRecentUnloads(sampleData);
+      // Return empty array instead of sample data
+      setRecentUnloads([]);
     } finally {
       setIsLoading(false);
     }
