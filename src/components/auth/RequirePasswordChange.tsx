@@ -58,15 +58,27 @@ const RequirePasswordChange = ({ onComplete, userEmail }: RequirePasswordChangeP
       }
 
       // Update the fuel pump status back to active
-      const { error: fuelPumpError } = await supabase
+      const { data: fuelPump, error: fetchError } = await supabase
         .from('fuel_pumps')
-        .update({ status: 'active' })
-        .eq('email', userEmail);
-      
-      if (fuelPumpError) {
-        console.warn('Failed to update fuel pump status after password change', fuelPumpError);
+        .select('*')
+        .eq('email', userEmail)
+        .maybeSingle();
+        
+      if (fetchError) {
+        console.warn('Failed to fetch fuel pump for status update:', fetchError);
+      } else if (fuelPump) {
+        const { error: fuelPumpError } = await supabase
+          .from('fuel_pumps')
+          .update({ status: 'active' })
+          .eq('id', fuelPump.id);
+        
+        if (fuelPumpError) {
+          console.warn('Failed to update fuel pump status after password change', fuelPumpError);
+        } else {
+          console.log('Successfully updated fuel pump status to active');
+        }
       } else {
-        console.log('Successfully updated fuel pump status to active');
+        console.warn('Fuel pump not found for email:', userEmail);
       }
       
       toast({

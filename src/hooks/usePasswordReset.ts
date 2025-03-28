@@ -102,7 +102,7 @@ export const usePasswordReset = () => {
     }
   };
 
-  // Function for admin-initiated forced password reset
+  // Function for admin-initiated forced password reset using the backend API
   const adminForcePasswordReset = async (
     userEmail: string,  
     tempPassword: string
@@ -127,41 +127,31 @@ export const usePasswordReset = () => {
         };
       }
       
-      // Check if user exists in auth table first
-      const { data: { users = [] } } = await supabase.auth.admin.listUsers();
-      const existingUser = users.find(u => u.email === userEmail);
+      console.log('Making admin reset password API call for email:', userEmail);
       
-      if (existingUser) {
-        console.log('Existing user found, updating password');
-        // Update user password using Supabase Auth Admin API
-        const { error: updateUserError } = await supabase.auth.admin.updateUserById(
-          existingUser.id,
-          { password: tempPassword }
-        );
-        
-        if (updateUserError) {
-          console.error('Error updating user password:', updateUserError);
-          return {
-            success: false,
-            error: 'Failed to update password. Admin role required.'
-          };
-        }
-      } else {
-        console.log('No existing user found, creating new user');
-        // Create a new user
-        const { error: createUserError } = await supabase.auth.admin.createUser({
+      // Use our backend API endpoint instead of direct Supabase admin calls
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin-reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           email: userEmail,
-          password: tempPassword,
-          email_confirm: true
-        });
-        
-        if (createUserError) {
-          console.error('Error creating user:', createUserError);
-          return {
-            success: false,
-            error: 'Failed to create user. Admin role required.'
-          };
-        }
+          newPassword: tempPassword
+        })
+      });
+      
+      const data = await response.json();
+      console.log('Admin reset password API response:', data);
+      
+      if (!response.ok || !data.success) {
+        const errorMessage = data.error || 'Failed to reset password. Please try again.';
+        console.error('Error from admin reset API:', errorMessage);
+        setError(errorMessage);
+        return {
+          success: false,
+          error: errorMessage
+        };
       }
 
       // Mark the fuel pump as requiring password change

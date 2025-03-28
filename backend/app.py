@@ -74,7 +74,7 @@ def supabase_admin_update_user_password(user_id, new_password):
         "password": new_password
     }
     response = requests.put(url, headers=headers, json=data)
-    return response.status_code == 200, response.json()
+    return response.status_code == 200, response.json() if response.status_code == 200 else response.text
 
 def supabase_get_user_by_email(email):
     """Get user by email using service role key"""
@@ -86,11 +86,30 @@ def supabase_get_user_by_email(email):
     response = requests.get(url, headers=headers)
     
     if response.status_code == 200:
-        users = response.json()
-        for user in users:
-            if user.get('email') == email:
-                return user
+        data = response.json()
+        users = data.get('users', []) if isinstance(data, dict) else data
+        
+        if users and isinstance(users, list):
+            for user in users:
+                if user.get('email') == email:
+                    return user
     return None
+
+def supabase_create_user(email, password):
+    """Create a new user with email and password using service role key"""
+    url = f"{SUPABASE_URL}/auth/v1/admin/users"
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "email": email,
+        "password": password,
+        "email_confirm": True
+    }
+    response = requests.post(url, headers=headers, json=data)
+    return response.status_code in [200, 201], response.json() if response.status_code in [200, 201] else response.text
 
 # Helper function for password hashing
 def hash_password(password, salt=None):
@@ -157,35 +176,48 @@ def admin_reset_password():
     print(f"Processing admin password reset for email: {email}")
     
     try:
+        # Check if Supabase service role key is available
+        if not SUPABASE_SERVICE_ROLE_KEY:
+            return jsonify({
+                'success': False, 
+                'error': 'Supabase service role key is not configured'
+            }), 500
+        
         # Find the user in Supabase Auth
         user = supabase_get_user_by_email(email)
         
         if not user:
-            print(f"Error: User not found with email {email}")
+            print(f"User not found with email {email}, attempting to create new user")
             
             # Create the user in Supabase Auth
-            data = {
-                "email": email,
-                "password": new_password,
-                "email_confirm": True
-            }
+            success, response = supabase_create_user(email, new_password)
             
-            headers = {
-                "apikey": SUPABASE_SERVICE_ROLE_KEY,
-                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
-                "Content-Type": "application/json"
-            }
-            
-            response = requests.post(f"{SUPABASE_URL}/auth/v1/admin/users", headers=headers, json=data)
-            
-            if response.status_code != 201 and response.status_code != 200:
-                print(f"Error: Failed to create user: {response.text}")
-                return jsonify({'success': False, 'error': 'Failed to create user in auth system'}), 500
+            if not success:
+                print(f"Error: Failed to create user: {response}")
+                return jsonify({'success': False, 'error': f'Failed to create user: {response}'}), 500
                 
             print(f"Successfully created user for {email}")
             
             # Update fuel pump status
-            supabase_update('fuel_pumps', {'status': 'password_change_required'}, 'email', email)
+            params = {'email': f'eq.{email}'}
+            update_data = {'status': 'password_change_required'}
+            
+            headers = {
+                "apikey": SUPABASE_ANON_KEY,
+                "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
+                "Content-Type": "application/json",
+                "Prefer": "return=representation"
+            }
+            
+            update_response = requests.patch(
+                f"{SUPABASE_URL}/rest/v1/fuel_pumps", 
+                headers=headers, 
+                params=params, 
+                json=update_data
+            )
+            
+            if update_response.status_code != 200:
+                print(f"Warning: Failed to update fuel pump status: {update_response.text}")
             
             return jsonify({
                 'success': True, 
@@ -193,14 +225,37 @@ def admin_reset_password():
             })
             
         # If user exists, update the password
-        success, response = supabase_admin_update_user_password(user['id'], new_password)
+        user_id = user.get('id')
+        
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Invalid user data'}), 500
+            
+        success, response = supabase_admin_update_user_password(user_id, new_password)
         
         if not success:
             print(f"Error: Failed to update password: {response}")
-            return jsonify({'success': False, 'error': 'Failed to update password'}), 500
+            return jsonify({'success': False, 'error': f'Failed to update password: {response}'}), 500
         
         # Update the fuel pump status
-        supabase_update('fuel_pumps', {'status': 'password_change_required'}, 'email', email)
+        params = {'email': f'eq.{email}'}
+        update_data = {'status': 'password_change_required'}
+        
+        headers = {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+        }
+        
+        update_response = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/fuel_pumps", 
+            headers=headers, 
+            params=params, 
+            json=update_data
+        )
+        
+        if update_response.status_code != 200:
+            print(f"Warning: Failed to update fuel pump status: {update_response.text}")
         
         print(f"Password reset successful for user with email {email}")
         return jsonify({
@@ -567,4 +622,4 @@ if __name__ == '__main__':
     # Print the full URL to make it clear where the API is running
     print(f"API running at: http://localhost:5000")
     print("Make sure this is accessible from your frontend application")
-    app.run(debug=True, port=5000, host='0.0.0.0')  # Use host='0.0.0.0' to make it accessible outside localhost
+    app.run(debug=True, port=5000, host='0.0.0.0')
