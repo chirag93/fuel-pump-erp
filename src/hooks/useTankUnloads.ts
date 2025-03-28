@@ -35,7 +35,21 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
         console.log(`Filtering tank unloads by fuel_pump_id: ${fuelPumpId}`);
         query = query.eq('fuel_pump_id', fuelPumpId);
       } else {
-        console.log('No fuel pump ID available, fetching all records');
+        console.log('No fuel pump ID available, attempting to fetch first available fuel pump');
+        
+        // If no fuel pump ID, try to get the first one from the database as fallback
+        const { data: firstPump } = await supabase
+          .from('fuel_pumps')
+          .select('id')
+          .limit(1)
+          .single();
+          
+        if (firstPump?.id) {
+          console.log(`Fallback: Using first fuel pump ID: ${firstPump.id}`);
+          query = query.eq('fuel_pump_id', firstPump.id);
+        } else {
+          console.log('No fuel pumps found in database, fetching all records');
+        }
       }
       
       // Only apply limit if not showing all records
@@ -52,6 +66,9 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
       if (data) {
         console.log(`Retrieved ${data.length} tank unloads`);
         setRecentUnloads(data as TankUnload[]);
+      } else {
+        console.log('No tank unloads data returned');
+        setRecentUnloads([]);
       }
     } catch (err) {
       console.error('Error fetching unloads:', err);

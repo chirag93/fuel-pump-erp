@@ -26,8 +26,19 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       
     if (superAdmin) {
       console.log('User is a super admin, bypassing fuel pump filter');
-      // Super admins can see all data, but we'll return null to bypass
-      // the fuel pump filter in queries
+      // For testing purposes, let's get the first fuel pump for super admins
+      // This ensures they can see some data
+      const { data: firstPump, error: firstPumpError } = await supabase
+        .from('fuel_pumps')
+        .select('id')
+        .limit(1)
+        .single();
+        
+      if (!firstPumpError && firstPump) {
+        console.log(`Super admin: Using first available fuel pump: ${firstPump.id}`);
+        return firstPump.id;
+      }
+      
       return null;
     }
     
@@ -45,6 +56,7 @@ export const getFuelPumpId = async (): Promise<string | null> => {
     
     if (fuelPump?.id) {
       console.log(`Found fuel pump ID: ${fuelPump.id}`);
+      return fuelPump.id;
     } else {
       console.log(`No fuel pump found for email: ${session.user.email}`);
       
@@ -62,7 +74,7 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       }
     }
     
-    return fuelPump?.id || null;
+    return null;
   } catch (error) {
     console.error('Error getting fuel pump ID:', error);
     return null;
