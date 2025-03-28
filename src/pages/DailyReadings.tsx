@@ -82,14 +82,37 @@ const DailyReadings = () => {
             description: `Successfully connected to fuel pump ID: ${pumpId.substring(0, 8)}...`
           });
         } else {
-          console.warn("No fuel pump ID available, displaying sample data");
-          // Show sample data if no pump ID
-          setReadings(getSampleReadings());
-          setFuelTypes(['Petrol', 'Diesel']);
           toast({
-            title: "Using sample data",
-            description: "No fuel pump configured. Displaying sample data for demonstration."
+            title: "No fuel pump found",
+            description: "Creating a default fuel pump for your account...",
+            variant: "destructive"
           });
+          
+          // Try again after a short delay - this gives time for the default fuel pump to be created
+          setTimeout(async () => {
+            const retryPumpId = await getFuelPumpId();
+            console.log(`Retry getting fuel pump ID: ${retryPumpId || 'still none'}`);
+            
+            if (retryPumpId) {
+              setFuelPumpId(retryPumpId);
+              await fetchReadings(retryPumpId);
+              await fetchFuelTypes(retryPumpId);
+              toast({
+                title: "Fuel pump created",
+                description: `Successfully created and connected to fuel pump ID: ${retryPumpId.substring(0, 8)}...`
+              });
+            } else {
+              console.warn("Still no fuel pump ID available, displaying sample data");
+              setReadings(getSampleReadings());
+              setFuelTypes(['Petrol', 'Diesel']);
+              toast({
+                title: "Using sample data",
+                description: "Failed to create fuel pump. Using sample data for demonstration."
+              });
+            }
+            setIsLoading(false);
+            setIsInitializing(false);
+          }, 2000);
         }
       } catch (error) {
         console.error("Error during initialization:", error);
@@ -100,7 +123,6 @@ const DailyReadings = () => {
           description: "Using sample data for demonstration",
           variant: "destructive"
         });
-      } finally {
         setIsLoading(false);
         setIsInitializing(false);
       }
@@ -151,17 +173,16 @@ const DailyReadings = () => {
     try {
       console.log(`DailyReadings - Fetching fuel types with fuel pump ID: ${pumpId || 'none'}`);
       
+      if (!pumpId) {
+        console.log('No fuel pump ID available, using default fuel types');
+        setFuelTypes(['Petrol', 'Diesel']);
+        return;
+      }
+      
       let query = supabase
         .from('fuel_settings')
-        .select('fuel_type');
-        
-      // Apply fuel pump filter if available
-      if (pumpId) {
-        console.log(`Filtering fuel types by fuel_pump_id: ${pumpId}`);
-        query = query.eq('fuel_pump_id', pumpId);
-      } else {
-        console.log('No fuel pump ID available, fetching all fuel settings');
-      }
+        .select('fuel_type')
+        .eq('fuel_pump_id', pumpId);
       
       const { data, error } = await query;
         
@@ -196,18 +217,25 @@ const DailyReadings = () => {
       console.log(`DailyReadings - Fetching readings with fuel pump ID: ${pumpId || 'none'}`);
       
       if (!pumpId) {
-        console.log('No fuel pump ID available, using sample data');
-        setReadings(getSampleReadings());
-        return;
+        console.log('No fuel pump ID available, retrying with getFuelPumpId');
+        const newPumpId = await getFuelPumpId();
+        
+        if (!newPumpId) {
+          console.log('Still no fuel pump ID, using sample data');
+          setReadings(getSampleReadings());
+          setIsLoading(false);
+          return;
+        }
+        
+        pumpId = newPumpId;
+        setFuelPumpId(newPumpId);
       }
       
       let query = supabase
         .from('daily_readings')
         .select('*')
+        .eq('fuel_pump_id', pumpId)
         .order('date', { ascending: false });
-        
-      // Apply fuel pump filter if available
-      query = query.eq('fuel_pump_id', pumpId);
       
       const { data, error } = await query;
         
@@ -617,7 +645,7 @@ const DailyReadings = () => {
                     `Using fuel pump ID: ${fuelPumpId.substring(0, 8)}...` : 
                     isInitializing ? 
                       'Initializing fuel pump connection...' :
-                      'Using sample data for demonstration'}
+                      'No fuel pump ID found. Please make sure you have a fuel pump configured.'}
                 </p>
               </div>
               <Button onClick={() => handleOpenDialog()} variant="outline">
