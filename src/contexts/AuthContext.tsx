@@ -20,6 +20,8 @@ interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
+  isAdmin: boolean;
+  isStaff: boolean;
   fuelPumpId: string | null;
   fuelPumpName: string | null;
   login: (userId: string, userData: any, rememberMe?: boolean) => Promise<boolean>;
@@ -57,6 +59,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(getStoredSession());
   const [isLoading, setIsLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isStaff, setIsStaff] = useState(false);
   const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
   const [fuelPumpName, setFuelPumpName] = useState<string | null>(null);
 
@@ -68,8 +72,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(storedSession);
       setUser(storedSession.user);
       
-      // Check if user is a super admin
+      // Set role states
       setIsSuperAdmin(storedSession.user.role === 'super_admin');
+      setIsAdmin(storedSession.user.role === 'admin');
+      setIsStaff(storedSession.user.role === 'staff');
       
       // If not a super admin, fetch associated fuel pump
       if (storedSession.user.role !== 'super_admin') {
@@ -103,12 +109,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (userId: string, userData: any, rememberMe: boolean = false): Promise<boolean> => {
     setIsLoading(true);
     try {
+      // Ensure valid role is set
+      if (!['admin', 'staff', 'super_admin'].includes(userData.role)) {
+        userData.role = 'staff'; // Default to staff if no valid role
+      }
+      
       // Create user profile from user data
       const userProfile: UserProfile = {
         id: userId,
         username: userData.username || userData.email?.split('@')[0] || 'user',
         email: userData.email || '',
-        role: userData.role || 'staff'
+        role: userData.role
       };
       
       // Create session
@@ -126,8 +137,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userProfile);
       setSession(newSession);
       
-      // Check if user is a super admin
+      // Set role states
       setIsSuperAdmin(userProfile.role === 'super_admin');
+      setIsAdmin(userProfile.role === 'admin');
+      setIsStaff(userProfile.role === 'staff');
       
       // If not a super admin, fetch associated fuel pump
       if (userProfile.role !== 'super_admin') {
@@ -162,6 +175,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setSession(null);
       setIsSuperAdmin(false);
+      setIsAdmin(false);
+      setIsStaff(false);
       setFuelPumpId(null);
       setFuelPumpName(null);
       
@@ -184,6 +199,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user, 
       isAuthenticated: !!user, 
       isSuperAdmin,
+      isAdmin,
+      isStaff,
       fuelPumpId,
       fuelPumpName,
       login, 

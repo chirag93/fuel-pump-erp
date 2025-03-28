@@ -8,6 +8,7 @@ interface SuperAdminUser {
   id: string;
   email: string;
   username: string;
+  role: 'super_admin'; // Always super_admin for this context
 }
 
 interface SuperAdminAuthContextType {
@@ -66,7 +67,7 @@ export const SuperAdminAuthProvider: React.FC<{ children: React.ReactNode }> = (
     setIsLoading(true);
     
     try {
-      // Only accept the hardcoded super admin credentials - strict check
+      // Special case for hardcoded super admin account
       if (email === 'admin@example.com' && password === 'admin123') {
         console.log('Using hardcoded super admin credentials');
         
@@ -74,7 +75,8 @@ export const SuperAdminAuthProvider: React.FC<{ children: React.ReactNode }> = (
         const superAdminUser: SuperAdminUser = {
           id: 'sa-' + new Date().getTime(),
           email: email,
-          username: email.split('@')[0]
+          username: email.split('@')[0],
+          role: 'super_admin'
         };
         
         // Store session if rememberMe is true
@@ -97,60 +99,55 @@ export const SuperAdminAuthProvider: React.FC<{ children: React.ReactNode }> = (
         return true;
       }
       
-      // For all other emails, we'll check if they have super admin role in Supabase
-      // But first, ensure we don't match partial emails with "admin" in them
-      if (email.toLowerCase().includes('admin') && email !== 'admin@example.com') {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (!data?.user) {
-          throw new Error('Authentication failed');
-        }
-        
-        // Check if this user is a super admin
-        const isAdmin = await superAdminApi.checkSuperAdminAccess(data.user.id);
-        
-        if (!isAdmin) {
-          // Sign out since they don't have admin access
-          await supabase.auth.signOut();
-          throw new Error('You do not have Super Admin access');
-        }
-        
-        // Create super admin user object
-        const superAdminUser: SuperAdminUser = {
-          id: data.user.id,
-          email: data.user.email || email,
-          username: email.split('@')[0]
-        };
-        
-        // Store session if rememberMe is true
-        if (rememberMe) {
-          localStorage.setItem('super_admin_session', JSON.stringify({
-            user: superAdminUser,
-            accessToken: data.session?.access_token
-          }));
-        }
-        
-        // Update state
-        setUser(superAdminUser);
-        setIsAuthenticated(true);
-        
-        toast({
-          title: "Login successful",
-          description: `Welcome back, ${superAdminUser.username}!`,
-        });
-        
-        return true;
+      // For all other emails, check if they have super admin role in Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        throw error;
       }
       
-      // If we get here, this is not a super admin login attempt
-      return false;
+      if (!data?.user) {
+        throw new Error('Authentication failed');
+      }
+      
+      // Check if this user is a super admin
+      const isAdmin = await superAdminApi.checkSuperAdminAccess(data.user.id);
+      
+      if (!isAdmin) {
+        // Sign out since they don't have admin access
+        await supabase.auth.signOut();
+        throw new Error('You do not have Super Admin access');
+      }
+      
+      // Create super admin user object
+      const superAdminUser: SuperAdminUser = {
+        id: data.user.id,
+        email: data.user.email || email,
+        username: email.split('@')[0],
+        role: 'super_admin'
+      };
+      
+      // Store session if rememberMe is true
+      if (rememberMe) {
+        localStorage.setItem('super_admin_session', JSON.stringify({
+          user: superAdminUser,
+          accessToken: data.session?.access_token
+        }));
+      }
+      
+      // Update state
+      setUser(superAdminUser);
+      setIsAuthenticated(true);
+      
+      toast({
+        title: "Login successful",
+        description: `Welcome back, ${superAdminUser.username}!`,
+      });
+      
+      return true;
     } catch (error: any) {
       console.error('Super admin login error:', error);
       toast({

@@ -36,6 +36,7 @@ const SuperAdminLogin = () => {
     }
 
     try {
+      // Clearly signaling this is a super admin login attempt
       console.log('Attempting super admin login with:', email);
       const success = await login(email, password, rememberMe);
       
@@ -118,7 +119,7 @@ const SuperAdminLogin = () => {
               </Label>
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? 'Signing in...' : 'Sign In to Super Admin'}
             </Button>
           </form>
         </CardContent>

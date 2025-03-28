@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +11,6 @@ import { toast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import RequirePasswordChange from '@/components/auth/RequirePasswordChange';
-import { useSuperAdminAuth } from '@/superadmin/contexts/SuperAdminAuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -20,7 +20,6 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [passwordChangeRequired, setPasswordChangeRequired] = useState(false);
   const { login: regularLogin, isAuthenticated } = useAuth();
-  const { login: superAdminLogin } = useSuperAdminAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -46,20 +45,16 @@ const Login = () => {
     try {
       console.log(`Attempting login with email: ${email}`);
       
-      // Only check for super admin login if we're specifically trying to log in as admin@example.com
-      // This is the specific hardcoded super admin account
+      // Check if this is the super admin account - if so, redirect to super admin login
       if (email === 'admin@example.com') {
-        console.log('Attempting super admin login with special account');
-        const superAdminSuccess = await superAdminLogin(email, password, rememberMe);
-        
-        if (superAdminSuccess) {
-          navigate('/super-admin/dashboard', { replace: true });
-          setIsLoading(false);
-          return;
-        }
+        console.log('Redirecting to super admin login page');
+        navigate('/super-admin/login', { 
+          state: { email, attemptedLogin: true } 
+        });
+        setIsLoading(false);
+        return;
       }
       
-      // Proceed with regular login for all other emails
       // First check if this fuel pump account exists
       const { data: fuelPump, error: fuelPumpError } = await supabase
         .from('fuel_pumps')
@@ -129,12 +124,35 @@ const Login = () => {
           return;
         }
 
+        // Determine user role based on email pattern or profiles
+        let userRole = 'staff';
+        
+        // If the email matches the fuel pump email, they're an admin
+        if (data.user.email === fuelPump.email) {
+          userRole = 'admin';
+        } else {
+          // Check if this user is in the staff table
+          try {
+            const { data: staffData } = await supabase
+              .from('staff')
+              .select('role')
+              .eq('email', data.user.email)
+              .maybeSingle();
+              
+            if (staffData) {
+              userRole = staffData.role;
+            }
+          } catch (err) {
+            console.error('Error checking staff role:', err);
+          }
+        }
+
         // Call the login method from auth context to set up session
         await regularLogin(data.user.id, {
           id: data.user.id,
           username: email.split('@')[0],
           email: data.user.email,
-          role: 'admin' // Default role, should be retrieved from profiles table in a real app
+          role: userRole
         }, rememberMe);
         
         const from = location.state?.from?.pathname || '/dashboard';
@@ -161,12 +179,37 @@ const Login = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (sessionData?.session?.user) {
+        // Determine user role
+        let userRole = 'staff';
+        
+        // Check if this is an admin account
+        const { data: fuelPump } = await supabase
+          .from('fuel_pumps')
+          .select('email')
+          .eq('email', sessionData.session.user.email)
+          .maybeSingle();
+          
+        if (fuelPump) {
+          userRole = 'admin';
+        } else {
+          // Check if this user is in the staff table
+          const { data: staffData } = await supabase
+            .from('staff')
+            .select('role')
+            .eq('email', sessionData.session.user.email)
+            .maybeSingle();
+            
+          if (staffData) {
+            userRole = staffData.role;
+          }
+        }
+        
         // Call the login method from auth context to set up session
         await regularLogin(sessionData.session.user.id, {
           id: sessionData.session.user.id,
           username: email.split('@')[0],
           email: sessionData.session.user.email,
-          role: 'admin'
+          role: userRole
         }, rememberMe);
         
         const from = location.state?.from?.pathname || '/dashboard';
@@ -184,6 +227,14 @@ const Login = () => {
       setError('An error occurred after password change. Please try logging in again.');
     }
   };
+
+  // Auto-fill email if redirected from super admin login page
+  useEffect(() => {
+    if (location.state?.email && location.state?.attemptedLogin) {
+      setEmail(location.state.email);
+      setError('Please use the Super Admin login page to access super admin features.');
+    }
+  }, [location.state]);
 
   return (
     <>
@@ -255,6 +306,15 @@ const Login = () => {
                 {isLoading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
+            <div className="mt-4 text-center">
+              <Button 
+                variant="link" 
+                className="text-primary"
+                onClick={() => navigate('/super-admin/login')}
+              >
+                Super Admin Login
+              </Button>
+            </div>
           </CardContent>
           <CardFooter className="flex justify-between gap-2">
             <Button 
