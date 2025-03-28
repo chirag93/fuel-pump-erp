@@ -4,6 +4,8 @@ import CustomerHeader from '@/components/customers/CustomerHeader';
 import CustomerTabs from '@/components/customers/CustomerTabs';
 import { useCustomerData } from '@/components/customers/hooks/useCustomerData';
 import { useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 
 const CustomerDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +33,17 @@ const CustomerDetails = () => {
       console.log('No indent booklets found in customer details');
     }
   }, [indentBooklets]);
+
+  if (isLoading) {
+    return (
+      <Card className="mx-auto my-12 max-w-md">
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+          <p className="text-lg font-medium">Loading customer details...</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">

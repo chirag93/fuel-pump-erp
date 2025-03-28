@@ -14,6 +14,8 @@ export const getIndentBookletsByCustomerId = async (customerId: string): Promise
     const fuelPumpId = await getFuelPumpId();
     console.log('Using fuel pump ID for booklets query:', fuelPumpId || 'none');
     
+    console.log('Starting Supabase query to fetch indent booklets...');
+    
     let query = supabase
       .from('indent_booklets')
       .select('*')
@@ -23,13 +25,16 @@ export const getIndentBookletsByCustomerId = async (customerId: string): Promise
     if (fuelPumpId) {
       query = query.eq('fuel_pump_id', fuelPumpId);
     }
-      
+    
+    console.log('Executing query...');
     const { data, error } = await query;
       
     if (error) {
       console.error('Error from Supabase while fetching indent booklets:', error);
       throw error;
     }
+    
+    console.log('Raw booklets data returned:', data);
     
     // Transform the data to ensure status is one of the allowed types
     const typedBooklets: IndentBooklet[] = (data || []).map((booklet: any) => ({
@@ -42,6 +47,18 @@ export const getIndentBookletsByCustomerId = async (customerId: string): Promise
     // If empty, let's log extra information for debugging
     if (typedBooklets.length === 0) {
       console.log(`No booklets found for customer ${customerId} with fuel pump ${fuelPumpId}`);
+      
+      // Check if RLS policies might be blocking access
+      console.log('Checking if RLS policies are properly set up...');
+      const { data: rlsCheck, error: rlsError } = await supabase
+        .from('indent_booklets')
+        .select('count(*)');
+      
+      if (rlsError) {
+        console.error('Error checking RLS policies:', rlsError);
+      } else {
+        console.log('RLS policy check result:', rlsCheck);
+      }
       
       // Do an additional check without fuel pump filter to see if there are any booklets at all
       const { data: allData } = await supabase
