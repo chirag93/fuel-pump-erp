@@ -39,6 +39,23 @@ export const getIndentBookletsByCustomerId = async (customerId: string): Promise
     
     console.log(`Found ${typedBooklets.length} indent booklets:`, typedBooklets);
     
+    // If empty, let's log extra information for debugging
+    if (typedBooklets.length === 0) {
+      console.log(`No booklets found for customer ${customerId} with fuel pump ${fuelPumpId}`);
+      
+      // Do an additional check without fuel pump filter to see if there are any booklets at all
+      const { data: allData } = await supabase
+        .from('indent_booklets')
+        .select('*')
+        .eq('customer_id', customerId);
+        
+      if (allData && allData.length > 0) {
+        console.log(`Found ${allData.length} booklets without fuel pump filter`, allData);
+      } else {
+        console.log(`No booklets found for customer ${customerId} even without fuel pump filter`);
+      }
+    }
+    
     return typedBooklets;
   } catch (error) {
     console.error('Error fetching indent booklets:', error);

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Customer, Vehicle, Indent, IndentBooklet, Transaction } from '@/integrations/supabase/client';
 import { getCustomerById, updateCustomerBalance } from '@/integrations/customers';
@@ -18,17 +18,8 @@ export const useCustomerData = (customerId: string) => {
   const [isLoadingBooklets, setIsLoadingBooklets] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  useEffect(() => {
-    if (customerId) {
-      fetchCustomerData(customerId);
-      fetchVehicles(customerId);
-      fetchIndents(customerId);
-      fetchIndentBooklets(customerId);
-      fetchTransactions(customerId);
-    }
-  }, [customerId, refreshTrigger]);
-
-  const fetchCustomerData = async (id: string) => {
+  // Separate fetch functions for better control
+  const fetchCustomerData = useCallback(async (id: string) => {
     try {
       setIsLoading(true);
       console.log('Fetching customer data for ID:', id);
@@ -56,9 +47,9 @@ export const useCustomerData = (customerId: string) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const fetchVehicles = async (id: string) => {
+  const fetchVehicles = useCallback(async (id: string) => {
     try {
       console.log('Fetching vehicles for customer ID:', id);
       const data = await getVehiclesByCustomerId(id);
@@ -67,9 +58,9 @@ export const useCustomerData = (customerId: string) => {
     } catch (error) {
       console.error('Error fetching vehicles:', error);
     }
-  };
+  }, []);
 
-  const fetchIndents = async (id: string) => {
+  const fetchIndents = useCallback(async (id: string) => {
     try {
       console.log('Fetching indents for customer ID:', id);
       const data = await getIndentsByCustomerId(id);
@@ -78,9 +69,9 @@ export const useCustomerData = (customerId: string) => {
     } catch (error) {
       console.error('Error fetching indents:', error);
     }
-  };
+  }, []);
 
-  const fetchIndentBooklets = async (id: string) => {
+  const fetchIndentBooklets = useCallback(async (id: string) => {
     try {
       setIsLoadingBooklets(true);
       console.log('Fetching indent booklets for customer ID:', id);
@@ -97,9 +88,9 @@ export const useCustomerData = (customerId: string) => {
     } finally {
       setIsLoadingBooklets(false);
     }
-  };
+  }, []);
 
-  const fetchTransactions = async (id: string) => {
+  const fetchTransactions = useCallback(async (id: string) => {
     try {
       console.log('Fetching transactions for customer ID:', id);
       const data = await getTransactionsByCustomerId(id);
@@ -108,7 +99,18 @@ export const useCustomerData = (customerId: string) => {
     } catch (error) {
       console.error('Error fetching transactions:', error);
     }
-  };
+  }, []);
+
+  // Load all data when customerId changes or refresh is triggered
+  useEffect(() => {
+    if (customerId) {
+      fetchCustomerData(customerId);
+      fetchVehicles(customerId);
+      fetchIndents(customerId);
+      fetchIndentBooklets(customerId);
+      fetchTransactions(customerId);
+    }
+  }, [customerId, refreshTrigger, fetchCustomerData, fetchVehicles, fetchIndents, fetchIndentBooklets, fetchTransactions]);
 
   const updateBalance = async (newBalance: number) => {
     if (!customer || !customer.id) return false;
@@ -121,9 +123,10 @@ export const useCustomerData = (customerId: string) => {
     return success;
   };
 
-  const refreshData = () => {
+  const refreshData = useCallback(() => {
+    console.log('Refreshing customer data');
     setRefreshTrigger(prev => prev + 1);
-  };
+  }, []);
 
   return {
     customer,

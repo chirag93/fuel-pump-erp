@@ -5,6 +5,7 @@ import VehiclesTab from './VehiclesTab';
 import BookletsTab from './BookletsTab';
 import TransactionsTab from './TransactionsTab';
 import { Customer, Vehicle, IndentBooklet, Transaction } from '@/integrations/supabase/client';
+import { useState, useCallback } from 'react';
 
 interface TransactionWithDetails extends Transaction {
   vehicle_number?: string;
@@ -33,8 +34,20 @@ const CustomerTabs = ({
   refreshData,
   isLoadingBooklets
 }: CustomerTabsProps) => {
+  const [activeTab, setActiveTab] = useState("details");
+  
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value);
+    console.log(`Tab changed to: ${value}`);
+    
+    // If switching to booklets tab, log the booklets data for debugging
+    if (value === "booklets") {
+      console.log(`Indent booklets in tab (${indentBooklets.length}):`, indentBooklets);
+    }
+  }, [indentBooklets]);
+  
   return (
-    <Tabs defaultValue="details" className="space-y-4">
+    <Tabs defaultValue="details" className="space-y-4" onValueChange={handleTabChange}>
       <TabsList>
         <TabsTrigger value="details">Details</TabsTrigger>
         <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
