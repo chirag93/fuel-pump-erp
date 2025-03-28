@@ -47,7 +47,7 @@ const LoginForm = ({
       console.log(`Attempting login with email: ${email}`);
       
       // Check if this is the super admin account - if so, redirect to super admin login
-      if (email === 'admin@example.com') {
+      if (email === 'superuser@example.com') {
         console.log('Redirecting to super admin login page');
         navigate('/super-admin/login', { 
           state: { email, attemptedLogin: true } 

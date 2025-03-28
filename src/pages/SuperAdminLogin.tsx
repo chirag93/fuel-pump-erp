@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,49 +20,56 @@ const SuperAdminLogin = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Special handling for admin@example.com account
-  const handleAdminDefaultLogin = async () => {
+  // Special handling for superuser@example.com account (super admin)
+  const handleSuperUserLogin = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // Try to get the default admin fuel pump record
-      const { data: adminPump, error: pumpError } = await supabase
-        .from('fuel_pumps')
+      // Try to get the super admin user record
+      const { data: superAdmin, error: adminError } = await supabase
+        .from('super_admins')
         .select('*')
-        .eq('email', 'admin@example.com')
+        .eq('email', 'superuser@example.com')
         .maybeSingle();
       
-      if (pumpError) {
-        console.error('Error checking for admin fuel pump:', pumpError);
+      if (adminError) {
+        console.error('Error checking for super admin:', adminError);
       }
       
-      // If admin fuel pump doesn't exist, create it
-      if (!adminPump) {
-        // Create the default admin fuel pump
-        await superAdminApi.provisionFuelPump({
-          name: 'System Admin',
-          email: 'admin@example.com',
-          address: 'System',
-          contact_number: 'N/A',
-          created_by: 'system'
-        }, 'admin123');
+      // If super admin doesn't exist, create it
+      if (!superAdmin) {
+        // Create the default super admin
+        const { data, error } = await supabase
+          .from('super_admins')
+          .insert({
+            id: 'sa-' + new Date().getTime(),
+            name: 'Super User',
+            email: 'superuser@example.com'
+          })
+          .select()
+          .single();
         
-        console.log('Created default admin fuel pump');
+        if (error) {
+          console.error('Error creating super admin:', error);
+          throw new Error('Failed to create super admin account');
+        }
+        
+        console.log('Created super admin account');
         toast({
-          title: 'Admin Account Created',
-          description: 'The default admin account has been provisioned with its own fuel pump.',
+          title: 'Super Admin Account Created',
+          description: 'The super admin account has been provisioned.',
         });
       }
       
-      // Proceed with login - Fix: Pass 'admin@example.com' and 'admin123' as email and password
-      await login('admin@example.com', 'admin123');
+      // Proceed with login - Pass email and password
+      await login('superuser@example.com', 'admin123');
       
       const from = location.state?.from?.pathname || '/super-admin/dashboard';
       navigate(from, { replace: true });
     } catch (error: any) {
-      console.error('Error during admin login:', error);
-      setError(error.message || 'Failed to log in as admin');
+      console.error('Error during super admin login:', error);
+      setError(error.message || 'Failed to log in as super admin');
     } finally {
       setIsLoading(false);
     }
@@ -74,10 +82,10 @@ const SuperAdminLogin = () => {
       navigate(from, { replace: true });
     }
     
-    // If user came from regular login and email is admin@example.com,
-    // handle special admin login flow
-    if (location.state?.email === 'admin@example.com') {
-      handleAdminDefaultLogin();
+    // If user came from regular login and email is superuser@example.com,
+    // handle special super admin login flow
+    if (location.state?.email === 'superuser@example.com') {
+      handleSuperUserLogin();
     }
   }, [isAuthenticated, navigate, location]);
 
@@ -86,9 +94,9 @@ const SuperAdminLogin = () => {
     setIsLoading(true);
     setError(null);
     
-    // Special case for system admin
-    if (username.toLowerCase() === 'admin' && token === 'admin123') {
-      handleAdminDefaultLogin();
+    // Special case for system super admin
+    if (username.toLowerCase() === 'superuser' && token === 'admin123') {
+      handleSuperUserLogin();
       return;
     }
 
@@ -102,7 +110,7 @@ const SuperAdminLogin = () => {
         return;
       }
       
-      // Fix: Pass username and token as email and password parameters
+      // Pass username and token as parameters
       await login(username, token);
       
       const from = location.state?.from?.pathname || '/super-admin/dashboard';

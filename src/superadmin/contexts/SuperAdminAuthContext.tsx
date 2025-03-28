@@ -67,8 +67,8 @@ export const SuperAdminAuthProvider: React.FC<{ children: React.ReactNode }> = (
     setIsLoading(true);
     
     try {
-      // Special case for hardcoded super admin account
-      if (email === 'admin@example.com' && password === 'admin123') {
+      // Special case for hardcoded super admin account - now superuser@example.com
+      if (email === 'superuser@example.com' && password === 'admin123') {
         console.log('Using hardcoded super admin credentials');
         
         // Create super admin user object
