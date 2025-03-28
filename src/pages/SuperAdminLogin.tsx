@@ -1,53 +1,123 @@
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Lock, Mail, Shield } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
+import { AlertCircle, Key, Lock, Shield } from 'lucide-react';
 import { useSuperAdminAuth } from '@/superadmin/contexts/SuperAdminAuthContext';
+import { superAdminApi } from '@/superadmin/api/superAdminApi';
+import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const SuperAdminLogin = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [username, setUsername] = useState('');
+  const [token, setToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { login, isAuthenticated } = useSuperAdminAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // If user is already authenticated, redirect to super admin dashboard
-  if (isAuthenticated) {
-    navigate('/super-admin/dashboard', { replace: true });
-    return null;
-  }
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  // Special handling for admin@example.com account
+  const handleAdminDefaultLogin = async () => {
     setIsLoading(true);
-
-    if (!email || !password) {
-      setError('Please enter both email and password');
+    setError(null);
+    
+    try {
+      // Try to get the default admin fuel pump record
+      const { data: adminPump, error: pumpError } = await supabase
+        .from('fuel_pumps')
+        .select('*')
+        .eq('email', 'admin@example.com')
+        .maybeSingle();
+      
+      if (pumpError) {
+        console.error('Error checking for admin fuel pump:', pumpError);
+      }
+      
+      // If admin fuel pump doesn't exist, create it
+      if (!adminPump) {
+        // Create the default admin fuel pump
+        await superAdminApi.provisionFuelPump({
+          name: 'System Admin',
+          email: 'admin@example.com',
+          address: 'System',
+          contact_number: 'N/A',
+          created_by: 'system'
+        }, 'admin123');
+        
+        console.log('Created default admin fuel pump');
+        toast({
+          title: 'Admin Account Created',
+          description: 'The default admin account has been provisioned with its own fuel pump.',
+        });
+      }
+      
+      // Proceed with login
+      await login('sa-admin', {
+        id: 'sa-admin',
+        username: 'admin',
+        email: 'admin@example.com'
+      });
+      
+      const from = location.state?.from?.pathname || '/super-admin/dashboard';
+      navigate(from, { replace: true });
+    } catch (error: any) {
+      console.error('Error during admin login:', error);
+      setError(error.message || 'Failed to log in as admin');
+    } finally {
       setIsLoading(false);
+    }
+  };
+
+  // If user is already authenticated, redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      const from = location.state?.from?.pathname || '/super-admin/dashboard';
+      navigate(from, { replace: true });
+    }
+    
+    // If user came from regular login and email is admin@example.com,
+    // handle special admin login flow
+    if (location.state?.email === 'admin@example.com') {
+      handleAdminDefaultLogin();
+    }
+  }, [isAuthenticated, navigate, location]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    
+    // Special case for system admin
+    if (username.toLowerCase() === 'admin' && token === 'admin123') {
+      handleAdminDefaultLogin();
       return;
     }
 
     try {
-      // Clearly signaling this is a super admin login attempt
-      console.log('Attempting super admin login with:', email);
-      const success = await login(email, password, rememberMe);
+      // Check token against database
+      const isValid = await superAdminApi.checkSuperAdminAccess(token);
       
-      if (success) {
-        navigate('/super-admin/dashboard', { replace: true });
-      } else {
-        setError('Invalid super admin credentials');
+      if (!isValid) {
+        setError('Invalid credentials. Please try again.');
+        setIsLoading(false);
+        return;
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during login.');
-      console.error(err);
+      
+      await login(token, {
+        id: token,
+        username,
+        email: `${username}@fuelpro360.com`
+      });
+      
+      const from = location.state?.from?.pathname || '/super-admin/dashboard';
+      navigate(from, { replace: true });
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setError(error.message || 'Failed to log in. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -58,79 +128,72 @@ const SuperAdminLogin = () => {
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
       <Card className="w-full max-w-md shadow-lg relative z-10">
         <CardHeader className="space-y-1">
-          <div className="flex justify-center mb-2">
+          <div className="flex justify-center mb-4">
             <div className="flex items-center gap-2">
-              <Shield className="h-8 w-8 text-primary" />
+              <Shield className="h-10 w-10 text-primary" />
               <span className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
                 Super Admin
               </span>
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Fuel Master Control</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Admin Access</CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to access the super admin dashboard
+            Enter your credentials to access super admin features
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <div className="bg-destructive/15 p-3 rounded-md flex items-center gap-2 mb-4 text-sm text-destructive">
-              <AlertCircle size={16} />
-              <p>{error}</p>
-            </div>
-          )}
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Username</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="superadmin@example.com"
+                  id="username"
+                  placeholder="Enter username"
                   className="pl-9"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   required
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="token">Access Token</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="password"
+                  id="token"
                   type="password"
+                  placeholder="Enter access token"
                   className="pl-9"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
                   required
                 />
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="rememberMe" 
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked === true)}
-              />
-              <Label htmlFor="rememberMe" className="cursor-pointer text-sm font-medium">
-                Remember me
-              </Label>
-            </div>
+            
+            {error && (
+              <div className="bg-destructive/15 p-3 rounded-md flex items-center gap-2 text-sm text-destructive">
+                <AlertCircle size={16} />
+                <p>{error}</p>
+              </div>
+            )}
+            
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Signing in...' : 'Sign In to Super Admin'}
+              {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
+            <div className="text-center">
+              <Button 
+                variant="link" 
+                className="text-primary"
+                onClick={() => navigate('/login')}
+              >
+                Regular User Login
+              </Button>
+            </div>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4 pt-0">
-          <div className="text-sm text-center text-muted-foreground mt-2">
-            Only authorized super admins can access this area.
-          </div>
-          <div className="text-xs text-center text-muted-foreground">
-            Default credentials: admin@example.com / admin123
-          </div>
-        </CardFooter>
       </Card>
     </div>
   );
