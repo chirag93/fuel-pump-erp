@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -168,28 +167,6 @@ const LoginForm = ({
           console.error('Error checking staff role:', err);
         }
       }
-      
-      // Special handling for testing accounts
-      if (!fuelPumpId) {
-        // Check if it's a test or special user
-        if (email === 'test@example.com' || email === 'admin@example.com') {
-          fuelPumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
-          fuelPumpName = 'Test Fuel Pump';
-          console.log(`Setting test/admin user to specific fuel pump ID: ${fuelPumpId}`);
-          
-          // Verify this fuel pump exists
-          const { data: verifyPump } = await supabase
-            .from('fuel_pumps')
-            .select('name')
-            .eq('id', fuelPumpId)
-            .maybeSingle();
-            
-          if (verifyPump) {
-            fuelPumpName = verifyPump.name;
-            console.log(`Verified test fuel pump exists with name: ${fuelPumpName}`);
-          }
-        }
-      }
 
       // Check if user is a super admin
       const { data: superAdmin } = await supabase
@@ -205,25 +182,6 @@ const LoginForm = ({
         });
         setIsLoading(false);
         return;
-      }
-      
-      // If we still don't have a fuel pump ID, let's use the specific one as a fallback
-      if (!fuelPumpId) {
-        fuelPumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
-        fuelPumpName = 'Default Fuel Pump';
-        console.log(`No fuel pump ID found, using fallback ID: ${fuelPumpId}`);
-        
-        // Verify this fuel pump exists
-        const { data: verifyPump } = await supabase
-          .from('fuel_pumps')
-          .select('name')
-          .eq('id', fuelPumpId)
-          .maybeSingle();
-          
-        if (verifyPump) {
-          fuelPumpName = verifyPump.name;
-          console.log(`Verified fallback fuel pump exists with name: ${fuelPumpName}`);
-        }
       }
 
       // Update Supabase user metadata with fuel pump ID
@@ -244,7 +202,7 @@ const LoginForm = ({
         email: data.user.email,
         role: userRole,
         fuelPumpId: fuelPumpId,
-        fuelPumpName: fuelPumpName || 'Default Fuel Pump'
+        fuelPumpName: fuelPumpName
       }, rememberMe);
       
       if (loginSuccess) {
@@ -257,7 +215,7 @@ const LoginForm = ({
             email: data.user.email,
             role: userRole,
             fuelPumpId: fuelPumpId,
-            fuelPumpName: fuelPumpName || 'Default Fuel Pump'
+            fuelPumpName: fuelPumpName
           }
         };
         
@@ -268,7 +226,7 @@ const LoginForm = ({
         
         toast({
           title: "Login successful",
-          description: `You have been logged in successfully to ${fuelPumpName || 'your fuel pump'}.`,
+          description: `You have been logged in successfully${fuelPumpName ? ` to ${fuelPumpName}` : ''}.`,
         });
       } else {
         setError('Failed to initialize session. Please try again.');

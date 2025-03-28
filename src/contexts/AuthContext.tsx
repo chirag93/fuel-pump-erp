@@ -20,25 +20,25 @@ interface Session {
 interface AuthContextType {
   user: UserProfile | null;
   fuelPumpId: string | null; // Added explicit fuel pump ID
-  fuelPumpName?: string | null; // Add fuelPumpName property
+  fuelPumpName: string | null; // Add fuelPumpName property
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
   isAdmin: boolean;
   isStaff: boolean;
-  isLoading?: boolean; // Add isLoading property
+  isLoading: boolean;
   login: (userId: string, userData: any, rememberMe?: boolean) => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  fuelPumpId: null, // Default to null
-  fuelPumpName: null, // Default to null
+  fuelPumpId: null,
+  fuelPumpName: null,
   isAuthenticated: false,
   isSuperAdmin: false,
   isAdmin: false,
   isStaff: false,
-  isLoading: false, // Default to false
+  isLoading: false,
   login: async () => false,
   logout: async () => {},
 });
@@ -125,40 +125,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem('fuel_pro_session', JSON.stringify({ user: userProfile }));
         } else {
           console.log("Auth initialization - No authenticated session found");
-          // Check if we have stored session
-          const storedSession = localStorage.getItem('fuel_pro_session');
-          
-          if (storedSession) {
-            console.log("Auth initialization - Found stored session, checking if valid");
-            
-            try {
-              const parsedSession = JSON.parse(storedSession);
-              
-              if (parsedSession.user) {
-                console.log("Auth initialization - Has stored user, attempting to restore session");
-                
-                // Try to restore Supabase session before using stored data
-                const { data, error } = await supabase.auth.refreshSession();
-                
-                if (!error && data.session) {
-                  console.log("Auth initialization - Successfully refreshed Supabase session");
-                  
-                  setUser(parsedSession.user);
-                  setFuelPumpId(parsedSession.user.fuelPumpId || null);
-                  setFuelPumpName(parsedSession.user.fuelPumpName || null);
-                } else {
-                  console.log("Auth initialization - Failed to refresh session, clearing stored data");
-                  localStorage.removeItem('fuel_pro_session');
-                  setUser(null);
-                  setFuelPumpId(null);
-                  setFuelPumpName(null);
-                }
-              }
-            } catch (error) {
-              console.error("Error parsing stored session:", error);
-              localStorage.removeItem('fuel_pro_session');
-            }
-          }
+          setUser(null);
+          setFuelPumpId(null);
+          setFuelPumpName(null);
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -219,14 +188,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log("Login - Received user data:", userData);
       
-      // Always include the default fuel pump ID if none provided
-      if (!userData.fuelPumpId) {
-        console.log("Login - No fuel pump ID provided, using default");
-        userData.fuelPumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
+      // Validate fuel pump ID if provided
+      if (userData.fuelPumpId) {
+        console.log(`Login - Validating fuel pump ID: ${userData.fuelPumpId}`);
+        
+        const { data: fuelPump } = await supabase
+          .from('fuel_pumps')
+          .select('id, name')
+          .eq('id', userData.fuelPumpId)
+          .maybeSingle();
+          
+        if (fuelPump) {
+          console.log(`Login - Verified fuel pump exists: ${fuelPump.name}`);
+          userData.fuelPumpName = fuelPump.name;
+        } else {
+          console.warn(`Login - Provided fuel pump ID not found: ${userData.fuelPumpId}`);
+          userData.fuelPumpId = null;
+          userData.fuelPumpName = null;
+        }
       }
       
       setUser(userData);
       setFuelPumpId(userData.fuelPumpId || null);
+      setFuelPumpName(userData.fuelPumpName || null);
       
       // Store in local storage for persistence
       if (rememberMe) {
@@ -251,6 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('fuel_pro_session');
       setUser(null);
       setFuelPumpId(null);
+      setFuelPumpName(null);
       
       toast({
         title: "Logged out",
@@ -274,13 +259,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const value = {
     user,
-    fuelPumpId, // Expose fuel pump ID directly
-    fuelPumpName, // Expose fuel pump name
+    fuelPumpId,
+    fuelPumpName,
     isAuthenticated,
     isSuperAdmin,
     isAdmin,
     isStaff,
-    isLoading, // Expose loading state
+    isLoading,
     login,
     logout
   };

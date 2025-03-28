@@ -9,9 +9,6 @@ export const getFuelPumpId = async (): Promise<string | null> => {
   try {
     console.log('Starting getFuelPumpId...');
     
-    // For testing, we can always fall back to this ID if needed
-    const specificPumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
-    
     // First check if we have the current user's session
     const { data: { session } } = await supabase.auth.getSession();
     
@@ -32,9 +29,8 @@ export const getFuelPumpId = async (): Promise<string | null> => {
         }
       }
       
-      // If still nothing, return the specific ID
-      console.log(`getFuelPumpId: Using fallback ID: ${specificPumpId}`);
-      return specificPumpId;
+      console.log('getFuelPumpId: No fuel pump ID available, returning null');
+      return null;
     }
     
     console.log(`getFuelPumpId: Session available for user: ${session.user.email}`);
@@ -47,8 +43,8 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       .maybeSingle();
       
     if (superAdmin) {
-      console.log('getFuelPumpId: User is a super admin, using our specific ID');
-      return specificPumpId;
+      console.log('getFuelPumpId: User is a super admin - they can access any fuel pump data');
+      return null; // Super admins can access any fuel pump's data
     }
     
     // Try to get the fuelPumpId from user metadata first (most reliable)
@@ -97,19 +93,36 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       }
     }
     
-    // Special case for testing
-    if (session.user.email === 'test@example.com' || session.user.email === 'admin@example.com') {
-      console.log(`getFuelPumpId: Using specific fuel pump ID for testing: ${specificPumpId}`);
-      return specificPumpId;
-    }
-    
-    // Try to get the fuel pump using the RPC function for case-insensitive matching
-    console.log(`getFuelPumpId: Trying to find fuel pump with email (case-insensitive): ${session.user.email}`);
+    // Check if the user email matches a fuel pump email
+    console.log(`getFuelPumpId: Checking if user email matches a fuel pump: ${session.user.email}`);
     const { data: fuelPumpData, error: rpcError } = await supabase
-      .rpc('get_fuel_pump_by_email', { email_param: session.user.email });
+      .rpc('get_fuel_pump_by_email', { email_param: session.user.email.toLowerCase() });
       
     if (!rpcError && fuelPumpData && fuelPumpData.length > 0) {
-      console.log(`getFuelPumpId: Found fuel pump via RPC: ${fuelPumpData[0].id}`);
+      console.log(`getFuelPumpId: Found matching fuel pump for email: ${fuelPumpData[0].id}`);
+      
+      // Update user metadata with this pump ID for future use
+      await supabase.auth.updateUser({
+        data: { 
+          fuelPumpId: fuelPumpData[0].id,
+          fuelPumpName: fuelPumpData[0].name
+        }
+      });
+      
+      // Update localStorage session
+      if (storedSession) {
+        try {
+          const parsedSession = JSON.parse(storedSession);
+          if (parsedSession.user) {
+            parsedSession.user.fuelPumpId = fuelPumpData[0].id;
+            parsedSession.user.fuelPumpName = fuelPumpData[0].name;
+            localStorage.setItem('fuel_pro_session', JSON.stringify(parsedSession));
+          }
+        } catch (parseError) {
+          console.error('Error updating stored session:', parseError);
+        }
+      }
+      
       return fuelPumpData[0].id;
     }
     
@@ -117,42 +130,7 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       console.error('getFuelPumpId: Error using RPC function:', rpcError);
     }
     
-    // Try with all email variations
-    const emailVariations = [
-      session.user.email,
-      session.user.email.toLowerCase(),
-      session.user.email.toUpperCase()
-    ];
-    
-    for (const emailVar of emailVariations) {
-      console.log(`getFuelPumpId: Trying direct query for fuel pump with email: ${emailVar}`);
-      
-      // Try ilike match first
-      const { data: fuelPump, error } = await supabase
-        .from('fuel_pumps')
-        .select('id')
-        .ilike('email', emailVar)
-        .maybeSingle();
-        
-      if (!error && fuelPump?.id) {
-        console.log(`getFuelPumpId: Found fuel pump ID via ilike: ${fuelPump.id}`);
-        return fuelPump.id;
-      }
-      
-      // Try exact match
-      const { data: exactMatch, error: exactError } = await supabase
-        .from('fuel_pumps')
-        .select('id')
-        .eq('email', emailVar)
-        .maybeSingle();
-        
-      if (!exactError && exactMatch?.id) {
-        console.log(`getFuelPumpId: Found fuel pump with exact match: ${exactMatch.id}`);
-        return exactMatch.id;
-      }
-    }
-    
-    // As a last resort, check if this user is in the staff table
+    // Check if this user is in the staff table
     const { data: staffData } = await supabase
       .from('staff')
       .select('fuel_pump_id')
@@ -161,42 +139,22 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       
     if (staffData?.fuel_pump_id) {
       console.log(`getFuelPumpId: Found fuel pump ID via staff record: ${staffData.fuel_pump_id}`);
+      
+      // Update user metadata with this pump ID
+      await supabase.auth.updateUser({
+        data: { 
+          fuelPumpId: staffData.fuel_pump_id
+        }
+      });
+      
       return staffData.fuel_pump_id;
     }
     
-    // Last resort: return the specific ID we're looking for
-    console.log(`getFuelPumpId: No fuel pump found through queries, using specific ID: ${specificPumpId}`);
-    
-    // Verify this specific ID exists
-    const { data: verifySpecificPump } = await supabase
-      .from('fuel_pumps')
-      .select('id')
-      .eq('id', specificPumpId)
-      .maybeSingle();
-      
-    if (verifySpecificPump) {
-      console.log(`getFuelPumpId: Verified specific fuel pump exists: ${specificPumpId}`);
-      return specificPumpId;
-    } else {
-      console.warn(`getFuelPumpId: Specific fuel pump not found in database: ${specificPumpId}`);
-      
-      // Get the first available fuel pump as absolute last resort
-      const { data: firstPump } = await supabase
-        .from('fuel_pumps')
-        .select('id')
-        .limit(1)
-        .maybeSingle();
-        
-      if (firstPump?.id) {
-        console.log(`getFuelPumpId: Using first available fuel pump: ${firstPump.id}`);
-        return firstPump.id;
-      }
-    }
-    
-    return specificPumpId;
+    console.log('getFuelPumpId: No fuel pump found for this user, returning null');
+    return null;
   } catch (error) {
     console.error('Error getting fuel pump ID:', error);
-    return '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
+    return null;
   }
 };
 

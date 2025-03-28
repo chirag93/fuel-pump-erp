@@ -1,4 +1,3 @@
-
 import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +7,8 @@ import { Loader2, ChevronLeft, FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getIndentsByBookletId } from '@/integrations/indents';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Indent {
   id: string;
@@ -29,55 +30,53 @@ const BookletIndents = () => {
   const [indents, setIndents] = useState<Indent[]>([]);
   const [booklet, setBooklet] = useState<any>(null);
   const [customer, setCustomer] = useState<any>(null);
+  const { fuelPumpId } = useAuth();
   
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         console.log('Fetching data for booklet ID:', bookletId);
+        console.log('Using fuel pump ID:', fuelPumpId || 'none');
         
         // Fetch the booklet
         if (bookletId) {
-          const { data: bookletData, error: bookletError } = await supabase
+          let bookletQuery = supabase
             .from('indent_booklets')
             .select('*')
-            .eq('id', bookletId)
-            .single();
+            .eq('id', bookletId);
+            
+          // Apply fuel pump filter if available
+          if (fuelPumpId) {
+            bookletQuery = bookletQuery.eq('fuel_pump_id', fuelPumpId);
+          }
+            
+          const { data: bookletData, error: bookletError } = await bookletQuery.single();
             
           if (bookletError) throw bookletError;
           setBooklet(bookletData);
           
           // Fetch the customer
           if (customerId) {
-            const { data: customerData, error: customerError } = await supabase
+            let customerQuery = supabase
               .from('customers')
               .select('*')
-              .eq('id', customerId)
-              .single();
+              .eq('id', customerId);
+              
+            // Apply fuel pump filter if available  
+            if (fuelPumpId) {
+              customerQuery = customerQuery.eq('fuel_pump_id', fuelPumpId);
+            }
+              
+            const { data: customerData, error: customerError } = await customerQuery.single();
               
             if (customerError) throw customerError;
             setCustomer(customerData);
           }
           
-          // Fetch the indents for this booklet
-          const { data: indentsData, error: indentsError } = await supabase
-            .from('indents')
-            .select(`
-              *,
-              vehicles (number)
-            `)
-            .eq('booklet_id', bookletId)
-            .order('date', { ascending: false }); // Changed from issue_date to date
-            
-          if (indentsError) throw indentsError;
-          
-          // Transform the data to include vehicle number
-          const transformedIndents = indentsData.map((indent: any) => ({
-            ...indent,
-            vehicle_number: indent.vehicles?.number
-          }));
-          
-          setIndents(transformedIndents);
+          // Fetch the indents for this booklet using our updated function
+          const indentsData = await getIndentsByBookletId(bookletId);
+          setIndents(indentsData);
         }
       } catch (error) {
         console.error('Error fetching booklet data:', error);
@@ -92,7 +91,7 @@ const BookletIndents = () => {
     };
     
     fetchData();
-  }, [bookletId, customerId]);
+  }, [bookletId, customerId, fuelPumpId]);
   
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
