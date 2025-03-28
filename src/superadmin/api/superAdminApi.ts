@@ -1,5 +1,4 @@
 
-import axios from 'axios';
 import { supabase } from '@/integrations/supabase/client';
 import { FuelPump } from '@/integrations/fuelPumps';
 
@@ -17,11 +16,6 @@ export const superAdminApi = {
   // Check if a user has super admin access
   async checkSuperAdminAccess(token: string): Promise<boolean> {
     try {
-      // Special case for hardcoded admin token - don't query the database
-      if (token && token.startsWith('sa-')) {
-        return true;
-      }
-      
       // Only query the database if we have a UUID format token
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (token && uuidRegex.test(token)) {
@@ -62,11 +56,8 @@ export const superAdminApi = {
         };
       }
       
-      // Handle special case for super admin IDs that start with "sa-"
-      // We need to avoid sending these to the database as creator_id
-      const createdById = fuelPumpData.created_by && 
-                          fuelPumpData.created_by.toString().startsWith('sa-') ? 
-                          null : fuelPumpData.created_by;
+      // Handle special case for creator IDs
+      const createdById = fuelPumpData.created_by;
       
       console.log('Creating fuel pump with data:', {
         ...fuelPumpData,

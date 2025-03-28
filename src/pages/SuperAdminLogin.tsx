@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,37 +7,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertCircle, Key, Lock, Shield } from 'lucide-react';
 import { useSuperAdminAuth } from '@/superadmin/contexts/SuperAdminAuthContext';
-import { superAdminApi } from '@/superadmin/api/superAdminApi';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 const SuperAdminLogin = () => {
-  const [username, setUsername] = useState('');
-  const [token, setToken] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { login, isAuthenticated } = useSuperAdminAuth();
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Special handling for superuser@example.com account (super admin)
-  const handleSuperUserLogin = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Call the login function with the email and password
-      await login('superuser@example.com', 'admin123', true);
-      
-      const from = location.state?.from?.pathname || '/super-admin/dashboard';
-      navigate(from, { replace: true });
-    } catch (error: any) {
-      console.error('Error during super admin login:', error);
-      setError(error.message || 'Failed to log in as super admin');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // If user is already authenticated, redirect to dashboard
   useEffect(() => {
@@ -44,55 +24,22 @@ const SuperAdminLogin = () => {
       const from = location.state?.from?.pathname || '/super-admin/dashboard';
       navigate(from, { replace: true });
     }
-    
-    // If user came from regular login and email is superuser@example.com,
-    // handle special super admin login flow
-    if (location.state?.email?.toLowerCase() === 'superuser@example.com') {
-      handleSuperUserLogin();
-    }
   }, [isAuthenticated, navigate, location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    
-    // Special case for system super admin
-    if (username.toLowerCase() === 'superuser' && token === 'admin123') {
-      await login('superuser@example.com', 'admin123');
-      
-      const from = location.state?.from?.pathname || '/super-admin/dashboard';
-      navigate(from, { replace: true });
-      setIsLoading(false);
-      return;
-    }
 
     try {
-      // For usernames with @ symbol, treat as email login
-      if (username.includes('@')) {
-        // Call the login function with the email and password
-        await login(username, token);
-        
+      const success = await login(email, password);
+      
+      if (success) {
         const from = location.state?.from?.pathname || '/super-admin/dashboard';
         navigate(from, { replace: true });
-        setIsLoading(false);
-        return;
-      }
-      
-      // Otherwise, check token against database
-      const isValid = await superAdminApi.checkSuperAdminAccess(token);
-      
-      if (!isValid) {
+      } else {
         setError('Invalid credentials. Please try again.');
-        setIsLoading(false);
-        return;
       }
-      
-      // Use a default email format for username-only logins
-      await login(`${username}@example.com`, token);
-      
-      const from = location.state?.from?.pathname || '/super-admin/dashboard';
-      navigate(from, { replace: true });
     } catch (error: any) {
       console.error('Login error:', error);
       setError(error.message || 'Failed to log in. Please try again.');
@@ -122,30 +69,31 @@ const SuperAdminLogin = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label>
               <div className="relative">
                 <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="username"
-                  placeholder="Enter username"
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
                   className="pl-9"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="token">Access Token</Label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="token"
+                  id="password"
                   type="password"
-                  placeholder="Enter access token"
+                  placeholder="Enter your password"
                   className="pl-9"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </div>
