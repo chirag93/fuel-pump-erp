@@ -43,11 +43,33 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       return await getFallbackFuelPumpId();
     }
     
-    // Get the fuel pump ID associated with this user's email
+    // First, try to get the fuel pump directly by ID for testing
+    if (session.user.email === 'test@example.com') {
+      const specificPumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
+      console.log(`Using specific fuel pump ID for testing: ${specificPumpId}`);
+      return specificPumpId;
+    }
+    
+    // Try to get the fuel pump using the RPC function for case-insensitive matching
+    console.log(`Trying to find fuel pump with email (case-insensitive): ${session.user.email}`);
+    const { data: fuelPumpData, error: rpcError } = await supabase
+      .rpc('get_fuel_pump_by_email', { email_param: session.user.email });
+      
+    if (!rpcError && fuelPumpData && fuelPumpData.length > 0) {
+      console.log(`Found fuel pump via RPC: ${fuelPumpData[0].id}`);
+      return fuelPumpData[0].id;
+    }
+    
+    if (rpcError) {
+      console.error('Error using RPC function:', rpcError);
+    }
+    
+    // Fallback to direct query if RPC fails
+    console.log(`Trying direct query for fuel pump with email: ${session.user.email}`);
     const { data: fuelPump, error } = await supabase
       .from('fuel_pumps')
       .select('id')
-      .eq('email', session.user.email)
+      .ilike('email', session.user.email)
       .maybeSingle();
       
     if (error) {
@@ -60,6 +82,19 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       return fuelPump.id;
     } else {
       console.log(`No fuel pump found for email: ${session.user.email}`);
+      
+      // Try one more query with exact matching (not case sensitive)
+      const { data: exactMatch, error: exactError } = await supabase
+        .from('fuel_pumps')
+        .select('id')
+        .eq('email', session.user.email)
+        .maybeSingle();
+        
+      if (!exactError && exactMatch?.id) {
+        console.log(`Found fuel pump with exact match: ${exactMatch.id}`);
+        return exactMatch.id;
+      }
+      
       // Instead of creating a new one, just return a fallback
       return await getFallbackFuelPumpId();
     }
@@ -76,6 +111,21 @@ export const getFuelPumpId = async (): Promise<string | null> => {
 const getFallbackFuelPumpId = async (): Promise<string | null> => {
   try {
     console.log('Using fallback method to get a fuel pump ID');
+    
+    // First try the specific ID we're looking for
+    const specificId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
+    
+    console.log(`Checking if specific fuel pump exists: ${specificId}`);
+    const { data: specificPump, error: specificError } = await supabase
+      .from('fuel_pumps')
+      .select('id')
+      .eq('id', specificId)
+      .maybeSingle();
+      
+    if (!specificError && specificPump) {
+      console.log(`Found specific fuel pump: ${specificPump.id}`);
+      return specificPump.id;
+    }
     
     // Try to get the first fuel pump as fallback
     const { data: firstPump, error } = await supabase

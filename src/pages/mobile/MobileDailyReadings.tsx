@@ -235,6 +235,12 @@ const MobileDailyReadings = () => {
       
       if (!fuelPumpId) {
         console.warn('No fuel pump ID available, record might not be filtered correctly');
+        toast({
+          title: "Warning",
+          description: "Could not identify your fuel pump. Please contact administrator.",
+          variant: "destructive"
+        });
+        return;
       }
       
       const tanksToInsert = Object.values(readingFormData.readings).map(tank => ({

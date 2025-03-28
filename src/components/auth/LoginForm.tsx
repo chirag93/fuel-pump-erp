@@ -68,13 +68,15 @@ const LoginForm = ({
       
       // Check if the user exists in the fuel_pumps table (admin)
       const { data: fuelPump } = await supabase
-        .from('fuel_pumps')
-        .select('*')
-        .eq('email', email)
-        .maybeSingle();
+        .rpc('get_fuel_pump_by_email', { email_param: email.toLowerCase() });
+      
+      let matchedFuelPump = null;
+      if (fuelPump && Array.isArray(fuelPump) && fuelPump.length > 0) {
+        matchedFuelPump = fuelPump[0];
+      }
       
       // Check if user needs to change password
-      if (fuelPump && fuelPump.status === 'password_change_required') {
+      if (matchedFuelPump && matchedFuelPump.status === 'password_change_required') {
         console.log('User needs to change password');
         setPasswordChangeRequired(true);
         setIsLoading(false);
@@ -86,9 +88,10 @@ const LoginForm = ({
       let fuelPumpId = null;
       
       // If the email matches the fuel pump email, they're an admin
-      if (fuelPump && data.user.email === fuelPump.email) {
+      if (matchedFuelPump && data.user.email.toLowerCase() === matchedFuelPump.email.toLowerCase()) {
         userRole = 'admin';
-        fuelPumpId = fuelPump.id;
+        fuelPumpId = matchedFuelPump.id;
+        console.log(`User is an admin for fuel pump: ${fuelPumpId}`);
       } else {
         // Check if this user is in the staff table
         try {
@@ -101,6 +104,7 @@ const LoginForm = ({
           if (staffData) {
             userRole = staffData.role;
             fuelPumpId = staffData.fuel_pump_id;
+            console.log(`User is staff with role ${userRole} for fuel pump: ${fuelPumpId}`);
           }
         } catch (err) {
           console.error('Error checking staff role:', err);

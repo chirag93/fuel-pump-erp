@@ -79,7 +79,7 @@ const DailyReadings = () => {
           await fetchFuelTypes(pumpId);
           toast({
             title: "Connected to fuel pump",
-            description: `Successfully connected to fuel pump ID: ${pumpId.substring(0, 8)}...`
+            description: `Successfully connected to fuel pump ID: ${pumpId}`
           });
         } else {
           console.warn("No fuel pump ID available");
@@ -159,6 +159,11 @@ const DailyReadings = () => {
       if (pumpId) {
         console.log(`Filtering daily readings by fuel_pump_id: ${pumpId}`);
         query = query.eq('fuel_pump_id', pumpId);
+        
+        // For testing, add this additional logging
+        console.log(`SQL query filter: daily_readings.fuel_pump_id = '${pumpId}'`);
+      } else {
+        console.log('No fuel pump ID available, fetching all readings');
       }
       
       const { data, error } = await query;
