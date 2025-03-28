@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import TankUnloadForm from "@/components/tank-unload/TankUnloadForm";
 import RecentUnloadsTable from "@/components/tank-unload/RecentUnloadsTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,36 +9,69 @@ import { useTankUnloads, TankUnload as TankUnloadType } from "@/hooks/useTankUnl
 import FuelTankDisplay from '@/components/fuel/FuelTankDisplay';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
+import { getFuelPumpId } from '@/integrations/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 const TankUnload = () => {
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
   const [fuelTypes, setFuelTypes] = useState<string[]>([]);
   const { recentUnloads, isLoading } = useTankUnloads(refreshCounter);
+  const { isAuthenticated } = useAuth();
 
   // Fetch available fuel types
   useEffect(() => {
     const fetchFuelTypes = async () => {
       try {
+        const fuelPumpId = await getFuelPumpId();
+        
+        if (!fuelPumpId) {
+          console.log('No fuel pump ID available for fetching fuel types');
+          if (!isAuthenticated) {
+            toast({
+              title: "Authentication Required",
+              description: "Please sign in to view fuel types",
+              variant: "destructive"
+            });
+          }
+          return;
+        }
+        
+        console.log(`Fetching fuel types for fuel pump ID: ${fuelPumpId}`);
+        
         // First check fuel_settings
-        const { data: settingsData } = await supabase
+        const { data: settingsData, error: settingsError } = await supabase
           .from('fuel_settings')
-          .select('fuel_type');
+          .select('fuel_type')
+          .eq('fuel_pump_id', fuelPumpId);
+          
+        if (settingsError) {
+          console.error('Error fetching fuel settings:', settingsError);
+        }
           
         if (settingsData && settingsData.length > 0) {
           const types = settingsData.map(item => item.fuel_type);
           setFuelTypes([...new Set(types)]);
+          console.log(`Found ${types.length} fuel types from settings`);
         } else {
           // Fallback to inventory
-          const { data: inventoryData } = await supabase
+          const { data: inventoryData, error: inventoryError } = await supabase
             .from('inventory')
-            .select('fuel_type');
+            .select('fuel_type')
+            .eq('fuel_pump_id', fuelPumpId);
+            
+          if (inventoryError) {
+            console.error('Error fetching inventory:', inventoryError);
+          }
             
           if (inventoryData && inventoryData.length > 0) {
             const types = inventoryData.map(item => item.fuel_type);
             setFuelTypes([...new Set(types)]);
+            console.log(`Found ${types.length} fuel types from inventory`);
           } else {
             // Default values if nothing is found
+            console.log('No fuel types found, using defaults');
             setFuelTypes(['Petrol', 'Diesel']);
           }
         }
@@ -49,7 +82,7 @@ const TankUnload = () => {
     };
     
     fetchFuelTypes();
-  }, [refreshCounter]);
+  }, [refreshCounter, isAuthenticated]);
 
   const handleUnloadSuccess = () => {
     // Increment the counter to trigger a refresh in the table

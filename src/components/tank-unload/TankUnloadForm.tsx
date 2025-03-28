@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Truck, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { getFuelPumpId } from "@/integrations/utils";
 
 interface TankUnloadFormProps {
   onSuccess: () => void;
@@ -38,7 +39,16 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
       const numericQuantity = parseFloat(quantity);
       const numericAmount = parseFloat(amount);
       
-      // Insert the tank unload record
+      // Get current fuel pump ID
+      const fuelPumpId = await getFuelPumpId();
+      
+      if (!fuelPumpId) {
+        throw new Error("No fuel pump ID available. Please log in with a valid account.");
+      }
+      
+      console.log(`Creating tank unload for fuel pump ID: ${fuelPumpId}`);
+      
+      // Insert the tank unload record with the fuel pump ID
       const { error } = await supabase
         .from('tank_unloads')
         .insert({
@@ -46,7 +56,8 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
           fuel_type: fuelType,
           quantity: numericQuantity,
           amount: numericAmount,
-          date: new Date().toISOString()
+          date: new Date().toISOString(),
+          fuel_pump_id: fuelPumpId
         });
         
       if (error) {
@@ -54,7 +65,7 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
       }
       
       // Update the fuel settings for this fuel type
-      await updateFuelStorage(fuelType, numericQuantity);
+      await updateFuelStorage(fuelType, numericQuantity, fuelPumpId);
       
       toast({
         title: "Success",
@@ -83,13 +94,14 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
   };
 
   // New function to update fuel storage levels
-  const updateFuelStorage = async (fuelType: string, addedQuantity: number) => {
+  const updateFuelStorage = async (fuelType: string, addedQuantity: number, fuelPumpId: string) => {
     try {
       // First, check if there's an entry in fuel_settings for this fuel type
       const { data: settingsData, error: settingsError } = await supabase
         .from('fuel_settings')
         .select('current_level, tank_capacity')
         .eq('fuel_type', fuelType)
+        .eq('fuel_pump_id', fuelPumpId)
         .maybeSingle();
 
       if (settingsError && settingsError.code !== 'PGRST116') {
@@ -106,19 +118,21 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
             current_level: newLevel,
             updated_at: new Date().toISOString()
           })
-          .eq('fuel_type', fuelType);
+          .eq('fuel_type', fuelType)
+          .eq('fuel_pump_id', fuelPumpId);
 
         if (updateError) {
           throw updateError;
         }
         
-        console.log(`Updated ${fuelType} storage to ${newLevel} liters`);
+        console.log(`Updated ${fuelType} storage to ${newLevel} liters for fuel pump ${fuelPumpId}`);
       } else {
         // No fuel settings entry, check if there's a recent inventory entry
         const { data: inventoryData, error: inventoryError } = await supabase
           .from('inventory')
           .select('*')
           .eq('fuel_type', fuelType)
+          .eq('fuel_pump_id', fuelPumpId)
           .order('date', { ascending: false })
           .limit(1);
           
@@ -142,14 +156,15 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
             current_level: baseQuantity + addedQuantity,
             current_price: inventoryData?.[0]?.price_per_unit || 0,
             tank_capacity: tankCapacity,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            fuel_pump_id: fuelPumpId
           });
           
         if (insertError) {
           throw insertError;
         }
         
-        console.log(`Created new fuel settings for ${fuelType} with level ${baseQuantity + addedQuantity} liters`);
+        console.log(`Created new fuel settings for ${fuelType} with level ${baseQuantity + addedQuantity} liters for fuel pump ${fuelPumpId}`);
       }
       
       // Also update the inventory table with a new entry
@@ -161,7 +176,8 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
           fuel_type: fuelType,
           quantity: addedQuantity,
           price_per_unit: parseFloat(amount) / addedQuantity, // Calculate price per unit from total amount
-          date: currentDate
+          date: currentDate,
+          fuel_pump_id: fuelPumpId
         });
         
       if (inventoryError) {
