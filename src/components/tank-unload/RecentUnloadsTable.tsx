@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import { useTankUnloads } from "@/hooks/useTankUnloads";
 import { useAuth } from '@/contexts/AuthContext';
+import { AlertTriangle } from "lucide-react";
 
 interface RecentUnloadsTableProps {
   refreshTrigger?: number;
@@ -12,7 +13,7 @@ interface RecentUnloadsTableProps {
 
 const RecentUnloadsTable = ({ refreshTrigger, showAll = false }: RecentUnloadsTableProps) => {
   const { isAuthenticated } = useAuth();
-  const { recentUnloads, isLoading } = useTankUnloads(refreshTrigger, showAll ? 100 : 5, showAll);
+  const { recentUnloads, isLoading, error } = useTankUnloads(refreshTrigger, showAll ? 100 : 5, showAll);
 
   // If showAll is true, display all records, otherwise only show the first 5
   const displayedUnloads = showAll ? recentUnloads : recentUnloads.slice(0, 5);
@@ -42,6 +43,15 @@ const RecentUnloadsTable = ({ refreshTrigger, showAll = false }: RecentUnloadsTa
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-4">
                     Loading...
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-4">
+                    <div className="flex flex-col items-center justify-center">
+                      <AlertTriangle className="h-5 w-5 text-amber-500 mb-2" />
+                      <p className="text-muted-foreground">{error}</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : !isAuthenticated ? (

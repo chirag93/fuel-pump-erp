@@ -34,10 +34,13 @@ export const getTransactionsByCustomerId = async (customerId: string): Promise<T
       .eq('customer_id', customerId)
       .eq('fuel_pump_id', fuelPumpId);
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching transactions:', error);
+      throw error;
+    }
     
     if (data) {
-      console.log(`Found ${data.length} transactions`);
+      console.log(`Found ${data.length} transactions for customer ${customerId} (fuel pump: ${fuelPumpId})`);
       
       // Process data to include vehicle number
       const processedTransactions = data.map((transaction: any) => ({
@@ -86,7 +89,12 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
       .select()
       .single();
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error creating transaction:', error);
+      throw error;
+    }
+    
+    console.log(`Created new transaction with ID ${id} for fuel pump ${fuelPumpId}`);
     return data as Transaction;
   } catch (error) {
     console.error('Error creating transaction:', error);

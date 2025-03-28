@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Fuel, Droplets, Loader2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { getFuelPumpId } from '@/integrations/utils';
+import { toast } from '@/hooks/use-toast';
 
 interface FuelTankProps {
   fuelType: string;
@@ -28,13 +30,24 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
         setIsLoading(true);
         setError(null);
         
-        console.log(`Fetching data for ${fuelType}, provided capacity: ${capacity}`);
+        // Get the current fuel pump ID
+        const fuelPumpId = await getFuelPumpId();
+        
+        if (!fuelPumpId) {
+          console.log('No fuel pump ID available for fetching fuel data');
+          setError('Authentication required');
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log(`Fetching data for ${fuelType} (fuel pump: ${fuelPumpId}), provided capacity: ${capacity}`);
         
         // Try to get data from fuel_settings first
         const { data: settingsData, error: settingsError } = await supabase
           .from('fuel_settings')
           .select('current_level, current_price, tank_capacity, updated_at')
           .eq('fuel_type', fuelType.trim())
+          .eq('fuel_pump_id', fuelPumpId)
           .maybeSingle();
 
         if (settingsData) {
@@ -68,6 +81,7 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
             .from('inventory')
             .select('*')
             .eq('fuel_type', fuelType.trim())
+            .eq('fuel_pump_id', fuelPumpId)
             .order('date', { ascending: false })
             .limit(1);
             

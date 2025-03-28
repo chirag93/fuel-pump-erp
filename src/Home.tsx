@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ModuleIcons } from '@/assets/icons';
 import {
   Droplets,
   FileText,
@@ -22,6 +21,9 @@ import {
 import FuelTankDisplay from '@/components/fuel/FuelTankDisplay';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getFuelPumpId } from '@/integrations/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 interface QuickActionProps {
   title: string;
@@ -33,7 +35,7 @@ interface QuickActionProps {
 }
 
 interface FuelLevel {
-  fuelType: 'Petrol' | 'Diesel';
+  fuelType: string;
   capacity: number;
   lastUpdated: string;
 }
@@ -75,20 +77,66 @@ const QuickAction = ({
 };
 
 const Home = () => {
-  const [fuelLevels, setFuelLevels] = useState<FuelLevel[]>([
-    { fuelType: 'Petrol', capacity: 10000, lastUpdated: 'Loading...' },
-    { fuelType: 'Diesel', capacity: 12000, lastUpdated: 'Loading...' }
-  ]);
+  const { isAuthenticated } = useAuth();
+  const [fuelLevels, setFuelLevels] = useState<FuelLevel[]>([]);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
+  const [isLoadingFuelLevels, setIsLoadingFuelLevels] = useState(true);
 
   // Fetch fuel levels from the database
   useEffect(() => {
     const fetchFuelLevels = async () => {
       try {
+        setIsLoadingFuelLevels(true);
+        
+        // Get fuel pump ID for data isolation
+        const fuelPumpId = await getFuelPumpId();
+        
+        if (!fuelPumpId) {
+          console.log('No fuel pump ID available for fetching fuel levels');
+          toast({
+            title: "Authentication Required",
+            description: "Please log in with a fuel pump account to view fuel levels",
+            variant: "destructive"
+          });
+          setIsLoadingFuelLevels(false);
+          return;
+        }
+        
+        console.log(`Fetching fuel levels with fuel pump ID: ${fuelPumpId}`);
+        
+        // First check if we have fuel settings
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('fuel_settings')
+          .select('fuel_type, tank_capacity, updated_at')
+          .eq('fuel_pump_id', fuelPumpId);
+          
+        if (settingsError) {
+          throw settingsError;
+        }
+        
+        if (settingsData && settingsData.length > 0) {
+          // Format the data from settings
+          const fuelData = settingsData.map(item => ({
+            fuelType: item.fuel_type,
+            capacity: item.tank_capacity || (item.fuel_type === 'Petrol' ? 10000 : 12000),
+            lastUpdated: item.updated_at ? new Date(item.updated_at).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            }) : 'Unknown'
+          }));
+          
+          setFuelLevels(fuelData);
+          setIsLoadingFuelLevels(false);
+          return;
+        }
+        
+        // Fallback to inventory if no settings
         const { data, error } = await supabase
           .from('inventory')
           .select('*')
+          .eq('fuel_pump_id', fuelPumpId)
           .order('date', { ascending: false });
           
         if (error) {
@@ -100,7 +148,7 @@ const Home = () => {
           const latestByFuelType: Record<string, any> = {};
           data.forEach(item => {
             // Only process Petrol and Diesel fuel types (no CNG)
-            if ((item.fuel_type === 'Petrol' || item.fuel_type === 'Diesel') && 
+            if ((item.fuel_type === 'Petrol' || item.fuel_type === 'Diesel' || item.fuel_type === 'Premium') && 
                 (!latestByFuelType[item.fuel_type] || new Date(item.date) > new Date(latestByFuelType[item.fuel_type].date))) {
               latestByFuelType[item.fuel_type] = item;
             }
@@ -111,7 +159,7 @@ const Home = () => {
             // Ensure we have a valid fuel_type before using it
             if (item && typeof item.fuel_type === 'string') {
               return {
-                fuelType: item.fuel_type as 'Petrol' | 'Diesel',
+                fuelType: item.fuel_type,
                 capacity: item.fuel_type === 'Petrol' ? 10000 : 12000, // Default capacities
                 lastUpdated: item.date ? new Date(item.date).toLocaleDateString('en-US', {
                   year: 'numeric',
@@ -125,21 +173,42 @@ const Home = () => {
           
           if (fuelData.length > 0) {
             setFuelLevels(fuelData);
+          } else {
+            console.log('No fuel data found for this fuel pump');
           }
+        } else {
+          console.log('No inventory data found for this fuel pump');
         }
       } catch (error) {
         console.error('Error fetching fuel levels:', error);
+      } finally {
+        setIsLoadingFuelLevels(false);
       }
     };
     
-    fetchFuelLevels();
-  }, []);
+    if (isAuthenticated) {
+      fetchFuelLevels();
+    } else {
+      setIsLoadingFuelLevels(false);
+    }
+  }, [isAuthenticated]);
 
   // Fetch recent activities
   useEffect(() => {
     const fetchRecentActivities = async () => {
       setIsLoadingActivities(true);
       try {
+        // Get fuel pump ID for data isolation
+        const fuelPumpId = await getFuelPumpId();
+        
+        if (!fuelPumpId) {
+          console.log('No fuel pump ID available for fetching recent activities');
+          setIsLoadingActivities(false);
+          return;
+        }
+        
+        console.log(`Fetching recent activities with fuel pump ID: ${fuelPumpId}`);
+        
         // Array to hold all activities
         let allActivities: RecentActivity[] = [];
         
@@ -147,6 +216,7 @@ const Home = () => {
         const { data: shiftsData, error: shiftsError } = await supabase
           .from('shifts')
           .select('id, start_time, staff_id, staff(name)')
+          .eq('fuel_pump_id', fuelPumpId)
           .order('start_time', { ascending: false })
           .limit(3);
           
@@ -166,6 +236,7 @@ const Home = () => {
         const { data: unloadsData, error: unloadsError } = await supabase
           .from('tank_unloads')
           .select('*')
+          .eq('fuel_pump_id', fuelPumpId)
           .order('date', { ascending: false })
           .limit(3);
           
@@ -185,6 +256,7 @@ const Home = () => {
         const { data: transactionsData, error: transactionsError } = await supabase
           .from('transactions')
           .select('id, date, fuel_type, amount, quantity, payment_method, created_at')
+          .eq('fuel_pump_id', fuelPumpId)
           .order('created_at', { ascending: false })
           .limit(3);
           
@@ -219,8 +291,12 @@ const Home = () => {
       }
     };
     
-    fetchRecentActivities();
-  }, []);
+    if (isAuthenticated) {
+      fetchRecentActivities();
+    } else {
+      setIsLoadingActivities(false);
+    }
+  }, [isAuthenticated]);
 
   // Helper function to format time for display
   const formatTime = (timeString: string) => {
@@ -339,17 +415,31 @@ const Home = () => {
       {/* Fuel Tank Status - Moved below Quick Actions */}
       <div>
         <h3 className="mb-4 text-xl font-semibold">Fuel Storage Status</h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          {fuelLevels.map((fuel, index) => (
-            <FuelTankDisplay 
-              key={index}
-              fuelType={fuel.fuelType} 
-              capacity={fuel.capacity} 
-              lastUpdated={fuel.lastUpdated}
-              showTankIcon={true}
-            />
-          ))}
-        </div>
+        {isLoadingFuelLevels ? (
+          <div className="text-center py-4">
+            <p className="text-muted-foreground">Loading fuel storage data...</p>
+          </div>
+        ) : !isAuthenticated ? (
+          <div className="text-center py-4">
+            <p className="text-muted-foreground">Please sign in to view fuel storage data</p>
+          </div>
+        ) : fuelLevels.length === 0 ? (
+          <div className="text-center py-4">
+            <p className="text-muted-foreground">No fuel storage data available</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {fuelLevels.map((fuel, index) => (
+              <FuelTankDisplay 
+                key={index}
+                fuelType={fuel.fuelType} 
+                capacity={fuel.capacity} 
+                lastUpdated={fuel.lastUpdated}
+                showTankIcon={true}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-8">
@@ -358,6 +448,10 @@ const Home = () => {
           {isLoadingActivities ? (
             <div className="text-center py-4">
               <p className="text-muted-foreground">Loading recent activities...</p>
+            </div>
+          ) : !isAuthenticated ? (
+            <div className="text-center py-4">
+              <p className="text-muted-foreground">Please sign in to view recent activities</p>
             </div>
           ) : recentActivities.length === 0 ? (
             <div className="text-center py-4">
