@@ -12,7 +12,7 @@ export const getFuelPumpId = async (): Promise<string | null> => {
     
     if (!session?.user) {
       console.error('No authenticated user found');
-      return null;
+      return await getFallbackFuelPumpId();
     }
     
     console.log(`Getting fuel pump ID for user: ${session.user.email}`);
@@ -39,7 +39,7 @@ export const getFuelPumpId = async (): Promise<string | null> => {
         return firstPump.id;
       }
       
-      return null;
+      return await getFallbackFuelPumpId();
     }
     
     // Get the fuel pump ID associated with this user's email
@@ -51,7 +51,7 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       
     if (error) {
       console.error('Error fetching fuel pump ID:', error);
-      return null;
+      return await getFallbackFuelPumpId();
     }
     
     if (fuelPump?.id) {
@@ -59,24 +59,43 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       return fuelPump.id;
     } else {
       console.log(`No fuel pump found for email: ${session.user.email}`);
-      
-      // Fall back to the first fuel pump in the database if the user doesn't have one assigned
-      // This is a temporary solution for testing
-      const { data: firstPump, error: firstPumpError } = await supabase
-        .from('fuel_pumps')
-        .select('id')
-        .limit(1)
-        .single();
-        
-      if (!firstPumpError && firstPump) {
-        console.log(`Falling back to first available fuel pump: ${firstPump.id}`);
-        return firstPump.id;
-      }
+      return await getFallbackFuelPumpId();
     }
-    
-    return null;
   } catch (error) {
     console.error('Error getting fuel pump ID:', error);
+    return await getFallbackFuelPumpId();
+  }
+};
+
+/**
+ * Fallback function to get the first available fuel pump ID
+ * This is used when the user doesn't have a fuel pump assigned
+ */
+const getFallbackFuelPumpId = async (): Promise<string | null> => {
+  try {
+    console.log('Using fallback method to get a fuel pump ID');
+    
+    // Try to get the first fuel pump as fallback
+    const { data: firstPump, error } = await supabase
+      .from('fuel_pumps')
+      .select('id')
+      .limit(1)
+      .single();
+      
+    if (error) {
+      console.error('Error fetching fallback fuel pump ID:', error);
+      return null;
+    }
+    
+    if (firstPump?.id) {
+      console.log(`Fallback: Using first available fuel pump: ${firstPump.id}`);
+      return firstPump.id;
+    }
+    
+    console.log('No fuel pumps found in the database');
+    return null;
+  } catch (error) {
+    console.error('Error in fallback fuel pump ID retrieval:', error);
     return null;
   }
 };

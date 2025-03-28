@@ -63,14 +63,29 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
       .select('pump_number, fuel_types');
       
     // Apply fuel pump filter if available
+    let firstPumpData = null;
+    
     if (fuelPumpId) {
       console.log(`Filtering pump settings by fuel_pump_id: ${fuelPumpId}`);
       pumpQuery.eq('fuel_pump_id', fuelPumpId);
-    } else if (firstPump?.id) {
-      console.log(`Using first fuel pump ID for pump settings: ${firstPump.id}`);
-      pumpQuery.eq('fuel_pump_id', firstPump.id);
     } else {
-      console.log('No fuel pump ID available, fetching all pump settings');
+      console.log('No fuel pump ID available for pump settings, trying to get first fuel pump');
+      
+      // Try to get the first fuel pump as fallback
+      const { data: firstPump } = await supabase
+        .from('fuel_pumps')
+        .select('id')
+        .limit(1)
+        .single();
+        
+      firstPumpData = firstPump;
+      
+      if (firstPump?.id) {
+        console.log(`Fallback: Using first fuel pump ID for pump settings: ${firstPump.id}`);
+        pumpQuery.eq('fuel_pump_id', firstPump.id);
+      } else {
+        console.log('No fuel pumps found, fetching all pump settings');
+      }
     }
       
     const { data: pumpData, error: pumpError } = await pumpQuery;
@@ -118,6 +133,7 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
 
 export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: number, current: number, price: number } }> => {
   let fuelPumpId = await getFuelPumpId();
+  let firstPumpData = null;
   
   console.log(`Getting fuel levels with fuel pump ID: ${fuelPumpId || 'none'}`);
   
@@ -131,6 +147,8 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
         .select('id')
         .limit(1)
         .single();
+      
+      firstPumpData = firstPump;  
         
       if (firstPump?.id) {
         console.log(`Fallback: Using first fuel pump ID for fuel levels: ${firstPump.id}`);
@@ -361,3 +379,4 @@ const updateTankLevelsFromReadings = async (
     console.error("Error updating tank levels from readings:", error);
   }
 };
+
