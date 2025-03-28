@@ -1,6 +1,7 @@
 
 import { supabase, Vehicle } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getFuelPumpId } from './utils';
 
 /**
  * Fetch all vehicles for a specific customer
@@ -8,10 +9,13 @@ import { toast } from '@/hooks/use-toast';
 export const getVehiclesByCustomerId = async (customerId: string): Promise<Vehicle[]> => {
   try {
     console.log('API getVehiclesByCustomerId called for customer ID:', customerId);
+    const fuelPumpId = await getFuelPumpId();
+    
     const { data, error } = await supabase
       .from('vehicles')
       .select('*')
-      .eq('customer_id', customerId);
+      .eq('customer_id', customerId)
+      .eq('fuel_pump_id', fuelPumpId);
       
     if (error) throw error;
     return data || [];
@@ -31,9 +35,11 @@ export const getVehiclesByCustomerId = async (customerId: string): Promise<Vehic
  */
 export const createVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'created_at'>): Promise<Vehicle | null> => {
   try {
+    const fuelPumpId = await getFuelPumpId();
+    
     const { data, error } = await supabase
       .from('vehicles')
-      .insert([vehicleData])
+      .insert([{ ...vehicleData, fuel_pump_id: fuelPumpId }])
       .select()
       .single();
       

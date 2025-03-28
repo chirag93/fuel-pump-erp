@@ -1,14 +1,19 @@
+
 import { supabase, Customer } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getFuelPumpId } from './utils';
 
 /**
  * Fetch all customers from the database
  */
 export const getAllCustomers = async (): Promise<Customer[]> => {
   try {
+    const fuelPumpId = await getFuelPumpId();
+    
     const { data, error } = await supabase
       .from('customers')
       .select('*')
+      .eq('fuel_pump_id', fuelPumpId)
       .order('name');
       
     if (error) throw error;
@@ -30,10 +35,13 @@ export const getAllCustomers = async (): Promise<Customer[]> => {
 export const getCustomerById = async (id: string): Promise<Customer | null> => {
   try {
     console.log('API getCustomerById called for ID:', id);
+    const fuelPumpId = await getFuelPumpId();
+    
     const { data, error } = await supabase
       .from('customers')
       .select('*')
       .eq('id', id)
+      .eq('fuel_pump_id', fuelPumpId)
       .single();
       
     if (error) throw error;
@@ -54,9 +62,11 @@ export const getCustomerById = async (id: string): Promise<Customer | null> => {
  */
 export const createCustomer = async (customerData: Omit<Customer, 'id' | 'created_at'>): Promise<Customer | null> => {
   try {
+    const fuelPumpId = await getFuelPumpId();
+    
     const { data, error } = await supabase
       .from('customers')
-      .insert([customerData])
+      .insert([{ ...customerData, fuel_pump_id: fuelPumpId }])
       .select()
       .single();
       

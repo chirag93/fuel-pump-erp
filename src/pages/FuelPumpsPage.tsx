@@ -20,7 +20,8 @@ import {
   Mail, 
   MapPin,
   Phone,
-  KeyRound
+  KeyRound,
+  Database
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
@@ -192,6 +193,11 @@ const FuelPumpsPage = () => {
                     <span className="text-sm">{pump.contact_number}</span>
                   </div>
                 )}
+                
+                <div className="flex items-start">
+                  <Database className="mt-0.5 mr-2 h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">Isolated data instance</span>
+                </div>
                 
                 <div className="flex justify-end gap-2 mt-4">
                   <Link to={`/super-admin/fuel-pumps/${pump.id}`}>

@@ -89,12 +89,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch the fuel pump associated with a user's email
   const fetchAssociatedFuelPump = async (email: string) => {
     try {
-      const response = await fetch(`${process.env.VITE_API_URL || 'http://localhost:5000'}/api/fuel-pumps?email=${email}`);
-      const data = await response.json();
+      const { data: fuelPumps, error } = await supabase
+        .from('fuel_pumps')
+        .select('id, name')
+        .eq('email', email)
+        .maybeSingle();
       
-      if (data && data.length > 0) {
-        setFuelPumpId(data[0].id);
-        setFuelPumpName(data[0].name);
+      if (error) {
+        throw error;
+      }
+      
+      if (fuelPumps) {
+        setFuelPumpId(fuelPumps.id);
+        setFuelPumpName(fuelPumps.name);
+        
+        // Update user with fuelPumpId
+        if (user) {
+          const updatedUser = {
+            ...user,
+            fuelPumpId: fuelPumps.id,
+            fuelPumpName: fuelPumps.name
+          };
+          setUser(updatedUser);
+          
+          // Update session in localStorage
+          if (session) {
+            const updatedSession = {
+              ...session,
+              user: updatedUser
+            };
+            setSession(updatedSession);
+            localStorage.setItem('fuel_pro_session', JSON.stringify(updatedSession));
+          }
+        }
       } else {
         setFuelPumpId(null);
         setFuelPumpName(null);

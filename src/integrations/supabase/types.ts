@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           address: string | null
           business_name: string
+          fuel_pump_id: string | null
           gst_number: string
           id: string
           updated_at: string | null
@@ -20,6 +21,7 @@ export type Database = {
         Insert: {
           address?: string | null
           business_name: string
+          fuel_pump_id?: string | null
           gst_number: string
           id?: string
           updated_at?: string | null
@@ -27,17 +29,27 @@ export type Database = {
         Update: {
           address?: string | null
           business_name?: string
+          fuel_pump_id?: string | null
           gst_number?: string
           id?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "business_settings_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       consumables: {
         Row: {
           category: string | null
           created_at: string | null
           date: string
+          fuel_pump_id: string | null
           id: string
           name: string
           price_per_unit: number
@@ -49,6 +61,7 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           date: string
+          fuel_pump_id?: string | null
           id?: string
           name: string
           price_per_unit: number
@@ -60,6 +73,7 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           date?: string
+          fuel_pump_id?: string | null
           id?: string
           name?: string
           price_per_unit?: number
@@ -67,7 +81,15 @@ export type Database = {
           total_price?: number
           unit?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "consumables_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customer_payments: {
         Row: {
@@ -75,6 +97,7 @@ export type Database = {
           created_at: string
           customer_id: string
           date: string
+          fuel_pump_id: string | null
           id: string
           notes: string | null
           payment_method: string
@@ -84,6 +107,7 @@ export type Database = {
           created_at?: string
           customer_id: string
           date?: string
+          fuel_pump_id?: string | null
           id?: string
           notes?: string | null
           payment_method: string
@@ -93,6 +117,7 @@ export type Database = {
           created_at?: string
           customer_id?: string
           date?: string
+          fuel_pump_id?: string | null
           id?: string
           notes?: string | null
           payment_method?: string
@@ -105,6 +130,13 @@ export type Database = {
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "customer_payments_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
         ]
       }
       customers: {
@@ -113,6 +145,7 @@ export type Database = {
           contact: string
           created_at: string | null
           email: string
+          fuel_pump_id: string | null
           gst: string
           id: string
           name: string
@@ -123,6 +156,7 @@ export type Database = {
           contact: string
           created_at?: string | null
           email: string
+          fuel_pump_id?: string | null
           gst: string
           id?: string
           name: string
@@ -133,12 +167,21 @@ export type Database = {
           contact?: string
           created_at?: string | null
           email?: string
+          fuel_pump_id?: string | null
           gst?: string
           id?: string
           name?: string
           phone?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_readings: {
         Row: {
@@ -147,6 +190,7 @@ export type Database = {
           created_at: string | null
           date: string
           dip_reading: number
+          fuel_pump_id: string | null
           fuel_type: string
           id: string
           net_stock: number | null
@@ -162,6 +206,7 @@ export type Database = {
           created_at?: string | null
           date: string
           dip_reading: number
+          fuel_pump_id?: string | null
           fuel_type: string
           id?: string
           net_stock?: number | null
@@ -177,6 +222,7 @@ export type Database = {
           created_at?: string | null
           date?: string
           dip_reading?: number
+          fuel_pump_id?: string | null
           fuel_type?: string
           id?: string
           net_stock?: number | null
@@ -186,7 +232,15 @@ export type Database = {
           stock_variation?: number | null
           tank_number?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "daily_readings_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fuel_pumps: {
         Row: {
@@ -272,6 +326,7 @@ export type Database = {
           appearance: string
           created_at: string
           density: number
+          fuel_pump_id: string | null
           fuel_type: string
           id: string
           litres_tested: number
@@ -285,6 +340,7 @@ export type Database = {
           appearance: string
           created_at?: string
           density: number
+          fuel_pump_id?: string | null
           fuel_type: string
           id?: string
           litres_tested?: number
@@ -298,6 +354,7 @@ export type Database = {
           appearance?: string
           created_at?: string
           density?: number
+          fuel_pump_id?: string | null
           fuel_type?: string
           id?: string
           litres_tested?: number
@@ -308,6 +365,13 @@ export type Database = {
           tested_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fuel_tests_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fuel_tests_tested_by_fkey"
             columns: ["tested_by"]
@@ -322,6 +386,7 @@ export type Database = {
           created_at: string | null
           customer_id: string
           end_number: string
+          fuel_pump_id: string | null
           id: string
           issued_date: string
           start_number: string
@@ -333,6 +398,7 @@ export type Database = {
           created_at?: string | null
           customer_id: string
           end_number: string
+          fuel_pump_id?: string | null
           id?: string
           issued_date: string
           start_number: string
@@ -344,6 +410,7 @@ export type Database = {
           created_at?: string | null
           customer_id?: string
           end_number?: string
+          fuel_pump_id?: string | null
           id?: string
           issued_date?: string
           start_number?: string
@@ -357,6 +424,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indent_booklets_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
             referencedColumns: ["id"]
           },
         ]
@@ -373,6 +447,7 @@ export type Database = {
           customer_id: string
           date: string | null
           discount_amount: number | null
+          fuel_pump_id: string | null
           fuel_type: string
           id: string
           indent_number: string | null
@@ -392,6 +467,7 @@ export type Database = {
           customer_id: string
           date?: string | null
           discount_amount?: number | null
+          fuel_pump_id?: string | null
           fuel_type: string
           id: string
           indent_number?: string | null
@@ -411,6 +487,7 @@ export type Database = {
           customer_id?: string
           date?: string | null
           discount_amount?: number | null
+          fuel_pump_id?: string | null
           fuel_type?: string
           id?: string
           indent_number?: string | null
@@ -435,6 +512,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "indents_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "indents_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
@@ -446,6 +530,7 @@ export type Database = {
       inventory: {
         Row: {
           date: string
+          fuel_pump_id: string | null
           fuel_type: string
           id: string
           price_per_unit: number
@@ -454,6 +539,7 @@ export type Database = {
         }
         Insert: {
           date: string
+          fuel_pump_id?: string | null
           fuel_type: string
           id?: string
           price_per_unit: number
@@ -462,13 +548,22 @@ export type Database = {
         }
         Update: {
           date?: string
+          fuel_pump_id?: string | null
           fuel_type?: string
           id?: string
           price_per_unit?: number
           quantity?: number
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "inventory_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoices: {
         Row: {
@@ -476,6 +571,7 @@ export type Database = {
           created_at: string | null
           customer_id: string | null
           date: string
+          fuel_pump_id: string | null
           id: string
           status: string
           updated_at: string | null
@@ -485,6 +581,7 @@ export type Database = {
           created_at?: string | null
           customer_id?: string | null
           date?: string
+          fuel_pump_id?: string | null
           id: string
           status: string
           updated_at?: string | null
@@ -494,6 +591,7 @@ export type Database = {
           created_at?: string | null
           customer_id?: string | null
           date?: string
+          fuel_pump_id?: string | null
           id?: string
           status?: string
           updated_at?: string | null
@@ -504,6 +602,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
             referencedColumns: ["id"]
           },
         ]
@@ -578,6 +683,7 @@ export type Database = {
           created_at: string | null
           date: string
           expenses: number | null
+          fuel_pump_id: string | null
           id: string
           opening_reading: number
           pump_id: string
@@ -596,6 +702,7 @@ export type Database = {
           created_at?: string | null
           date: string
           expenses?: number | null
+          fuel_pump_id?: string | null
           id?: string
           opening_reading: number
           pump_id: string
@@ -614,6 +721,7 @@ export type Database = {
           created_at?: string | null
           date?: string
           expenses?: number | null
+          fuel_pump_id?: string | null
           id?: string
           opening_reading?: number
           pump_id?: string
@@ -623,6 +731,13 @@ export type Database = {
           upi_sales?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "readings_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "readings_shift_id_fkey"
             columns: ["shift_id"]
@@ -698,6 +813,7 @@ export type Database = {
           cash_remaining: number | null
           created_at: string | null
           end_time: string | null
+          fuel_pump_id: string | null
           id: string
           shift_type: string
           staff_id: string
@@ -708,6 +824,7 @@ export type Database = {
           cash_remaining?: number | null
           created_at?: string | null
           end_time?: string | null
+          fuel_pump_id?: string | null
           id?: string
           shift_type: string
           staff_id: string
@@ -718,6 +835,7 @@ export type Database = {
           cash_remaining?: number | null
           created_at?: string | null
           end_time?: string | null
+          fuel_pump_id?: string | null
           id?: string
           shift_type?: string
           staff_id?: string
@@ -725,6 +843,13 @@ export type Database = {
           status?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "shifts_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shifts_staff_id_fkey"
             columns: ["staff_id"]
@@ -739,6 +864,7 @@ export type Database = {
           assigned_pumps: Json | null
           auth_id: string | null
           email: string
+          fuel_pump_id: string | null
           id: string
           is_active: boolean | null
           joining_date: string
@@ -752,6 +878,7 @@ export type Database = {
           assigned_pumps?: Json | null
           auth_id?: string | null
           email: string
+          fuel_pump_id?: string | null
           id?: string
           is_active?: boolean | null
           joining_date: string
@@ -765,6 +892,7 @@ export type Database = {
           assigned_pumps?: Json | null
           auth_id?: string | null
           email?: string
+          fuel_pump_id?: string | null
           id?: string
           is_active?: boolean | null
           joining_date?: string
@@ -774,7 +902,15 @@ export type Database = {
           salary?: number
           staff_numeric_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "staff_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       staff_permissions: {
         Row: {
@@ -831,6 +967,7 @@ export type Database = {
           amount: number
           created_at: string
           date: string
+          fuel_pump_id: string | null
           fuel_type: string
           id: string
           quantity: number
@@ -840,6 +977,7 @@ export type Database = {
           amount: number
           created_at?: string
           date?: string
+          fuel_pump_id?: string | null
           fuel_type: string
           id?: string
           quantity: number
@@ -849,12 +987,21 @@ export type Database = {
           amount?: number
           created_at?: string
           date?: string
+          fuel_pump_id?: string | null
           fuel_type?: string
           id?: string
           quantity?: number
           vehicle_number?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tank_unloads_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {
@@ -867,6 +1014,7 @@ export type Database = {
           customer_id: string | null
           date: string
           discount_amount: number | null
+          fuel_pump_id: string | null
           fuel_type: string
           id: string
           indent_id: string | null
@@ -886,6 +1034,7 @@ export type Database = {
           customer_id?: string | null
           date: string
           discount_amount?: number | null
+          fuel_pump_id?: string | null
           fuel_type: string
           id: string
           indent_id?: string | null
@@ -905,6 +1054,7 @@ export type Database = {
           customer_id?: string | null
           date?: string
           discount_amount?: number | null
+          fuel_pump_id?: string | null
           fuel_type?: string
           id?: string
           indent_id?: string | null
@@ -920,6 +1070,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
             referencedColumns: ["id"]
           },
           {
@@ -950,6 +1107,7 @@ export type Database = {
           capacity: string
           created_at: string | null
           customer_id: string
+          fuel_pump_id: string | null
           id: string
           number: string
           type: string
@@ -958,6 +1116,7 @@ export type Database = {
           capacity: string
           created_at?: string | null
           customer_id: string
+          fuel_pump_id?: string | null
           id?: string
           number: string
           type: string
@@ -966,6 +1125,7 @@ export type Database = {
           capacity?: string
           created_at?: string | null
           customer_id?: string
+          fuel_pump_id?: string | null
           id?: string
           number?: string
           type?: string
@@ -976,6 +1136,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_fuel_pump_id_fkey"
+            columns: ["fuel_pump_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_pumps"
             referencedColumns: ["id"]
           },
         ]
@@ -1075,6 +1242,10 @@ export type Database = {
           p_auth_id: string
         }
         Returns: Database["public"]["Enums"]["staff_feature"][]
+      }
+      get_user_fuel_pump_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       has_feature_access: {
         Args: {

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -82,21 +83,24 @@ const LoginForm = ({
 
       // Determine user role based on email pattern or profiles
       let userRole = 'staff';
+      let fuelPumpId = null;
       
       // If the email matches the fuel pump email, they're an admin
       if (fuelPump && data.user.email === fuelPump.email) {
         userRole = 'admin';
+        fuelPumpId = fuelPump.id;
       } else {
         // Check if this user is in the staff table
         try {
           const { data: staffData } = await supabase
             .from('staff')
-            .select('role')
+            .select('role, fuel_pump_id')
             .eq('email', data.user.email)
             .maybeSingle();
             
           if (staffData) {
             userRole = staffData.role;
+            fuelPumpId = staffData.fuel_pump_id;
           }
         } catch (err) {
           console.error('Error checking staff role:', err);
@@ -124,7 +128,8 @@ const LoginForm = ({
         id: data.user.id,
         username: email.split('@')[0],
         email: data.user.email,
-        role: userRole
+        role: userRole,
+        fuelPumpId: fuelPumpId
       }, rememberMe);
       
       const from = location.state?.from?.pathname || '/dashboard';

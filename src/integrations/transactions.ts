@@ -1,6 +1,7 @@
 
 import { supabase, Transaction } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getFuelPumpId } from './utils';
 
 export interface TransactionWithDetails extends Transaction {
   vehicle_number?: string;
@@ -12,13 +13,16 @@ export interface TransactionWithDetails extends Transaction {
 export const getTransactionsByCustomerId = async (customerId: string): Promise<TransactionWithDetails[]> => {
   try {
     console.log('API getTransactionsByCustomerId called for customer ID:', customerId);
+    const fuelPumpId = await getFuelPumpId();
+    
     const { data, error } = await supabase
       .from('transactions')
       .select(`
         *,
         vehicles:vehicle_id (number)
       `)
-      .eq('customer_id', customerId);
+      .eq('customer_id', customerId)
+      .eq('fuel_pump_id', fuelPumpId);
       
     if (error) throw error;
     
@@ -53,10 +57,11 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
   try {
     // Generate a UUID for the transaction ID
     const id = crypto.randomUUID();
+    const fuelPumpId = await getFuelPumpId();
     
     const { data, error } = await supabase
       .from('transactions')
-      .insert([{ id, ...transactionData }])
+      .insert([{ id, ...transactionData, fuel_pump_id: fuelPumpId }])
       .select()
       .single();
       
