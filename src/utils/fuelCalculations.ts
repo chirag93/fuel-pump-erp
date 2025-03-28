@@ -12,6 +12,8 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
   const fuelUsage: { [key: string]: number } = {};
   const fuelPumpId = await getFuelPumpId();
   
+  console.log(`Calculating fuel usage with fuel pump ID: ${fuelPumpId || 'none'}`);
+  
   // Fetch fuel types from settings
   const query = supabase
     .from('fuel_settings')
@@ -84,6 +86,8 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
 export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: number, current: number, price: number } }> => {
   const fuelPumpId = await getFuelPumpId();
   
+  console.log(`Getting fuel levels with fuel pump ID: ${fuelPumpId || 'none'}`);
+  
   // Fetch fuel settings from database
   const query = supabase
     .from('fuel_settings')
@@ -125,17 +129,85 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
       };
     });
   } else {
-    // Default values if no data found
-    fuelLevels['Petrol'] = {
-      capacity: 20000,
-      current: 12450,
-      price: 0
-    };
-    fuelLevels['Diesel'] = {
-      capacity: 15000,
-      current: 7800,
-      price: 0
-    };
+    console.log("No fuel settings found, checking inventory data...");
+    
+    // If no settings found, try to get data from inventory
+    for (const fuelType of ['Petrol', 'Diesel']) {
+      console.log(`Fetching data for ${fuelType}, provided capacity: undefined`);
+      
+      try {
+        // Try to get settings first
+        const settingsQuery = supabase
+          .from('fuel_settings')
+          .select('*')
+          .eq('fuel_type', fuelType);
+          
+        if (fuelPumpId) {
+          settingsQuery.eq('fuel_pump_id', fuelPumpId);
+        }
+        
+        const { data: settingsData, error: settingsError } = await settingsQuery;
+        
+        if (settingsError) throw settingsError;
+        
+        if (settingsData && settingsData.length > 0) {
+          console.log("Settings data found:", settingsData[0]);
+          const settings = settingsData[0];
+          console.log(`Using capacity from settings: ${settings.tank_capacity}`);
+          
+          fuelLevels[fuelType] = {
+            capacity: settings.tank_capacity || 10000,
+            current: settings.current_level || 0,
+            price: settings.current_price || 0
+          };
+          continue;
+        } else {
+          console.log("No settings data found, falling back to inventory");
+        }
+        
+        // Fall back to inventory if no settings
+        const inventoryQuery = supabase
+          .from('inventory')
+          .select('*')
+          .eq('fuel_type', fuelType)
+          .order('date', { ascending: false })
+          .limit(1);
+          
+        if (fuelPumpId) {
+          inventoryQuery.eq('fuel_pump_id', fuelPumpId);
+        }
+        
+        const { data: inventoryData, error: inventoryError } = await inventoryQuery;
+        
+        if (inventoryError) throw inventoryError;
+        
+        if (inventoryData && inventoryData.length > 0) {
+          console.log("Inventory data found:", inventoryData[0]);
+          const inventory = inventoryData[0];
+          
+          fuelLevels[fuelType] = {
+            capacity: 10000, // Default capacity
+            current: inventory.quantity || 0,
+            price: inventory.price_per_unit || 0
+          };
+        } else {
+          // Default values if no data found
+          fuelLevels[fuelType] = {
+            capacity: fuelType === 'Petrol' ? 20000 : 15000,
+            current: fuelType === 'Petrol' ? 12450 : 7800,
+            price: 0
+          };
+        }
+      } catch (err) {
+        console.error(`Error fetching ${fuelType} data:`, err);
+        // Default values if error
+        fuelLevels[fuelType] = {
+          capacity: fuelType === 'Petrol' ? 20000 : 15000,
+          current: fuelType === 'Petrol' ? 12450 : 7800,
+          price: 0
+        };
+      }
+    }
   }
   
   // Update tank levels based on the latest daily readings

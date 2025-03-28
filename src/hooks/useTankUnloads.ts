@@ -23,6 +23,7 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
     
     try {
       const fuelPumpId = await getFuelPumpId();
+      console.log(`Fetching tank unloads with fuel pump ID: ${fuelPumpId || 'none'}`);
       
       let query = supabase
         .from('tank_unloads')
@@ -46,6 +47,7 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
       }
       
       if (data) {
+        console.log(`Retrieved ${data.length} tank unloads`);
         setRecentUnloads(data as TankUnload[]);
       }
     } catch (err) {

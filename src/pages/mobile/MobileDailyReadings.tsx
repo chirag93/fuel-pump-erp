@@ -44,6 +44,7 @@ const MobileDailyReadings = () => {
   useEffect(() => {
     const fetchFuelTypes = async () => {
       const fuelPumpId = await getFuelPumpId();
+      console.log(`Mobile Daily Readings - Fetching fuel types with fuel pump ID: ${fuelPumpId || 'none'}`);
       
       const query = supabase
         .from('fuel_settings')
@@ -62,6 +63,7 @@ const MobileDailyReadings = () => {
       }
       
       if (data && data.length > 0) {
+        console.log(`Found ${data.length} fuel types`);
         const types = data.map(item => item.fuel_type);
         setFuelTypes(types);
         // Set default fuel type
@@ -69,6 +71,8 @@ const MobileDailyReadings = () => {
           ...prev,
           fuel_type: types[0]
         }));
+      } else {
+        console.log('No fuel types found, using defaults');
       }
     };
     
@@ -79,6 +83,7 @@ const MobileDailyReadings = () => {
   useEffect(() => {
     const fetchPreviousReading = async () => {
       const fuelPumpId = await getFuelPumpId();
+      console.log(`Fetching previous reading for ${readingFormData.fuel_type} with fuel pump ID: ${fuelPumpId || 'none'}`);
       
       const query = supabase
         .from('daily_readings')
@@ -100,6 +105,7 @@ const MobileDailyReadings = () => {
       }
       
       if (data && data.length > 0) {
+        console.log('Found previous reading:', data[0]);
         setPreviousReadingData(data[0]);
         
         // Use previous closing stock as today's opening stock
@@ -126,6 +132,7 @@ const MobileDailyReadings = () => {
           }
         }));
       } else {
+        console.log('No previous reading found');
         setPreviousReadingData(null);
       }
     };
@@ -217,6 +224,7 @@ const MobileDailyReadings = () => {
     
     try {
       const fuelPumpId = await getFuelPumpId();
+      console.log(`Saving reading with fuel pump ID: ${fuelPumpId || 'none'}`);
       
       const tanksToInsert = Object.values(readingFormData.readings).map(tank => ({
         date: readingFormData.date,
