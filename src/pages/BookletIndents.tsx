@@ -1,545 +1,257 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { ArrowLeft, FileText, AlertCircle, Edit, Plus } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { supabase, Indent, IndentBooklet, Transaction } from '@/integrations/supabase/client';
-import { IndentEditDialog } from '@/components/indent/IndentEditDialog';
-import { getIndentsByBookletId } from '@/integrations/indents';
 
-interface IndentWithTransaction extends Indent {
-  transaction?: Transaction;
+import { useParams, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Loader2, ChevronLeft, FileText, Download } from 'lucide-react';
+import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+
+interface Indent {
+  id: string;
+  customer_id: string;
+  booklet_id: string;
+  indent_number: string;
+  issue_date: string;
+  vehicle_id: string;
   vehicle_number?: string;
+  fuel_type: string;
+  quantity: number;
+  amount: number;
+  status: 'Pending' | 'Completed' | 'Cancelled';
 }
 
 const BookletIndents = () => {
-  const { customerId, bookletId } = useParams<{ customerId: string; bookletId: string }>();
-  const [indents, setIndents] = useState<IndentWithTransaction[]>([]);
-  const [booklet, setBooklet] = useState<IndentBooklet | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [editingIndent, setEditingIndent] = useState<IndentWithTransaction | null>(null);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const [unusedIndentNumbers, setUnusedIndentNumbers] = useState<string[]>([]);
-  const [showUnusedIndents, setShowUnusedIndents] = useState(false);
+  const { bookletId, customerId } = useParams<{ bookletId: string, customerId: string }>();
+  const [loading, setLoading] = useState(true);
+  const [indents, setIndents] = useState<Indent[]>([]);
+  const [booklet, setBooklet] = useState<any>(null);
+  const [customer, setCustomer] = useState<any>(null);
   
-  const PAGE_SIZE = 10;
-
-  // Get all indent numbers that should exist in this booklet
-  const generateAllIndentNumbers = (booklet: IndentBooklet) => {
-    if (!booklet) return [];
-    
-    const start = parseInt(booklet.start_number);
-    const end = parseInt(booklet.end_number);
-    const allNumbers: string[] = [];
-    
-    for (let i = start; i <= end; i++) {
-      allNumbers.push(i.toString());
-    }
-    
-    return allNumbers;
-  };
-
-  // Find unused indent numbers by comparing all possible numbers with used ones
-  const findUnusedIndentNumbers = (booklet: IndentBooklet, usedIndents: { indent_number: string }[]) => {
-    if (!booklet) return [];
-    
-    const allNumbers = generateAllIndentNumbers(booklet);
-    const usedNumbers = usedIndents.map(indent => indent.indent_number);
-    
-    // Filter out used numbers to get unused ones
-    return allNumbers.filter(num => !usedNumbers.includes(num));
-  };
-
-  // Update booklet status based on indent usage
-  const updateBookletStatus = async (booklet: IndentBooklet, unusedCount: number) => {
-    if (!booklet) return;
-    
-    const totalIndents = booklet.total_indents;
-    const usedIndents = totalIndents - unusedCount;
-    
-    // Determine the status based on used indents
-    let newStatus: 'Active' | 'Completed' | 'Cancelled';
-    
-    if (usedIndents === totalIndents) {
-      newStatus = 'Completed'; // All indents are used
-    } else if (usedIndents > 0) {
-      newStatus = 'Active'; // Some indents are used (will display as "In Progress")
-    } else {
-      newStatus = 'Active'; // No indents used (will display as "Unused")
-    }
-    
-    console.log(`Updating booklet status: total=${totalIndents}, used=${usedIndents}, unused=${unusedCount}, newStatus=${newStatus}`);
-    
-    // Only update if status has changed or used_indents count has changed
-    if (newStatus !== booklet.status || usedIndents !== booklet.used_indents) {
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('indent_booklets')
-          .update({ 
-            status: newStatus,
-            used_indents: usedIndents
-          })
-          .eq('id', booklet.id)
-          .select();
-          
-        if (error) throw error;
+        console.log('Fetching data for booklet ID:', bookletId);
         
-        if (data && data.length > 0) {
-          const updatedBooklet: IndentBooklet = {
-            ...data[0],
-            status: data[0].status as 'Active' | 'Completed' | 'Cancelled'
-          };
+        // Fetch the booklet
+        if (bookletId) {
+          const { data: bookletData, error: bookletError } = await supabase
+            .from('indent_booklets')
+            .select('*')
+            .eq('id', bookletId)
+            .single();
+            
+          if (bookletError) throw bookletError;
+          setBooklet(bookletData);
           
-          setBooklet(updatedBooklet);
-          
-          if (newStatus !== booklet.status) {
-            toast({
-              title: "Booklet Updated",
-              description: `Booklet status updated to ${
-                newStatus === 'Completed' ? 'Completed' : 
-                newStatus === 'Active' && usedIndents > 0 ? 'In Progress' : 'Unused'
-              }`
-            });
+          // Fetch the customer
+          if (customerId) {
+            const { data: customerData, error: customerError } = await supabase
+              .from('customers')
+              .select('*')
+              .eq('id', customerId)
+              .single();
+              
+            if (customerError) throw customerError;
+            setCustomer(customerData);
           }
+          
+          // Fetch the indents for this booklet
+          const { data: indentsData, error: indentsError } = await supabase
+            .from('indents')
+            .select(`
+              *,
+              vehicles (number)
+            `)
+            .eq('booklet_id', bookletId)
+            .order('issue_date', { ascending: false });
+            
+          if (indentsError) throw indentsError;
+          
+          // Transform the data to include vehicle number
+          const transformedIndents = indentsData.map((indent: any) => ({
+            ...indent,
+            vehicle_number: indent.vehicles?.number
+          }));
+          
+          setIndents(transformedIndents);
         }
       } catch (error) {
-        console.error('Error updating booklet status:', error);
+        console.error('Error fetching booklet data:', error);
         toast({
           title: "Error",
-          description: "Failed to update booklet status",
+          description: "Failed to load indent data. Please try again later.",
           variant: "destructive"
         });
+      } finally {
+        setLoading(false);
       }
-    }
-  };
-
-  const fetchData = async () => {
-    if (!bookletId) return;
+    };
     
-    try {
-      setIsLoading(true);
-      
-      // Fetch booklet details
-      const { data: bookletData, error: bookletError } = await supabase
-        .from('indent_booklets')
-        .select('*')
-        .eq('id', bookletId)
-        .single();
-
-      if (bookletError) throw bookletError;
-      
-      if (bookletData) {
-        // Ensure status is properly typed
-        const typedBooklet: IndentBooklet = {
-          ...bookletData,
-          status: bookletData.status as 'Active' | 'Completed' | 'Cancelled'
-        };
-        setBooklet(typedBooklet);
-      }
-      
-      // Calculate pagination range
-      const from = (currentPage - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-      
-      // Fetch indents for this booklet with pagination
-      const { data: indentsData, error: indentsError, count } = await supabase
-        .from('indents')
-        .select(`
-          *,
-          vehicles(number)
-        `, { count: 'exact' })
-        .eq('booklet_id', bookletId)
-        .order('created_at', { ascending: false })
-        .range(from, to);
-
-      if (indentsError) throw indentsError;
-      
-      // Update pagination info
-      if (count !== null) {
-        setTotalCount(count);
-        setTotalPages(Math.ceil(count / PAGE_SIZE));
-      }
-      
-      // If we have indents, fetch their related transactions
-      if (indentsData && indentsData.length > 0) {
-        const indentIds = indentsData.map(indent => indent.id);
-        
-        const { data: transactionsData, error: transactionsError } = await supabase
-          .from('transactions')
-          .select('*')
-          .in('indent_id', indentIds);
-          
-        if (transactionsError) throw transactionsError;
-
-        console.log('Transactions data:', transactionsData); // Debug log
-        
-        // Map transactions to indents
-        const indentsWithTransactions = indentsData.map(indent => {
-          const transaction = transactionsData?.find(t => t.indent_id === indent.id);
-          console.log(`Indent ID: ${indent.id}, Transaction:`, transaction); // Debug log
-          return {
-            ...indent,
-            transaction: transaction,
-            vehicle_number: indent.vehicles?.number,
-            status: indent.status || 'Pending'  // Default to 'Pending' if status is null
-          };
-        });
-        
-        setIndents(indentsWithTransactions as IndentWithTransaction[]);
-        
-        // Now get all indents for this booklet (not just the paginated ones)
-        // to calculate the unused indent numbers
-        const { data: allIndentsData } = await supabase
-          .from('indents')
-          .select('indent_number')
-          .eq('booklet_id', bookletId);
-        
-        if (allIndentsData && bookletData) {
-          const typedBooklet: IndentBooklet = {
-            ...bookletData,
-            status: bookletData.status as 'Active' | 'Completed' | 'Cancelled'
-          };
-          // Now we're passing the correct type - just objects with indent_number
-          const unused = findUnusedIndentNumbers(typedBooklet, allIndentsData);
-          setUnusedIndentNumbers(unused);
-          
-          // Update booklet status based on unused count
-          updateBookletStatus(typedBooklet, unused.length);
-        }
-      } else {
-        setIndents([]);
-        
-        // If no indents at all, all numbers in the range are unused
-        if (bookletData) {
-          const typedBooklet: IndentBooklet = {
-            ...bookletData,
-            status: bookletData.status as 'Active' | 'Completed' | 'Cancelled'
-          };
-          const unused = findUnusedIndentNumbers(typedBooklet, []);
-          setUnusedIndentNumbers(unused);
-          
-          // Update booklet status based on unused count (all unused)
-          updateBookletStatus(typedBooklet, unused.length);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load indent information",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
     fetchData();
-  }, [bookletId, currentPage]);
-
-  const handleEditIndent = (indent: IndentWithTransaction) => {
-    setEditingIndent(indent);
-    setShowEditDialog(true);
+  }, [bookletId, customerId]);
+  
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'Completed': return 'bg-green-100 text-green-800';
+      case 'Cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-blue-100 text-blue-800';
+    }
   };
-
-  const handleIndentUpdated = async () => {
-    setShowEditDialog(false);
-    setEditingIndent(null);
-    await fetchData(); // Refresh data after update
-    toast({
-      title: "Success",
-      description: "Indent has been updated"
+  
+  const exportIndents = () => {
+    if (!indents.length || !customer) return;
+    
+    // Define CSV headers
+    const headers = [
+      'Indent Number',
+      'Date',
+      'Vehicle',
+      'Fuel Type',
+      'Quantity',
+      'Amount',
+      'Status'
+    ];
+    
+    // Convert indents to CSV rows
+    const rows = indents.map(indent => {
+      return [
+        indent.indent_number,
+        format(new Date(indent.issue_date), 'dd/MM/yyyy'),
+        indent.vehicle_number || 'N/A',
+        indent.fuel_type,
+        indent.quantity,
+        indent.amount,
+        indent.status
+      ];
     });
+    
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    // Create a blob and download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `booklet_indents_${bookletId}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
-
-  const handlePageChange = (page: number) => {
-    if (page > 0 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  const navigateToCreateIndent = () => {
-    // Navigate to the create indent page with the customer ID and booklet ID
-    window.location.href = `/record-indent?customerId=${customerId}&bookletId=${bookletId}`;
-  };
-
-  // Generate pagination items
-  const renderPaginationItems = () => {
-    const items = [];
-    
-    // Always show first page
-    items.push(
-      <PaginationItem key="first">
-        <PaginationLink 
-          isActive={currentPage === 1} 
-          onClick={() => handlePageChange(1)}
-        >
-          1
-        </PaginationLink>
-      </PaginationItem>
-    );
-    
-    // Show ellipsis if needed
-    if (currentPage > 3) {
-      items.push(
-        <PaginationItem key="ellipsis1">
-          <span className="flex h-9 w-9 items-center justify-center">...</span>
-        </PaginationItem>
-      );
-    }
-    
-    // Show pages around current page
-    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
-      if (i <= 1 || i >= totalPages) continue; // Skip first and last as they're always shown
-      
-      items.push(
-        <PaginationItem key={i}>
-          <PaginationLink 
-            isActive={currentPage === i} 
-            onClick={() => handlePageChange(i)}
-          >
-            {i}
-          </PaginationLink>
-        </PaginationItem>
-      );
-    }
-    
-    // Show ellipsis if needed
-    if (currentPage < totalPages - 2) {
-      items.push(
-        <PaginationItem key="ellipsis2">
-          <span className="flex h-9 w-9 items-center justify-center">...</span>
-        </PaginationItem>
-      );
-    }
-    
-    // Always show last page if there's more than 1 page
-    if (totalPages > 1) {
-      items.push(
-        <PaginationItem key="last">
-          <PaginationLink 
-            isActive={currentPage === totalPages} 
-            onClick={() => handlePageChange(totalPages)}
-          >
-            {totalPages}
-          </PaginationLink>
-        </PaginationItem>
-      );
-    }
-    
-    return items;
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <p>Loading booklet indents...</p>
-      </div>
-    );
-  }
-
+  
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center">
-        <Link to={`/customers/${customerId}`} className="mr-4">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Customer
-          </Button>
-        </Link>
-        <h1 className="text-2xl font-bold">Booklet Indents</h1>
-      </div>
-      
-      {booklet && (
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Booklet {booklet.start_number} - {booklet.end_number}</CardTitle>
-                <CardDescription>
-                  Issued on {new Date(booklet.issued_date).toLocaleDateString()} • 
-                  {booklet.used_indents} of {booklet.total_indents} indents used • 
-                  Status: <span className={`px-2 py-1 text-xs rounded-full ${
-                    booklet.status === 'Completed' 
-                      ? 'bg-green-100 text-green-800' 
-                      : booklet.status === 'Active' && booklet.used_indents > 0
-                      ? 'bg-blue-100 text-blue-800' 
-                      : booklet.status === 'Active' && booklet.used_indents === 0
-                      ? 'bg-gray-100 text-gray-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {booklet.status === 'Completed' 
-                      ? 'Completed' 
-                      : booklet.status === 'Active' && booklet.used_indents > 0 
-                      ? 'In Progress' 
-                      : booklet.status === 'Active' && booklet.used_indents === 0
-                      ? 'Unused'
-                      : booklet.status}
-                  </span>
-                </CardDescription>
-              </div>
-              
-              <Button onClick={() => navigateToCreateIndent()} className="gap-1">
-                <Plus size={16} />
-                New Indent
-              </Button>
+    <div className="space-y-6">
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-muted-foreground">Loading indent data...</span>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Link to={`/customers/${customerId}`}>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <ChevronLeft className="h-4 w-4" />
+                  Back to Customer
+                </Button>
+              </Link>
+              <h1 className="text-3xl font-bold">Booklet Indents</h1>
             </div>
             
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                {unusedIndentNumbers.length} unused indent numbers available
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowUnusedIndents(!showUnusedIndents)}
-              >
-                {showUnusedIndents ? "Hide Unused Indents" : "Show Unused Indents"}
+            {indents.length > 0 && (
+              <Button variant="outline" onClick={exportIndents} className="flex items-center gap-2">
+                <Download size={16} />
+                Export CSV
               </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {showUnusedIndents && unusedIndentNumbers.length > 0 && (
-              <div className="mb-6 p-4 border rounded-md bg-slate-50">
-                <h3 className="text-sm font-medium mb-2">Unused Indent Numbers</h3>
-                <div className="flex flex-wrap gap-2">
-                  {unusedIndentNumbers.map(number => (
-                    <span 
-                      key={number} 
-                      className="inline-block px-2 py-1 text-xs bg-slate-100 rounded-md"
-                      title="Click to create new indent with this number"
-                      onClick={() => window.location.href = `/record-indent?customerId=${customerId}&bookletId=${bookletId}&indentNumber=${number}`}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      {number}
-                    </span>
-                  ))}
+            )}
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Booklet Details</CardTitle>
+              <CardDescription>
+                Viewing indents for booklet {booklet?.start_number} - {booklet?.end_number}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm font-medium">Customer</p>
+                  <p className="text-lg">{customer?.name || 'Unknown'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Booklet Range</p>
+                  <p className="text-lg">{booklet?.start_number} - {booklet?.end_number}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Usage</p>
+                  <p className="text-lg">{booklet?.used_indents} of {booklet?.total_indents} indents used</p>
                 </div>
               </div>
-            )}
-            
-            {indents.length === 0 && !showUnusedIndents ? (
-              <div className="py-8 text-center">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No indents have been created for this booklet yet</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4" 
-                  onClick={() => navigateToCreateIndent()}
-                >
-                  Create First Indent
-                </Button>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Indent Number</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Vehicle</TableHead>
-                    <TableHead>Fuel Type</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Transaction</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {indents.map((indent) => (
-                    <TableRow key={indent.id}>
-                      <TableCell className="font-medium">{indent.indent_number}</TableCell>
-                      <TableCell>{new Date(indent.date).toLocaleDateString()}</TableCell>
-                      <TableCell>{indent.vehicle_number || 'Unknown'}</TableCell>
-                      <TableCell>{indent.fuel_type}</TableCell>
-                      <TableCell>{indent.quantity} L</TableCell>
-                      <TableCell>₹{indent.amount.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          indent.status === 'Completed' 
-                            ? 'bg-green-100 text-green-800' 
-                            : indent.status === 'Pending' 
-                            ? 'bg-yellow-100 text-yellow-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {indent.status}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {indent.transaction ? (
-                          <div className="text-xs">
-                            <span className="font-semibold">ID:</span> {indent.transaction.id.substring(0, 8)}...<br/>
-                            <span className="font-semibold">Date:</span> {new Date(indent.transaction.date).toLocaleDateString()}<br/>
-                            <span className="font-semibold">Method:</span> {indent.transaction.payment_method}
-                          </div>
-                        ) : (
-                          <div className="flex items-center text-yellow-600">
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            No transaction
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditIndent(indent)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
+            </CardContent>
+          </Card>
           
-          {totalPages > 1 && (
-            <CardFooter className="flex justify-center pt-2">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious 
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                  
-                  {renderPaginationItems()}
-                  
-                  <PaginationItem>
-                    <PaginationNext 
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-              
-              <p className="text-sm text-center text-muted-foreground mt-2">
-                Showing {indents.length} of {totalCount} indents
-              </p>
-            </CardFooter>
-          )}
-        </Card>
-      )}
-
-      {editingIndent && (
-        <IndentEditDialog
-          open={showEditDialog}
-          onOpenChange={setShowEditDialog}
-          indent={editingIndent}
-          onUpdate={handleIndentUpdated}
-        />
+          <Card>
+            <CardHeader>
+              <CardTitle>Indent List</CardTitle>
+              <CardDescription>
+                All indents issued from this booklet
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {indents.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold">No Indents Found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    No indents have been issued from this booklet yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Indent #</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Vehicle</TableHead>
+                        <TableHead>Fuel Type</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {indents.map((indent) => (
+                        <TableRow key={indent.id}>
+                          <TableCell className="font-medium">{indent.indent_number}</TableCell>
+                          <TableCell>{format(new Date(indent.issue_date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell>{indent.vehicle_number || 'N/A'}</TableCell>
+                          <TableCell>{indent.fuel_type}</TableCell>
+                          <TableCell>{indent.quantity} L</TableCell>
+                          <TableCell>₹{indent.amount.toLocaleString()}</TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(indent.status)}`}>
+                              {indent.status}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );
