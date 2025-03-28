@@ -104,7 +104,7 @@ export const usePasswordReset = () => {
 
   // Function for admin-initiated forced password reset
   const adminForcePasswordReset = async (
-    userEmail: string,  // Renamed parameter to be more explicit
+    userEmail: string,  
     tempPassword: string
   ): Promise<ResetPasswordResult> => {
     setIsResetting(true);
@@ -127,43 +127,41 @@ export const usePasswordReset = () => {
         };
       }
       
-      // Find the user in Supabase Auth
-      // Properly type the result from listUsers to fix the TypeScript error
-      const { data, error: usersError } = await supabase.auth.admin.listUsers();
+      // Check if user exists in auth table first
+      const { data: { users = [] } } = await supabase.auth.admin.listUsers();
+      const existingUser = users.find(u => u.email === userEmail);
       
-      if (usersError) {
-        console.error('Error listing users:', usersError);
-        return {
-          success: false,
-          error: 'Failed to list users. Admin access might be required.'
-        };
-      }
-      
-      // Properly type the users array and safely access the email property
-      const users: User[] = data?.users || [];
-      
-      // Find the user with matching email
-      const user = users.find(u => u.email === userEmail);
-      
-      if (!user) {
-        return {
-          success: false,
-          error: 'User not found in authentication system.'
-        };
-      }
-      
-      // Update user password using Supabase Auth Admin API
-      const { error: updateUserError } = await supabase.auth.admin.updateUserById(
-        user.id,
-        { password: tempPassword }
-      );
-      
-      if (updateUserError) {
-        console.error('Error updating user password:', updateUserError);
-        return {
-          success: false,
-          error: 'Failed to update password. Admin role required.'
-        };
+      if (existingUser) {
+        console.log('Existing user found, updating password');
+        // Update user password using Supabase Auth Admin API
+        const { error: updateUserError } = await supabase.auth.admin.updateUserById(
+          existingUser.id,
+          { password: tempPassword }
+        );
+        
+        if (updateUserError) {
+          console.error('Error updating user password:', updateUserError);
+          return {
+            success: false,
+            error: 'Failed to update password. Admin role required.'
+          };
+        }
+      } else {
+        console.log('No existing user found, creating new user');
+        // Create a new user
+        const { error: createUserError } = await supabase.auth.admin.createUser({
+          email: userEmail,
+          password: tempPassword,
+          email_confirm: true
+        });
+        
+        if (createUserError) {
+          console.error('Error creating user:', createUserError);
+          return {
+            success: false,
+            error: 'Failed to create user. Admin role required.'
+          };
+        }
       }
 
       // Mark the fuel pump as requiring password change

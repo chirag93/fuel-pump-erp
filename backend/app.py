@@ -162,14 +162,45 @@ def admin_reset_password():
         
         if not user:
             print(f"Error: User not found with email {email}")
-            return jsonify({'success': False, 'error': 'User not found'}), 404
-        
-        # Update the password using Supabase Admin API
+            
+            # Create the user in Supabase Auth
+            data = {
+                "email": email,
+                "password": new_password,
+                "email_confirm": True
+            }
+            
+            headers = {
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.post(f"{SUPABASE_URL}/auth/v1/admin/users", headers=headers, json=data)
+            
+            if response.status_code != 201 and response.status_code != 200:
+                print(f"Error: Failed to create user: {response.text}")
+                return jsonify({'success': False, 'error': 'Failed to create user in auth system'}), 500
+                
+            print(f"Successfully created user for {email}")
+            
+            # Update fuel pump status
+            supabase_update('fuel_pumps', {'status': 'password_change_required'}, 'email', email)
+            
+            return jsonify({
+                'success': True, 
+                'message': 'User created and password set. User will be required to change password on next login.'
+            })
+            
+        # If user exists, update the password
         success, response = supabase_admin_update_user_password(user['id'], new_password)
         
         if not success:
             print(f"Error: Failed to update password: {response}")
             return jsonify({'success': False, 'error': 'Failed to update password'}), 500
+        
+        # Update the fuel pump status
+        supabase_update('fuel_pumps', {'status': 'password_change_required'}, 'email', email)
         
         print(f"Password reset successful for user with email {email}")
         return jsonify({
