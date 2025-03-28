@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,16 +44,7 @@ const RequirePasswordChange = ({ onComplete, userEmail }: RequirePasswordChangeP
     }
 
     try {
-      // First try to sign in with temporary password
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: userEmail,
-        password: 'admin123' // Use the default temporary password
-      });
-      
-      if (signInError) {
-        console.error('Error signing in with temporary password:', signInError);
-        throw new Error('Unable to authenticate with temporary password. Please contact your administrator.');
-      }
+      console.log('Updating password for user:', userEmail);
       
       // Now update the password using Supabase
       const { error: updateError } = await supabase.auth.updateUser({
@@ -62,6 +52,7 @@ const RequirePasswordChange = ({ onComplete, userEmail }: RequirePasswordChangeP
       });
 
       if (updateError) {
+        console.error('Error updating password:', updateError);
         throw updateError;
       }
 
@@ -73,6 +64,8 @@ const RequirePasswordChange = ({ onComplete, userEmail }: RequirePasswordChangeP
       
       if (fuelPumpError) {
         console.warn('Failed to update fuel pump status after password change', fuelPumpError);
+      } else {
+        console.log('Successfully updated fuel pump status to active');
       }
       
       toast({
