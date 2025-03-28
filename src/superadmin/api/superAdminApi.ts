@@ -1,11 +1,10 @@
-
 import axios from 'axios';
 import { supabase } from '@/integrations/supabase/client';
 import { FuelPump } from '@/integrations/fuelPumps';
 
 // Create a service role client that can bypass RLS
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY; 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_SERVICE_ROLE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || ''; 
 
 // Create service role client only if key is available
 const serviceRoleClient = SUPABASE_SERVICE_ROLE_KEY 
@@ -75,7 +74,7 @@ export const superAdminApi = {
       
       // Instead of using standard client, use API call for admin operations
       // This bypasses RLS policies by using the server's admin privileges
-      const apiUrl = `${process.env.VITE_API_URL || 'http://localhost:5000'}/api/create-fuel-pump`;
+      const apiUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/create-fuel-pump`;
       
       const response = await axios.post(apiUrl, {
         name: fuelPumpData.name,
@@ -155,7 +154,7 @@ export const superAdminApi = {
     error?: string;
   }> {
     try {
-      const apiUrl = `${process.env.VITE_API_URL || 'http://localhost:5000'}/api/admin-reset-password`;
+      const apiUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin-reset-password`;
       
       const response = await axios.post(apiUrl, {
         email,
