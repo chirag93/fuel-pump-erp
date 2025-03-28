@@ -52,7 +52,7 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
         setRecentUnloads(data as TankUnload[]);
       } else {
         console.log('No tank unloads data returned');
-        // Only show empty array instead of sample data
+        // Return empty array instead of sample data
         setRecentUnloads([]);
       }
     } catch (err) {

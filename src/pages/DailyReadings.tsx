@@ -85,7 +85,7 @@ const DailyReadings = () => {
           console.warn("No fuel pump ID available");
           toast({
             title: "No fuel pump configured",
-            description: "Could not find or create a fuel pump. Please check your account settings."
+            description: "Could not find an existing fuel pump. Please contact administrator."
           });
         }
       } catch (error) {
@@ -150,19 +150,16 @@ const DailyReadings = () => {
     try {
       console.log(`DailyReadings - Fetching readings with fuel pump ID: ${pumpId || 'none'}`);
       
-      if (!pumpId) {
-        console.log('No fuel pump ID available');
-        setReadings([]);
-        return;
-      }
-      
       let query = supabase
         .from('daily_readings')
         .select('*')
         .order('date', { ascending: false });
         
       // Apply fuel pump filter if available
-      query = query.eq('fuel_pump_id', pumpId);
+      if (pumpId) {
+        console.log(`Filtering daily readings by fuel_pump_id: ${pumpId}`);
+        query = query.eq('fuel_pump_id', pumpId);
+      }
       
       const { data, error } = await query;
         

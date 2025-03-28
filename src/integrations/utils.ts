@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -59,8 +60,8 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       return fuelPump.id;
     } else {
       console.log(`No fuel pump found for email: ${session.user.email}`);
-      // Create a default fuel pump for this user
-      return await createDefaultFuelPumpIfNeeded(session.user.email);
+      // Instead of creating a new one, just return a fallback
+      return await getFallbackFuelPumpId();
     }
   } catch (error) {
     console.error('Error getting fuel pump ID:', error);
