@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { supabase } from '@/integrations/supabase/client';
 import { FuelPump } from '@/integrations/fuelPumps';
@@ -72,24 +73,23 @@ export const superAdminApi = {
         created_by: createdById,
       });
       
-      // Instead of using standard client, use API call for admin operations
-      // This bypasses RLS policies by using the server's admin privileges
-      const apiUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/create-fuel-pump`;
-      
-      const response = await axios.post(apiUrl, {
-        name: fuelPumpData.name,
-        email: fuelPumpData.email,
-        address: fuelPumpData.address,
-        contact_number: fuelPumpData.contact_number,
-        created_by: createdById,
-        password: password
+      // Use the Supabase Edge Function directly instead of localhost API
+      const { data: response, error } = await supabase.functions.invoke('create-fuel-pump', {
+        body: {
+          name: fuelPumpData.name,
+          email: fuelPumpData.email,
+          address: fuelPumpData.address,
+          contact_number: fuelPumpData.contact_number,
+          created_by: createdById,
+          password: password
+        }
       });
       
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Failed to create fuel pump');
+      if (error || !response.success) {
+        throw new Error(error?.message || response?.error || 'Failed to create fuel pump');
       }
       
-      const newPump = response.data.fuelPump;
+      const newPump = response.fuelPump;
       
       // 3. Initialize default settings for this pump
       await this.initializeDefaultSettings(newPump.id);
@@ -154,15 +154,16 @@ export const superAdminApi = {
     error?: string;
   }> {
     try {
-      const apiUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin-reset-password`;
-      
-      const response = await axios.post(apiUrl, {
-        email,
-        newPassword
+      // Use the Supabase Edge Function directly instead of localhost API
+      const { data: response, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: {
+          email,
+          newPassword
+        }
       });
       
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Failed to reset password');
+      if (error || !response.success) {
+        throw new Error(error?.message || response?.error || 'Failed to reset password');
       }
       
       // Update the fuel pump status
