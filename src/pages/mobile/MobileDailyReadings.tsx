@@ -38,158 +38,117 @@ const MobileDailyReadings = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previousReadingData, setPreviousReadingData] = useState<any>(null);
-  const [fuelTypes, setFuelTypes] = useState<string[]>(['Petrol', 'Diesel']);
-  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
-  const [isInitializing, setIsInitializing] = useState(true);
-
-  // Initialize and get fuel pump ID
-  useEffect(() => {
-    const initializeFuelPump = async () => {
-      setIsInitializing(true);
-      try {
-        const pumpId = await getFuelPumpId();
-        console.log(`Mobile Daily Readings - Got fuel pump ID: ${pumpId || 'none'}`);
-        setFuelPumpId(pumpId);
-        
-        if (!pumpId) {
-          toast({
-            title: "No fuel pump found",
-            description: "Creating a default fuel pump for you.",
-            variant: "destructive"
-          });
-        }
-      } catch (error) {
-        console.error('Error initializing fuel pump:', error);
-        toast({
-          title: "Error",
-          description: "Failed to initialize fuel pump. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsInitializing(false);
-      }
-    };
-    
-    initializeFuelPump();
-  }, [toast]);
+  const [fuelTypes, setFuelTypes] = useState<string[]>(['Petrol', 'Diesel', 'Premium']);
 
   // Fetch fuel types from settings
   useEffect(() => {
     const fetchFuelTypes = async () => {
-      if (isInitializing) return;
+      const fuelPumpId = await getFuelPumpId();
+      console.log(`Mobile Daily Readings - Fetching fuel types with fuel pump ID: ${fuelPumpId || 'none'}`);
       
-      try {
-        const pumpId = fuelPumpId || await getFuelPumpId();
-        console.log(`Mobile Daily Readings - Fetching fuel types with fuel pump ID: ${pumpId || 'none'}`);
+      const query = supabase
+        .from('fuel_settings')
+        .select('fuel_type');
         
-        if (!pumpId) {
-          console.log('No fuel pump ID available, using default fuel types');
-          setFuelTypes(['Petrol', 'Diesel']);
-          return;
-        }
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        console.log(`Filtering fuel settings by fuel_pump_id: ${fuelPumpId}`);
+        query.eq('fuel_pump_id', fuelPumpId);
+      } else {
+        console.log('No fuel pump ID available, fetching all fuel settings');
+      }
         
-        const query = supabase
-          .from('fuel_settings')
-          .select('fuel_type')
-          .eq('fuel_pump_id', pumpId);
-          
-        const { data, error } = await query;
-          
-        if (error) {
-          console.error('Error fetching fuel types:', error);
-          return;
-        }
+      const { data, error } = await query;
         
-        if (data && data.length > 0) {
-          console.log(`Found ${data.length} fuel types`);
-          const types = data.map(item => item.fuel_type);
-          setFuelTypes(types);
-          // Set default fuel type
-          setReadingFormData(prev => ({
-            ...prev,
-            fuel_type: types[0]
-          }));
-        } else {
-          console.log('No fuel types found, using defaults');
-          // Use default fuel types if none found
-          setFuelTypes(['Petrol', 'Diesel']);
-        }
-      } catch (error) {
+      if (error) {
         console.error('Error fetching fuel types:', error);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        console.log(`Found ${data.length} fuel types`);
+        const types = data.map(item => item.fuel_type);
+        setFuelTypes(types);
+        // Set default fuel type
+        setReadingFormData(prev => ({
+          ...prev,
+          fuel_type: types[0]
+        }));
+      } else {
+        console.log('No fuel types found, using defaults');
+        // Use default fuel types if none found
         setFuelTypes(['Petrol', 'Diesel']);
       }
     };
     
     fetchFuelTypes();
-  }, [isInitializing, fuelPumpId]);
+  }, []);
 
   // Fetch previous reading when fuel type changes
   useEffect(() => {
     const fetchPreviousReading = async () => {
-      if (isInitializing || !readingFormData.fuel_type) return;
+      const fuelPumpId = await getFuelPumpId();
+      console.log(`Fetching previous reading for ${readingFormData.fuel_type} with fuel pump ID: ${fuelPumpId || 'none'}`);
       
-      try {
-        const pumpId = fuelPumpId || await getFuelPumpId();
-        console.log(`Fetching previous reading for ${readingFormData.fuel_type} with fuel pump ID: ${pumpId || 'none'}`);
+      const query = supabase
+        .from('daily_readings')
+        .select('*')
+        .eq('fuel_type', readingFormData.fuel_type)
+        .order('date', { ascending: false })
+        .limit(1);
         
-        if (!pumpId) {
-          console.log('No fuel pump ID available, skipping previous reading fetch');
-          return;
-        }
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        console.log(`Filtering daily readings by fuel_pump_id: ${fuelPumpId} and fuel_type: ${readingFormData.fuel_type}`);
+        query.eq('fuel_pump_id', fuelPumpId);
+      } else {
+        console.log('No fuel pump ID available, fetching all readings');
+      }
         
-        const query = supabase
-          .from('daily_readings')
-          .select('*')
-          .eq('fuel_type', readingFormData.fuel_type)
-          .eq('fuel_pump_id', pumpId)
-          .order('date', { ascending: false })
-          .limit(1);
-          
-        const { data, error } = await query;
-          
-        if (error) {
-          console.error('Error fetching previous reading:', error);
-          return;
-        }
+      const { data, error } = await query;
         
-        if (data && data.length > 0) {
-          console.log('Found previous reading:', data[0]);
-          setPreviousReadingData(data[0]);
-          
-          // Use previous closing stock as today's opening stock
-          const calculatedValues = calculateValues({
-            ...readingFormData,
-            readings: {
-              ...readingFormData.readings,
-              1: {
-                ...readingFormData.readings[1],
-                net_stock: data[0].closing_stock
-              }
-            }
-          });
-          
-          // Update form data with previous data
-          setReadingFormData(prev => ({
-            ...prev,
-            readings: {
-              ...prev.readings,
-              1: {
-                ...prev.readings[1],
-                net_stock: data[0].closing_stock
-              }
-            }
-          }));
-        } else {
-          console.log('No previous reading found');
-          setPreviousReadingData(null);
-        }
-      } catch (error) {
+      if (error) {
         console.error('Error fetching previous reading:', error);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        console.log('Found previous reading:', data[0]);
+        setPreviousReadingData(data[0]);
+        
+        // Use previous closing stock as today's opening stock
+        const calculatedValues = calculateValues({
+          ...readingFormData,
+          readings: {
+            ...readingFormData.readings,
+            1: {
+              ...readingFormData.readings[1],
+              net_stock: data[0].closing_stock
+            }
+          }
+        });
+        
+        // Update form data with previous data
+        setReadingFormData(prev => ({
+          ...prev,
+          readings: {
+            ...prev.readings,
+            1: {
+              ...prev.readings[1],
+              net_stock: data[0].closing_stock
+            }
+          }
+        }));
+      } else {
+        console.log('No previous reading found');
+        setPreviousReadingData(null);
       }
     };
     
-    fetchPreviousReading();
-  }, [readingFormData.fuel_type, isInitializing, fuelPumpId]);
+    if (readingFormData.fuel_type) {
+      fetchPreviousReading();
+    }
+  }, [readingFormData.fuel_type]);
 
   // Calculate dependent values based on form data
   const calculatedValues = calculateValues(readingFormData);
@@ -272,17 +231,11 @@ const MobileDailyReadings = () => {
     setIsSubmitting(true);
     
     try {
-      // Get or create fuel pump ID if needed
-      const pumpId = fuelPumpId || await getFuelPumpId();
-      console.log(`Saving reading with fuel pump ID: ${pumpId || 'none'}`);
+      const fuelPumpId = await getFuelPumpId();
+      console.log(`Saving reading with fuel pump ID: ${fuelPumpId || 'none'}`);
       
-      if (!pumpId) {
-        toast({
-          title: "Error",
-          description: "Could not determine fuel pump ID. Please try again.",
-          variant: "destructive"
-        });
-        return;
+      if (!fuelPumpId) {
+        console.warn('No fuel pump ID available, record might not be filtered correctly');
       }
       
       const tanksToInsert = Object.values(readingFormData.readings).map(tank => ({
@@ -297,7 +250,7 @@ const MobileDailyReadings = () => {
         sales_per_tank_stock: calculatedValues.sales_per_tank_stock,
         actual_meter_sales: readingFormData.actual_meter_sales,
         stock_variation: calculatedValues.stock_variation,
-        fuel_pump_id: pumpId
+        fuel_pump_id: fuelPumpId
       }));
 
       const { error } = await supabase
@@ -313,8 +266,12 @@ const MobileDailyReadings = () => {
           current_level: readingFormData.closing_stock,
           updated_at: new Date().toISOString()
         })
-        .eq('fuel_type', readingFormData.fuel_type)
-        .eq('fuel_pump_id', pumpId);
+        .eq('fuel_type', readingFormData.fuel_type);
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        updateQuery.eq('fuel_pump_id', fuelPumpId);
+      }
         
       await updateQuery;
 
@@ -345,9 +302,13 @@ const MobileDailyReadings = () => {
         .from('daily_readings')
         .select('*')
         .eq('fuel_type', readingFormData.fuel_type)
-        .eq('fuel_pump_id', pumpId)
         .order('date', { ascending: false })
         .limit(1);
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        fetchQuery.eq('fuel_pump_id', fuelPumpId);
+      }
         
       const { data } = await fetchQuery;
         
@@ -378,129 +339,117 @@ const MobileDailyReadings = () => {
         <h1 className="text-xl font-semibold">Daily Meter Readings</h1>
       </div>
       
-      {isInitializing ? (
-        <Card className="mb-4">
-          <CardContent className="pt-4 flex items-center justify-center h-40">
-            <div className="text-center">
-              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-sm text-muted-foreground">Initializing fuel pump...</p>
+      <Card className="mb-4">
+        <CardContent className="pt-4">
+          <div className="flex items-center mb-4">
+            <Droplets className="h-5 w-5 text-primary mr-2" />
+            <h2 className="text-lg font-medium">Record Today's Readings</h2>
+          </div>
+          
+          <p className="text-sm text-muted-foreground mb-4">
+            Enter the current meter readings for each fuel pump to track daily sales.
+          </p>
+          
+          <div className="mb-4">
+            <label htmlFor="fuelType" className="text-sm font-medium mb-1 block">
+              Fuel Type
+            </label>
+            <Select
+              value={readingFormData.fuel_type}
+              onValueChange={(value) => handleInputChange('fuel_type', value)}
+            >
+              <SelectTrigger id="fuelType">
+                <SelectValue placeholder="Select fuel type" />
+              </SelectTrigger>
+              <SelectContent>
+                {fuelTypes.map((type) => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {previousReadingData && (
+            <div className="mb-4 p-3 bg-primary/10 rounded-md">
+              <div className="flex items-center mb-2">
+                <Info className="h-4 w-4 text-primary mr-1" />
+                <span className="text-sm font-medium">Previous Reading ({new Date(previousReadingData.date).toLocaleDateString()})</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Opening:</span>
+                  <span className="ml-1">{previousReadingData.opening_stock.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Closing:</span>
+                  <span className="ml-1">{previousReadingData.closing_stock.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="mb-4">
-          <CardContent className="pt-4">
-            <div className="flex items-center mb-4">
-              <Droplets className="h-5 w-5 text-primary mr-2" />
-              <h2 className="text-lg font-medium">Record Today's Readings</h2>
-            </div>
-            
-            <p className="text-sm text-muted-foreground mb-4">
-              Enter the current meter readings for each fuel pump to track daily sales.
-              {fuelPumpId && <span className="block mt-1 text-xs">Fuel Pump ID: {fuelPumpId.substring(0, 8)}...</span>}
-            </p>
-            
-            <div className="mb-4">
-              <label htmlFor="fuelType" className="text-sm font-medium mb-1 block">
-                Fuel Type
+          )}
+          
+          <TankReadingsForm 
+            readingFormData={readingFormData}
+            tankCount={tankCount}
+            handleTankInputChange={handleTankInputChange}
+            addTank={addTank}
+            removeTank={removeTank}
+            calculatedValues={calculatedValues}
+          />
+          
+          <div className="grid grid-cols-1 gap-3 mt-4">
+            <div>
+              <label htmlFor="receipt_quantity" className="text-sm font-medium">
+                Receipt Quantity
               </label>
-              <Select
-                value={readingFormData.fuel_type}
-                onValueChange={(value) => handleInputChange('fuel_type', value)}
-              >
-                <SelectTrigger id="fuelType">
-                  <SelectValue placeholder="Select fuel type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fuelTypes.map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <input
+                type="number"
+                id="receipt_quantity"
+                value={readingFormData.receipt_quantity || ""}
+                onChange={(e) => handleInputChange('receipt_quantity', e.target.value)}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Enter receipt quantity"
+              />
             </div>
             
-            {previousReadingData && (
-              <div className="mb-4 p-3 bg-primary/10 rounded-md">
-                <div className="flex items-center mb-2">
-                  <Info className="h-4 w-4 text-primary mr-1" />
-                  <span className="text-sm font-medium">Previous Reading ({new Date(previousReadingData.date).toLocaleDateString()})</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">Opening:</span>
-                    <span className="ml-1">{previousReadingData.opening_stock.toFixed(2)}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Closing:</span>
-                    <span className="ml-1">{previousReadingData.closing_stock.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <TankReadingsForm 
-              readingFormData={readingFormData}
-              tankCount={tankCount}
-              handleTankInputChange={handleTankInputChange}
-              addTank={addTank}
-              removeTank={removeTank}
-              calculatedValues={calculatedValues}
-            />
-            
-            <div className="grid grid-cols-1 gap-3 mt-4">
-              <div>
-                <label htmlFor="receipt_quantity" className="text-sm font-medium">
-                  Receipt Quantity
-                </label>
-                <input
-                  type="number"
-                  id="receipt_quantity"
-                  value={readingFormData.receipt_quantity || ""}
-                  onChange={(e) => handleInputChange('receipt_quantity', e.target.value)}
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="Enter receipt quantity"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="closing_stock" className="text-sm font-medium">
-                  Closing Stock
-                </label>
-                <input
-                  type="number"
-                  id="closing_stock"
-                  value={readingFormData.closing_stock || ""}
-                  onChange={(e) => handleInputChange('closing_stock', e.target.value)}
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="Enter closing stock"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="actual_meter_sales" className="text-sm font-medium">
-                  Actual Meter Sales
-                </label>
-                <input
-                  type="number"
-                  id="actual_meter_sales"
-                  value={readingFormData.actual_meter_sales || ""}
-                  onChange={(e) => handleInputChange('actual_meter_sales', e.target.value)}
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="Enter actual meter sales"
-                />
-              </div>
-              
-              <Button 
-                className="w-full mt-4" 
-                onClick={handleSaveReading}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Saving...' : 'Save Reading'}
-              </Button>
+            <div>
+              <label htmlFor="closing_stock" className="text-sm font-medium">
+                Closing Stock
+              </label>
+              <input
+                type="number"
+                id="closing_stock"
+                value={readingFormData.closing_stock || ""}
+                onChange={(e) => handleInputChange('closing_stock', e.target.value)}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Enter closing stock"
+              />
             </div>
-          </CardContent>
-        </Card>
-      )}
+            
+            <div>
+              <label htmlFor="actual_meter_sales" className="text-sm font-medium">
+                Actual Meter Sales
+              </label>
+              <input
+                type="number"
+                id="actual_meter_sales"
+                value={readingFormData.actual_meter_sales || ""}
+                onChange={(e) => handleInputChange('actual_meter_sales', e.target.value)}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Enter actual meter sales"
+              />
+            </div>
+            
+            <Button 
+              className="w-full mt-4" 
+              onClick={handleSaveReading}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Saving...' : 'Save Reading'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
