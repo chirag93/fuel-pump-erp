@@ -14,7 +14,7 @@ interface Indent {
   customer_id: string;
   booklet_id: string;
   indent_number: string;
-  issue_date: string;
+  date: string; // Changed from issue_date to date
   vehicle_id: string;
   vehicle_number?: string;
   fuel_type: string;
@@ -67,7 +67,7 @@ const BookletIndents = () => {
               vehicles (number)
             `)
             .eq('booklet_id', bookletId)
-            .order('issue_date', { ascending: false });
+            .order('date', { ascending: false }); // Changed from issue_date to date
             
           if (indentsError) throw indentsError;
           
@@ -120,7 +120,7 @@ const BookletIndents = () => {
     const rows = indents.map(indent => {
       return [
         indent.indent_number,
-        format(new Date(indent.issue_date), 'dd/MM/yyyy'),
+        format(new Date(indent.date), 'dd/MM/yyyy'), // Changed from issue_date to date
         indent.vehicle_number || 'N/A',
         indent.fuel_type,
         indent.quantity,
@@ -233,7 +233,7 @@ const BookletIndents = () => {
                       {indents.map((indent) => (
                         <TableRow key={indent.id}>
                           <TableCell className="font-medium">{indent.indent_number}</TableCell>
-                          <TableCell>{format(new Date(indent.issue_date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell>{format(new Date(indent.date), 'dd/MM/yyyy')}</TableCell>
                           <TableCell>{indent.vehicle_number || 'N/A'}</TableCell>
                           <TableCell>{indent.fuel_type}</TableCell>
                           <TableCell>{indent.quantity} L</TableCell>
