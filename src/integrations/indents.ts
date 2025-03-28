@@ -34,10 +34,14 @@ export const getIndentsByCustomerId = async (customerId: string): Promise<Indent
     if (data) {
       console.log(`Found ${data.length} indents`);
       
-      // Process data to include vehicle number if needed
+      // Process data to include vehicle number and ensure status is a valid enum value
       const processedIndents = data.map((indent: any) => ({
         ...indent,
         vehicle_number: indent.vehicles?.number || 'Unknown',
+        // Ensure status is one of the allowed values or default to "Pending"
+        status: ['Completed', 'Cancelled', 'Pending'].includes(indent.status) 
+          ? indent.status 
+          : 'Pending'
       })) as Indent[];
       
       // Now fetch transactions separately instead of using a nested join
@@ -139,11 +143,18 @@ export const getIndentsByBookletId = async (bookletId: string): Promise<Indent[]
         
       if (transactionsError) throw transactionsError;
       
-      // Map transactions to the indents
+      // Map transactions to the indents and ensure status is properly typed
       const indentsWithTransactions = data.map(indent => {
         const transaction = transactionsData?.find(t => t.indent_id === indent.id);
+        
+        // Ensure status is one of the allowed values or default to "Pending"
+        const typedStatus = ['Completed', 'Cancelled', 'Pending'].includes(indent.status) 
+          ? indent.status as 'Completed' | 'Cancelled' | 'Pending'
+          : 'Pending';
+          
         return {
           ...indent,
+          status: typedStatus,
           transaction: transaction ? {
             ...transaction,
             source: transaction.source as 'mobile' | 'web'
@@ -155,7 +166,14 @@ export const getIndentsByBookletId = async (bookletId: string): Promise<Indent[]
       return indentsWithTransactions;
     }
     
-    return data ? (data as Indent[]) : [];
+    return data ? (data.map(indent => ({
+      ...indent,
+      // Ensure status is one of the allowed values
+      status: ['Completed', 'Cancelled', 'Pending'].includes(indent.status) 
+        ? indent.status as 'Completed' | 'Cancelled' | 'Pending'
+        : 'Pending'
+    })) as Indent[]) : [];
+    
   } catch (error) {
     console.error('Error fetching indents by booklet ID:', error);
     toast({

@@ -10,18 +10,20 @@ import { toast } from '@/hooks/use-toast';
 import { getIndentsByBookletId } from '@/integrations/indents';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Define a local Indent interface for component use
 interface Indent {
   id: string;
   customer_id: string;
   booklet_id: string;
   indent_number: string;
-  date: string; // Changed from issue_date to date
+  date: string;
   vehicle_id: string;
   vehicle_number?: string;
   fuel_type: string;
   quantity: number;
   amount: number;
   status: 'Pending' | 'Completed' | 'Cancelled';
+  transaction?: any | null;
 }
 
 const BookletIndents = () => {
@@ -76,7 +78,14 @@ const BookletIndents = () => {
           
           // Fetch the indents for this booklet using our updated function
           const indentsData = await getIndentsByBookletId(bookletId);
-          setIndents(indentsData);
+          
+          // Convert the indents to our component's Indent type
+          const typedIndents = indentsData.map(indent => ({
+            ...indent,
+            status: indent.status as 'Pending' | 'Completed' | 'Cancelled'
+          })) as Indent[];
+          
+          setIndents(typedIndents);
         }
       } catch (error) {
         console.error('Error fetching booklet data:', error);
@@ -119,7 +128,7 @@ const BookletIndents = () => {
     const rows = indents.map(indent => {
       return [
         indent.indent_number,
-        format(new Date(indent.date), 'dd/MM/yyyy'), // Changed from issue_date to date
+        format(new Date(indent.date), 'dd/MM/yyyy'),
         indent.vehicle_number || 'N/A',
         indent.fuel_type,
         indent.quantity,
