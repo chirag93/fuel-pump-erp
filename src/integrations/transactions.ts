@@ -156,8 +156,19 @@ export const getAllTransactions = async (
       throw error;
     }
     
+    // Process and validate the source field to ensure it conforms to the Transaction type
+    const processedData = data?.map(item => {
+      // Ensure source is either 'mobile' or 'web'
+      const processedItem = { 
+        ...item,
+        // Normalize the source field to ensure it's either 'mobile' or 'web'
+        source: (item.source === 'mobile' ? 'mobile' : 'web') as 'mobile' | 'web'
+      };
+      return processedItem;
+    }) || [];
+    
     return { 
-      transactions: data || [], 
+      transactions: processedData as Transaction[], 
       totalCount: count || 0 
     };
   } catch (error) {
