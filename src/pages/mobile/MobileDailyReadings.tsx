@@ -17,6 +17,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getFuelPumpId } from '@/integrations/utils';
 
 const MobileDailyReadings = () => {
   const { toast } = useToast();
@@ -42,9 +43,18 @@ const MobileDailyReadings = () => {
   // Fetch fuel types from settings
   useEffect(() => {
     const fetchFuelTypes = async () => {
-      const { data, error } = await supabase
+      const fuelPumpId = await getFuelPumpId();
+      
+      const query = supabase
         .from('fuel_settings')
         .select('fuel_type');
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        query.eq('fuel_pump_id', fuelPumpId);
+      }
+        
+      const { data, error } = await query;
         
       if (error) {
         console.error('Error fetching fuel types:', error);
@@ -68,12 +78,21 @@ const MobileDailyReadings = () => {
   // Fetch previous reading when fuel type changes
   useEffect(() => {
     const fetchPreviousReading = async () => {
-      const { data, error } = await supabase
+      const fuelPumpId = await getFuelPumpId();
+      
+      const query = supabase
         .from('daily_readings')
         .select('*')
         .eq('fuel_type', readingFormData.fuel_type)
         .order('date', { ascending: false })
         .limit(1);
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        query.eq('fuel_pump_id', fuelPumpId);
+      }
+        
+      const { data, error } = await query;
         
       if (error) {
         console.error('Error fetching previous reading:', error);
@@ -197,6 +216,8 @@ const MobileDailyReadings = () => {
     setIsSubmitting(true);
     
     try {
+      const fuelPumpId = await getFuelPumpId();
+      
       const tanksToInsert = Object.values(readingFormData.readings).map(tank => ({
         date: readingFormData.date,
         fuel_type: readingFormData.fuel_type,
@@ -208,7 +229,8 @@ const MobileDailyReadings = () => {
         closing_stock: readingFormData.closing_stock,
         sales_per_tank_stock: calculatedValues.sales_per_tank_stock,
         actual_meter_sales: readingFormData.actual_meter_sales,
-        stock_variation: calculatedValues.stock_variation
+        stock_variation: calculatedValues.stock_variation,
+        fuel_pump_id: fuelPumpId
       }));
 
       const { error } = await supabase
@@ -218,13 +240,20 @@ const MobileDailyReadings = () => {
       if (error) throw error;
 
       // Update fuel settings with new stock level
-      await supabase
+      const updateQuery = supabase
         .from('fuel_settings')
         .update({
           current_level: readingFormData.closing_stock,
           updated_at: new Date().toISOString()
         })
         .eq('fuel_type', readingFormData.fuel_type);
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        updateQuery.eq('fuel_pump_id', fuelPumpId);
+      }
+        
+      await updateQuery;
 
       toast({
         title: "Reading saved",
@@ -249,12 +278,19 @@ const MobileDailyReadings = () => {
       setTankCount(1);
       
       // Re-fetch the previous reading
-      const { data } = await supabase
+      const fetchQuery = supabase
         .from('daily_readings')
         .select('*')
         .eq('fuel_type', readingFormData.fuel_type)
         .order('date', { ascending: false })
         .limit(1);
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        fetchQuery.eq('fuel_pump_id', fuelPumpId);
+      }
+        
+      const { data } = await fetchQuery;
         
       if (data && data.length > 0) {
         setPreviousReadingData(data[0]);

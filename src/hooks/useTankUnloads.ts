@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
+import { getFuelPumpId } from '@/integrations/utils';
 
 export interface TankUnload {
   id: string;
@@ -21,11 +22,18 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
     setError(null);
     
     try {
+      const fuelPumpId = await getFuelPumpId();
+      
       let query = supabase
         .from('tank_unloads')
         .select('*')
         .order('date', { ascending: false });
         
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        query = query.eq('fuel_pump_id', fuelPumpId);
+      }
+      
       // Only apply limit if not showing all records
       if (!showAll) {
         query = query.limit(limit);

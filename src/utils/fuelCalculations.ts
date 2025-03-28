@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { getFuelPumpId } from "@/integrations/utils";
 
 interface Reading {
   pumpId: string;
@@ -9,11 +10,19 @@ interface Reading {
 
 export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: string]: number }> => {
   const fuelUsage: { [key: string]: number } = {};
+  const fuelPumpId = await getFuelPumpId();
   
   // Fetch fuel types from settings
-  const { data: fuelTypesData, error: fuelTypesError } = await supabase
+  const query = supabase
     .from('fuel_settings')
     .select('fuel_type');
+    
+  // Apply fuel pump filter if available
+  if (fuelPumpId) {
+    query.eq('fuel_pump_id', fuelPumpId);
+  }
+    
+  const { data: fuelTypesData, error: fuelTypesError } = await query;
     
   if (fuelTypesError) {
     console.error("Error fetching fuel types:", fuelTypesError);
@@ -27,9 +36,16 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
   });
   
   // Fetch pump settings to map pump IDs to fuel types
-  const { data: pumpData, error: pumpError } = await supabase
+  const pumpQuery = supabase
     .from('pump_settings')
     .select('pump_number, fuel_types');
+    
+  // Apply fuel pump filter if available
+  if (fuelPumpId) {
+    pumpQuery.eq('fuel_pump_id', fuelPumpId);
+  }
+    
+  const { data: pumpData, error: pumpError } = await pumpQuery;
     
   if (pumpError) {
     console.error("Error fetching pump settings:", pumpError);
@@ -66,10 +82,19 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
 };
 
 export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: number, current: number, price: number } }> => {
+  const fuelPumpId = await getFuelPumpId();
+  
   // Fetch fuel settings from database
-  const { data, error } = await supabase
+  const query = supabase
     .from('fuel_settings')
     .select('fuel_type, tank_capacity, current_level, current_price');
+    
+  // Apply fuel pump filter if available
+  if (fuelPumpId) {
+    query.eq('fuel_pump_id', fuelPumpId);
+  }
+    
+  const { data, error } = await query;
     
   if (error) {
     console.error("Error fetching fuel levels:", error);
@@ -122,14 +147,23 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
 // New function to update tank levels based on daily readings
 const updateTankLevelsFromReadings = async (fuelLevels: { [key: string]: { capacity: number, current: number, price: number } }) => {
   try {
+    const fuelPumpId = await getFuelPumpId();
+    
     // For each fuel type, get the latest daily reading
     for (const fuelType of Object.keys(fuelLevels)) {
-      const { data, error } = await supabase
+      const query = supabase
         .from('daily_readings')
         .select('closing_stock, date, receipt_quantity, sales_per_tank_stock')
         .eq('fuel_type', fuelType)
         .order('date', { ascending: false })
         .limit(1);
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        query.eq('fuel_pump_id', fuelPumpId);
+      }
+        
+      const { data, error } = await query;
         
       if (error) {
         console.error(`Error fetching latest readings for ${fuelType}:`, error);
@@ -145,13 +179,20 @@ const updateTankLevelsFromReadings = async (fuelLevels: { [key: string]: { capac
           fuelLevels[fuelType].current = latestReading.closing_stock;
           
           // Also update the database with this value
-          const { error: updateError } = await supabase
+          const updateQuery = supabase
             .from('fuel_settings')
             .update({
               current_level: latestReading.closing_stock,
               updated_at: new Date().toISOString()
             })
             .eq('fuel_type', fuelType);
+            
+          // Apply fuel pump filter if available
+          if (fuelPumpId) {
+            updateQuery.eq('fuel_pump_id', fuelPumpId);
+          }
+            
+          const { error: updateError } = await updateQuery;
             
           if (updateError) {
             console.error(`Error updating fuel settings for ${fuelType}:`, updateError);

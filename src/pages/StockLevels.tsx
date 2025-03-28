@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,7 @@ import { toast } from '@/hooks/use-toast';
 import { Loader2, Calendar, Filter } from 'lucide-react';
 import ChartPlaceholder from '@/components/shared/ChartPlaceholder';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getFuelPumpId } from '@/integrations/utils';
 
 interface TankUnloadData {
   id: string;
@@ -67,13 +67,21 @@ const StockLevels = () => {
     try {
       const formattedStartDate = startDate ? format(startDate, 'yyyy-MM-dd') : '';
       const formattedEndDate = endDate ? format(endDate, 'yyyy-MM-dd') : '';
+      const fuelPumpId = await getFuelPumpId();
 
       // Fetch Tank Unload Data for both fuel types
-      const { data: tankUnload, error: tankUnloadError } = await supabase
+      const tankUnloadQuery = supabase
         .from('tank_unloads')
         .select('*')
         .gte('date', formattedStartDate)
         .lte('date', formattedEndDate);
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        tankUnloadQuery.eq('fuel_pump_id', fuelPumpId);
+      }
+
+      const { data: tankUnload, error: tankUnloadError } = await tankUnloadQuery;
 
       if (tankUnloadError) {
         throw tankUnloadError;
@@ -82,11 +90,18 @@ const StockLevels = () => {
       setTankUnloadData(tankUnload || []);
 
       // Fetch Daily Reading Data for both fuel types
-      const { data: dailyReadings, error: dailyReadingsError } = await supabase
+      const dailyReadingsQuery = supabase
         .from('daily_readings')
         .select('*')
         .gte('date', formattedStartDate)
         .lte('date', formattedEndDate);
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        dailyReadingsQuery.eq('fuel_pump_id', fuelPumpId);
+      }
+
+      const { data: dailyReadings, error: dailyReadingsError } = await dailyReadingsQuery;
 
       if (dailyReadingsError) {
         throw dailyReadingsError;

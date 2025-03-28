@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Plus, Download } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { getFuelPumpId } from '@/integrations/utils';
 
 // Import the new components
 import ReadingsTable from '@/components/daily-readings/ReadingsTable';
@@ -68,9 +69,18 @@ const DailyReadings = () => {
 
   const fetchFuelTypes = async () => {
     try {
-      const { data, error } = await supabase
+      const fuelPumpId = await getFuelPumpId();
+      
+      const query = supabase
         .from('fuel_settings')
         .select('fuel_type');
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        query.eq('fuel_pump_id', fuelPumpId);
+      }
+      
+      const { data, error } = await query;
         
       if (error) throw error;
       
@@ -93,10 +103,19 @@ const DailyReadings = () => {
   const fetchReadings = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const fuelPumpId = await getFuelPumpId();
+      
+      const query = supabase
         .from('daily_readings')
         .select('*')
         .order('date', { ascending: false });
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        query.eq('fuel_pump_id', fuelPumpId);
+      }
+      
+      const { data, error } = await query;
         
       if (error) throw error;
       
@@ -119,14 +138,23 @@ const DailyReadings = () => {
 
   const fetchPreviousDayClosingStock = async (date: string, fuelType: string): Promise<number | null> => {
     try {
+      const fuelPumpId = await getFuelPumpId();
+      
       // Find the most recent reading before the selected date
-      const { data, error } = await supabase
+      const query = supabase
         .from('daily_readings')
         .select('closing_stock, date')
         .eq('fuel_type', fuelType)
         .lt('date', date)
         .order('date', { ascending: false })
         .limit(1);
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        query.eq('fuel_pump_id', fuelPumpId);
+      }
+      
+      const { data, error } = await query;
         
       if (error) throw error;
       
@@ -346,6 +374,9 @@ const DailyReadings = () => {
           .eq('id', readingFormData.id);
       }
       
+      // Get fuel pump ID
+      const fuelPumpId = await getFuelPumpId();
+      
       // Create entries for each tank
       const entries = Object.values(readingFormData.readings).map(tank => ({
         date: readingFormData.date,
@@ -358,7 +389,8 @@ const DailyReadings = () => {
         closing_stock: readingFormData.closing_stock,
         actual_meter_sales: readingFormData.actual_meter_sales,
         sales_per_tank_stock: calculations.sales_per_tank_stock,
-        stock_variation: calculations.stock_variation
+        stock_variation: calculations.stock_variation,
+        fuel_pump_id: fuelPumpId
       }));
       
       // Insert entries
@@ -369,13 +401,20 @@ const DailyReadings = () => {
       if (error) throw error;
       
       // Update fuel_settings with the new closing stock (tank level)
-      const { error: updateError } = await supabase
+      const updateQuery = supabase
         .from('fuel_settings')
         .update({
           current_level: readingFormData.closing_stock,
           updated_at: new Date().toISOString()
         })
         .eq('fuel_type', readingFormData.fuel_type.trim());
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        updateQuery.eq('fuel_pump_id', fuelPumpId);
+      }
+      
+      const { error: updateError } = await updateQuery;
         
       if (updateError) {
         console.error('Error updating fuel settings:', updateError);
