@@ -41,7 +41,16 @@ export const getIndentsByCustomerId = async (customerId: string): Promise<Indent
         } else if (transactionsData) {
           // Map transactions to their respective indents
           processedIndents.forEach(indent => {
-            indent.transaction = transactionsData.find(tx => tx.indent_id === indent.id) || null;
+            const matchingTransaction = transactionsData.find(tx => tx.indent_id === indent.id);
+            if (matchingTransaction) {
+              // Ensure source is strictly typed as 'mobile' | 'web'
+              indent.transaction = {
+                ...matchingTransaction,
+                source: matchingTransaction.source as 'mobile' | 'web'
+              };
+            } else {
+              indent.transaction = null;
+            }
           });
         }
       }
@@ -96,7 +105,10 @@ export const getIndentsByBookletId = async (bookletId: string): Promise<Indent[]
         const transaction = transactionsData?.find(t => t.indent_id === indent.id);
         return {
           ...indent,
-          transaction,
+          transaction: transaction ? {
+            ...transaction,
+            source: transaction.source as 'mobile' | 'web'
+          } : null,
           vehicle_number: indent.vehicles?.number || 'Unknown',
         };
       }) as Indent[];
