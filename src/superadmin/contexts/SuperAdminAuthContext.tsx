@@ -91,8 +91,8 @@ export const SuperAdminAuthProvider: React.FC<{ children: React.ReactNode }> = (
           console.log('Creating super admin record...');
           try {
             // Generate a valid UUID for the super admin
-            const { data: uuidData } = await supabase.rpc('generate_uuid');
-            superAdminId = uuidData || crypto.randomUUID();
+            // Instead of using RPC, use the built-in crypto API or a fallback
+            superAdminId = crypto.randomUUID();
             
             const { data, error } = await supabase
               .from('super_admins')
