@@ -132,13 +132,13 @@ export interface Indent {
   discount_amount: number | null;
   created_at?: string;
   vehicle_number?: string;
-  customer_name?: string; // Added this property
-  // Fix type issue by making approval_status a string | null to match database
+  customer_name?: string;
   approval_status?: string | null;
   source?: 'mobile' | 'web';
   approved_by?: string | null;
   approval_date?: string | null;
   approval_notes?: string | null;
+  transaction?: Transaction | null; // Add this line to fix the TypeScript error
 }
 
 export interface Transaction {
@@ -154,11 +154,9 @@ export interface Transaction {
   indent_id: string | null;
   discount_amount: number | null;
   created_at?: string;
-  // Extended properties for join data
   customer_name?: string;
   vehicle_number?: string;
-  staff_name?: string; // Added this property
-  // Fix type issue by making approval_status a string | null to match database
+  staff_name?: string;
   approval_status?: string | null;
   source?: 'mobile' | 'web';
   approved_by?: string | null;
