@@ -20,10 +20,12 @@ interface Session {
 interface AuthContextType {
   user: UserProfile | null;
   fuelPumpId: string | null; // Added explicit fuel pump ID
+  fuelPumpName?: string | null; // Add fuelPumpName property
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
   isAdmin: boolean;
   isStaff: boolean;
+  isLoading?: boolean; // Add isLoading property
   login: (userId: string, userData: any, rememberMe?: boolean) => Promise<boolean>;
   logout: () => Promise<void>;
 }
@@ -31,10 +33,12 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   fuelPumpId: null, // Default to null
+  fuelPumpName: null, // Default to null
   isAuthenticated: false,
   isSuperAdmin: false,
   isAdmin: false,
   isStaff: false,
+  isLoading: false, // Default to false
   login: async () => false,
   logout: async () => {},
 });
@@ -44,11 +48,14 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
+  const [fuelPumpName, setFuelPumpName] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   
   // Initialize auth state from localStorage if available
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        setIsLoading(true);
         // Check if user is authenticated via Supabase
         const { data: { session } } = await supabase.auth.getSession();
         
@@ -59,10 +66,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Extract fuel pump ID from user metadata
           const metadataFuelPumpId = session.user.user_metadata?.fuelPumpId;
+          const metadataFuelPumpName = session.user.user_metadata?.fuelPumpName;
           
           if (metadataFuelPumpId) {
             console.log(`Auth initialization - Fuel pump ID from metadata: ${metadataFuelPumpId}`);
             setFuelPumpId(metadataFuelPumpId);
+          }
+          
+          if (metadataFuelPumpName) {
+            console.log(`Auth initialization - Fuel pump name from metadata: ${metadataFuelPumpName}`);
+            setFuelPumpName(metadataFuelPumpName);
           }
           
           // Check if we have stored user data
@@ -82,6 +95,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   setFuelPumpId(parsedSession.user.fuelPumpId);
                 }
                 
+                // If no fuel pump name from metadata, try from stored session
+                if (!metadataFuelPumpName && parsedSession.user.fuelPumpName) {
+                  console.log(`Auth initialization - Fuel pump name from storage: ${parsedSession.user.fuelPumpName}`);
+                  setFuelPumpName(parsedSession.user.fuelPumpName);
+                }
+                
+                setIsLoading(false);
                 return; // Exit early if we restored from storage
               }
             } catch (error) {
@@ -96,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: session.user.email || '',
             role: session.user.user_metadata?.role || 'staff',
             fuelPumpId: metadataFuelPumpId,
-            fuelPumpName: session.user.user_metadata?.fuelPumpName,
+            fuelPumpName: metadataFuelPumpName,
           };
           
           setUser(userProfile);
@@ -125,11 +145,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   
                   setUser(parsedSession.user);
                   setFuelPumpId(parsedSession.user.fuelPumpId || null);
+                  setFuelPumpName(parsedSession.user.fuelPumpName || null);
                 } else {
                   console.log("Auth initialization - Failed to refresh session, clearing stored data");
                   localStorage.removeItem('fuel_pro_session');
                   setUser(null);
                   setFuelPumpId(null);
+                  setFuelPumpName(null);
                 }
               }
             } catch (error) {
@@ -140,6 +162,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -154,6 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log("User signed in");
           
           const metadataFuelPumpId = session.user.user_metadata?.fuelPumpId;
+          const metadataFuelPumpName = session.user.user_metadata?.fuelPumpName;
           
           const userProfile: UserProfile = {
             id: session.user.id,
@@ -161,11 +186,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: session.user.email || '',
             role: session.user.user_metadata?.role || 'staff',
             fuelPumpId: metadataFuelPumpId,
-            fuelPumpName: session.user.user_metadata?.fuelPumpName,
+            fuelPumpName: metadataFuelPumpName,
           };
           
           setUser(userProfile);
           setFuelPumpId(metadataFuelPumpId || null);
+          setFuelPumpName(metadataFuelPumpName || null);
           
           // Store for future use
           localStorage.setItem('fuel_pro_session', JSON.stringify({ user: userProfile }));
@@ -174,6 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.removeItem('fuel_pro_session');
           setUser(null);
           setFuelPumpId(null);
+          setFuelPumpName(null);
         }
       }
     );
@@ -248,10 +275,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     fuelPumpId, // Expose fuel pump ID directly
+    fuelPumpName, // Expose fuel pump name
     isAuthenticated,
     isSuperAdmin,
     isAdmin,
     isStaff,
+    isLoading, // Expose loading state
     login,
     logout
   };

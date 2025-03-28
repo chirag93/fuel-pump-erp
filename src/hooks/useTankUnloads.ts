@@ -145,23 +145,27 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
         }
       }
       
-      // Try a completely different approach - direct SQL query
+      // Try using a direct query instead of RPC - removing the RPC approach that was causing errors
+      // This section replaces the previous RPC code that was causing type errors
       try {
-        const { data: directData, error: directError } = await supabase.rpc(
-          'get_tank_unloads_for_pump',
-          { pump_id_param: '2c762f9c-f89b-4084-9ebe-b6902fdf4311' }
-        );
-        
+        console.log("Using direct query as final attempt");
+        const { data: directData, error: directError } = await supabase
+          .from('tank_unloads')
+          .select('*')
+          .eq('fuel_pump_id', '2c762f9c-f89b-4084-9ebe-b6902fdf4311')
+          .order('date', { ascending: false })
+          .limit(limit);
+          
         if (!directError && directData && directData.length > 0) {
-          console.log(`Retrieved ${directData.length} tank unloads with direct SQL query`);
+          console.log(`Retrieved ${directData.length} tank unloads with direct query`);
           setRecentUnloads(directData as TankUnload[]);
           return; // Success with direct query! Early return
         } else {
-          console.log('No data found with direct SQL query');
+          console.log('No data found with direct query');
           if (directError) console.error('Direct query error:', directError);
         }
-      } catch (rpcError) {
-        console.error('RPC function error or not available:', rpcError);
+      } catch (queryError) {
+        console.error('Error with direct query:', queryError);
       }
       
       // If we reach here, we couldn't find any data
