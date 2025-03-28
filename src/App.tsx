@@ -77,7 +77,8 @@ function App() {
         <Route path="/shift-management" element={<ShiftManagement />} />
         <Route path="/daily-readings" element={<DailyReadings />} />
         <Route path="/staff-management" element={<StaffManagement />} />
-        <Route path="/booklet-indents/:id" element={<BookletIndents />} />
+        <Route path="/booklet-indents/:bookletId" element={<BookletIndents />} />
+        <Route path="/customers/:customerId/booklets/:bookletId/indents" element={<BookletIndents />} />
         <Route path="/stock-levels" element={<StockLevels />} />
         <Route path="/tank-unload" element={<TankUnload />} />
         <Route path="/consumables" element={<Consumables />} />

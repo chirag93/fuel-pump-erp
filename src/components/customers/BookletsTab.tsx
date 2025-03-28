@@ -1,290 +1,135 @@
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Book, Edit, FileText, RefreshCw, Loader2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { IndentBookletDialog } from './IndentBookletDialog';
+import { useState } from 'react';
 import { IndentBooklet } from '@/integrations/supabase/client';
-import { createIndentBooklet } from '@/integrations/indentBooklets';
-import { Link } from 'react-router-dom';
-
-interface NewBookletData {
-  start_number: string;
-  end_number: string;
-  customer_id: string;
-  issued_date: string;
-}
+import { Book, Plus, FileText, Eye, Loader2 } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { format } from 'date-fns';
 
 interface BookletsTabProps {
   indentBooklets: IndentBooklet[];
-  setIndentBooklets: React.Dispatch<React.SetStateAction<IndentBooklet[]>>;
   customerId: string;
   customerName: string;
+  setIndentBooklets: React.Dispatch<React.SetStateAction<IndentBooklet[]>>;
   isLoading?: boolean;
   onRefresh?: () => void;
 }
 
 const BookletsTab = ({ 
   indentBooklets, 
-  setIndentBooklets, 
   customerId, 
-  customerName,
+  customerName, 
+  setIndentBooklets,
   isLoading = false,
-  onRefresh
+  onRefresh 
 }: BookletsTabProps) => {
-  const [bookletDialogOpen, setBookletDialogOpen] = useState(false);
-  const [newBooklet, setNewBooklet] = useState<Partial<NewBookletData>>({
-    customer_id: customerId,
-    start_number: '',
-    end_number: '',
-    issued_date: new Date().toISOString().split('T')[0]
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Reset new booklet data when the customer ID changes
-  useEffect(() => {
-    setNewBooklet({
-      customer_id: customerId,
-      start_number: '',
-      end_number: '',
-      issued_date: new Date().toISOString().split('T')[0]
-    });
-  }, [customerId]);
-
-  const handleAddBooklet = async () => {
-    try {
-      setIsSubmitting(true);
-      if (!newBooklet.start_number || !newBooklet.end_number || !newBooklet.issued_date) {
-        toast({
-          title: "Missing information",
-          description: "Please fill all required fields",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const startNum = parseInt(newBooklet.start_number);
-      const endNum = parseInt(newBooklet.end_number);
-
-      if (isNaN(startNum) || isNaN(endNum) || startNum >= endNum) {
-        toast({
-          title: "Invalid range",
-          description: "End number must be greater than start number",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const totalIndents = endNum - startNum + 1;
-
-      const bookletData = {
-        customer_id: customerId,
-        start_number: newBooklet.start_number,
-        end_number: newBooklet.end_number,
-        issued_date: newBooklet.issued_date,
-        total_indents: totalIndents,
-        used_indents: 0,
-        status: 'Active' as 'Active' | 'Completed' | 'Cancelled'
-      };
-      
-      console.log('Creating indent booklet with data:', bookletData);
-      const result = await createIndentBooklet(bookletData);
-      
-      if (result) {
-        console.log('Booklet created successfully:', result);
-        setIndentBooklets([...indentBooklets, result]);
-        setBookletDialogOpen(false);
-        setNewBooklet({
-          customer_id: customerId,
-          start_number: '',
-          end_number: '',
-          issued_date: new Date().toISOString().split('T')[0]
-        });
-        
-        toast({
-          title: "Success",
-          description: "Indent booklet created successfully"
-        });
-      }
-    } catch (error) {
-      console.error('Error adding indent booklet:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create indent booklet",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+  const [dialogOpen, setDialogOpen] = useState(false);
+  
+  const handleNewBooklet = (newBooklet: IndentBooklet) => {
+    setIndentBooklets(prev => [...prev, newBooklet]);
   };
-
-  const getDisplayStatus = (booklet: IndentBooklet): string => {
-    if (booklet.status === 'Completed') return 'Completed';
-    if (booklet.status === 'Active' && booklet.used_indents > 0) return 'In Progress';
-    if (booklet.status === 'Active' && booklet.used_indents === 0) return 'Unused';
-    return booklet.status;
-  }
-
-  const getStatusClassNames = (booklet: IndentBooklet): string => {
-    if (booklet.status === 'Completed') return 'bg-green-100 text-green-800';
-    if (booklet.status === 'Active' && booklet.used_indents > 0) return 'bg-blue-100 text-blue-800';
-    if (booklet.status === 'Active' && booklet.used_indents === 0) return 'bg-gray-100 text-gray-800';
-    return 'bg-red-100 text-red-800'; // Cancelled or other statuses
-  }
-
-  // Debug function
-  const handleDebugRefresh = () => {
-    if (onRefresh) {
-      toast({
-        title: "Refreshing",
-        description: "Refreshing indent booklets data"
-      });
-      onRefresh();
-    }
+  
+  const getStatusBadgeColor = (status: string, usedIndents: number) => {
+    if (status === 'Completed') return 'bg-green-100 text-green-800';
+    if (status === 'Cancelled') return 'bg-red-100 text-red-800';
+    if (status === 'Active' && usedIndents > 0) return 'bg-blue-100 text-blue-800';
+    return 'bg-gray-100 text-gray-800';
   };
-
+  
+  const getStatusLabel = (status: string, usedIndents: number) => {
+    if (status === 'Completed') return 'Completed';
+    if (status === 'Cancelled') return 'Cancelled';
+    if (status === 'Active' && usedIndents > 0) return 'In Progress';
+    return 'Unused';
+  };
+  
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Indent Booklets</CardTitle>
-          <div className="flex gap-2">
-            {onRefresh && (
-              <Button variant="outline" size="sm" onClick={handleDebugRefresh} disabled={isLoading}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            )}
-            <Dialog open={bookletDialogOpen} onOpenChange={setBookletDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-1">
-                  <Book className="h-4 w-4" />
-                  Issue Booklet
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Issue New Indent Booklet</DialogTitle>
-                  <DialogDescription>
-                    Issue a new indent booklet to this customer
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="issued_date">Issue Date</Label>
-                    <Input 
-                      id="issued_date" 
-                      type="date"
-                      value={newBooklet.issued_date}
-                      onChange={e => setNewBooklet({...newBooklet, issued_date: e.target.value})}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="start_number">Start Number</Label>
-                      <Input 
-                        id="start_number" 
-                        placeholder="e.g. 1001"
-                        value={newBooklet.start_number}
-                        onChange={e => setNewBooklet({...newBooklet, start_number: e.target.value})}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="end_number">End Number</Label>
-                      <Input 
-                        id="end_number" 
-                        placeholder="e.g. 1100"
-                        value={newBooklet.end_number}
-                        onChange={e => setNewBooklet({...newBooklet, end_number: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                  {newBooklet.start_number && newBooklet.end_number && !isNaN(parseInt(newBooklet.start_number)) && !isNaN(parseInt(newBooklet.end_number)) && (
-                    <div className="text-sm text-muted-foreground">
-                      This booklet will contain {Math.max(0, parseInt(newBooklet.end_number) - parseInt(newBooklet.start_number) + 1)} indent slips.
-                    </div>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setBookletDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={handleAddBooklet} disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
-                      </>
-                    ) : 'Issue Booklet'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="py-8 text-center">
-            <Loader2 className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-spin" />
-            <p className="text-muted-foreground">Loading indent booklets...</p>
-          </div>
-        ) : indentBooklets.length === 0 ? (
-          <div className="py-8 text-center">
-            <Book className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No indent booklets issued yet</p>
-            <Button 
-              variant="outline" 
-              className="mt-4" 
-              onClick={() => setBookletDialogOpen(true)}
-            >
-              Issue First Booklet
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between">
+            <div>
+              <CardTitle>Indent Booklets</CardTitle>
+              <CardDescription>Manage indent booklets for {customerName}</CardDescription>
+            </div>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Issue New Booklet
             </Button>
           </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Range</TableHead>
-                <TableHead>Issued Date</TableHead>
-                <TableHead>Used</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {indentBooklets.map((booklet) => (
-                <TableRow key={booklet.id}>
-                  <TableCell className="font-medium">{booklet.start_number} - {booklet.end_number}</TableCell>
-                  <TableCell>{new Date(booklet.issued_date).toLocaleDateString()}</TableCell>
-                  <TableCell>{booklet.used_indents} / {booklet.total_indents}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusClassNames(booklet)}`}>
-                      {getDisplayStatus(booklet)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2">Loading booklets...</span>
+            </div>
+          ) : indentBooklets && indentBooklets.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Booklet Numbers</TableHead>
+                  <TableHead>Issue Date</TableHead>
+                  <TableHead>Total Indents</TableHead>
+                  <TableHead>Used</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {indentBooklets.map((booklet) => (
+                  <TableRow key={booklet.id}>
+                    <TableCell className="font-medium">{booklet.start_number} - {booklet.end_number}</TableCell>
+                    <TableCell>{format(new Date(booklet.issued_date), 'dd/MM/yyyy')}</TableCell>
+                    <TableCell>{booklet.total_indents}</TableCell>
+                    <TableCell>{booklet.used_indents}</TableCell>
+                    <TableCell>
+                      <Badge 
+                        className={getStatusBadgeColor(booklet.status, booklet.used_indents)}
+                        variant="outline"
+                      >
+                        {getStatusLabel(booklet.status, booklet.used_indents)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
                       <Link to={`/customers/${customerId}/booklets/${booklet.id}/indents`}>
-                        <Button variant="outline" size="sm" className="flex items-center gap-1">
-                          <FileText className="h-4 w-4" />
+                        <Button variant="outline" size="sm">
+                          <Eye className="mr-2 h-4 w-4" />
                           View Indents
                         </Button>
                       </Link>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Book className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold">No Booklets Found</h3>
+              <p className="text-muted-foreground mb-4">
+                This customer does not have any indent booklets yet.
+              </p>
+              <Button onClick={() => setDialogOpen(true)}>
+                Issue First Booklet
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      <IndentBookletDialog 
+        open={dialogOpen} 
+        onOpenChange={setDialogOpen} 
+        customerId={customerId}
+        customerName={customerName}
+        onSuccess={handleNewBooklet}
+      />
+    </div>
   );
 };
 
