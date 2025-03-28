@@ -142,8 +142,10 @@ export const usePasswordReset = () => {
         };
       }
       
-      // Find the user with matching email
-      const existingUser = userList.users.find(user => user.email === userEmail);
+      // Find the user with matching email - add proper type for users
+      const existingUser = userList.users.find((user: { email?: string; id: string }) => 
+        user.email === userEmail
+      );
       
       let userId;
       
