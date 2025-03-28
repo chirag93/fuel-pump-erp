@@ -67,14 +67,53 @@ export const SuperAdminAuthProvider: React.FC<{ children: React.ReactNode }> = (
     setIsLoading(true);
     
     try {
-      // Special case for hardcoded super admin account - now superuser@example.com
-      if (email === 'superuser@example.com' && password === 'admin123') {
-        console.log('Using hardcoded super admin credentials');
+      // Special case for superuser@example.com (super admin)
+      if (email.toLowerCase() === 'superuser@example.com' && password === 'admin123') {
+        console.log('Using super admin credentials');
+        
+        // Check if super admin exists in the database
+        const { data: existingAdmin, error: checkError } = await supabase
+          .from('super_admins')
+          .select('*')
+          .eq('email', email.toLowerCase())
+          .maybeSingle();
+          
+        if (checkError) {
+          console.error('Error checking for existing super admin:', checkError);
+        }
+        
+        let superAdminId = 'sa-' + new Date().getTime();
+        
+        // If super admin doesn't exist yet, create the record
+        if (!existingAdmin) {
+          console.log('Creating super admin record...');
+          try {
+            const { data, error } = await supabase
+              .from('super_admins')
+              .insert({
+                id: superAdminId,
+                name: 'Super User',
+                email: email.toLowerCase()
+              })
+              .select()
+              .single();
+              
+            if (error) {
+              console.error('Error creating super admin record:', error);
+            } else if (data) {
+              superAdminId = data.id;
+            }
+          } catch (error) {
+            console.error('Error creating super admin record:', error);
+          }
+        } else {
+          superAdminId = existingAdmin.id;
+        }
         
         // Create super admin user object
         const superAdminUser: SuperAdminUser = {
-          id: 'sa-' + new Date().getTime(),
-          email: email,
+          id: superAdminId,
+          email: email.toLowerCase(),
           username: email.split('@')[0],
           role: 'super_admin'
         };

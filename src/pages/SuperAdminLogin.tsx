@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,44 +25,8 @@ const SuperAdminLogin = () => {
     setError(null);
     
     try {
-      // Try to get the super admin user record
-      const { data: superAdmin, error: adminError } = await supabase
-        .from('super_admins')
-        .select('*')
-        .eq('email', 'superuser@example.com')
-        .maybeSingle();
-      
-      if (adminError) {
-        console.error('Error checking for super admin:', adminError);
-      }
-      
-      // If super admin doesn't exist, create it
-      if (!superAdmin) {
-        // Create the default super admin
-        const { data, error } = await supabase
-          .from('super_admins')
-          .insert({
-            id: 'sa-' + new Date().getTime(),
-            name: 'Super User',
-            email: 'superuser@example.com'
-          })
-          .select()
-          .single();
-        
-        if (error) {
-          console.error('Error creating super admin:', error);
-          throw new Error('Failed to create super admin account');
-        }
-        
-        console.log('Created super admin account');
-        toast({
-          title: 'Super Admin Account Created',
-          description: 'The super admin account has been provisioned.',
-        });
-      }
-      
-      // Proceed with login - Pass email and password
-      await login('superuser@example.com', 'admin123');
+      // Call the login function with the email and password
+      await login('superuser@example.com', 'admin123', true);
       
       const from = location.state?.from?.pathname || '/super-admin/dashboard';
       navigate(from, { replace: true });
@@ -84,7 +47,7 @@ const SuperAdminLogin = () => {
     
     // If user came from regular login and email is superuser@example.com,
     // handle special super admin login flow
-    if (location.state?.email === 'superuser@example.com') {
+    if (location.state?.email?.toLowerCase() === 'superuser@example.com') {
       handleSuperUserLogin();
     }
   }, [isAuthenticated, navigate, location]);
@@ -96,12 +59,27 @@ const SuperAdminLogin = () => {
     
     // Special case for system super admin
     if (username.toLowerCase() === 'superuser' && token === 'admin123') {
-      handleSuperUserLogin();
+      await login('superuser@example.com', 'admin123');
+      
+      const from = location.state?.from?.pathname || '/super-admin/dashboard';
+      navigate(from, { replace: true });
+      setIsLoading(false);
       return;
     }
 
     try {
-      // Check token against database
+      // For usernames with @ symbol, treat as email login
+      if (username.includes('@')) {
+        // Call the login function with the email and password
+        await login(username, token);
+        
+        const from = location.state?.from?.pathname || '/super-admin/dashboard';
+        navigate(from, { replace: true });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Otherwise, check token against database
       const isValid = await superAdminApi.checkSuperAdminAccess(token);
       
       if (!isValid) {
@@ -110,8 +88,8 @@ const SuperAdminLogin = () => {
         return;
       }
       
-      // Pass username and token as parameters
-      await login(username, token);
+      // Use a default email format for username-only logins
+      await login(`${username}@example.com`, token);
       
       const from = location.state?.from?.pathname || '/super-admin/dashboard';
       navigate(from, { replace: true });

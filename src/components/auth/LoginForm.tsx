@@ -8,6 +8,7 @@ import { AlertCircle, Lock, Mail } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getFuelPumpByEmail } from '@/integrations/fuelPumps';
 
 interface LoginFormProps {
   email: string;
@@ -47,7 +48,7 @@ const LoginForm = ({
       console.log(`Attempting login with email: ${email}`);
       
       // Check if this is the super admin account - if so, redirect to super admin login
-      if (email === 'superuser@example.com') {
+      if (email.toLowerCase() === 'superuser@example.com') {
         console.log('Redirecting to super admin login page');
         navigate('/super-admin/login', { 
           state: { email, attemptedLogin: true } 
@@ -56,16 +57,97 @@ const LoginForm = ({
         return;
       }
       
-      // First check if this fuel pump account exists
-      const { data: fuelPump, error: fuelPumpError } = await supabase
-        .from('fuel_pumps')
-        .select('*')
-        .eq('email', email)
-        .maybeSingle();
-      
-      if (fuelPumpError) {
-        console.error('Error checking fuel pump status:', fuelPumpError);
+      // Special handling for the hardcoded admin@example.com fuel pump admin
+      if (email.toLowerCase() === 'admin@example.com' && password === 'admin123') {
+        console.log('Handling hardcoded admin@example.com account login');
+        
+        // Check if this fuel pump already exists
+        let fuelPump = await getFuelPumpByEmail(email);
+        
+        // If fuel pump doesn't exist, create it (ideally this would be done by a super admin)
+        if (!fuelPump) {
+          console.log('Creating fuel pump record for admin@example.com');
+          try {
+            const { data, error: createError } = await supabase
+              .from('fuel_pumps')
+              .insert({
+                name: 'Demo Fuel Pump',
+                email: email,
+                status: 'active',
+                address: '123 Demo Street',
+                contact_number: '555-1234'
+              })
+              .select()
+              .single();
+              
+            if (createError) throw createError;
+            fuelPump = data;
+          } catch (err) {
+            console.error('Error creating fuel pump for admin account:', err);
+          }
+        }
+        
+        // Sign in with Supabase or create account if needed
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (authError) {
+          console.log('Auth error, attempting to create admin user account');
+          // Try to create the user if it doesn't exist
+          const { data: signupData, error: signupError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                role: 'admin'
+              }
+            }
+          });
+          
+          if (signupError) {
+            throw signupError;
+          }
+          
+          // If sign up succeeded, try login again
+          const { data: retryAuthData, error: retryAuthError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+          
+          if (retryAuthError) throw retryAuthError;
+          
+          await regularLogin(retryAuthData.user!.id, {
+            id: retryAuthData.user!.id,
+            username: 'admin',
+            email: retryAuthData.user!.email,
+            role: 'admin'
+          }, rememberMe);
+        } else {
+          // Regular login with existing account
+          await regularLogin(authData.user!.id, {
+            id: authData.user!.id,
+            username: 'admin',
+            email: authData.user!.email,
+            role: 'admin'
+          }, rememberMe);
+        }
+        
+        const from = location.state?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
+        
+        toast({
+          title: "Login successful",
+          description: "You have been logged in successfully.",
+        });
+        
+        setIsLoading(false);
+        return;
       }
+      
+      // First check if this fuel pump account exists
+      const fuelPump = await getFuelPumpByEmail(email);
       
       if (!fuelPump) {
         console.warn(`No fuel pump found with email: ${email}`);
