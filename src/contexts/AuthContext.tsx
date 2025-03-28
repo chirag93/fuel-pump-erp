@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -70,6 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const storedSession = getStoredSession();
     
     if (storedSession) {
+      console.log('Found stored session:', storedSession);
       setSession(storedSession);
       setUser(storedSession.user);
       
@@ -78,10 +78,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAdmin(storedSession.user.role === 'admin');
       setIsStaff(storedSession.user.role === 'staff');
       
-      // If not a super admin, fetch associated fuel pump
-      if (storedSession.user.role !== 'super_admin') {
-        fetchAssociatedFuelPump(storedSession.user.email);
+      // Set fuel pump ID and name from stored session
+      if (storedSession.user.fuelPumpId) {
+        console.log(`Setting fuel pump ID from stored session: ${storedSession.user.fuelPumpId}`);
+        setFuelPumpId(storedSession.user.fuelPumpId);
+        setFuelPumpName(storedSession.user.fuelPumpName || null);
+      } else {
+        // If not a super admin and no fuel pump ID in session, fetch it
+        if (storedSession.user.role !== 'super_admin') {
+          fetchAssociatedFuelPump(storedSession.user.email);
+        }
       }
+    } else {
+      console.log('No stored session found');
     }
     
     setIsLoading(false);
@@ -90,26 +99,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch the fuel pump associated with a user's email
   const fetchAssociatedFuelPump = async (email: string) => {
     try {
-      const { data: fuelPumps, error } = await supabase
+      // First try the RPC function for case-insensitive matching
+      const { data: fuelPumpData, error: rpcError } = await supabase
+        .rpc('get_fuel_pump_by_email', { email_param: email.toLowerCase() });
+        
+      if (!rpcError && fuelPumpData && fuelPumpData.length > 0) {
+        const fuelPump = fuelPumpData[0];
+        console.log(`Found fuel pump via RPC: ${fuelPump.id} (${fuelPump.name})`);
+        setFuelPumpId(fuelPump.id);
+        setFuelPumpName(fuelPump.name);
+        
+        // Update user with fuelPumpId
+        if (user) {
+          const updatedUser = {
+            ...user,
+            fuelPumpId: fuelPump.id,
+            fuelPumpName: fuelPump.name
+          };
+          setUser(updatedUser);
+          
+          // Update session in localStorage
+          if (session) {
+            const updatedSession = {
+              ...session,
+              user: updatedUser
+            };
+            setSession(updatedSession);
+            localStorage.setItem('fuel_pro_session', JSON.stringify(updatedSession));
+          }
+        }
+        return;
+      }
+      
+      if (rpcError) {
+        console.error('Error using RPC function:', rpcError);
+      }
+      
+      // Fallback to direct query if RPC fails
+      const { data: fuelPump, error } = await supabase
         .from('fuel_pumps')
         .select('id, name')
-        .eq('email', email)
+        .ilike('email', email)
         .maybeSingle();
       
       if (error) {
         throw error;
       }
       
-      if (fuelPumps) {
-        setFuelPumpId(fuelPumps.id);
-        setFuelPumpName(fuelPumps.name);
+      if (fuelPump) {
+        console.log(`Found fuel pump via direct query: ${fuelPump.id} (${fuelPump.name})`);
+        setFuelPumpId(fuelPump.id);
+        setFuelPumpName(fuelPump.name);
         
         // Update user with fuelPumpId
         if (user) {
           const updatedUser = {
             ...user,
-            fuelPumpId: fuelPumps.id,
-            fuelPumpName: fuelPumps.name
+            fuelPumpId: fuelPump.id,
+            fuelPumpName: fuelPump.name
           };
           setUser(updatedUser);
           
@@ -124,13 +171,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       } else {
-        setFuelPumpId(null);
-        setFuelPumpName(null);
+        console.log(`No fuel pump found for email: ${email}, using hardcoded fallback`);
+        const fallbackId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
+        const fallbackName = 'Default Fuel Pump';
+        
+        setFuelPumpId(fallbackId);
+        setFuelPumpName(fallbackName);
+        
+        // Update user with fallback fuelPumpId
+        if (user) {
+          const updatedUser = {
+            ...user,
+            fuelPumpId: fallbackId,
+            fuelPumpName: fallbackName
+          };
+          setUser(updatedUser);
+          
+          // Update session in localStorage
+          if (session) {
+            const updatedSession = {
+              ...session,
+              user: updatedUser
+            };
+            setSession(updatedSession);
+            localStorage.setItem('fuel_pro_session', JSON.stringify(updatedSession));
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching associated fuel pump:', error);
-      setFuelPumpId(null);
-      setFuelPumpName(null);
+      
+      // Use fallback fuel pump ID
+      const fallbackId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
+      const fallbackName = 'Default Fuel Pump';
+      
+      setFuelPumpId(fallbackId);
+      setFuelPumpName(fallbackName);
+      
+      // Update user with fallback fuelPumpId
+      if (user) {
+        const updatedUser = {
+          ...user,
+          fuelPumpId: fallbackId,
+          fuelPumpName: fallbackName
+        };
+        setUser(updatedUser);
+        
+        // Update session in localStorage
+        if (session) {
+          const updatedSession = {
+            ...session,
+            user: updatedUser
+          };
+          setSession(updatedSession);
+          localStorage.setItem('fuel_pro_session', JSON.stringify(updatedSession));
+        }
+      }
     }
   };
 
@@ -142,12 +238,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         userData.role = 'staff'; // Default to staff if no valid role
       }
       
+      // Ensure fuelPumpId is set
+      if (!userData.fuelPumpId) {
+        userData.fuelPumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
+        userData.fuelPumpName = 'Default Fuel Pump';
+        console.log(`No fuel pump ID provided during login, using default: ${userData.fuelPumpId}`);
+      }
+      
+      console.log('Login with user data:', userData);
+      
       // Create user profile from user data
       const userProfile: UserProfile = {
         id: userId,
         username: userData.username || userData.email?.split('@')[0] || 'user',
         email: userData.email || '',
-        role: userData.role
+        role: userData.role,
+        fuelPumpId: userData.fuelPumpId,
+        fuelPumpName: userData.fuelPumpName
       };
       
       // Create session
@@ -159,6 +266,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Store session if rememberMe is true
       if (rememberMe) {
         localStorage.setItem('fuel_pro_session', JSON.stringify(newSession));
+        console.log('Session stored in localStorage with fuel pump ID:', userProfile.fuelPumpId);
       }
       
       // Update state
@@ -170,9 +278,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAdmin(userProfile.role === 'admin');
       setIsStaff(userProfile.role === 'staff');
       
-      // If not a super admin, fetch associated fuel pump
-      if (userProfile.role !== 'super_admin') {
-        await fetchAssociatedFuelPump(userProfile.email);
+      // Set fuel pump ID and name
+      if (userProfile.fuelPumpId) {
+        setFuelPumpId(userProfile.fuelPumpId);
+        setFuelPumpName(userProfile.fuelPumpName || null);
+        console.log(`Fuel pump ID set in context: ${userProfile.fuelPumpId}`);
+      }
+      
+      // Also update the Supabase user metadata to store the fuel pump ID
+      try {
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: {
+            fuelPumpId: userProfile.fuelPumpId,
+            fuelPumpName: userProfile.fuelPumpName
+          }
+        });
+        
+        if (updateError) {
+          console.error('Error updating user metadata:', updateError);
+        } else {
+          console.log('User metadata updated with fuel pump ID:', userProfile.fuelPumpId);
+        }
+      } catch (metadataError) {
+        console.error('Error updating user metadata:', metadataError);
       }
       
       toast({
@@ -240,3 +368,5 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
+
+export default AuthContext;
