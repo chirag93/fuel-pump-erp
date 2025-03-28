@@ -17,6 +17,7 @@ import {
 import { Droplet, Edit, Plus } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/components/ui/use-toast';
+import { getFuelPumpId } from '@/integrations/utils';
 
 export interface FuelSettings {
   id: string;
@@ -25,6 +26,7 @@ export interface FuelSettings {
   tank_capacity: number;
   current_level: number;
   updated_at?: string;
+  fuel_pump_id?: string;
 }
 
 export function FuelTypeSettings() {
@@ -38,17 +40,34 @@ export function FuelTypeSettings() {
     current_level: 0
   });
   const [editFuelType, setEditFuelType] = useState<FuelSettings | null>(null);
+  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
   
   useEffect(() => {
-    fetchFuelSettings();
+    const initFuelPumpId = async () => {
+      const id = await getFuelPumpId();
+      setFuelPumpId(id);
+      if (id) {
+        fetchFuelSettings(id);
+      } else {
+        console.log('No fuel pump ID available');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to view fuel settings",
+          variant: "destructive"
+        });
+      }
+    };
+    
+    initFuelPumpId();
   }, []);
   
-  const fetchFuelSettings = async () => {
+  const fetchFuelSettings = async (pumpId: string) => {
     try {
-      console.log('Fetching fuel settings for settings page');
+      console.log('Fetching fuel settings for settings page with pump ID:', pumpId);
       const { data, error } = await supabase
         .from('fuel_settings')
-        .select('*');
+        .select('*')
+        .eq('fuel_pump_id', pumpId);
         
       if (error) throw error;
       
@@ -68,6 +87,15 @@ export function FuelTypeSettings() {
   
   const handleAddFuelType = async () => {
     try {
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to add fuel types",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       if (!newFuelType.fuel_type || newFuelType.current_price === undefined || 
           newFuelType.tank_capacity === undefined || newFuelType.current_level === undefined) {
         toast({
@@ -87,7 +115,8 @@ export function FuelTypeSettings() {
           fuel_type: cleanedFuelType,
           current_price: newFuelType.current_price,
           tank_capacity: newFuelType.tank_capacity,
-          current_level: newFuelType.current_level
+          current_level: newFuelType.current_level,
+          fuel_pump_id: fuelPumpId
         }])
         .select();
         
@@ -120,6 +149,15 @@ export function FuelTypeSettings() {
   
   const handleUpdateFuelType = async () => {
     try {
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to update fuel types",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       if (!editFuelType) {
         toast({
           title: "Error",
@@ -134,7 +172,8 @@ export function FuelTypeSettings() {
       
       console.log('Updating fuel type with data:', {
         ...editFuelType,
-        fuel_type: cleanedFuelType
+        fuel_type: cleanedFuelType,
+        fuel_pump_id: fuelPumpId
       });
       
       const { data, error } = await supabase
@@ -144,7 +183,8 @@ export function FuelTypeSettings() {
           current_price: editFuelType.current_price,
           tank_capacity: editFuelType.tank_capacity,
           current_level: editFuelType.current_level,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          fuel_pump_id: fuelPumpId
         })
         .eq('id', editFuelType.id)
         .select();

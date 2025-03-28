@@ -1,12 +1,14 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getFuelPumpId } from './utils';
 
 export interface BusinessSettings {
   id?: string;
   gst_number: string;
   business_name: string;
   address: string;
+  fuel_pump_id?: string;
 }
 
 /**
@@ -14,9 +16,22 @@ export interface BusinessSettings {
  */
 export const getBusinessSettings = async (): Promise<BusinessSettings | null> => {
   try {
+    const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.log('No fuel pump ID available, cannot fetch business settings');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to view business settings",
+        variant: "destructive"
+      });
+      return null;
+    }
+    
     const { data, error } = await supabase
       .from('business_settings')
       .select('*')
+      .eq('fuel_pump_id', fuelPumpId)
       .maybeSingle();
       
     if (error) throw error;
@@ -37,6 +52,18 @@ export const getBusinessSettings = async (): Promise<BusinessSettings | null> =>
  */
 export const updateBusinessSettings = async (settings: BusinessSettings): Promise<boolean> => {
   try {
+    const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      console.log('No fuel pump ID available, cannot update business settings');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to update business settings",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
     if (!settings.gst_number) {
       toast({
         title: "Missing information",
@@ -48,7 +75,8 @@ export const updateBusinessSettings = async (settings: BusinessSettings): Promis
     
     const { data: existingData, error: existingError } = await supabase
       .from('business_settings')
-      .select('*');
+      .select('*')
+      .eq('fuel_pump_id', fuelPumpId);
       
     if (existingError) throw existingError;
     
@@ -58,7 +86,8 @@ export const updateBusinessSettings = async (settings: BusinessSettings): Promis
         .update({
           gst_number: settings.gst_number,
           business_name: settings.business_name,
-          address: settings.address
+          address: settings.address,
+          fuel_pump_id: fuelPumpId
         })
         .eq('id', existingData[0].id);
         
@@ -69,7 +98,8 @@ export const updateBusinessSettings = async (settings: BusinessSettings): Promis
         .insert([{
           gst_number: settings.gst_number,
           business_name: settings.business_name,
-          address: settings.address
+          address: settings.address,
+          fuel_pump_id: fuelPumpId
         }]);
         
       if (error) throw error;

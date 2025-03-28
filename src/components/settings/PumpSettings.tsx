@@ -18,6 +18,7 @@ import { Edit, Plus, Settings } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/components/ui/use-toast';
 import { FuelSettings } from './FuelTypeSettings';
+import { getFuelPumpId } from '@/integrations/utils';
 
 interface PumpSettings {
   id: string;
@@ -25,6 +26,7 @@ interface PumpSettings {
   nozzle_count: number;
   fuel_types: string[];
   created_at?: string;
+  fuel_pump_id?: string;
 }
 
 export function PumpSettings() {
@@ -36,17 +38,34 @@ export function PumpSettings() {
     nozzle_count: 1,
     fuel_types: []
   });
+  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchPumpSettings();
-    fetchFuelSettings();
+    const initFuelPumpId = async () => {
+      const id = await getFuelPumpId();
+      setFuelPumpId(id);
+      if (id) {
+        fetchPumpSettings(id);
+        fetchFuelSettings(id);
+      } else {
+        console.log('No fuel pump ID available');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to view pump settings",
+          variant: "destructive"
+        });
+      }
+    };
+    
+    initFuelPumpId();
   }, []);
 
-  const fetchPumpSettings = async () => {
+  const fetchPumpSettings = async (pumpId: string) => {
     try {
       const { data, error } = await supabase
         .from('pump_settings')
-        .select('*');
+        .select('*')
+        .eq('fuel_pump_id', pumpId);
         
       if (error) throw error;
       
@@ -63,11 +82,12 @@ export function PumpSettings() {
     }
   };
 
-  const fetchFuelSettings = async () => {
+  const fetchFuelSettings = async (pumpId: string) => {
     try {
       const { data, error } = await supabase
         .from('fuel_settings')
-        .select('*');
+        .select('*')
+        .eq('fuel_pump_id', pumpId);
         
       if (error) throw error;
       
@@ -81,6 +101,15 @@ export function PumpSettings() {
 
   const handleAddPump = async () => {
     try {
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to add pumps",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       if (!newPump.pump_number || !newPump.nozzle_count) {
         toast({
           title: "Missing information",
@@ -95,7 +124,8 @@ export function PumpSettings() {
         .insert([{
           pump_number: newPump.pump_number,
           nozzle_count: newPump.nozzle_count,
-          fuel_types: newPump.fuel_types || []
+          fuel_types: newPump.fuel_types || [],
+          fuel_pump_id: fuelPumpId
         }])
         .select();
         
