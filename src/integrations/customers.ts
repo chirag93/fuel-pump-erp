@@ -1,4 +1,3 @@
-
 import { supabase, Customer } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getFuelPumpId } from './utils';
@@ -80,7 +79,7 @@ export const getCustomerById = async (id: string): Promise<Customer | null> => {
 /**
  * Create a new customer
  */
-export const createCustomer = async (customerData: Omit<Customer, 'id' | 'created_at'>): Promise<Customer | null> => {
+export const createCustomer = async (customerData: Omit<Customer, 'id' | 'created_at' | 'fuel_pump_id'>): Promise<Customer | null> => {
   try {
     const fuelPumpId = await getFuelPumpId();
     
@@ -94,12 +93,9 @@ export const createCustomer = async (customerData: Omit<Customer, 'id' | 'create
       return null;
     }
     
-    // Destructure to separate fuel_pump_id from the rest
-    const { fuel_pump_id, ...restData } = customerData;
-    
     const { data, error } = await supabase
       .from('customers')
-      .insert([{ ...restData, fuel_pump_id: fuelPumpId }])
+      .insert([{ ...customerData, fuel_pump_id: fuelPumpId }])
       .select()
       .single();
       

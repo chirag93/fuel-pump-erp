@@ -114,8 +114,7 @@ const Customers = () => {
         email: newCustomer.email,
         phone: newCustomer.phone,
         contact: newCustomer.contact,
-        balance: newCustomer.balance || 0,
-        fuel_pump_id: fuelPumpId as string
+        balance: newCustomer.balance || 0
       });
       
       if (createdCustomer) {
