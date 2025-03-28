@@ -66,6 +66,37 @@ export const SuperAdminAuthProvider: React.FC<{ children: React.ReactNode }> = (
     setIsLoading(true);
     
     try {
+      // Check for hardcoded admin credentials first
+      if (email === 'admin@example.com' && password === 'admin123') {
+        console.log('Using hardcoded super admin credentials');
+        
+        // Create super admin user object
+        const superAdminUser: SuperAdminUser = {
+          id: 'sa-' + new Date().getTime(),
+          email: email,
+          username: email.split('@')[0]
+        };
+        
+        // Store session if rememberMe is true
+        if (rememberMe) {
+          localStorage.setItem('super_admin_session', JSON.stringify({
+            user: superAdminUser,
+            accessToken: 'sa-token-' + new Date().getTime()
+          }));
+        }
+        
+        // Update state
+        setUser(superAdminUser);
+        setIsAuthenticated(true);
+        
+        toast({
+          title: "Super Admin Login successful",
+          description: `Welcome back, ${superAdminUser.username}!`,
+        });
+        
+        return true;
+      }
+      
       // Use Supabase auth to verify credentials
       const { data, error } = await supabase.auth.signInWithPassword({
         email,

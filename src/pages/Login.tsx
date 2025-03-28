@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import RequirePasswordChange from '@/components/auth/RequirePasswordChange';
+import { useSuperAdminAuth } from '@/superadmin/contexts/SuperAdminAuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -19,7 +20,8 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [passwordChangeRequired, setPasswordChangeRequired] = useState(false);
-  const { login, isAuthenticated } = useAuth();
+  const { login: regularLogin, isAuthenticated } = useAuth();
+  const { login: superAdminLogin } = useSuperAdminAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -45,6 +47,19 @@ const Login = () => {
     try {
       console.log(`Attempting login with email: ${email}`);
       
+      // First, check if this is a super admin login attempt
+      if (email.toLowerCase().includes('admin')) {
+        console.log('Attempting super admin login');
+        const superAdminSuccess = await superAdminLogin(email, password, rememberMe);
+        
+        if (superAdminSuccess) {
+          navigate('/super-admin/dashboard', { replace: true });
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      // If not a super admin or super admin login failed, proceed with regular login
       // First check if this fuel pump account exists
       const { data: fuelPump, error: fuelPumpError } = await supabase
         .from('fuel_pumps')
@@ -115,7 +130,7 @@ const Login = () => {
         }
 
         // Call the login method from auth context to set up session
-        await login(data.user.id, {
+        await regularLogin(data.user.id, {
           id: data.user.id,
           username: email.split('@')[0],
           email: data.user.email,
@@ -147,7 +162,7 @@ const Login = () => {
       
       if (sessionData?.session?.user) {
         // Call the login method from auth context to set up session
-        await login(sessionData.session.user.id, {
+        await regularLogin(sessionData.session.user.id, {
           id: sessionData.session.user.id,
           username: email.split('@')[0],
           email: sessionData.session.user.email,
