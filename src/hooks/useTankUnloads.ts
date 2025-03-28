@@ -19,7 +19,6 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
   const [recentUnloads, setRecentUnloads] = useState<TankUnload[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [currentFuelPumpId, setCurrentFuelPumpId] = useState<string | null>(null);
 
   const fetchRecentUnloads = useCallback(async () => {
     setIsLoading(true);
@@ -49,47 +48,29 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
         console.log(`useTankUnloads - Utility function fuel pump ID: ${fuelPumpId || 'none'}`);
       }
       
-      // Use localStorage as another fallback
+      // Check if we have a fuel pump ID
       if (!fuelPumpId) {
-        const storedSession = localStorage.getItem('fuel_pro_session');
-        if (storedSession) {
-          try {
-            const parsedSession = JSON.parse(storedSession);
-            if (parsedSession.user && parsedSession.user.fuelPumpId) {
-              fuelPumpId = parsedSession.user.fuelPumpId;
-              console.log(`useTankUnloads - localStorage fuel pump ID: ${fuelPumpId}`);
-            }
-          } catch (parseError) {
-            console.error('Error parsing stored session:', parseError);
-          }
-        }
+        console.log('No fuel pump ID available for filtering data');
+        setIsLoading(false);
+        setRecentUnloads([]);
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to view data",
+          variant: "destructive"
+        });
+        return;
       }
       
-      // Default to the specific ID if still not available
-      if (!fuelPumpId) {
-        fuelPumpId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
-        console.log(`useTankUnloads - Using default ID: ${fuelPumpId}`);
-      }
-      
-      // Track the ID we're using
-      setCurrentFuelPumpId(fuelPumpId);
-      
-      console.log(`useTankUnloads - Fetching tank unloads with fuel pump ID: ${fuelPumpId || 'none'}`);
+      console.log(`useTankUnloads - Fetching tank unloads with fuel pump ID: ${fuelPumpId}`);
       
       let query = supabase
         .from('tank_unloads')
         .select('*')
         .order('date', { ascending: false });
         
-      // Apply fuel pump filter if available and not showing all
-      if (fuelPumpId && !showAll) {
-        console.log(`Filtering tank unloads by fuel_pump_id: ${fuelPumpId}`);
-        query = query.eq('fuel_pump_id', fuelPumpId);
-      } else if (showAll) {
-        console.log('Showing all tank unloads (no fuel pump filter)');
-      } else {
-        console.log('No fuel pump ID available, fetching all tank unloads');
-      }
+      // Apply fuel pump filter
+      console.log(`Filtering tank unloads by fuel_pump_id: ${fuelPumpId}`);
+      query = query.eq('fuel_pump_id', fuelPumpId);
       
       // Only apply limit if not showing all records
       if (!showAll) {
@@ -103,66 +84,13 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
         throw new Error(error.message);
       }
       
-      if (data && data.length > 0) {
+      if (data) {
         console.log(`Retrieved ${data.length} tank unloads for ID ${fuelPumpId}`);
         setRecentUnloads(data as TankUnload[]);
-        return; // Success! Early return
-      } 
-      
-      console.log('No tank unloads data returned for initial query');
-      
-      // If no results with the provided fuel pump ID, try with our specific ID
-      // if it's not already the one we used
-      if (fuelPumpId !== '2c762f9c-f89b-4084-9ebe-b6902fdf4311' && !showAll) {
-        const specificId = '2c762f9c-f89b-4084-9ebe-b6902fdf4311';
-        console.log(`Trying with specific ID: ${specificId}`);
-        
-        const fallbackQuery = supabase
-          .from('tank_unloads')
-          .select('*')
-          .eq('fuel_pump_id', specificId)
-          .order('date', { ascending: false })
-          .limit(limit);
-          
-        const { data: fallbackData, error: fallbackError } = await fallbackQuery;
-        
-        if (fallbackError) {
-          console.error('Error in fallback attempt:', fallbackError);
-        } else if (fallbackData && fallbackData.length > 0) {
-          console.log(`Retrieved ${fallbackData.length} tank unloads with fallback ID ${specificId}`);
-          setRecentUnloads(fallbackData as TankUnload[]);
-          return; // Success with fallback! Early return
-        } else {
-          console.log(`No data found with fallback ID ${specificId}`);
-        }
+      } else {
+        console.log('No tank unloads data returned');
+        setRecentUnloads([]);
       }
-      
-      // If still no results and not showing all, try without filter as last resort
-      if (!showAll) {
-        console.log('Trying without fuel pump ID filter as last resort');
-        const unfilteredQuery = supabase
-          .from('tank_unloads')
-          .select('*')
-          .order('date', { ascending: false })
-          .limit(limit);
-          
-        const { data: unfilteredData, error: unfilteredError } = await unfilteredQuery;
-        
-        if (unfilteredError) {
-          console.error('Error in unfiltered attempt:', unfilteredError);
-        } else if (unfilteredData && unfilteredData.length > 0) {
-          console.log(`Retrieved ${unfilteredData.length} tank unloads without filter`);
-          setRecentUnloads(unfilteredData as TankUnload[]);
-          return; // Success with unfiltered! Early return
-        } else {
-          console.log('No data found without filter');
-        }
-      }
-      
-      // If we reach here, we couldn't find any data
-      console.log('No tank unload data could be found through any method');
-      setRecentUnloads([]);
-      
     } catch (err) {
       console.error('Error fetching unloads:', err);
       setError(err instanceof Error ? err : new Error('Unknown error occurred'));
@@ -170,23 +98,17 @@ export function useTankUnloads(refreshTrigger?: number, limit: number = 10, show
       
       toast({
         title: "Error loading data",
-        description: err instanceof Error ? err.message : "Failed to fetch tank unload data",
+        description: err instanceof Error ? err.message : "An unknown error occurred",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
-  }, [limit, showAll, contextFuelPumpId, isAuthenticated]);
+  }, [contextFuelPumpId, isAuthenticated, limit, showAll, refreshTrigger]);
   
   useEffect(() => {
     fetchRecentUnloads();
-  }, [fetchRecentUnloads, refreshTrigger]); // Refetch when refreshTrigger changes
-
-  return {
-    recentUnloads,
-    isLoading,
-    error,
-    refetch: fetchRecentUnloads,
-    currentFuelPumpId
-  };
+  }, [fetchRecentUnloads]);
+  
+  return { recentUnloads, isLoading, error, refetch: fetchRecentUnloads };
 }

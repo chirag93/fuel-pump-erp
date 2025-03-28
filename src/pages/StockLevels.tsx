@@ -88,20 +88,25 @@ const StockLevels = () => {
       console.log(`StockLevels - Fetching data with fuel pump ID: ${fuelPumpId || 'none'}`);
       console.log(`Date range: ${formattedStartDate} to ${formattedEndDate}`);
 
-      // Fetch Tank Unload Data for both fuel types
+      // Check if we have a fuel pump ID
+      if (!fuelPumpId) {
+        console.log('No fuel pump ID available for filtering data');
+        setIsLoading(false);
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to view stock data",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Fetch Tank Unload Data for this fuel pump
       const tankUnloadQuery = supabase
         .from('tank_unloads')
         .select('*')
+        .eq('fuel_pump_id', fuelPumpId)
         .gte('date', formattedStartDate)
         .lte('date', formattedEndDate);
-        
-      // Apply fuel pump filter if available
-      if (fuelPumpId) {
-        console.log(`Filtering tank unloads by fuel_pump_id: ${fuelPumpId}`);
-        tankUnloadQuery.eq('fuel_pump_id', fuelPumpId);
-      } else {
-        console.log('No fuel pump ID available, fetching all tank unloads');
-      }
 
       const { data: tankUnload, error: tankUnloadError } = await tankUnloadQuery;
 
@@ -112,20 +117,13 @@ const StockLevels = () => {
       console.log(`Retrieved ${tankUnload?.length || 0} tank unloads`);
       setTankUnloadData(tankUnload || []);
 
-      // Fetch Daily Reading Data for both fuel types
+      // Fetch Daily Reading Data for this fuel pump
       const dailyReadingsQuery = supabase
         .from('daily_readings')
         .select('*')
+        .eq('fuel_pump_id', fuelPumpId)
         .gte('date', formattedStartDate)
         .lte('date', formattedEndDate);
-        
-      // Apply fuel pump filter if available
-      if (fuelPumpId) {
-        console.log(`Filtering daily readings by fuel_pump_id: ${fuelPumpId}`);
-        dailyReadingsQuery.eq('fuel_pump_id', fuelPumpId);
-      } else {
-        console.log('No fuel pump ID available, fetching all daily readings');
-      }
 
       const { data: dailyReadings, error: dailyReadingsError } = await dailyReadingsQuery;
 
