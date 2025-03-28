@@ -3,6 +3,15 @@ import axios from 'axios';
 import { supabase } from '@/integrations/supabase/client';
 import { FuelPump } from '@/integrations/fuelPumps';
 
+// Create a service role client that can bypass RLS
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY; 
+
+// Create service role client only if key is available
+const serviceRoleClient = SUPABASE_SERVICE_ROLE_KEY 
+  ? supabase.auth.admin 
+  : null;
+
 // Centralized API functions for super admin features
 export const superAdminApi = {
   // Check if a user has super admin access
@@ -64,42 +73,24 @@ export const superAdminApi = {
         created_by: createdById,
       });
       
-      // 1. Create the fuel pump record
-      const { data: newPump, error: pumpError } = await supabase
-        .from('fuel_pumps')
-        .insert([{
-          name: fuelPumpData.name,
-          email: fuelPumpData.email,
-          address: fuelPumpData.address,
-          contact_number: fuelPumpData.contact_number,
-          status: 'active',
-          created_by: createdById // Use the properly handled ID
-        }])
-        .select()
-        .single();
-        
-      if (pumpError) {
-        console.error('Error creating fuel pump:', pumpError);
-        throw new Error(pumpError.message);
-      }
-      
-      // 2. Create the user account via the backend API
-      const apiUrl = `${process.env.VITE_API_URL || 'http://localhost:5000'}/api/admin-reset-password`;
+      // Instead of using standard client, use API call for admin operations
+      // This bypasses RLS policies by using the server's admin privileges
+      const apiUrl = `${process.env.VITE_API_URL || 'http://localhost:5000'}/api/create-fuel-pump`;
       
       const response = await axios.post(apiUrl, {
+        name: fuelPumpData.name,
         email: fuelPumpData.email,
-        newPassword: password
+        address: fuelPumpData.address,
+        contact_number: fuelPumpData.contact_number,
+        created_by: createdById,
+        password: password
       });
       
       if (!response.data.success) {
-        // Rollback the fuel pump creation
-        await supabase
-          .from('fuel_pumps')
-          .delete()
-          .eq('id', newPump.id);
-          
-        throw new Error(response.data.error || 'Failed to create user account');
+        throw new Error(response.data.error || 'Failed to create fuel pump');
       }
+      
+      const newPump = response.data.fuelPump;
       
       // 3. Initialize default settings for this pump
       await this.initializeDefaultSettings(newPump.id);
