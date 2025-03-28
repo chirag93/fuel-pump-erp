@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useSuperAdminAuth } from '@/superadmin/contexts/SuperAdminAuthContext';
+import { superAdminApi } from '@/superadmin/api/superAdminApi';
 import { FuelPump } from '@/integrations/fuelPumps';
 import { 
   BarChart4, 
@@ -49,7 +50,7 @@ interface SuperAdminLayoutProps {
 
 const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
   const { pathname } = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout } = useSuperAdminAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [linkedPumps, setLinkedPumps] = useState<FuelPump[]>([]);
@@ -59,25 +60,11 @@ const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
   const fetchLinkedPumps = async () => {
     try {
       setIsRefreshing(true);
-
-      // First try to get pumps created by the current user
-      let { data, error, count } = await supabase
-        .from('fuel_pumps')
-        .select('*', { count: 'exact' });
-      
-      if (error) {
-        console.error('Error fetching fuel pumps:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch fuel pumps',
-          variant: 'destructive',
-        });
-        return;
-      }
+      const data = await superAdminApi.getAllFuelPumps();
       
       if (data) {
         setLinkedPumps(data);
-        setPumpCount(count || 0);
+        setPumpCount(data.length || 0);
       }
     } catch (error) {
       console.error('Error in fetchLinkedPumps:', error);
@@ -200,7 +187,7 @@ const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
             </div>
             <div>
               <p className="font-medium">{user?.username || 'Super Admin'}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role || 'Super Admin'}</p>
+              <p className="text-xs text-muted-foreground capitalize">Super Admin</p>
             </div>
           </div>
           <Button 

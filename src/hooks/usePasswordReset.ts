@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { User } from '@supabase/supabase-js';
+import axios from 'axios';
 
 interface PasswordResetOptions {
   email: string;
@@ -79,7 +79,6 @@ export const usePasswordReset = () => {
 
       if (updateError) {
         console.error('Error updating fuel pump status:', updateError);
-        // This isn't fatal since the reset email was sent, but we log it
         console.warn('Failed to update fuel pump status after sending reset email');
       }
 
@@ -102,7 +101,7 @@ export const usePasswordReset = () => {
     }
   };
 
-  // Function for admin-initiated forced password reset directly using Supabase
+  // Function for admin-initiated forced password reset using the backend API
   const adminForcePasswordReset = async (
     userEmail: string,  
     tempPassword: string
@@ -127,68 +126,17 @@ export const usePasswordReset = () => {
         };
       }
       
-      console.log('Attempting to reset password for email:', userEmail);
+      // Make request to backend API for password reset
+      const apiUrl = `${process.env.VITE_API_URL || 'http://localhost:5000'}/api/admin-reset-password`;
+      console.log('Calling admin reset password API at:', apiUrl);
       
-      // Check if the user exists in auth by listing users and filtering by email
-      // This is a workaround since getUserByEmail is not available
-      const { data: userList, error: listError } = await supabase.auth.admin.listUsers();
+      const response = await axios.post(apiUrl, {
+        email: userEmail,
+        newPassword: tempPassword
+      });
       
-      if (listError) {
-        console.error('Error listing users:', listError);
-        setError(listError.message);
-        return {
-          success: false,
-          error: listError.message
-        };
-      }
-      
-      // Find the user with matching email - add proper type for users
-      const existingUser = userList.users.find((user: { email?: string; id: string }) => 
-        user.email === userEmail
-      );
-      
-      let userId;
-      
-      if (!existingUser) {
-        console.log('User does not exist in auth, creating a new user');
-        
-        // User doesn't exist, so create one
-        const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-          email: userEmail,
-          password: tempPassword,
-          email_confirm: true,
-          user_metadata: {
-            email_verified: true
-          }
-        });
-        
-        if (createError) {
-          console.error('Error creating user:', createError);
-          setError(createError.message);
-          return {
-            success: false,
-            error: createError.message
-          };
-        }
-        
-        userId = newUser.user.id;
-      } else {
-        // User exists, update their password
-        userId = existingUser.id;
-        
-        const { error: updateError } = await supabase.auth.admin.updateUserById(
-          userId,
-          { password: tempPassword }
-        );
-        
-        if (updateError) {
-          console.error('Error updating user password:', updateError);
-          setError(updateError.message);
-          return {
-            success: false,
-            error: updateError.message
-          };
-        }
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Failed to reset password');
       }
 
       // Mark the fuel pump as requiring password change

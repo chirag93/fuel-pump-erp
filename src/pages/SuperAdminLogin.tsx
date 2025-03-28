@@ -1,15 +1,13 @@
 
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext';
 import { AlertCircle, Lock, Mail, Shield } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
-import { supabase } from '@/integrations/supabase/client';
+import { useSuperAdminAuth } from '@/superadmin/contexts/SuperAdminAuthContext';
 
 const SuperAdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -17,39 +15,13 @@ const SuperAdminLogin = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const { login, isAuthenticated, isSuperAdmin } = useAuth();
+  const { login, isAuthenticated } = useSuperAdminAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // If user is already authenticated and is a super admin, redirect to super admin dashboard
-  if (isAuthenticated && isSuperAdmin) {
+  // If user is already authenticated, redirect to super admin dashboard
+  if (isAuthenticated) {
     navigate('/super-admin/dashboard', { replace: true });
     return null;
-  }
-  
-  // If user is authenticated but not a super admin, show an access denied message
-  if (isAuthenticated && !isSuperAdmin) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gradient-to-b from-background to-secondary/30 p-4">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
-        <Card className="w-full max-w-md shadow-lg relative z-10">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center text-destructive">Access Denied</CardTitle>
-            <CardDescription className="text-center">
-              You do not have permission to access the Super Admin area.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button 
-              className="w-full"
-              onClick={() => navigate('/', { replace: true })}
-            >
-              Return to Home
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -64,42 +36,10 @@ const SuperAdminLogin = () => {
     }
 
     try {
-      // Use Supabase authentication
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (authError) {
-        throw authError;
-      }
-
-      if (data?.user) {
-        // Get user metadata or check in profiles table to verify super_admin role
-        // This is a simplified check - in a real app, you'd check the user's role in a profiles table
-        const isSuperAdminUser = email.includes('super') || email.includes('admin');
-        
-        if (isSuperAdminUser) {
-          // Call the login method from auth context to set up session
-          await login(data.user.id, {
-            id: data.user.id,
-            username: email.split('@')[0],
-            email: data.user.email,
-            role: 'super_admin'
-          }, rememberMe);
-          
-          navigate('/super-admin/dashboard', { replace: true });
-          toast({
-            title: "Login successful",
-            description: "Welcome to the Super Admin dashboard.",
-          });
-        } else {
-          setError('You do not have Super Admin access.');
-          // Sign out since they don't have proper access
-          await supabase.auth.signOut();
-        }
-      } else {
-        setError('Login failed. Please check your credentials.');
+      const success = await login(email, password, rememberMe);
+      
+      if (success) {
+        navigate('/super-admin/dashboard', { replace: true });
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred during login.');
