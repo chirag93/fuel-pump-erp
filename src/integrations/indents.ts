@@ -11,6 +11,16 @@ export const getIndentsByCustomerId = async (customerId: string): Promise<Indent
     console.log('API getIndentsByCustomerId called for customer ID:', customerId);
     const fuelPumpId = await getFuelPumpId();
     
+    if (!fuelPumpId) {
+      console.log('No fuel pump ID available for filtering indents');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to view indents",
+        variant: "destructive"
+      });
+      return [];
+    }
+    
     let query = supabase
       .from('indents')
       .select(`
@@ -19,13 +29,9 @@ export const getIndentsByCustomerId = async (customerId: string): Promise<Indent
       `)
       .eq('customer_id', customerId);
       
-    // Apply fuel pump filter if available
-    if (fuelPumpId) {
-      console.log(`Filtering indents by fuel_pump_id: ${fuelPumpId}`);
-      query = query.eq('fuel_pump_id', fuelPumpId);
-    } else {
-      console.log('No fuel pump ID available, querying all indents for this customer');
-    }
+    // Apply fuel pump filter
+    console.log(`Filtering indents by fuel_pump_id: ${fuelPumpId}`);
+    query = query.eq('fuel_pump_id', fuelPumpId);
       
     const { data, error } = await query;
       
@@ -53,10 +59,8 @@ export const getIndentsByCustomerId = async (customerId: string): Promise<Indent
           .select('*')
           .in('indent_id', indentIds);
           
-        // Apply fuel pump filter if available  
-        if (fuelPumpId) {
-          transactionQuery = transactionQuery.eq('fuel_pump_id', fuelPumpId);
-        }
+        // Apply fuel pump filter  
+        transactionQuery = transactionQuery.eq('fuel_pump_id', fuelPumpId);
         
         const { data: transactionsData, error: transactionsError } = await transactionQuery;
           
@@ -102,6 +106,16 @@ export const getIndentsByBookletId = async (bookletId: string): Promise<Indent[]
     console.log('Fetching indents for booklet ID:', bookletId);
     const fuelPumpId = await getFuelPumpId();
     
+    if (!fuelPumpId) {
+      console.log('No fuel pump ID available for filtering indents by booklet');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to view booklet indents",
+        variant: "destructive"
+      });
+      return [];
+    }
+    
     let query = supabase
       .from('indents')
       .select(`
@@ -110,13 +124,9 @@ export const getIndentsByBookletId = async (bookletId: string): Promise<Indent[]
       `)
       .eq('booklet_id', bookletId);
       
-    // Apply fuel pump filter if available
-    if (fuelPumpId) {
-      console.log(`Filtering indents by fuel_pump_id: ${fuelPumpId}`);
-      query = query.eq('fuel_pump_id', fuelPumpId);
-    } else {
-      console.log('No fuel pump ID available, querying all indents for this booklet');
-    }
+    // Apply fuel pump filter
+    console.log(`Filtering indents by fuel_pump_id: ${fuelPumpId}`);
+    query = query.eq('fuel_pump_id', fuelPumpId);
       
     const { data, error } = await query;
       
@@ -134,10 +144,8 @@ export const getIndentsByBookletId = async (bookletId: string): Promise<Indent[]
         .select('*')
         .in('indent_id', indentIds);
         
-      // Apply fuel pump filter if available
-      if (fuelPumpId) {
-        transactionQuery = transactionQuery.eq('fuel_pump_id', fuelPumpId);
-      }
+      // Apply fuel pump filter
+      transactionQuery = transactionQuery.eq('fuel_pump_id', fuelPumpId);
       
       const { data: transactionsData, error: transactionsError } = await transactionQuery;
         

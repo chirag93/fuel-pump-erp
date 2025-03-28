@@ -14,17 +14,23 @@ export const getIndentBookletsByCustomerId = async (customerId: string): Promise
     const fuelPumpId = await getFuelPumpId();
     console.log('Using fuel pump ID for booklets query:', fuelPumpId || 'none');
     
+    if (!fuelPumpId) {
+      console.log('No fuel pump ID available for filtering booklets');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to view booklets",
+        variant: "destructive"
+      });
+      return [];
+    }
+    
     console.log('Starting Supabase query to fetch indent booklets...');
     
     let query = supabase
       .from('indent_booklets')
       .select('*')
-      .eq('customer_id', customerId);
-      
-    // If we have a fuel pump ID, include it in the query
-    if (fuelPumpId) {
-      query = query.eq('fuel_pump_id', fuelPumpId);
-    }
+      .eq('customer_id', customerId)
+      .eq('fuel_pump_id', fuelPumpId);
     
     console.log('Executing query...');
     const { data, error } = await query;
@@ -64,6 +70,16 @@ export const createIndentBooklet = async (bookletData: Omit<IndentBooklet, 'id' 
     // Get the fuel pump ID
     const fuelPumpId = await getFuelPumpId();
     console.log('Using fuel pump ID for creating booklet:', fuelPumpId || 'none');
+    
+    if (!fuelPumpId) {
+      console.log('No fuel pump ID available for creating booklet');
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to create booklets",
+        variant: "destructive"
+      });
+      return null;
+    }
     
     // Include the fuel pump ID in the data
     const dataWithFuelPumpId = {
