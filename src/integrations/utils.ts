@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 /**
  * Get the current user's associated fuel pump ID
@@ -12,7 +13,7 @@ export const getFuelPumpId = async (): Promise<string | null> => {
     
     if (!session?.user) {
       console.error('No authenticated user found');
-      return await getFallbackFuelPumpId();
+      return createDefaultFuelPumpIfNeeded();
     }
     
     console.log(`Getting fuel pump ID for user: ${session.user.email}`);
@@ -32,14 +33,14 @@ export const getFuelPumpId = async (): Promise<string | null> => {
         .from('fuel_pumps')
         .select('id')
         .limit(1)
-        .single();
+        .maybeSingle();
         
       if (!firstPumpError && firstPump) {
         console.log(`Super admin: Using first available fuel pump: ${firstPump.id}`);
         return firstPump.id;
       }
       
-      return await getFallbackFuelPumpId();
+      return await createDefaultFuelPumpIfNeeded();
     }
     
     // Get the fuel pump ID associated with this user's email
@@ -51,7 +52,7 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       
     if (error) {
       console.error('Error fetching fuel pump ID:', error);
-      return await getFallbackFuelPumpId();
+      return await createDefaultFuelPumpIfNeeded();
     }
     
     if (fuelPump?.id) {
@@ -59,11 +60,11 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       return fuelPump.id;
     } else {
       console.log(`No fuel pump found for email: ${session.user.email}`);
-      return await getFallbackFuelPumpId();
+      return await createDefaultFuelPumpIfNeeded();
     }
   } catch (error) {
     console.error('Error getting fuel pump ID:', error);
-    return await getFallbackFuelPumpId();
+    return await createDefaultFuelPumpIfNeeded();
   }
 };
 
@@ -80,7 +81,7 @@ const getFallbackFuelPumpId = async (): Promise<string | null> => {
       .from('fuel_pumps')
       .select('id')
       .limit(1)
-      .single();
+      .maybeSingle();
       
     if (error) {
       console.error('Error fetching fallback fuel pump ID:', error);
@@ -97,5 +98,131 @@ const getFallbackFuelPumpId = async (): Promise<string | null> => {
   } catch (error) {
     console.error('Error in fallback fuel pump ID retrieval:', error);
     return null;
+  }
+};
+
+/**
+ * Create a default fuel pump if none exists
+ * This ensures that there is always at least one fuel pump to work with
+ */
+const createDefaultFuelPumpIfNeeded = async (): Promise<string | null> => {
+  try {
+    // First check if any fuel pumps exist
+    const { data: existingPumps, error: checkError } = await supabase
+      .from('fuel_pumps')
+      .select('id')
+      .limit(1)
+      .maybeSingle();
+      
+    if (!checkError && existingPumps?.id) {
+      // If a fuel pump exists, return its ID
+      console.log(`Using existing fuel pump: ${existingPumps.id}`);
+      return existingPumps.id;
+    }
+    
+    console.log('No fuel pumps found, attempting to create a default one');
+    
+    // Get the current user's email
+    const { data: { session } } = await supabase.auth.getSession();
+    const userEmail = session?.user?.email || 'default@fuelpump.com';
+    
+    // Create a default fuel pump
+    const { data: newPump, error: createError } = await supabase
+      .from('fuel_pumps')
+      .insert({
+        name: 'Default Fuel Pump',
+        email: userEmail,
+        address: '123 Default St',
+        contact_number: '555-1234',
+        status: 'active'
+      })
+      .select();
+      
+    if (createError) {
+      console.error('Error creating default fuel pump:', createError);
+      
+      // If we can't create due to RLS, try using RPC if available
+      try {
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('create_default_fuel_pump', {
+          user_email: userEmail
+        });
+        
+        if (rpcError) throw rpcError;
+        
+        if (rpcResult) {
+          console.log(`Created default fuel pump via RPC: ${rpcResult}`);
+          return rpcResult;
+        }
+      } catch (rpcIssue) {
+        console.error('Failed to create fuel pump via RPC:', rpcIssue);
+      }
+      
+      // If still no success, try one more fallback
+      return await getFallbackFuelPumpId();
+    }
+    
+    if (newPump && newPump.length > 0) {
+      const pumpId = newPump[0].id;
+      console.log(`Created default fuel pump with ID: ${pumpId}`);
+      
+      // Create default fuel settings
+      await createDefaultFuelSettings(pumpId);
+      
+      return pumpId;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error in createDefaultFuelPumpIfNeeded:', error);
+    return null;
+  }
+};
+
+/**
+ * Create default fuel settings for a new fuel pump
+ */
+const createDefaultFuelSettings = async (fuelPumpId: string): Promise<void> => {
+  try {
+    const fuelTypes = ['Petrol', 'Diesel'];
+    
+    for (const type of fuelTypes) {
+      const { error } = await supabase
+        .from('fuel_settings')
+        .insert({
+          fuel_pump_id: fuelPumpId,
+          fuel_type: type,
+          tank_capacity: type === 'Petrol' ? 20000 : 15000,
+          current_level: type === 'Petrol' ? 15000 : 10000,
+          current_price: type === 'Petrol' ? 102.5 : 89.75
+        });
+        
+      if (error) {
+        console.error(`Error creating default fuel settings for ${type}:`, error);
+      }
+    }
+    
+    // Create default pump settings
+    const { error: pumpError } = await supabase
+      .from('pump_settings')
+      .insert([
+        {
+          fuel_pump_id: fuelPumpId,
+          pump_number: 'P001',
+          fuel_types: ['Petrol'],
+          nozzle_count: 1
+        },
+        {
+          fuel_pump_id: fuelPumpId,
+          pump_number: 'P002',
+          fuel_types: ['Diesel'],
+          nozzle_count: 1
+        }
+      ]);
+      
+    if (pumpError) {
+      console.error('Error creating default pump settings:', pumpError);
+    }
+  } catch (error) {
+    console.error('Error in createDefaultFuelSettings:', error);
   }
 };

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { getFuelPumpId } from "@/integrations/utils";
 
@@ -28,15 +27,15 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
       console.log('No fuel pump ID available, attempting to get first available fuel pump');
       
       // Try to get the first fuel pump as fallback
-      const { data: firstPump } = await supabase
+      const { data: firstPumpData } = await supabase
         .from('fuel_pumps')
         .select('id')
         .limit(1)
-        .single();
+        .maybeSingle();
         
-      if (firstPump?.id) {
-        console.log(`Fallback: Using first fuel pump ID for fuel settings: ${firstPump.id}`);
-        query.eq('fuel_pump_id', firstPump.id);
+      if (firstPumpData?.id) {
+        console.log(`Fallback: Using first fuel pump ID for fuel settings: ${firstPumpData.id}`);
+        query.eq('fuel_pump_id', firstPumpData.id);
       } else {
         console.log('No fuel pumps found, fetching all fuel settings');
       }
@@ -133,7 +132,6 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
 
 export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: number, current: number, price: number } }> => {
   let fuelPumpId = await getFuelPumpId();
-  let firstPumpData = null;
   
   console.log(`Getting fuel levels with fuel pump ID: ${fuelPumpId || 'none'}`);
   
@@ -142,17 +140,15 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
     if (!fuelPumpId) {
       console.log('No fuel pump ID available, attempting to get first available fuel pump');
       
-      const { data: firstPump } = await supabase
+      const { data: firstPumpData } = await supabase
         .from('fuel_pumps')
         .select('id')
         .limit(1)
-        .single();
-      
-      firstPumpData = firstPump;  
+        .maybeSingle();
         
-      if (firstPump?.id) {
-        console.log(`Fallback: Using first fuel pump ID for fuel levels: ${firstPump.id}`);
-        fuelPumpId = firstPump.id;
+      if (firstPumpData?.id) {
+        console.log(`Fallback: Using first fuel pump ID for fuel levels: ${firstPumpData.id}`);
+        fuelPumpId = firstPumpData.id;
       } else {
         console.log('No fuel pumps found in database');
       }
@@ -379,4 +375,3 @@ const updateTankLevelsFromReadings = async (
     console.error("Error updating tank levels from readings:", error);
   }
 };
-
