@@ -36,10 +36,13 @@ const SuperAdminLogin = () => {
     }
 
     try {
+      console.log('Attempting super admin login with:', email);
       const success = await login(email, password, rememberMe);
       
       if (success) {
         navigate('/super-admin/dashboard', { replace: true });
+      } else {
+        setError('Invalid super admin credentials');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred during login.');
@@ -122,6 +125,9 @@ const SuperAdminLogin = () => {
         <CardFooter className="flex flex-col space-y-4 pt-0">
           <div className="text-sm text-center text-muted-foreground mt-2">
             Only authorized super admins can access this area.
+          </div>
+          <div className="text-xs text-center text-muted-foreground">
+            Default credentials: admin@example.com / admin123
           </div>
         </CardFooter>
       </Card>

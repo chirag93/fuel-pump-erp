@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,9 +46,10 @@ const Login = () => {
     try {
       console.log(`Attempting login with email: ${email}`);
       
-      // First, check if this is a super admin login attempt
-      if (email.toLowerCase().includes('admin')) {
-        console.log('Attempting super admin login');
+      // Only check for super admin login if we're specifically trying to log in as admin@example.com
+      // This is the specific hardcoded super admin account
+      if (email === 'admin@example.com') {
+        console.log('Attempting super admin login with special account');
         const superAdminSuccess = await superAdminLogin(email, password, rememberMe);
         
         if (superAdminSuccess) {
@@ -59,7 +59,7 @@ const Login = () => {
         }
       }
       
-      // If not a super admin or super admin login failed, proceed with regular login
+      // Proceed with regular login for all other emails
       // First check if this fuel pump account exists
       const { data: fuelPump, error: fuelPumpError } = await supabase
         .from('fuel_pumps')
