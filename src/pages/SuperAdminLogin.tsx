@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,12 +54,8 @@ const SuperAdminLogin = () => {
         });
       }
       
-      // Proceed with login
-      await login('sa-admin', {
-        id: 'sa-admin',
-        username: 'admin',
-        email: 'admin@example.com'
-      });
+      // Proceed with login - Fix: Pass 'admin@example.com' and 'admin123' as email and password
+      await login('admin@example.com', 'admin123');
       
       const from = location.state?.from?.pathname || '/super-admin/dashboard';
       navigate(from, { replace: true });
@@ -107,11 +102,8 @@ const SuperAdminLogin = () => {
         return;
       }
       
-      await login(token, {
-        id: token,
-        username,
-        email: `${username}@fuelpro360.com`
-      });
+      // Fix: Pass username and token as email and password parameters
+      await login(username, token);
       
       const from = location.state?.from?.pathname || '/super-admin/dashboard';
       navigate(from, { replace: true });
