@@ -178,11 +178,53 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
           console.log(`Updated auth user metadata with fuelPumpId: ${fuelPumpId}`);
         }
       } else if (changePassword && staffData.password) {
-        // For existing staff, we can't change their password through the admin API with the anon key
+        // For existing staff, use our custom edge function to update the password
+        if (!initialData.auth_id) {
+          toast({
+            title: "Cannot Change Password",
+            description: "This staff member doesn't have an associated user account",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Get the current session for authentication
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to change staff passwords",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        console.log("Calling edge function to update password");
+        const { data, error } = await supabase.functions.invoke("admin-reset-staff-password", {
+          body: {
+            staff_id: initialData.id,
+            auth_id: initialData.auth_id,
+            new_password: staffData.password
+          }
+        });
+
+        if (error || !data?.success) {
+          console.error("Error updating password:", error || data?.error);
+          toast({
+            title: "Password Update Failed",
+            description: data?.error || error?.message || "Could not update password",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        console.log("Password updated successfully via edge function");
         toast({
-          title: "Password Change Not Supported",
-          description: "Changing staff passwords requires admin privileges. Please log in as the staff member to change their password.",
-          variant: "destructive"
+          title: "Password Updated",
+          description: "The staff member's password has been updated successfully"
         });
       }
 
@@ -200,12 +242,12 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         salary: parseFloat(staffData.salary.toString()),
         joining_date: staffData.joining_date,
         assigned_pumps: staffData.assigned_pumps,
-        auth_id: authId,
+        auth_id: authId || initialData?.auth_id,
         fuel_pump_id: fuelPumpId,  // Always set the fuel_pump_id
         is_active: true
       };
 
-      console.log("Submitting staff data via API:", { ...staffPayload, auth_id: authId ? "[redacted]" : undefined });
+      console.log("Submitting staff data via API:", { ...staffPayload, auth_id: staffPayload.auth_id ? "[redacted]" : undefined });
       
       if (onSubmit) {
         // Let the parent component handle the API call
