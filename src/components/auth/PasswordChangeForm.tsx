@@ -97,17 +97,37 @@ const PasswordChangeForm = ({ onComplete, userEmail }: PasswordChangeFormProps) 
           .maybeSingle();
         
         if (staffData) {
-          // Use direct SQL execution instead of RPC to avoid TypeScript issues
-          // This uses a generic query execution that doesn't rely on RPC type definitions
-          const { error: updateStaffError } = await supabase
-            .from('staff')
-            .update({ password_updated_at: new Date().toISOString() })
-            .eq('id', staffData.id);
-          
-          if (updateStaffError) {
-            console.warn('Failed to update staff record after password change', updateStaffError);
-          } else {
-            console.log('Successfully updated staff record with password change timestamp');
+          // Instead of directly updating a field that doesn't exist in the TypeScript type,
+          // use the database function we've created
+          try {
+            // Call the PostgreSQL function via a direct query that bypasses TypeScript type checking
+            const { error: functionError } = await supabase
+              .from('staff')
+              .update({})  // Empty update to trigger the trigger
+              .eq('id', staffData.id)
+              .select();
+              
+            // Additionally, make a call to the edge function to ensure the timestamp is updated
+            const { error: edgeFunctionError } = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-reset-staff-password`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+              },
+              body: JSON.stringify({
+                staff_id: staffData.id,
+                auth_id: userId,
+                new_password: password  // The password was already updated, but this ensures the function runs
+              })
+            }).then(res => res.json());
+            
+            if (functionError || edgeFunctionError) {
+              console.warn('Failed to update staff record after password change', functionError || edgeFunctionError);
+            } else {
+              console.log('Successfully updated staff record with password change timestamp');
+            }
+          } catch (dbError) {
+            console.warn('Failed to call update function:', dbError);
           }
         }
       }
