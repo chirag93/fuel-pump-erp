@@ -59,7 +59,7 @@ serve(async (req) => {
       }
     );
 
-    // Verify the requesting user is an admin by checking the auth header
+    // Get the auth header for authorization check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -78,7 +78,11 @@ serve(async (req) => {
     if (authError || !user) {
       console.error("Auth error:", authError);
       return new Response(
-        JSON.stringify({ success: false, error: "Invalid authentication" }),
+        JSON.stringify({ 
+          success: false, 
+          error: "Invalid authentication",
+          details: authError?.message
+        }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -86,19 +90,38 @@ serve(async (req) => {
       );
     }
     
-    // Check if the user is an admin by checking if they match a fuel pump or are a super admin
+    // Get the staff record to verify permissions
     const { data: staffData, error: staffError } = await supabaseAdmin
       .from('staff')
-      .select('fuel_pump_id')
+      .select('fuel_pump_id, auth_id')
       .eq('id', staff_id)
       .single();
     
-    if (staffError) {
+    if (staffError || !staffData) {
       console.error("Error fetching staff:", staffError);
       return new Response(
-        JSON.stringify({ success: false, error: "Staff member not found" }),
+        JSON.stringify({ 
+          success: false, 
+          error: "Staff member not found",
+          details: staffError?.message
+        }),
         {
           status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
+    
+    // Verify the auth_id in the request matches what's in the database
+    if (staffData.auth_id !== auth_id) {
+      console.error("Auth ID mismatch:", { requestedAuthId: auth_id, actualAuthId: staffData.auth_id });
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Auth ID mismatch - the provided auth_id doesn't match the staff record" 
+        }),
+        {
+          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         }
       );
@@ -107,20 +130,28 @@ serve(async (req) => {
     // Check if user is a super admin
     const { data: superAdmin } = await supabaseAdmin
       .from('super_admins')
-      .select('*')
+      .select('id')
       .eq('id', user.id)
       .maybeSingle();
       
-    // Check if user is a fuel pump admin (has same fuel_pump_id as the staff member)
+    // Check if user is a fuel pump admin
     const { data: fuelPump } = await supabaseAdmin
       .from('fuel_pumps')
-      .select('*')
+      .select('id, email')
       .eq('id', staffData.fuel_pump_id)
-      .eq('email', user.email)
       .maybeSingle();
     
+    const isFuelPumpAdmin = fuelPump && fuelPump.email.toLowerCase() === user.email.toLowerCase();
+    
     // If not a super admin or the fuel pump admin, deny access
-    if (!superAdmin && !fuelPump) {
+    if (!superAdmin && !isFuelPumpAdmin) {
+      console.error("Permission denied:", { 
+        userId: user.id, 
+        userEmail: user.email,
+        fuelPumpId: staffData.fuel_pump_id,
+        fuelPumpEmail: fuelPump?.email 
+      });
+      
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -154,7 +185,25 @@ serve(async (req) => {
       );
     }
 
-    console.log("Password updated successfully");
+    // After successful password update, let's verify we can retrieve the user
+    const { data: verifyUser, error: verifyError } = await supabaseAdmin.auth.admin.getUserById(auth_id);
+    
+    if (verifyError || !verifyUser) {
+      console.error("Error verifying user after password update:", verifyError);
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          warning: "Password updated but verification failed. The user might need to reset their password again.",
+          details: verifyError?.message 
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
+
+    console.log("Password updated and verified successfully");
     return new Response(
       JSON.stringify({ 
         success: true, 

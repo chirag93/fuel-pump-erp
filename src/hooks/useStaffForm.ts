@@ -210,11 +210,22 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
           }
         });
 
-        if (error || !data?.success) {
-          console.error("Error updating password:", error || data?.error);
+        if (error) {
+          console.error("Error calling password reset function:", error);
           toast({
             title: "Password Update Failed",
-            description: data?.error || error?.message || "Could not update password",
+            description: error.message || "Could not connect to password reset service",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+        
+        if (!data?.success) {
+          console.error("Error updating password:", data?.error);
+          toast({
+            title: "Password Update Failed",
+            description: data?.error || "Failed to update password. Please try again.",
             variant: "destructive"
           });
           setIsSubmitting(false);
