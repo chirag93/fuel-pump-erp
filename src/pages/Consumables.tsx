@@ -9,6 +9,7 @@ import { Package, Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
+import { getFuelPumpId } from '@/integrations/utils';
 
 interface Consumable {
   id: string;
@@ -20,6 +21,7 @@ interface Consumable {
   total_price: number;
   date: string;
   created_at?: string;
+  fuel_pump_id?: string;
 }
 
 const Consumables = () => {
@@ -35,15 +37,34 @@ const Consumables = () => {
     unit: '',
     price_per_unit: '',
   });
+  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
 
-  // Fetch consumables from the database
+  // Fetch fuel pump ID and consumables from the database
   useEffect(() => {
-    const fetchConsumables = async () => {
+    const initData = async () => {
       try {
         setIsLoading(true);
+        
+        // Get the fuel pump ID first
+        const pumpId = await getFuelPumpId();
+        setFuelPumpId(pumpId);
+        
+        if (!pumpId) {
+          console.error('No fuel pump ID available');
+          toast({
+            title: "Authentication Required",
+            description: "Please log in with a fuel pump account to view consumables",
+            variant: "destructive"
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Now fetch consumables filtered by the fuel pump ID
         const { data, error } = await supabase
           .from('consumables')
           .select('*')
+          .eq('fuel_pump_id', pumpId)
           .order('name', { ascending: true });
           
         if (error) {
@@ -61,7 +82,8 @@ const Consumables = () => {
             price_per_unit: item.price_per_unit,
             total_price: item.total_price,
             date: item.date,
-            created_at: item.created_at
+            created_at: item.created_at,
+            fuel_pump_id: item.fuel_pump_id
           }));
           setConsumables(formattedData);
         }
@@ -77,7 +99,7 @@ const Consumables = () => {
       }
     };
     
-    fetchConsumables();
+    initData();
   }, []);
 
   // Filter consumables based on search term
@@ -113,6 +135,15 @@ const Consumables = () => {
   const handleSaveConsumable = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!fuelPumpId) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to add consumables",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Validation
     if (!formData.name || !formData.category || !formData.quantity || !formData.unit || !formData.price_per_unit) {
       toast({
@@ -142,7 +173,8 @@ const Consumables = () => {
             total_price: totalPrice,
             date: today
           })
-          .eq('id', editingConsumable.id);
+          .eq('id', editingConsumable.id)
+          .eq('fuel_pump_id', fuelPumpId); // Extra security: ensure we only update our own consumables
         
         if (error) throw error;
         
@@ -170,7 +202,8 @@ const Consumables = () => {
             unit: formData.unit,
             price_per_unit: pricePerUnit,
             total_price: totalPrice,
-            date: today
+            date: today,
+            fuel_pump_id: fuelPumpId // Add fuel pump ID to ensure proper data segregation
           }])
           .select();
         
@@ -188,7 +221,8 @@ const Consumables = () => {
             price_per_unit: data[0].price_per_unit,
             total_price: data[0].total_price,
             date: data[0].date,
-            created_at: data[0].created_at
+            created_at: data[0].created_at,
+            fuel_pump_id: data[0].fuel_pump_id
           };
           
           setConsumables([...consumables, newConsumable]);
@@ -208,12 +242,22 @@ const Consumables = () => {
   };
 
   const handleDeleteConsumable = async (id: string) => {
+    if (!fuelPumpId) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in with a fuel pump account to delete consumables",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (confirm("Are you sure you want to remove this item?")) {
       try {
         const { error } = await supabase
           .from('consumables')
           .delete()
-          .eq('id', id);
+          .eq('id', id)
+          .eq('fuel_pump_id', fuelPumpId); // Extra security: ensure we only delete our own consumables
         
         if (error) throw error;
         

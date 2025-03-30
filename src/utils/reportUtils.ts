@@ -1,7 +1,9 @@
+
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { BarChart, FileText } from 'lucide-react';
 import React from 'react';
+import { getFuelPumpId } from '@/integrations/utils';
 
 export interface ReportData {
   title: string;
@@ -36,10 +38,13 @@ export const getReportIcon = (type: string): React.ReactNode => {
 };
 
 export const generateProfitLossReport = async (fromDate: string, toDate: string): Promise<ReportData> => {
+  const fuelPumpId = await getFuelPumpId();
+  
   // Get all sales (revenue)
   const { data: sales, error: salesError } = await supabase
     .from('transactions')
     .select('amount')
+    .eq('fuel_pump_id', fuelPumpId)
     .gte('date', fromDate)
     .lte('date', toDate);
   
@@ -49,6 +54,7 @@ export const generateProfitLossReport = async (fromDate: string, toDate: string)
   const { data: purchases, error: purchasesError } = await supabase
     .from('tank_unloads')
     .select('amount')
+    .eq('fuel_pump_id', fuelPumpId)
     .gte('date', fromDate)
     .lte('date', toDate);
   
@@ -58,6 +64,7 @@ export const generateProfitLossReport = async (fromDate: string, toDate: string)
   const { data: expenses, error: expensesError } = await supabase
     .from('consumables')
     .select('total_price')
+    .eq('fuel_pump_id', fuelPumpId)
     .gte('date', fromDate)
     .lte('date', toDate);
   
@@ -85,6 +92,8 @@ export const generateProfitLossReport = async (fromDate: string, toDate: string)
 };
 
 export const generateSalesReport = async (fromDate: string, toDate: string): Promise<ReportData> => {
+  const fuelPumpId = await getFuelPumpId();
+  
   // Get all sales transactions with fuel type
   const { data, error } = await supabase
     .from('transactions')
@@ -98,6 +107,7 @@ export const generateSalesReport = async (fromDate: string, toDate: string): Pro
       customer_id,
       customers(name)
     `)
+    .eq('fuel_pump_id', fuelPumpId)
     .gte('date', fromDate)
     .lte('date', toDate)
     .order('date', { ascending: false });
@@ -162,17 +172,21 @@ export const generateSalesReport = async (fromDate: string, toDate: string): Pro
 };
 
 export const generateBalanceSheetReport = async (fromDate: string, toDate: string): Promise<ReportData> => {
+  const fuelPumpId = await getFuelPumpId();
+  
   // Get customer balances (accounts receivable)
   const { data: customers, error: customersError } = await supabase
     .from('customers')
-    .select('balance');
+    .select('balance')
+    .eq('fuel_pump_id', fuelPumpId);
   
   if (customersError) throw customersError;
   
   // Get current fuel inventory value
   const { data: fuelSettings, error: fuelError } = await supabase
     .from('fuel_settings')
-    .select('fuel_type, current_level, current_price');
+    .select('fuel_type, current_level, current_price')
+    .eq('fuel_pump_id', fuelPumpId);
   
   if (fuelError) throw fuelError;
   
@@ -190,6 +204,7 @@ export const generateBalanceSheetReport = async (fromDate: string, toDate: strin
   const { data: cashTransactions, error: cashError } = await supabase
     .from('transactions')
     .select('amount')
+    .eq('fuel_pump_id', fuelPumpId)
     .eq('payment_method', 'cash')
     .gte('date', fromDate)
     .lte('date', toDate);
@@ -203,6 +218,7 @@ export const generateBalanceSheetReport = async (fromDate: string, toDate: strin
   const { data: businessSettings, error: businessError } = await supabase
     .from('business_settings')
     .select('*')
+    .eq('fuel_pump_id', fuelPumpId)
     .single();
   
   if (businessError) throw businessError;
@@ -230,10 +246,13 @@ export const generateBalanceSheetReport = async (fromDate: string, toDate: strin
 };
 
 export const generateCashFlowReport = async (fromDate: string, toDate: string): Promise<ReportData> => {
+  const fuelPumpId = await getFuelPumpId();
+  
   // Get cash sales
   const { data: cashSales, error: cashError } = await supabase
     .from('transactions')
     .select('amount')
+    .eq('fuel_pump_id', fuelPumpId)
     .eq('payment_method', 'cash')
     .gte('date', fromDate)
     .lte('date', toDate);
@@ -244,6 +263,7 @@ export const generateCashFlowReport = async (fromDate: string, toDate: string): 
   const { data: payments, error: paymentsError } = await supabase
     .from('customer_payments')
     .select('amount')
+    .eq('fuel_pump_id', fuelPumpId)
     .gte('date', fromDate)
     .lte('date', toDate);
   
@@ -253,6 +273,7 @@ export const generateCashFlowReport = async (fromDate: string, toDate: string): 
   const { data: purchases, error: purchasesError } = await supabase
     .from('tank_unloads')
     .select('amount')
+    .eq('fuel_pump_id', fuelPumpId)
     .gte('date', fromDate)
     .lte('date', toDate);
   
@@ -262,6 +283,7 @@ export const generateCashFlowReport = async (fromDate: string, toDate: string): 
   const { data: expenses, error: expensesError } = await supabase
     .from('consumables')
     .select('total_price')
+    .eq('fuel_pump_id', fuelPumpId)
     .gte('date', fromDate)
     .lte('date', toDate);
   
@@ -295,10 +317,13 @@ export const generateCashFlowReport = async (fromDate: string, toDate: string): 
 };
 
 export const generateTaxSummaryReport = async (fromDate: string, toDate: string): Promise<ReportData> => {
+  const fuelPumpId = await getFuelPumpId();
+  
   // Get all sales (for output tax calculation)
   const { data: sales, error: salesError } = await supabase
     .from('transactions')
     .select('amount')
+    .eq('fuel_pump_id', fuelPumpId)
     .gte('date', fromDate)
     .lte('date', toDate);
   
@@ -308,6 +333,7 @@ export const generateTaxSummaryReport = async (fromDate: string, toDate: string)
   const { data: purchases, error: purchasesError } = await supabase
     .from('tank_unloads')
     .select('amount')
+    .eq('fuel_pump_id', fuelPumpId)
     .gte('date', fromDate)
     .lte('date', toDate);
   

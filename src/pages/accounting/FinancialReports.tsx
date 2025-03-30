@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AccountingPageLayout } from '@/components/accounting/AccountingPageLayout';
 import { BarChart, FileText } from 'lucide-react';
