@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { Vehicle } from '@/integrations/supabase/client';
 import { toast } from "@/hooks/use-toast";
+import { getFuelPumpId } from '@/integrations/utils';
 
 interface CustomerVehicleSelectionProps {
   selectedCustomer: string;
@@ -32,6 +33,19 @@ export const CustomerVehicleSelection = ({
   const fetchVehicles = async (customerId: string = '') => {
     setIsVehicleLoading(true);
     try {
+      const fuelPumpId = await getFuelPumpId();
+      
+      if (!fuelPumpId) {
+        console.error('No fuel pump ID available');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to view vehicles",
+          variant: "destructive"
+        });
+        setIsVehicleLoading(false);
+        return;
+      }
+      
       let query = supabase
         .from('vehicles')
         .select('*')
@@ -40,6 +54,9 @@ export const CustomerVehicleSelection = ({
       if (customerId) {
         query = query.eq('customer_id', customerId);
       }
+      
+      // Add fuel pump ID filter to ensure data isolation
+      query = query.eq('fuel_pump_id', fuelPumpId);
 
       const { data, error } = await query;
 

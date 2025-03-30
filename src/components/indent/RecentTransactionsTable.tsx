@@ -6,6 +6,8 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Button } from '@/components/ui/button';
 import { supabase, Transaction } from '@/integrations/supabase/client';
 import BillPreviewDialog from './BillPreviewDialog';
+import { getFuelPumpId } from '@/integrations/utils';
+import { toast } from "@/hooks/use-toast";
 
 interface ExtendedTransaction extends Transaction {
   customer_name?: string;
@@ -26,7 +28,21 @@ export const RecentTransactionsTable = ({ refreshTrigger }: RecentTransactionsTa
     const fetchRecentTransactions = async () => {
       setIsLoading(true);
       try {
-        // Get the last 5 transactions with customer and vehicle info
+        // Get the fuel pump ID
+        const fuelPumpId = await getFuelPumpId();
+        
+        if (!fuelPumpId) {
+          console.error('No fuel pump ID available');
+          toast({
+            title: "Authentication Required",
+            description: "Please log in with a fuel pump account to view transactions",
+            variant: "destructive"
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Get the last 5 transactions with customer and vehicle info, filtered by fuel pump ID
         const { data, error } = await supabase
           .from('transactions')
           .select(`
@@ -34,6 +50,7 @@ export const RecentTransactionsTable = ({ refreshTrigger }: RecentTransactionsTa
             customers(name),
             vehicles(number)
           `)
+          .eq('fuel_pump_id', fuelPumpId) // Add fuel pump ID filter
           .order('created_at', { ascending: false })
           .limit(5);
           

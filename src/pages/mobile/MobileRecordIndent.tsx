@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, FileText, Search, Check, X, Loader2 } from 'lucide-react';
@@ -9,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getFuelPumpId } from '@/integrations/utils';
 import {
   Dialog,
   DialogContent,
@@ -78,41 +78,75 @@ const MobileRecordIndent = () => {
   useEffect(() => {
     const fetchStaff = async () => {
       console.info('Fetching staff data...');
-      const { data, error } = await supabase
-        .from('staff')
-        .select('id, name')
-        .eq('is_active', true);
+      try {
+        const fuelPumpId = await getFuelPumpId();
         
-      if (error) {
-        console.error('Error fetching staff:', error);
-        return;
-      }
-      
-      if (data) {
-        console.info(`Staff data fetched: ${data.length} records`);
-        setStaff(data);
-        // If staff exists, select the first one by default
-        if (data.length > 0) {
-          setSelectedStaff(data[0].id);
+        if (!fuelPumpId) {
+          console.error('No fuel pump ID available');
+          toast({
+            title: "Authentication Required",
+            description: "Please log in with a fuel pump account to view staff",
+            variant: "destructive"
+          });
+          return;
         }
+        
+        const { data, error } = await supabase
+          .from('staff')
+          .select('id, name')
+          .eq('fuel_pump_id', fuelPumpId)
+          .eq('is_active', true);
+          
+        if (error) {
+          console.error('Error fetching staff:', error);
+          return;
+        }
+        
+        if (data) {
+          console.info(`Staff data fetched: ${data.length} records`);
+          setStaff(data);
+          // If staff exists, select the first one by default
+          if (data.length > 0) {
+            setSelectedStaff(data[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching staff:', error);
       }
     };
     
     // Fetch current fuel price
     const fetchFuelPrice = async () => {
-      const { data, error } = await supabase
-        .from('fuel_settings')
-        .select('current_price')
-        .eq('fuel_type', fuelType)
-        .single();
+      try {
+        const fuelPumpId = await getFuelPumpId();
         
-      if (error) {
+        if (!fuelPumpId) {
+          console.error('No fuel pump ID available');
+          toast({
+            title: "Authentication Required",
+            description: "Please log in with a fuel pump account to fetch fuel price",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        const { data, error } = await supabase
+          .from('fuel_settings')
+          .select('current_price')
+          .eq('fuel_pump_id', fuelPumpId)
+          .eq('fuel_type', fuelType)
+          .single();
+          
+        if (error) {
+          console.error('Error fetching fuel price:', error);
+          return;
+        }
+        
+        if (data) {
+          setFuelPrice(data.current_price);
+        }
+      } catch (error) {
         console.error('Error fetching fuel price:', error);
-        return;
-      }
-      
-      if (data) {
-        setFuelPrice(data.current_price);
       }
     };
     
@@ -140,21 +174,38 @@ const MobileRecordIndent = () => {
   useEffect(() => {
     if (selectedCustomer) {
       const fetchVehicles = async () => {
-        const { data, error } = await supabase
-          .from('vehicles')
-          .select('*')
-          .eq('customer_id', selectedCustomer);
+        try {
+          const fuelPumpId = await getFuelPumpId();
           
-        if (error) {
+          if (!fuelPumpId) {
+            console.error('No fuel pump ID available');
+            toast({
+              title: "Authentication Required",
+              description: "Please log in with a fuel pump account to view vehicles",
+              variant: "destructive"
+            });
+            return;
+          }
+          
+          const { data, error } = await supabase
+            .from('vehicles')
+            .select('*')
+            .eq('fuel_pump_id', fuelPumpId)
+            .eq('customer_id', selectedCustomer);
+            
+          if (error) {
+            console.error('Error fetching vehicles:', error);
+            return;
+          }
+          
+          if (data) {
+            setVehicles(data);
+            // Reset selected vehicle
+            setSelectedVehicle('');
+            setSelectedVehicleNumber('');
+          }
+        } catch (error) {
           console.error('Error fetching vehicles:', error);
-          return;
-        }
-        
-        if (data) {
-          setVehicles(data);
-          // Reset selected vehicle
-          setSelectedVehicle('');
-          setSelectedVehicleNumber('');
         }
       };
       
@@ -176,10 +227,24 @@ const MobileRecordIndent = () => {
     try {
       console.log('Searching for indent number:', searchIndentNumber);
       
+      const fuelPumpId = await getFuelPumpId();
+      
+      if (!fuelPumpId) {
+        console.error('No fuel pump ID available');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to search indents",
+          variant: "destructive"
+        });
+        setIsSearching(false);
+        return;
+      }
+      
       // First check if this indent number exists in any booklet
       const { data: bookletData, error: bookletError } = await supabase
         .from('indent_booklets')
         .select('*')
+        .eq('fuel_pump_id', fuelPumpId)
         .or(`start_number.lte.${searchIndentNumber},end_number.gte.${searchIndentNumber}`)
         .order('issued_date', { ascending: false });
 
@@ -210,6 +275,7 @@ const MobileRecordIndent = () => {
       const { data: existingIndent, error: existingError } = await supabase
         .from('indents')
         .select('*')
+        .eq('fuel_pump_id', fuelPumpId)
         .eq('indent_number', searchIndentNumber);
 
       if (existingError) {
@@ -227,6 +293,7 @@ const MobileRecordIndent = () => {
       const { data: customerData, error: customerError } = await supabase
         .from('customers')
         .select('id, name')
+        .eq('fuel_pump_id', fuelPumpId)
         .eq('id', matchingBooklet.customer_id)
         .single();
 
@@ -290,6 +357,18 @@ const MobileRecordIndent = () => {
     setIsSubmitting(true);
     
     try {
+      const fuelPumpId = await getFuelPumpId();
+      
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to save indent",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
       // Generate an ID for the indent
       const indentId = `IND-${Date.now()}`;
       
@@ -305,7 +384,8 @@ const MobileRecordIndent = () => {
         quantity: Number(quantity),
         discount_amount: discountAmount,
         date: date.toISOString().split('T')[0],
-        source: 'mobile'
+        source: 'mobile',
+        fuel_pump_id: fuelPumpId // Add fuel pump ID
       };
       
       const { error: indentError } = await supabase
@@ -327,7 +407,8 @@ const MobileRecordIndent = () => {
         payment_method: 'INDENT',
         date: date.toISOString().split('T')[0],
         staff_id: selectedStaff,
-        source: 'mobile'
+        source: 'mobile',
+        fuel_pump_id: fuelPumpId // Add fuel pump ID
       };
       
       const { error: transactionError } = await supabase
@@ -342,6 +423,7 @@ const MobileRecordIndent = () => {
           .from('customers')
           .select('balance')
           .eq('id', selectedCustomer)
+          .eq('fuel_pump_id', fuelPumpId)
           .single();
           
         if (currentCustomer) {
@@ -350,7 +432,8 @@ const MobileRecordIndent = () => {
           await supabase
             .from('customers')
             .update({ balance: newBalance })
-            .eq('id', selectedCustomer);
+            .eq('id', selectedCustomer)
+            .eq('fuel_pump_id', fuelPumpId);
         }
       } catch (balanceError) {
         console.error('Error updating customer balance:', balanceError);
@@ -363,13 +446,15 @@ const MobileRecordIndent = () => {
           .from('indent_booklets')
           .select('used_indents')
           .eq('id', selectedBooklet)
+          .eq('fuel_pump_id', fuelPumpId)
           .single();
           
         if (booklet) {
           await supabase
             .from('indent_booklets')
             .update({ used_indents: (booklet.used_indents || 0) + 1 })
-            .eq('id', selectedBooklet);
+            .eq('id', selectedBooklet)
+            .eq('fuel_pump_id', fuelPumpId);
         }
       } catch (bookletError) {
         console.error('Error updating booklet usage count:', bookletError);

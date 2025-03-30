@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -12,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getFuelPumpId } from '@/integrations/utils';
 
 interface IndentBookletSelectionProps {
   selectedCustomer: string;
@@ -70,9 +70,23 @@ export const IndentBookletSelection = ({
   const fetchCustomers = async () => {
     setIsCustomerLoading(true);
     try {
+      const fuelPumpId = await getFuelPumpId();
+      
+      if (!fuelPumpId) {
+        console.error('No fuel pump ID available');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to view customers",
+          variant: "destructive"
+        });
+        setIsCustomerLoading(false);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('customers')
         .select('*')
+        .eq('fuel_pump_id', fuelPumpId) // Add fuel pump ID filter
         .order('name', { ascending: true });
 
       if (error) {
@@ -97,11 +111,25 @@ export const IndentBookletSelection = ({
   const fetchIndentBooklets = async (customerId: string) => {
     setIsBookletLoading(true);
     try {
+      const fuelPumpId = await getFuelPumpId();
+      
+      if (!fuelPumpId) {
+        console.error('No fuel pump ID available');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to view booklets",
+          variant: "destructive"
+        });
+        setIsBookletLoading(false);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('indent_booklets')
         .select('*')
         .eq('customer_id', customerId)
         .eq('status', 'Active')
+        .eq('fuel_pump_id', fuelPumpId) // Add fuel pump ID filter
         .order('issued_date', { ascending: false });
 
       if (error) {
@@ -192,10 +220,24 @@ export const IndentBookletSelection = ({
 
     setIsSearching(true);
     try {
-      // First check if this indent number exists in any booklet
+      const fuelPumpId = await getFuelPumpId();
+      
+      if (!fuelPumpId) {
+        console.error('No fuel pump ID available');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to search indents",
+          variant: "destructive"
+        });
+        setIsSearching(false);
+        return;
+      }
+      
+      // First check if this indent number exists in any booklet for the current fuel pump
       const { data: bookletData, error: bookletError } = await supabase
         .from('indent_booklets')
         .select('*')
+        .eq('fuel_pump_id', fuelPumpId) // Add fuel pump ID filter
         .or(`start_number.lte.${searchIndentNumber},end_number.gte.${searchIndentNumber}`)
         .order('issued_date', { ascending: false });
 
@@ -223,7 +265,8 @@ export const IndentBookletSelection = ({
       const { data: indentData, error: indentError } = await supabase
         .from('indents')
         .select('id')
-        .eq('indent_number', searchIndentNumber);
+        .eq('indent_number', searchIndentNumber)
+        .eq('fuel_pump_id', fuelPumpId); // Add fuel pump ID filter
 
       if (indentError) throw indentError;
 
@@ -238,6 +281,7 @@ export const IndentBookletSelection = ({
         .from('customers')
         .select('name')
         .eq('id', matchingBooklet.customer_id)
+        .eq('fuel_pump_id', fuelPumpId) // Add fuel pump ID filter
         .single();
         
       if (customerError) {
@@ -256,6 +300,7 @@ export const IndentBookletSelection = ({
         .from('vehicles')
         .select('id')
         .eq('customer_id', matchingBooklet.customer_id)
+        .eq('fuel_pump_id', fuelPumpId) // Add fuel pump ID filter
         .limit(1);
 
       if (vehicleError) {

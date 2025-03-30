@@ -9,6 +9,7 @@ import { FuelTransactionForm } from '@/components/indent/FuelTransactionForm';
 import { RecentTransactionsTable } from '@/components/indent/RecentTransactionsTable';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { getFuelPumpId } from '@/integrations/utils';
 
 const RecordIndent = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
@@ -30,9 +31,22 @@ const RecordIndent = () => {
   useEffect(() => {
     const fetchStaff = async () => {
       try {
+        const fuelPumpId = await getFuelPumpId();
+        
+        if (!fuelPumpId) {
+          console.error('No fuel pump ID available');
+          toast({
+            title: "Authentication Required",
+            description: "Please log in with a fuel pump account to view staff",
+            variant: "destructive"
+          });
+          return;
+        }
+        
         const { data, error } = await supabase
           .from('staff')
           .select('id, name')
+          .eq('fuel_pump_id', fuelPumpId) // Add fuel pump ID filter
           .order('name', { ascending: true });
           
         if (error) throw error;
@@ -69,6 +83,19 @@ const RecordIndent = () => {
         toast({
           title: "Missing information",
           description: "Please fill all required fields",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Get the fuel pump ID
+      const fuelPumpId = await getFuelPumpId();
+      
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to record indents",
           variant: "destructive"
         });
         setIsSubmitting(false);
@@ -120,7 +147,8 @@ const RecordIndent = () => {
           indent_number: indentNumber,
           booklet_id: selectedBooklet,
           date: date.toISOString(),
-          status: 'Fulfilled'
+          status: 'Fulfilled',
+          fuel_pump_id: fuelPumpId // Add fuel pump ID
         });
 
         const { error: indentError } = await supabase
@@ -136,7 +164,8 @@ const RecordIndent = () => {
             indent_number: indentNumber,
             booklet_id: selectedBooklet,
             date: date.toISOString(),
-            status: 'Fulfilled'
+            status: 'Fulfilled',
+            fuel_pump_id: fuelPumpId // Add fuel pump ID
           });
 
         if (indentError) {
@@ -187,7 +216,8 @@ const RecordIndent = () => {
         quantity: quantity,
         discount_amount: discountAmount,
         payment_method: 'Cash',
-        indent_id: createdIndentNumber // Using the indent number we just created
+        indent_id: createdIndentNumber, // Using the indent number we just created
+        fuel_pump_id: fuelPumpId // Add fuel pump ID
       });
 
       // Now create the transaction referencing the indent if it was created
@@ -204,7 +234,8 @@ const RecordIndent = () => {
           quantity: quantity,
           discount_amount: discountAmount,
           payment_method: 'Cash', // Default payment method
-          indent_id: createdIndentNumber // Using the indent number we just created
+          indent_id: createdIndentNumber, // Using the indent number we just created
+          fuel_pump_id: fuelPumpId // Add fuel pump ID
         });
 
       if (transactionError) {
