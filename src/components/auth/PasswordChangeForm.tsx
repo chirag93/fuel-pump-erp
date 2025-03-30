@@ -39,9 +39,24 @@ const PasswordChangeForm = ({ onComplete, userEmail }: PasswordChangeFormProps) 
     try {
       console.log('Updating password for user:', userEmail);
       
-      // Now update the password using Supabase
+      // Get the current user session to get user info
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        throw sessionError;
+      }
+      
+      if (!sessionData.session?.user) {
+        throw new Error('No active session found. Please try logging in again.');
+      }
+      
+      // Get existing user metadata to preserve it
+      const userId = sessionData.session.user.id;
+      const existingMetadata = sessionData.session.user.user_metadata || {};
+      
+      // Update the password using Supabase, preserving metadata
       const { error: updateError } = await supabase.auth.updateUser({
-        password
+        password,
+        data: existingMetadata  // Preserve existing metadata
       });
 
       if (updateError) {
@@ -49,16 +64,20 @@ const PasswordChangeForm = ({ onComplete, userEmail }: PasswordChangeFormProps) 
         throw updateError;
       }
 
-      // Update the fuel pump status back to active
-      const { data: fuelPump, error: fetchError } = await supabase
+      // Check if user is a fuel pump admin or staff
+      let isPumpAdmin = false;
+      
+      // First check if the user is a fuel pump admin
+      const { data: fuelPump, error: fetchFuelPumpError } = await supabase
         .from('fuel_pumps')
         .select('*')
         .eq('email', userEmail)
         .maybeSingle();
+      
+      if (fuelPump) {
+        isPumpAdmin = true;
         
-      if (fetchError) {
-        console.warn('Failed to fetch fuel pump for status update:', fetchError);
-      } else if (fuelPump) {
+        // Update the fuel pump status back to active
         const { error: fuelPumpError } = await supabase
           .from('fuel_pumps')
           .update({ status: 'active' })
@@ -70,7 +89,48 @@ const PasswordChangeForm = ({ onComplete, userEmail }: PasswordChangeFormProps) 
           console.log('Successfully updated fuel pump status to active');
         }
       } else {
-        console.warn('Fuel pump not found for email:', userEmail);
+        // If not admin, check if staff
+        const { data: staffData, error: staffError } = await supabase
+          .from('staff')
+          .select('id, auth_id, fuel_pump_id')
+          .eq('auth_id', userId)
+          .maybeSingle();
+        
+        if (staffData) {
+          // Update a timestamp on the staff record to indicate password was changed
+          const { error: updateStaffError } = await supabase
+            .from('staff')
+            .update({ password_updated_at: new Date().toISOString() })
+            .eq('id', staffData.id);
+          
+          if (updateStaffError) {
+            console.warn('Failed to update staff record after password change', updateStaffError);
+          } else {
+            console.log('Successfully updated staff record with password change timestamp');
+          }
+        }
+      }
+      
+      // Refetch user metadata and store in localStorage for backup
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) {
+        // Save updated user session to localStorage
+        try {
+          const storedSession = localStorage.getItem('fuel_pro_session');
+          if (storedSession) {
+            const parsedSession = JSON.parse(storedSession);
+            if (parsedSession.user) {
+              parsedSession.user = {
+                ...parsedSession.user,
+                ...data.user.user_metadata
+              };
+              localStorage.setItem('fuel_pro_session', JSON.stringify(parsedSession));
+              console.log('Updated stored session with latest user metadata');
+            }
+          }
+        } catch (parseError) {
+          console.error('Error updating stored session:', parseError);
+        }
       }
       
       toast({

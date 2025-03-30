@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,6 @@ import { AlertCircle, Lock, Mail } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { getFuelPumpByEmail } from '@/integrations/fuelPumps';
 
 interface LoginFormProps {
   email: string;
@@ -79,141 +77,123 @@ const LoginForm = ({
         app_metadata: data.user.app_metadata,
         user_metadata: data.user.user_metadata
       });
-      
-      // Check if the user exists in the fuel_pumps table (admin)
-      let matchedFuelPump = null;
-      
-      // Try RPC function first (case-insensitive match)
-      const { data: fuelPump, error: rpcError } = await supabase
-        .rpc('get_fuel_pump_by_email', { email_param: email.toLowerCase() });
-      
-      if (fuelPump && Array.isArray(fuelPump) && fuelPump.length > 0) {
-        matchedFuelPump = fuelPump[0];
-        console.log('Found fuel pump via RPC:', matchedFuelPump);
-      } else {
-        console.log(`No fuel pump found via RPC for email: ${email.toLowerCase()}`);
-        if (rpcError) {
-          console.error('RPC error:', rpcError);
-        }
-      }
-      
-      // If no match via RPC, try direct query as fallback
-      if (!matchedFuelPump) {
-        console.log('Trying direct query fallback for fuel pump');
-        
-        // First try case-insensitive match
-        const { data: directFuelPump, error: directError } = await supabase
-          .from('fuel_pumps')
-          .select('*')
-          .ilike('email', email)
-          .maybeSingle();
-        
-        if (!directError && directFuelPump) {
-          matchedFuelPump = directFuelPump;
-          console.log('Found fuel pump via direct query (ilike):', matchedFuelPump);
-        } else {
-          console.log(`No fuel pump found via direct query for email: ${email}`);
-          
-          // Try exact match as final attempt
-          const { data: exactFuelPump, error: exactError } = await supabase
-            .from('fuel_pumps')
-            .select('*')
-            .eq('email', email)
-            .maybeSingle();
-          
-          if (!exactError && exactFuelPump) {
-            matchedFuelPump = exactFuelPump;
-            console.log('Found fuel pump via exact email match:', matchedFuelPump);
-          } else {
-            console.log('No fuel pump found via exact email match');
-          }
-        }
-      }
-      
-      // Check if user needs to change password
-      if (matchedFuelPump && matchedFuelPump.status === 'password_change_required') {
-        console.log('User needs to change password');
-        setPasswordChangeRequired(true);
-        setIsLoading(false);
-        return;
-      }
 
-      // Determine user role based on email pattern or profiles
+      // Determine if this user is a staff or admin by checking various sources
       let userRole = 'staff';
       let fuelPumpId = null;
       let fuelPumpName = null;
+      let staffData = null;
       
-      // Check for staff record by auth_id (most reliable method)
-      const { data: staffByAuthData } = await supabase
-        .from('staff')
-        .select('role, fuel_pump_id, id, name')
-        .eq('auth_id', data.user.id)
-        .maybeSingle();
+      // Try to find the fuel pump details - needed for both staff and admin
+      const { data: matchedFuelPump } = await supabase
+        .rpc('get_fuel_pump_by_email', { email_param: email.toLowerCase() });
       
-      if (staffByAuthData) {
-        userRole = staffByAuthData.role;
-        fuelPumpId = staffByAuthData.fuel_pump_id;
-        console.log(`User is staff with role ${userRole} for fuel pump: ${fuelPumpId} (found by auth_id)`);
+      const fuelPump = matchedFuelPump && Array.isArray(matchedFuelPump) && matchedFuelPump.length > 0 
+        ? matchedFuelPump[0] 
+        : null;
         
-        // Get fuel pump name
-        if (fuelPumpId) {
-          const { data: pumpData } = await supabase
-            .from('fuel_pumps')
-            .select('name')
-            .eq('id', fuelPumpId)
-            .maybeSingle();
-            
-          if (pumpData) {
-            fuelPumpName = pumpData.name;
-          }
+      if (fuelPump) {
+        console.log('Found fuel pump:', fuelPump);
+        
+        // Check if user needs to change password (for admin)
+        if (fuelPump.status === 'password_change_required') {
+          console.log('Admin needs to change password');
+          setPasswordChangeRequired(true);
+          setIsLoading(false);
+          return;
+        }
+        
+        // If email matches fuel pump, this is an admin user
+        if (data.user.email.toLowerCase() === fuelPump.email.toLowerCase()) {
+          userRole = 'admin';
+          fuelPumpId = fuelPump.id;
+          fuelPumpName = fuelPump.name;
+          console.log(`User is an admin for fuel pump: ${fuelPumpId} (${fuelPumpName})`);
         }
       }
-      // If the email matches the fuel pump email, they're an admin
-      else if (matchedFuelPump && data.user.email.toLowerCase() === matchedFuelPump.email.toLowerCase()) {
-        userRole = 'admin';
-        fuelPumpId = matchedFuelPump.id;
-        fuelPumpName = matchedFuelPump.name;
-        console.log(`User is an admin for fuel pump: ${fuelPumpId} (${fuelPumpName})`);
-      } 
-      // Check if the fuel pump ID is in user metadata
-      else if (data.user.user_metadata?.fuelPumpId) {
-        fuelPumpId = data.user.user_metadata.fuelPumpId;
-        fuelPumpName = data.user.user_metadata.fuelPumpName;
-        userRole = data.user.user_metadata.role || 'staff';
-        console.log(`Found fuel pump ID in user metadata: ${fuelPumpId}`);
-      } 
-      // Check if this user is in the staff table by email
-      else {
-        try {
-          const { data: staffData } = await supabase
+      
+      // If not definitely an admin, check if staff
+      if (userRole !== 'admin') {
+        // Check for staff record by auth_id (most reliable method)
+        const { data: staffByAuthData } = await supabase
+          .from('staff')
+          .select('id, role, fuel_pump_id, name, auth_id')
+          .eq('auth_id', data.user.id)
+          .maybeSingle();
+        
+        if (staffByAuthData) {
+          staffData = staffByAuthData;
+          userRole = staffByAuthData.role;
+          fuelPumpId = staffByAuthData.fuel_pump_id;
+          console.log(`User is staff with role ${userRole} for fuel pump: ${fuelPumpId} (found by auth_id)`);
+          
+          // Get fuel pump name
+          if (fuelPumpId) {
+            const { data: pumpData } = await supabase
+              .from('fuel_pumps')
+              .select('name, status')
+              .eq('id', fuelPumpId)
+              .maybeSingle();
+              
+            if (pumpData) {
+              fuelPumpName = pumpData.name;
+              
+              // Check if staff needs to change password
+              if (pumpData.status === 'password_change_required') {
+                console.log('Staff needs to change password');
+                setPasswordChangeRequired(true);
+                setIsLoading(false);
+                return;
+              }
+            }
+          }
+        } else {
+          // Check if this user is in the staff table by email as fallback
+          const { data: staffByEmailData } = await supabase
             .from('staff')
-            .select('role, fuel_pump_id, id')
+            .select('id, role, fuel_pump_id, name, auth_id')
             .eq('email', data.user.email)
             .maybeSingle();
           
-          if (staffData) {
-            userRole = staffData.role;
-            fuelPumpId = staffData.fuel_pump_id;
-            console.log(`User is staff with role ${userRole} for fuel pump: ${fuelPumpId} (found by email)`);
+          if (staffByEmailData) {
+            staffData = staffByEmailData;
+            userRole = staffByEmailData.role;
+            fuelPumpId = staffByEmailData.fuel_pump_id;
+            
+            // If the staff record doesn't have auth_id but email matches, update the auth_id
+            if (!staffByEmailData.auth_id) {
+              await supabase
+                .from('staff')
+                .update({ auth_id: data.user.id })
+                .eq('id', staffByEmailData.id);
+              
+              console.log(`Updated staff record with auth_id: ${data.user.id}`);
+            }
             
             // Get fuel pump name
             if (fuelPumpId) {
               const { data: pumpData } = await supabase
                 .from('fuel_pumps')
-                .select('name')
+                .select('name, status')
                 .eq('id', fuelPumpId)
                 .maybeSingle();
                 
               if (pumpData) {
                 fuelPumpName = pumpData.name;
+                
+                // Check if staff needs to change password
+                if (pumpData.status === 'password_change_required') {
+                  console.log('Staff needs to change password');
+                  setPasswordChangeRequired(true);
+                  setIsLoading(false);
+                  return;
+                }
               }
             }
           }
-        } catch (err) {
-          console.error('Error checking staff role:', err);
         }
       }
-
+      
       // Check if user is a super admin
       const { data: superAdmin } = await supabase
         .from('super_admins')
@@ -230,16 +210,39 @@ const LoginForm = ({
         return;
       }
 
-      // Update Supabase user metadata with fuel pump ID
-      await supabase.auth.updateUser({
-        data: { 
-          fuelPumpId: fuelPumpId,
-          fuelPumpName: fuelPumpName,
-          role: userRole
+      // Make sure we have a role and fuel pump ID
+      if (!userRole || (!fuelPumpId && userRole !== 'super_admin')) {
+        // Check if the fuel pump ID is in user metadata as last resort
+        if (data.user.user_metadata?.fuelPumpId) {
+          fuelPumpId = data.user.user_metadata.fuelPumpId;
+          fuelPumpName = data.user.user_metadata.fuelPumpName;
+          userRole = data.user.user_metadata.role || userRole;
+          console.log(`Found fuel pump ID in user metadata: ${fuelPumpId}`);
+        } else {
+          console.warn('Could not determine fuel pump ID or role for user');
+          setError('Your account is not properly linked to a fuel pump. Please contact support.');
+          setIsLoading(false);
+          return;
         }
-      });
-      
-      console.log(`Updated user metadata with fuelPumpId: ${fuelPumpId}`);
+      }
+
+      // Update Supabase user metadata with fuel pump ID and role
+      if (fuelPumpId || userRole) {
+        try {
+          await supabase.auth.updateUser({
+            data: { 
+              fuelPumpId: fuelPumpId,
+              fuelPumpName: fuelPumpName,
+              role: userRole,
+              staffId: staffData?.id
+            }
+          });
+          console.log(`Updated user metadata with fuelPumpId: ${fuelPumpId} and role: ${userRole}`);
+        } catch (metadataError) {
+          console.error('Failed to update user metadata:', metadataError);
+          // Non-critical error, continue with login
+        }
+      }
 
       // Call the login method from auth context to set up session
       const loginSuccess = await regularLogin(data.user.id, {
@@ -248,7 +251,8 @@ const LoginForm = ({
         email: data.user.email,
         role: userRole,
         fuelPumpId: fuelPumpId,
-        fuelPumpName: fuelPumpName
+        fuelPumpName: fuelPumpName,
+        staffId: staffData?.id
       }, rememberMe);
       
       if (loginSuccess) {
@@ -261,7 +265,8 @@ const LoginForm = ({
             email: data.user.email,
             role: userRole,
             fuelPumpId: fuelPumpId,
-            fuelPumpName: fuelPumpName
+            fuelPumpName: fuelPumpName,
+            staffId: staffData?.id
           }
         };
         

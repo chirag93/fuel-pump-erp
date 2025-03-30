@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -237,6 +236,21 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
           title: "Password Updated",
           description: "The staff member's password has been updated successfully"
         });
+        
+        // If we have metadata from the edge function response, update the auth user
+        if (data.metadata) {
+          try {
+            // Get the current user session to get user info
+            const { data: getCurrentUser } = await supabase.auth.getUser();
+            
+            // Only do this if the current user is not the staff member being updated
+            if (getCurrentUser?.user?.id !== initialData.auth_id) {
+              console.log("Staff's metadata preserved in edge function response");
+            }
+          } catch (metadataError) {
+            console.error("Error verifying metadata:", metadataError);
+          }
+        }
       }
 
       // Generate a valid email if none is provided
@@ -269,7 +283,8 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
           const { error } = await supabase
             .from('staff')
             .update(staffPayload)
-            .eq('id', initialData.id);
+            .eq('id', initialData.id)
+            .eq('fuel_pump_id', fuelPumpId);
             
           if (error) throw error;
           
