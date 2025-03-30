@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -67,59 +66,190 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
       
-      // Try to get from database
-      const freshFuelPumpId = await getFuelPumpId();
-      
-      if (freshFuelPumpId) {
-        console.log(`AuthContext: Retrieved fresh fuel pump ID: ${freshFuelPumpId}`);
+      // Check if we already have the fuel pump ID in user metadata
+      if (session.user.user_metadata?.fuelPumpId) {
+        console.log(`AuthContext: Already have fuel pump ID in metadata: ${session.user.user_metadata.fuelPumpId}`);
         
-        // Update state
-        setFuelPumpId(freshFuelPumpId);
-        
-        // Get fuel pump name
-        const { data: fuelPumpData } = await supabase
+        // Verify this ID exists in database
+        const { data: verifyPump } = await supabase
           .from('fuel_pumps')
-          .select('name')
-          .eq('id', freshFuelPumpId)
+          .select('id, name')
+          .eq('id', session.user.user_metadata.fuelPumpId)
           .single();
-          
-        if (fuelPumpData) {
-          setFuelPumpName(fuelPumpData.name);
-          console.log(`AuthContext: Retrieved fuel pump name: ${fuelPumpData.name}`);
-        }
         
-        // Update user metadata with this pump ID for future use
+      if (verifyPump) {
+        console.log(`AuthContext: Verified fuel pump ID exists: ${verifyPump.id}`);
+        setFuelPumpId(verifyPump.id);
+        setFuelPumpName(verifyPump.name);
+        return verifyPump.id;
+      } else {
+        console.log(`AuthContext: Fuel pump ID ${session.user.user_metadata.fuelPumpId} from metadata does not exist in database, will try other methods`);
+      }
+    }
+    
+    // Try to find fuel pump ID using email lookup for admins
+    const { data: fuelPumpData } = await supabase
+      .from('fuel_pumps')
+      .select('id, name')
+      .eq('email', session.user.email)
+      .maybeSingle();
+    
+    if (fuelPumpData) {
+      console.log(`AuthContext: Found pump by email match: ${fuelPumpData.id}`);
+      setFuelPumpId(fuelPumpData.id);
+      setFuelPumpName(fuelPumpData.name);
+      
+      // Update user metadata
+      await supabase.auth.updateUser({
+        data: { 
+          fuelPumpId: fuelPumpData.id,
+          fuelPumpName: fuelPumpData.name,
+          role: 'admin'
+        }
+      });
+      
+      // Update local storage
+      updateLocalStorage(fuelPumpData.id, fuelPumpData.name, 'admin');
+      
+      return fuelPumpData.id;
+    }
+    
+    // If not found as admin, check if this user is in the staff table
+    // Try first by email
+    const { data: staffData } = await supabase
+      .from('staff')
+      .select('fuel_pump_id, role')
+      .eq('email', session.user.email)
+      .maybeSingle();
+    
+    if (staffData?.fuel_pump_id) {
+      console.log(`AuthContext: Found fuel pump ID via staff email: ${staffData.fuel_pump_id}`);
+      
+      // Get fuel pump name
+      const { data: pumpData } = await supabase
+        .from('fuel_pumps')
+        .select('name')
+        .eq('id', staffData.fuel_pump_id)
+        .single();
+      
+      if (pumpData) {
+        setFuelPumpId(staffData.fuel_pump_id);
+        setFuelPumpName(pumpData.name);
+        
+        // Update user metadata
         await supabase.auth.updateUser({
           data: { 
-            fuelPumpId: freshFuelPumpId,
-            fuelPumpName: fuelPumpData?.name
+            fuelPumpId: staffData.fuel_pump_id,
+            fuelPumpName: pumpData.name,
+            role: staffData.role || 'staff'
           }
         });
         
         // Update local storage
-        try {
-          const storedSession = localStorage.getItem('fuel_pro_session');
-          if (storedSession) {
-            const parsedSession = JSON.parse(storedSession);
-            if (parsedSession.user) {
-              parsedSession.user.fuelPumpId = freshFuelPumpId;
-              parsedSession.user.fuelPumpName = fuelPumpData?.name;
-              localStorage.setItem('fuel_pro_session', JSON.stringify(parsedSession));
-            }
-          }
-        } catch (parseError) {
-          console.error('Error updating stored session:', parseError);
-        }
+        updateLocalStorage(staffData.fuel_pump_id, pumpData.name, staffData.role || 'staff');
         
-        return freshFuelPumpId;
+        return staffData.fuel_pump_id;
+      }
+    }
+    
+    // If not found by email, try by auth_id
+    const { data: staffByAuthData } = await supabase
+      .from('staff')
+      .select('fuel_pump_id, role')
+      .eq('auth_id', session.user.id)
+      .maybeSingle();
+    
+    if (staffByAuthData?.fuel_pump_id) {
+      console.log(`AuthContext: Found fuel pump ID via staff auth_id: ${staffByAuthData.fuel_pump_id}`);
+      
+      // Get fuel pump name
+      const { data: pumpData } = await supabase
+        .from('fuel_pumps')
+        .select('name')
+        .eq('id', staffByAuthData.fuel_pump_id)
+        .single();
+      
+      if (pumpData) {
+        setFuelPumpId(staffByAuthData.fuel_pump_id);
+        setFuelPumpName(pumpData.name);
+        
+        // Update user metadata
+        await supabase.auth.updateUser({
+          data: { 
+            fuelPumpId: staffByAuthData.fuel_pump_id,
+            fuelPumpName: pumpData.name,
+            role: staffByAuthData.role || 'staff'
+          }
+        });
+        
+        // Update local storage
+        updateLocalStorage(staffByAuthData.fuel_pump_id, pumpData.name, staffByAuthData.role || 'staff');
+        
+        return staffByAuthData.fuel_pump_id;
+      }
+    }
+    
+    // Try to get from database using other methods
+    const freshFuelPumpId = await getFuelPumpId();
+    
+    if (freshFuelPumpId) {
+      console.log(`AuthContext: Retrieved fresh fuel pump ID: ${freshFuelPumpId}`);
+      
+      // Update state
+      setFuelPumpId(freshFuelPumpId);
+      
+      // Get fuel pump name
+      const { data: fuelPumpData } = await supabase
+        .from('fuel_pumps')
+        .select('name')
+        .eq('id', freshFuelPumpId)
+        .single();
+      
+      if (fuelPumpData) {
+        setFuelPumpName(fuelPumpData.name);
+        console.log(`AuthContext: Retrieved fuel pump name: ${fuelPumpData.name}`);
       }
       
-      return null;
-    } catch (error) {
-      console.error('Error refreshing fuel pump ID:', error);
-      return null;
+      // Update user metadata with this pump ID for future use
+      await supabase.auth.updateUser({
+        data: { 
+          fuelPumpId: freshFuelPumpId,
+          fuelPumpName: fuelPumpData?.name
+        }
+      });
+      
+      // Update local storage
+      updateLocalStorage(freshFuelPumpId, fuelPumpData?.name, session.user.user_metadata?.role || 'staff');
+      
+      return freshFuelPumpId;
     }
-  };
+    
+    console.log('AuthContext: Could not find fuel pump ID for user. Returning null.');
+    return null;
+  } catch (error) {
+    console.error('Error refreshing fuel pump ID:', error);
+    return null;
+  }
+};
+
+// Helper function to update localStorage
+const updateLocalStorage = (fuelPumpId: string, fuelPumpName: string | undefined, role: string) => {
+  try {
+    const storedSession = localStorage.getItem('fuel_pro_session');
+    if (storedSession) {
+      const parsedSession = JSON.parse(storedSession);
+      if (parsedSession.user) {
+        parsedSession.user.fuelPumpId = fuelPumpId;
+        parsedSession.user.fuelPumpName = fuelPumpName;
+        parsedSession.user.role = role;
+        localStorage.setItem('fuel_pro_session', JSON.stringify(parsedSession));
+        console.log('Updated local storage with fuel pump data');
+      }
+    }
+  } catch (parseError) {
+    console.error('Error updating stored session:', parseError);
+  }
+};
   
   // Initialize auth state from localStorage if available
   useEffect(() => {

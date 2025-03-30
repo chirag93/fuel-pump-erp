@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import type { Database } from '@/integrations/supabase/types';
+import { getFuelPumpId } from '@/integrations/utils';
 
 type StaffFeature = Database['public']['Enums']['staff_feature'];
 
@@ -109,6 +110,18 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     setIsSubmitting(true);
     
     try {
+      // Get fuel pump ID first to ensure we have it for the staff record
+      const fuelPumpId = await getFuelPumpId();
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to manage staff",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
       let authId;
       
       if (!initialData) {
@@ -127,7 +140,8 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
           options: {
             data: {
               name: staffData.name,
-              role: 'staff'
+              role: 'staff',
+              fuelPumpId: fuelPumpId,  // Add fuel pump ID to user metadata during signup
             },
             // Critical: Disable email verification entirely
             emailRedirectTo: null
@@ -142,6 +156,27 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         authId = authData.user?.id;
         
         console.log("New staff auth account created:", authId);
+        
+        // Immediately update the user metadata to include fuel pump ID
+        if (authId) {
+          // Get fuel pump name
+          const { data: pumpData } = await supabase
+            .from('fuel_pumps')
+            .select('name')
+            .eq('id', fuelPumpId)
+            .single();
+            
+          // Update the user metadata
+          await supabase.auth.updateUser({
+            data: { 
+              fuelPumpId: fuelPumpId,
+              fuelPumpName: pumpData?.name,
+              role: 'staff'
+            }
+          });
+          
+          console.log(`Updated auth user metadata with fuelPumpId: ${fuelPumpId}`);
+        }
       } else if (changePassword && staffData.password) {
         // For existing staff, we can't change their password through the admin API with the anon key
         toast({
@@ -166,6 +201,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         joining_date: staffData.joining_date,
         assigned_pumps: staffData.assigned_pumps,
         auth_id: authId,
+        fuel_pump_id: fuelPumpId,  // Always set the fuel_pump_id
         is_active: true
       };
 

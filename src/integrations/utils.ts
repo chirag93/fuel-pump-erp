@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -219,6 +218,50 @@ export const getFuelPumpId = async (): Promise<string | null> => {
       }
       
       return staffData.fuel_pump_id;
+    }
+    
+    // Now let's also try a different approach: check for staff by auth_id
+    // This is crucial because sometimes the email lookup might fail
+    console.log(`getFuelPumpId: Trying to find staff by auth_id: ${session.user.id}`);
+    const { data: staffByAuthData } = await supabase
+      .from('staff')
+      .select('fuel_pump_id, name')
+      .eq('auth_id', session.user.id)
+      .maybeSingle();
+    
+    if (staffByAuthData?.fuel_pump_id) {
+      console.log(`getFuelPumpId: Found fuel pump ID via staff auth_id lookup: ${staffByAuthData.fuel_pump_id}`);
+      
+      // Get fuel pump name
+      const { data: pumpData } = await supabase
+        .from('fuel_pumps')
+        .select('name')
+        .eq('id', staffByAuthData.fuel_pump_id)
+        .maybeSingle();
+      
+      // Update user metadata with this pump ID
+      await supabase.auth.updateUser({
+        data: { 
+          fuelPumpId: staffByAuthData.fuel_pump_id,
+          fuelPumpName: pumpData?.name
+        }
+      });
+      
+      // Update localStorage if needed
+      if (storedSession) {
+        try {
+          const parsedSession = JSON.parse(storedSession);
+          if (parsedSession.user) {
+            parsedSession.user.fuelPumpId = staffByAuthData.fuel_pump_id;
+            parsedSession.user.fuelPumpName = pumpData?.name;
+            localStorage.setItem('fuel_pro_session', JSON.stringify(parsedSession));
+          }
+        } catch (parseError) {
+          console.error('Error updating stored session:', parseError);
+        }
+      }
+      
+      return staffByAuthData.fuel_pump_id;
     }
     
     // Attempt to find any matching fuel pump based on email domain

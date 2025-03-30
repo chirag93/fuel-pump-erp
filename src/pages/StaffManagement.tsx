@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +23,7 @@ interface Staff {
   assigned_pumps: string[];
   features?: string[];
   fuel_pump_id?: string;
+  auth_id?: string;
 }
 
 const StaffManagement = () => {
@@ -155,25 +155,73 @@ const StaffManagement = () => {
           .update(staffData)
           .eq('id', editingStaff.id)
           .eq('fuel_pump_id', fuelPumpId);
-          
+        
         if (error) throw error;
         
         toast({ 
           title: "Staff updated", 
           description: `${staffData.name}'s information has been updated` 
         });
+
+        // If there's an auth_id, update its metadata with the fuel pump ID
+        if (editingStaff.auth_id) {
+          // Get fuel pump name
+          const { data: pumpData } = await supabase
+            .from('fuel_pumps')
+            .select('name')
+            .eq('id', fuelPumpId)
+            .single();
+          
+          // This must be done as an admin as users can't update others' metadata
+          // But try anyway - it might work if the current user has admin permissions
+          try {
+            await supabase.auth.admin.updateUserById(editingStaff.auth_id, {
+              user_metadata: { 
+                fuelPumpId: fuelPumpId,
+                fuelPumpName: pumpData?.name,
+                role: staffData.role
+              }
+            });
+          } catch (adminError) {
+            console.log("Could not update user metadata as admin. This is expected if you're not a super admin:", adminError);
+          }
+        }
       } else {
         // Add new staff
         const { data, error } = await supabase
           .from('staff')
           .insert([staffData])
           .select();
-          
+        
         if (error) throw error;
         
         if (data && data.length > 0) {
           console.log("New staff created:", data[0]);
+        
+          // If there's an auth_id, update its metadata with the fuel pump ID
+          if (staffData.auth_id) {
+            // Get fuel pump name
+            const { data: pumpData } = await supabase
+              .from('fuel_pumps')
+              .select('name')
+              .eq('id', fuelPumpId)
+              .single();
           
+            // Try to update the user metadata
+            try {
+              await supabase.auth.updateUser({
+                data: { 
+                  fuelPumpId: fuelPumpId,
+                  fuelPumpName: pumpData?.name,
+                  role: staffData.role
+                }
+              });
+              console.log(`Updated user metadata with fuelPumpId for new staff: ${fuelPumpId}`);
+            } catch (metadataError) {
+              console.error("Error updating user metadata for new staff:", metadataError);
+            }
+          }
+        
           toast({ 
             title: "Staff added", 
             description: `${staffData.name} has been added to the staff list` 
@@ -212,7 +260,7 @@ const StaffManagement = () => {
           .delete()
           .eq('id', id)
           .eq('fuel_pump_id', fuelPumpId);
-          
+        
         if (error) throw error;
         
         toast({ 
