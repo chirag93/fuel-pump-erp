@@ -1,190 +1,122 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.43.2";
+// Follow CORS headers setup
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.10.0'
 
-// CORS headers for browser requests
+// Set up CORS headers
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// Create Supabase client
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  { global: { headers: { Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` } } }
+)
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: corsHeaders,
-    });
+  // Handle CORS preflight request
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Get request body
-    const { staff_id, auth_id, new_password } = await req.json();
+    // Parse request
+    const { staff_id, auth_id, new_password, new_email, update_email_only } = await req.json()
     
-    // Validate required fields
-    if (!auth_id || !new_password || !staff_id) {
-      console.error("Missing required fields:", { staff_id, auth_id, new_password: new_password ? "[REDACTED]" : undefined });
+    // Validate required parameters
+    if (!auth_id) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Missing required fields: auth_id, new_password, and staff_id are required" 
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
-    }
-    
-    if (new_password.length < 6) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Password must be at least 6 characters" 
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
+        JSON.stringify({ success: false, error: 'auth_id is required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
     }
 
-    // Create a Supabase client with the service role key for admin actions
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    if (!update_email_only && !new_password && !new_email) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Either new_password or new_email is required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
 
-    // Get the staff record to verify the auth_id and retrieve important data
-    const { data: staffData, error: staffError } = await supabaseAdmin
+    // Get the staff record to verify details and preserve metadata
+    const { data: staffData, error: staffError } = await supabase
       .from('staff')
-      .select('auth_id, fuel_pump_id, name, role, email')
+      .select('name, auth_id')
       .eq('id', staff_id)
-      .single();
-    
-    if (staffError || !staffData) {
-      console.error("Error fetching staff:", staffError);
+      .single()
+
+    if (staffError) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Staff member not found",
-          details: staffError?.message
-        }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
-    }
-    
-    // Make sure the auth_id in the request matches what's in the database
-    if (staffData.auth_id !== auth_id) {
-      console.error("Auth ID mismatch:", { requestedAuthId: auth_id, actualAuthId: staffData.auth_id });
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Auth ID mismatch - the provided auth_id doesn't match the staff record" 
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
+        JSON.stringify({ success: false, error: `Staff record not found: ${staffError.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      )
     }
 
-    // First, get existing user data including metadata to preserve it
-    const { data: userData, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(auth_id);
+    // Get current user metadata to preserve
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(auth_id)
     
-    if (getUserError) {
-      console.error("Error getting user data:", getUserError);
+    if (userError) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Failed to retrieve user data", 
-          details: getUserError.message
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
+        JSON.stringify({ success: false, error: `Auth user not found: ${userError.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      )
+    }
+    
+    const userMetadata = userData.user?.user_metadata || {}
+
+    // Prepare the update parameters
+    const updateParams: any = { data: userMetadata }
+    
+    // Add password/email to update if provided
+    if (new_password && !update_email_only) {
+      updateParams.password = new_password
+    }
+    
+    if (new_email) {
+      updateParams.email = new_email
     }
 
-    // Preserve the user's metadata and add important staff information if missing
-    const existingMetadata = userData.user?.user_metadata || {};
-    const updatedMetadata = {
-      ...existingMetadata,
-      fuelPumpId: existingMetadata.fuelPumpId || staffData.fuel_pump_id,
-      role: existingMetadata.role || staffData.role || 'staff',
-      name: existingMetadata.name || staffData.name
-    };
+    // Update the user with admin rights
+    console.log(`Updating ${update_email_only ? 'email' : 'password'} for auth_id: ${auth_id} with preserved metadata`)
+    const { data, error } = await supabase.auth.admin.updateUserById(auth_id, updateParams)
 
-    console.log(`Updating password for auth_id: ${auth_id} with preserved metadata`);
-    
-    // Update the password using admin API while preserving metadata
-    const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(
-      auth_id, 
-      { 
-        password: new_password,
-        user_metadata: updatedMetadata
+    if (error) {
+      console.error(`Error updating user: ${error.message}`)
+      return new Response(
+        JSON.stringify({ success: false, error: `Failed to update user: ${error.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    }
+
+    // Update staff record timestamp if needed (for password changes)
+    if (!update_email_only && staff_id) {
+      try {
+        await supabase
+          .from('staff')
+          .update({})  // Empty update to trigger the password_updated_at trigger
+          .eq('id', staff_id)
+      } catch (dbError) {
+        console.error(`Could not update staff record with password change timestamp: ${dbError}`)
       }
-    );
-
-    if (passwordError) {
-      console.error("Error updating password:", passwordError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Failed to update password", 
-          details: passwordError.message
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
     }
 
-    // Update the staff record to indicate password has been changed
-    const { error: updateStaffError } = await supabaseAdmin
-      .from('staff')
-      .update({ 
-        password_updated_at: new Date().toISOString() 
-      })
-      .eq('id', staff_id);
-
-    if (updateStaffError) {
-      console.warn("Could not update staff record with password change timestamp:", updateStaffError);
-    }
-
-    console.log(`Password updated successfully for user: ${staffData.name} (${auth_id})`);
+    console.log(`Password updated successfully for user: ${staffData.name} (${auth_id})`)
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Password updated successfully",
-        metadata: updatedMetadata
+        message: `User ${update_email_only ? 'email' : 'password'} updated successfully`, 
+        metadata: userMetadata 
       }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
-    );
-  } catch (error) {
-    console.error("Unexpected error:", error);
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+    )
+  } catch (err) {
+    console.error(`Unhandled error: ${err.message}`)
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: `An unexpected error occurred: ${error.message}` 
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
-    );
+      JSON.stringify({ success: false, error: `Server error: ${err.message}` }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    )
   }
-});
+})

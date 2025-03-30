@@ -149,6 +149,9 @@ const StaffManagement = () => {
       staffData.fuel_pump_id = fuelPumpId;
       
       if (editingStaff) {
+        // Check if email has been changed
+        const emailChanged = editingStaff.email !== staffData.email;
+        
         // Update existing staff
         const { error } = await supabase
           .from('staff')
@@ -163,6 +166,51 @@ const StaffManagement = () => {
           description: `${staffData.name}'s information has been updated` 
         });
 
+        // If there's an auth_id and email has changed, update the user's email in Auth
+        if (editingStaff.auth_id && emailChanged) {
+          try {
+            // First get current user session
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+              // Check if the current user has admin rights (can update other users)
+              // Either we're a super admin, a fuel pump admin, or we're updating our own email
+              const canUpdateEmail = session.user.id === editingStaff.auth_id;
+              
+              if (canUpdateEmail) {
+                // Direct update if we're updating our own email
+                await supabase.auth.updateUser({ email: staffData.email });
+                console.log(`Updated auth email for user ${editingStaff.auth_id} to ${staffData.email}`);
+              } else {
+                // Try to use the admin-reset-staff-password edge function to update the email
+                console.log("Attempting to update email via edge function");
+                const { data: updateResult, error: updateError } = await supabase.functions.invoke("admin-reset-staff-password", {
+                  body: {
+                    staff_id: editingStaff.id,
+                    auth_id: editingStaff.auth_id,
+                    new_email: staffData.email,
+                    update_email_only: true
+                  }
+                });
+                
+                if (updateError) {
+                  console.warn("Error updating user email via edge function:", updateError);
+                } else {
+                  console.log("Successfully updated user email via edge function");
+                }
+              }
+            }
+          } catch (updateEmailError) {
+            console.error("Error updating user email in auth:", updateEmailError);
+            // Still show success toast but log the error for debugging
+            toast({
+              title: "Warning",
+              description: "Staff data updated but email sync failed. User may need to update email separately.",
+              variant: "default"
+            });
+          }
+        }
+
         // If there's an auth_id, update its metadata with the fuel pump ID
         if (editingStaff.auth_id) {
           // Get fuel pump name
@@ -172,18 +220,19 @@ const StaffManagement = () => {
             .eq('id', fuelPumpId)
             .single();
           
-          // This must be done as an admin as users can't update others' metadata
-          // But try anyway - it might work if the current user has admin permissions
+          // Try to update the user metadata
           try {
-            await supabase.auth.admin.updateUserById(editingStaff.auth_id, {
-              user_metadata: { 
+            // For own user or when we have appropriate permissions
+            await supabase.auth.updateUser({
+              data: { 
                 fuelPumpId: fuelPumpId,
                 fuelPumpName: pumpData?.name,
                 role: staffData.role
               }
             });
-          } catch (adminError) {
-            console.log("Could not update user metadata as admin. This is expected if you're not a super admin:", adminError);
+            console.log(`Updated user metadata for ${staffData.email}`);
+          } catch (metadataError) {
+            console.error("Error updating user metadata:", metadataError);
           }
         }
       } else {
