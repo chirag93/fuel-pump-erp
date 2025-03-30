@@ -97,11 +97,12 @@ const PasswordChangeForm = ({ onComplete, userEmail }: PasswordChangeFormProps) 
           .maybeSingle();
         
         if (staffData) {
-          // Update a timestamp on the staff record to indicate password was changed
-          const { error: updateStaffError } = await supabase
-            .from('staff')
-            .update({ password_updated_at: new Date().toISOString() })
-            .eq('id', staffData.id);
+          // Use a direct SQL RPC call to update the timestamp, avoiding TypeScript type issues
+          // This is safer than updating through the normal API since the types might not be updated yet
+          const { error: updateStaffError } = await supabase.rpc(
+            'update_staff_password_timestamp', 
+            { staff_id: staffData.id }
+          );
           
           if (updateStaffError) {
             console.warn('Failed to update staff record after password change', updateStaffError);
