@@ -75,6 +75,24 @@ export const useIndentValidation = () => {
         return false;
       }
       
+      // Also check if this indent number has been used as id in indents table
+      const { data: existingIndentById, error: existingByIdError } = await supabase
+        .from('indents')
+        .select('id')
+        .eq('id', indentNum)
+        .eq('fuel_pump_id', fuelPumpId);
+        
+      if (existingByIdError) {
+        console.error('Error checking existing indent by ID:', existingByIdError);
+        setIndentNumberError('Could not verify if indent number exists as ID');
+        return false;
+      }
+      
+      if (existingIndentById && existingIndentById.length > 0) {
+        setIndentNumberError('This indent number has already been used as an ID');
+        return false;
+      }
+      
       // All checks passed
       setIndentNumberError('');
       return true;

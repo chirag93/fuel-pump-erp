@@ -21,11 +21,13 @@ export const FuelSelector = ({ fuelType, setFuelType }: FuelSelectorProps) => {
         const fuelPumpId = await getFuelPumpId();
         
         if (!fuelPumpId) {
+          console.log('No fuel pump ID available, using default fuel types');
           setFuelTypes([
             { type: 'Petrol', price: 0 },
             { type: 'Diesel', price: 0 },
             { type: 'Premium', price: 0 }
           ]);
+          setIsLoading(false);
           return;
         }
         
@@ -45,23 +47,45 @@ export const FuelSelector = ({ fuelType, setFuelType }: FuelSelectorProps) => {
             price: item.current_price
           }));
           setFuelTypes(formattedData);
+          
+          // Set a default fuel type if none is selected and we have data
+          if (!fuelType && formattedData.length > 0) {
+            setFuelType(formattedData[0].type);
+          }
         } else {
           // Fallback to defaults if no data
-          setFuelTypes([
+          const defaults = [
             { type: 'Petrol', price: 0 },
             { type: 'Diesel', price: 0 },
             { type: 'Premium', price: 0 }
-          ]);
+          ];
+          setFuelTypes(defaults);
+          
+          // Set a default fuel type if none is selected
+          if (!fuelType) {
+            setFuelType(defaults[0].type);
+          }
         }
       } catch (error) {
         console.error('Error fetching fuel types:', error);
+        // Fallback to defaults on error
+        setFuelTypes([
+          { type: 'Petrol', price: 0 },
+          { type: 'Diesel', price: 0 },
+          { type: 'Premium', price: 0 }
+        ]);
+        
+        // Set a default fuel type if none is selected
+        if (!fuelType) {
+          setFuelType('Petrol');
+        }
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchFuelTypes();
-  }, []);
+  }, [fuelType, setFuelType]);
 
   return (
     <div>

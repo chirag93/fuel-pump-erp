@@ -105,15 +105,16 @@ export const useSaveIndent = ({
         return;
       }
       
-      // Generate a unique ID for the indent
-      const indentId = `IND-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`;
+      // The indentId needs to be persistent and unique
+      // Using the indentNumber directly since that's what's referenced in the foreign key
+      const indentId = indentNumber;
       
       console.log("Creating indent with data:", {
         id: indentId,
+        indent_number: indentNumber,
         customer_id: selectedCustomer,
         vehicle_id: selectedVehicle,
         booklet_id: selectedBooklet,
-        indent_number: indentNumber,
         fuel_type: fuelType,
         amount: Number(amount),
         quantity: Number(quantity),
@@ -162,11 +163,12 @@ export const useSaveIndent = ({
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Now create transaction record
-      // Using the indent ID as the foreign key reference
+      // IMPORTANT: The indent_id in transactions table should match what's in the indents table
+      // In this case, we're using the indentId which is set to indentNumber
       const transactionId = crypto.randomUUID();
       console.log("Creating transaction with data:", {
         id: transactionId,
-        indent_id: indentId,
+        indent_id: indentId, // Use the indent ID which is the indent number
         customer_id: selectedCustomer
       });
       
@@ -176,7 +178,7 @@ export const useSaveIndent = ({
           id: transactionId,
           customer_id: selectedCustomer,
           vehicle_id: selectedVehicle,
-          indent_id: indentId, // Use the indent ID as foreign key
+          indent_id: indentId, // This needs to match the id in indents table
           fuel_type: fuelType,
           amount: Number(amount),
           quantity: Number(quantity),

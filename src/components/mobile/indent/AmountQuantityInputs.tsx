@@ -36,6 +36,7 @@ export const AmountQuantityInputs = ({
         
         if (!fuelPumpId) {
           console.log('No fuel pump ID available');
+          setPriceIsLoading(false);
           return;
         }
         
@@ -48,14 +49,19 @@ export const AmountQuantityInputs = ({
           
         if (error) {
           console.error('Error fetching fuel price:', error);
+          setPriceIsLoading(false);
           return;
         }
         
         if (data) {
           setFuelPrice(data.current_price);
+        } else {
+          console.log('No price data found for fuel type:', fuelType);
+          setFuelPrice(0);
         }
       } catch (error) {
         console.error('Error in fetchFuelPrice:', error);
+        setFuelPrice(0);
       } finally {
         setPriceIsLoading(false);
       }
@@ -68,6 +74,7 @@ export const AmountQuantityInputs = ({
   useEffect(() => {
     if (amountInputFocused && !quantityInputFocused && amount !== '' && fuelPrice > 0) {
       const calculatedQuantity = Number(amount) / fuelPrice;
+      // Use toFixed(2) to limit to 2 decimal places and avoid floating point precision issues
       setQuantity(parseFloat(calculatedQuantity.toFixed(2)));
     }
   }, [amount, fuelPrice, amountInputFocused, quantityInputFocused, setQuantity]);
@@ -76,9 +83,36 @@ export const AmountQuantityInputs = ({
   useEffect(() => {
     if (quantityInputFocused && !amountInputFocused && quantity !== '' && fuelPrice > 0) {
       const calculatedAmount = Number(quantity) * fuelPrice;
+      // Use toFixed(2) to limit to 2 decimal places and avoid floating point precision issues
       setAmount(parseFloat(calculatedAmount.toFixed(2)));
     }
   }, [quantity, fuelPrice, quantityInputFocused, amountInputFocused, setAmount]);
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '') {
+      setAmount('');
+    } else {
+      // Ensure we're working with a valid number
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue)) {
+        setAmount(numValue);
+      }
+    }
+  };
+
+  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '') {
+      setQuantity('');
+    } else {
+      // Ensure we're working with a valid number
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue)) {
+        setQuantity(numValue);
+      }
+    }
+  };
 
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -90,10 +124,11 @@ export const AmountQuantityInputs = ({
           id="amount"
           type="number"
           value={amount.toString()}
-          onChange={(e) => setAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
+          onChange={handleAmountChange}
           onFocus={() => setAmountInputFocused(true)}
           onBlur={() => setAmountInputFocused(false)}
           placeholder="Enter amount"
+          step="0.01"
         />
         {fuelPrice > 0 && (
           <p className="text-xs text-muted-foreground mt-1">Current price: ₹{fuelPrice}/L</p>
@@ -107,10 +142,11 @@ export const AmountQuantityInputs = ({
           id="quantity"
           type="number"
           value={quantity.toString()}
-          onChange={(e) => setQuantity(e.target.value === '' ? '' : parseFloat(e.target.value))}
+          onChange={handleQuantityChange}
           onFocus={() => setQuantityInputFocused(true)}
           onBlur={() => setQuantityInputFocused(false)}
           placeholder="Enter quantity"
+          step="0.01"
         />
       </div>
     </div>
