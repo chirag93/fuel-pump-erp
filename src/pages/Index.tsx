@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Droplets, ChevronRight, ChevronDown, Laptop, ShieldCheck, Users, TrendingUp, BarChart3, Smartphone, Zap, FileText, Clock, Truck, GaugeCircle } from "lucide-react";
@@ -54,9 +53,7 @@ const Index = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 md:pt-32 md:pb-40">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
-                Transform Your Fuel Station Management
-              </h1>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">Transform Your Fuel Station</h1>
               <p className="text-xl max-w-lg text-blue-100">
                 A comprehensive system designed to streamline operations, enhance customer experiences, and improve efficiency at your fuel pump stations.
               </p>
@@ -454,11 +451,9 @@ const Index = () => {
             <p>© {new Date().getFullYear()} Fuel Pro 360. All rights reserved.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               {/* Fix: This is the problematic line - returning null for each social item rather than void */}
-              {["Facebook", "Twitter", "LinkedIn", "Instagram"].map((social, idx) => (
-                <a key={idx} href="#" className="hover:text-blue-300 transition-colors">
+              {["Facebook", "Twitter", "LinkedIn", "Instagram"].map((social, idx) => <a key={idx} href="#" className="hover:text-blue-300 transition-colors">
                   {social}
-                </a>
-              ))}
+                </a>)}
             </div>
           </div>
         </div>
@@ -466,4 +461,3 @@ const Index = () => {
     </div>;
 };
 export default Index;
-
