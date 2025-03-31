@@ -1,25 +1,40 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronLeft, CalendarClock, Plus, Loader2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ChevronLeft, CalendarClock, Loader2, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from '@/components/ui/alert-dialog';
 import { StartShiftForm } from '@/components/shift/StartShiftForm';
 import { useShiftManagement } from '@/hooks/useShiftManagement';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { MobileActiveShifts } from '@/components/shift/MobileActiveShifts';
 
 const MobileShiftManagement = () => {
   const {
     staffList,
+    activeShifts,
     newShift,
     setNewShift,
     handleAddShift,
-    isLoading
+    isLoading,
+    fetchShifts
   } = useShiftManagement();
   
   const [formOpen, setFormOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const handleOpenForm = () => {
     if (staffList.length === 0) {
@@ -32,16 +47,44 @@ const MobileShiftManagement = () => {
     }
     setFormOpen(true);
   };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logged out",
+        description: "You have been logged out successfully."
+      });
+      navigate('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast({
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
   
   return (
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
-      <div className="flex items-center mb-4">
-        <Link to="/mobile">
-          <Button variant="ghost" size="icon" className="mr-2">
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <h1 className="text-xl font-semibold">Shift Management</h1>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+          <Link to="/mobile">
+            <Button variant="ghost" size="icon" className="mr-2">
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <h1 className="text-xl font-semibold">Shift Management</h1>
+        </div>
+        <Button 
+          variant="outline" 
+          size="icon" 
+          onClick={() => setLogoutDialogOpen(true)}
+          aria-label="Logout"
+        >
+          <LogOut className="h-5 w-5 text-destructive" />
+        </Button>
       </div>
       
       <Card className="mb-4">
@@ -68,21 +111,50 @@ const MobileShiftManagement = () => {
               size="lg"
               disabled={isLoading}
             >
-              <Plus className="mr-2 h-4 w-4" /> Start New Shift
+              Start New Shift
             </Button>
           )}
-          
-          <StartShiftForm
-            formOpen={formOpen}
-            setFormOpen={setFormOpen}
-            newShift={newShift}
-            setNewShift={setNewShift}
-            handleAddShift={handleAddShift}
-            staffList={staffList}
-            isMobile={true}
-          />
         </CardContent>
       </Card>
+
+      {/* Active Shifts Section */}
+      <MobileActiveShifts 
+        activeShifts={activeShifts} 
+        isLoading={isLoading} 
+        onEndShift={(shift) => {
+          toast({
+            title: "Feature in development",
+            description: "End shift functionality is available on desktop version."
+          });
+        }} 
+      />
+      
+      {/* StartShiftForm Modal */}
+      <StartShiftForm
+        formOpen={formOpen}
+        setFormOpen={setFormOpen}
+        newShift={newShift}
+        setNewShift={setNewShift}
+        handleAddShift={handleAddShift}
+        staffList={staffList}
+        isMobile={true}
+      />
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to logout?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will end your current session and return you to the login screen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogout}>Logout</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
