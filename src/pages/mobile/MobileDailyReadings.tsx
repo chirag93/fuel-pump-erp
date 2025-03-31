@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 
 const MobileDailyReadings = () => {

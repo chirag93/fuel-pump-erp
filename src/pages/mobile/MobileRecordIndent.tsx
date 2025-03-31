@@ -319,6 +319,71 @@ const MobileRecordIndent = () => {
     }
   };
   
+  // New function to validate indent number against booklet range and duplicates
+  const validateIndentNumber = async (indentNum: string): Promise<boolean> => {
+    if (!indentNum || !selectedBooklet) {
+      setIndentNumberError('Indent number and booklet are required');
+      return false;
+    }
+    
+    try {
+      const fuelPumpId = await getFuelPumpId();
+      
+      // Get booklet details to check range
+      const { data: booklet, error: bookletError } = await supabase
+        .from('indent_booklets')
+        .select('start_number, end_number')
+        .eq('id', selectedBooklet)
+        .single();
+        
+      if (bookletError || !booklet) {
+        console.error('Error fetching booklet details:', bookletError);
+        setIndentNumberError('Could not verify booklet details');
+        return false;
+      }
+      
+      // Check if number is within range
+      const startNum = parseInt(booklet.start_number);
+      const endNum = parseInt(booklet.end_number);
+      const currentNum = parseInt(indentNum);
+      
+      if (isNaN(currentNum)) {
+        setIndentNumberError('Please enter a valid number');
+        return false;
+      }
+      
+      if (currentNum < startNum || currentNum > endNum) {
+        setIndentNumberError(`Indent number must be between ${startNum} and ${endNum}`);
+        return false;
+      }
+      
+      // Check if this indent number has already been used
+      const { data: existingIndent, error: existingError } = await supabase
+        .from('indents')
+        .select('id')
+        .eq('indent_number', indentNum);
+        
+      if (existingError) {
+        console.error('Error checking existing indent:', existingError);
+        setIndentNumberError('Could not verify if indent number exists');
+        return false;
+      }
+      
+      if (existingIndent && existingIndent.length > 0) {
+        setIndentNumberError('This indent number has already been used');
+        return false;
+      }
+      
+      // All checks passed
+      setIndentNumberError('');
+      return true;
+    } catch (error) {
+      console.error('Error validating indent number:', error);
+      setIndentNumberError('Error validating indent number');
+      return false;
+    }
+  };
+  
   const handleSaveIndent = async () => {
     // Validate form
     if (!indentNumber) {
@@ -353,6 +418,12 @@ const MobileRecordIndent = () => {
       return;
     }
     
+    // Additional validation for indent number
+    const isValid = await validateIndentNumber(indentNumber);
+    if (!isValid) {
+      return;
+    }
+    
     // Proceed with saving
     setIsSubmitting(true);
     
@@ -369,7 +440,7 @@ const MobileRecordIndent = () => {
         return;
       }
       
-      // Generate an ID for the indent
+      // Generate a UUID for the indent
       const indentId = crypto.randomUUID();
       
       console.log("Creating indent with data:", {
@@ -402,16 +473,27 @@ const MobileRecordIndent = () => {
           fuel_pump_id: fuelPumpId
         }]);
         
-      if (indentError) throw indentError;
+      if (indentError) {
+        console.error('Error creating indent:', indentError);
+        
+        // Check if the error is a duplicate key error
+        if (indentError.message && indentError.message.includes('duplicate key')) {
+          setIndentNumberError('This indent number has already been used');
+          setIsSubmitting(false);
+          return;
+        }
+        
+        throw indentError;
+      }
       
-      // Create transaction record - using the indent ID (not indent_number)
+      // Create transaction record - using the indent ID
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert([{
           id: crypto.randomUUID(),
           customer_id: selectedCustomer,
           vehicle_id: selectedVehicle,
-          indent_id: indentId, // Use the UUID of the indent, not indent_number
+          indent_id: indentId,
           fuel_type: fuelType,
           amount: Number(amount),
           quantity: Number(quantity),
@@ -423,7 +505,10 @@ const MobileRecordIndent = () => {
           fuel_pump_id: fuelPumpId
         }]);
         
-      if (transactionError) throw transactionError;
+      if (transactionError) {
+        console.error('Error creating transaction:', transactionError);
+        throw transactionError;
+      }
       
       // Update customer balance if needed
       try {
