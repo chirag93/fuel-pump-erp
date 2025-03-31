@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { FileText, Search, Check, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -439,14 +440,11 @@ const MobileRecordIndent = () => {
         return;
       }
       
-      // First generate a string ID that will work for both indents and transactions
-      // Use a prefix followed by a timestamp and random string to avoid collisions
-      const timestamp = new Date().getTime();
-      const randomString = Math.random().toString(36).substring(2, 8);
-      const consistentId = `IND${timestamp}${randomString}`;
+      // Generate a unique ID that will be used for both the indent and as a reference in the transaction
+      const indentId = `IND-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
       
       console.log("Creating indent with data:", {
-        id: consistentId,
+        id: indentId,
         customer_id: selectedCustomer,
         vehicle_id: selectedVehicle,
         booklet_id: selectedBooklet,
@@ -457,11 +455,11 @@ const MobileRecordIndent = () => {
         date: new Date().toISOString().split('T')[0]
       });
       
-      // Create indent record
+      // Create indent record with the generated ID
       const { data: indentData, error: indentError } = await supabase
         .from('indents')
         .insert([{
-          id: consistentId, // Use the string format ID
+          id: indentId,
           customer_id: selectedCustomer,
           vehicle_id: selectedVehicle,
           booklet_id: selectedBooklet,
@@ -491,14 +489,14 @@ const MobileRecordIndent = () => {
       
       console.log("Indent created successfully:", indentData);
       
-      // Create transaction record - using the same consistent ID format
+      // Now create transaction record referencing the SAME indent ID
       const { data: transactionData, error: transactionError } = await supabase
         .from('transactions')
         .insert([{
-          id: crypto.randomUUID(), // Use a UUID for transaction ID
+          id: crypto.randomUUID(), // Use a different ID for the transaction
           customer_id: selectedCustomer,
           vehicle_id: selectedVehicle,
-          indent_id: consistentId, // Use the same string ID from the indent
+          indent_id: indentId, // Use the SAME ID from the indent
           fuel_type: fuelType,
           amount: Number(amount),
           quantity: Number(quantity),
@@ -519,7 +517,7 @@ const MobileRecordIndent = () => {
           await supabase
             .from('indents')
             .delete()
-            .eq('id', consistentId);
+            .eq('id', indentId);
           
           console.log("Rolled back indent creation due to transaction failure");
         } catch (rollbackError) {

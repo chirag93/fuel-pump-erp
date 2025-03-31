@@ -85,10 +85,11 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
     // Generate a UUID for the transaction ID
     const id = crypto.randomUUID();
     
-    // Make sure indent_id is a string to match the format used in the indents table
+    // Make sure the indent_id is consistent with what's stored in the indents table
+    // Note: indent_id should now be a string value that matches exactly what's in the indents table
     const formattedData = {
       ...transactionData,
-      indent_id: transactionData.indent_id ? String(transactionData.indent_id) : null
+      indent_id: transactionData.indent_id || null
     };
     
     console.log('Creating transaction with data:', {
