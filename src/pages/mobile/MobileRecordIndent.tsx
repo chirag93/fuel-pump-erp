@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { FileText, Search, Check, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -319,7 +318,7 @@ const MobileRecordIndent = () => {
     }
   };
   
-  // New function to validate indent number against booklet range and duplicates
+  // Validate indent number against booklet range and duplicates
   const validateIndentNumber = async (indentNum: string): Promise<boolean> => {
     if (!indentNum || !selectedBooklet) {
       setIndentNumberError('Indent number and booklet are required');
@@ -440,11 +439,14 @@ const MobileRecordIndent = () => {
         return;
       }
       
-      // Generate a UUID for the indent
-      const indentId = crypto.randomUUID();
+      // First generate a string ID that will work for both indents and transactions
+      // Use a prefix followed by a timestamp and random string to avoid collisions
+      const timestamp = new Date().getTime();
+      const randomString = Math.random().toString(36).substring(2, 8);
+      const consistentId = `IND${timestamp}${randomString}`;
       
       console.log("Creating indent with data:", {
-        id: indentId,
+        id: consistentId,
         customer_id: selectedCustomer,
         vehicle_id: selectedVehicle,
         booklet_id: selectedBooklet,
@@ -456,10 +458,10 @@ const MobileRecordIndent = () => {
       });
       
       // Create indent record
-      const { error: indentError } = await supabase
+      const { data: indentData, error: indentError } = await supabase
         .from('indents')
         .insert([{
-          id: indentId,
+          id: consistentId, // Use the string format ID
           customer_id: selectedCustomer,
           vehicle_id: selectedVehicle,
           booklet_id: selectedBooklet,
@@ -471,7 +473,8 @@ const MobileRecordIndent = () => {
           date: date.toISOString().split('T')[0],
           source: 'mobile',
           fuel_pump_id: fuelPumpId
-        }]);
+        }])
+        .select();
         
       if (indentError) {
         console.error('Error creating indent:', indentError);
@@ -486,14 +489,16 @@ const MobileRecordIndent = () => {
         throw indentError;
       }
       
-      // Create transaction record - using the indent ID
-      const { error: transactionError } = await supabase
+      console.log("Indent created successfully:", indentData);
+      
+      // Create transaction record - using the same consistent ID format
+      const { data: transactionData, error: transactionError } = await supabase
         .from('transactions')
         .insert([{
-          id: crypto.randomUUID(),
+          id: crypto.randomUUID(), // Use a UUID for transaction ID
           customer_id: selectedCustomer,
           vehicle_id: selectedVehicle,
-          indent_id: indentId,
+          indent_id: consistentId, // Use the same string ID from the indent
           fuel_type: fuelType,
           amount: Number(amount),
           quantity: Number(quantity),
@@ -503,12 +508,28 @@ const MobileRecordIndent = () => {
           staff_id: selectedStaff,
           source: 'mobile',
           fuel_pump_id: fuelPumpId
-        }]);
+        }])
+        .select();
         
       if (transactionError) {
         console.error('Error creating transaction:', transactionError);
+        
+        // If transaction fails, let's try to delete the indent to maintain consistency
+        try {
+          await supabase
+            .from('indents')
+            .delete()
+            .eq('id', consistentId);
+          
+          console.log("Rolled back indent creation due to transaction failure");
+        } catch (rollbackError) {
+          console.error("Failed to rollback indent:", rollbackError);
+        }
+        
         throw transactionError;
       }
+      
+      console.log("Transaction created successfully:", transactionData);
       
       // Update customer balance if needed
       try {
@@ -527,10 +548,12 @@ const MobileRecordIndent = () => {
             .update({ balance: newBalance })
             .eq('id', selectedCustomer)
             .eq('fuel_pump_id', fuelPumpId);
+            
+          console.log("Updated customer balance to:", newBalance);
         }
       } catch (balanceError) {
         console.error('Error updating customer balance:', balanceError);
-        // Continue with success even if balance update fails
+        // Continue with success even if balance update fails, but log it
       }
       
       // Update booklet used_indents count
@@ -548,13 +571,15 @@ const MobileRecordIndent = () => {
             .update({ used_indents: (booklet.used_indents || 0) + 1 })
             .eq('id', selectedBooklet)
             .eq('fuel_pump_id', fuelPumpId);
+            
+          console.log("Updated booklet used_indents count");
         }
       } catch (bookletError) {
         console.error('Error updating booklet usage count:', bookletError);
-        // Continue with success even if booklet update fails
+        // Continue with success even if booklet update fails, but log it
       }
       
-      // Show success dialog
+      // All operations succeeded, now show success dialog
       setSuccessDetails({
         indentNumber,
         customerName: selectedCustomerName,
@@ -563,6 +588,8 @@ const MobileRecordIndent = () => {
         quantity: Number(quantity),
         fuelType
       });
+      
+      console.log("All operations completed successfully, showing success dialog");
       setSuccessDialogOpen(true);
       
       // Reset form

@@ -50,9 +50,11 @@ export const getIndentsByCustomerId = async (customerId: string): Promise<Indent
           : 'Pending'
       })) as Indent[];
       
-      // Now fetch transactions separately instead of using a nested join
+      // Now fetch transactions separately with consistent ID format
       if (processedIndents.length > 0) {
         const indentIds = processedIndents.map(indent => indent.id);
+        
+        console.log('Fetching transactions for indent IDs:', indentIds);
         
         let transactionQuery = supabase
           .from('transactions')
@@ -67,6 +69,8 @@ export const getIndentsByCustomerId = async (customerId: string): Promise<Indent
         if (transactionsError) {
           console.error('Error fetching transactions for indents:', transactionsError);
         } else if (transactionsData) {
+          console.log(`Found ${transactionsData.length} transactions for indents`);
+          
           // Map transactions to their respective indents
           processedIndents.forEach(indent => {
             const matchingTransaction = transactionsData.find(tx => tx.indent_id === indent.id);
@@ -135,8 +139,10 @@ export const getIndentsByBookletId = async (bookletId: string): Promise<Indent[]
     if (data && data.length > 0) {
       console.log(`Found ${data.length} indents for booklet ${bookletId}`);
       
-      // Get all indent IDs
+      // Get all indent IDs, ensuring correct format matching
       const indentIds = data.map(indent => indent.id);
+      
+      console.log('Fetching transactions for indent IDs:', indentIds);
       
       // Fetch transactions related to these indents
       let transactionQuery = supabase
@@ -150,6 +156,8 @@ export const getIndentsByBookletId = async (bookletId: string): Promise<Indent[]
       const { data: transactionsData, error: transactionsError } = await transactionQuery;
         
       if (transactionsError) throw transactionsError;
+      
+      console.log(`Found ${transactionsData?.length || 0} transactions for these indents`);
       
       // Map transactions to the indents and ensure status is properly typed
       const indentsWithTransactions = data.map(indent => {
