@@ -4,13 +4,14 @@ import { FuelSelector } from './FuelSelector';
 import { AmountQuantityInputs } from './AmountQuantityInputs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { VehicleData } from '@/hooks/mobile/useIndentForm';
 
 interface IndentFormDetailsProps {
   indentNumber: string;
   setIndentNumber: (value: string) => void;
   indentNumberError?: string;
   selectedCustomerName: string;
-  vehicles: { id: string; number: string }[];
+  vehicles: VehicleData[];
   selectedVehicle: string;
   setSelectedVehicle: (vehicleId: string) => void;
   setSelectedVehicleNumber: (vehicleNumber: string) => void;

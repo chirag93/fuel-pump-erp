@@ -70,7 +70,7 @@ const IndentsTable: React.FC<IndentsTableProps> = ({
               <TableCell>
                 <Badge 
                   variant={
-                    indent.approval_status === 'approved' ? "success" : 
+                    indent.approval_status === 'approved' ? "default" : 
                     indent.approval_status === 'rejected' ? "destructive" : 
                     "outline"
                   }
