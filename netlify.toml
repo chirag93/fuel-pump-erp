@@ -8,9 +8,9 @@
   to = "/index.html"
   status = 200
 
-# Use a safer build command that checks if the test script exists before running it
+# Run all tests before build
 [build]
-  command = "npm run build"
+  command = "npm run test:all && npm run build"
   publish = "dist"
 
 # Optional: Custom headers

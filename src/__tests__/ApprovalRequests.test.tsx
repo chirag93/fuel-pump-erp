@@ -1,0 +1,131 @@
+
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import ApprovalRequests from '@/pages/ApprovalRequests';
+import { renderWithProviders } from '@/test-utils/test-helpers';
+import '@testing-library/jest-dom';
+import { supabase } from '@/integrations/supabase/client';
+
+// Mock the useApprovalRequests hook
+jest.mock('@/hooks/useApprovalRequests', () => ({
+  useApprovalRequests: jest.fn(() => ({
+    pendingIndents: [
+      {
+        id: 'indent-1',
+        indent_number: 'IND001',
+        customer_name: 'Test Customer',
+        vehicle_number: 'ABC123',
+        date: '2023-08-15',
+        fuel_type: 'Petrol',
+        amount: 1000,
+        source: 'mobile',
+        approval_status: 'pending'
+      },
+      {
+        id: 'indent-2',
+        indent_number: 'IND002',
+        customer_name: 'Another Customer',
+        vehicle_number: 'XYZ789',
+        date: '2023-08-16',
+        fuel_type: 'Diesel',
+        amount: 2000,
+        source: 'mobile',
+        approval_status: 'pending'
+      }
+    ],
+    isLoadingIndents: false,
+    pendingTransactions: [],
+    isLoadingTransactions: false,
+    handleApproveIndent: jest.fn().mockResolvedValue(true),
+    handleRejectIndent: jest.fn().mockResolvedValue(true),
+    handleApproveTransaction: jest.fn().mockResolvedValue(true),
+    handleRejectTransaction: jest.fn().mockResolvedValue(true),
+    refetchIndents: jest.fn(),
+    refetchTransactions: jest.fn()
+  }))
+}));
+
+// Mock Supabase
+jest.mock('@/integrations/supabase/client', () => ({
+  supabase: {
+    from: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis()
+  }
+}));
+
+describe('ApprovalRequests Component', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('renders the approval requests page', async () => {
+    renderWithProviders(<ApprovalRequests />, { isAuthenticated: true });
+    
+    // Check page title
+    expect(screen.getByText('Approval Requests')).toBeInTheDocument();
+    
+    // Check Pending Indents tab
+    expect(screen.getByRole('tab', { name: 'Pending Indents' })).toBeInTheDocument();
+    
+    // Check Pending Transactions tab
+    expect(screen.getByRole('tab', { name: 'Pending Transactions' })).toBeInTheDocument();
+    
+    // Check indent data is displayed
+    expect(screen.getByText('IND001')).toBeInTheDocument();
+    expect(screen.getByText('Test Customer')).toBeInTheDocument();
+    expect(screen.getByText('ABC123')).toBeInTheDocument();
+    
+    // Check approval/reject buttons
+    const approveButtons = screen.getAllByText('Approve');
+    const rejectButtons = screen.getAllByText('Reject');
+    expect(approveButtons.length).toBeGreaterThan(0);
+    expect(rejectButtons.length).toBeGreaterThan(0);
+  });
+  
+  it('handles indent approval', async () => {
+    const { useApprovalRequests } = require('@/hooks/useApprovalRequests');
+    const mockHandleApproveIndent = jest.fn().mockResolvedValue(true);
+    
+    useApprovalRequests.mockReturnValue({
+      pendingIndents: [
+        {
+          id: 'indent-1',
+          indent_number: 'IND001',
+          customer_name: 'Test Customer',
+          vehicle_number: 'ABC123',
+          date: '2023-08-15',
+          fuel_type: 'Petrol',
+          amount: 1000,
+          source: 'mobile',
+          approval_status: 'pending'
+        }
+      ],
+      isLoadingIndents: false,
+      pendingTransactions: [],
+      isLoadingTransactions: false,
+      handleApproveIndent: mockHandleApproveIndent,
+      handleRejectIndent: jest.fn().mockResolvedValue(true),
+      handleApproveTransaction: jest.fn().mockResolvedValue(true),
+      handleRejectTransaction: jest.fn().mockResolvedValue(true),
+      refetchIndents: jest.fn(),
+      refetchTransactions: jest.fn()
+    });
+    
+    const user = userEvent.setup();
+    renderWithProviders(<ApprovalRequests />, { isAuthenticated: true });
+    
+    // Find and click the approve button
+    const approveButton = screen.getAllByText('Approve')[0];
+    await user.click(approveButton);
+    
+    // Check that the handleApproveIndent function was called
+    expect(mockHandleApproveIndent).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'indent-1'
+    }));
+  });
+  
+  // Additional tests would be added for comprehensive coverage
+});

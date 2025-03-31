@@ -30,6 +30,29 @@ const config: Config = {
   },
   // Mock fetch globally
   setupFiles: ['./src/setupTests.ts'],
+  // Configure special test setups
+  projects: [
+    {
+      displayName: 'web',
+      testMatch: ['**/__tests__/**/!(mobile|superadmin)*.test.(ts|tsx)'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.ts']
+    },
+    {
+      displayName: 'mobile',
+      testMatch: ['**/__tests__/**/mobile*.test.(ts|tsx)'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.ts', '<rootDir>/src/setupMobileTests.ts']
+    },
+    {
+      displayName: 'superadmin',
+      testMatch: ['**/__tests__/**/superadmin*.test.(ts|tsx)'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.ts']
+    },
+    {
+      displayName: 'integration',
+      testMatch: ['**/integrations/__tests__/**/*.test.ts'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.ts']
+    }
+  ]
 };
 
 export default config;

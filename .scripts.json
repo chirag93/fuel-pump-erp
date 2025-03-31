@@ -4,6 +4,11 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:indent": "node run-indent-tests.js"
+    "test:indent": "node run-indent-tests.js",
+    "test:all": "node run-all-tests.js",
+    "test:mobile": "jest \"__tests__/mobile.*\\.test\\.(ts|tsx)$\"",
+    "test:web": "jest \"__tests__/((?!mobile|superadmin).)*\\.test\\.(ts|tsx)$\"",
+    "test:superadmin": "jest \"__tests__/superadmin.*\\.test\\.(ts|tsx)$\"",
+    "test:integration": "jest \"integrations/__tests__/.*\\.test\\.ts$\""
   }
 }
