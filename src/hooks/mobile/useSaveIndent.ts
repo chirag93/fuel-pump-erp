@@ -105,9 +105,8 @@ export const useSaveIndent = ({
         return;
       }
       
-      // The indentId needs to be persistent and unique
-      // Using the indentNumber directly since that's what's referenced in the foreign key
-      const indentId = indentNumber;
+      // Generate a unique UUID for the indent ID
+      const indentId = crypto.randomUUID();
       
       console.log("Creating indent with data:", {
         id: indentId,
@@ -118,7 +117,9 @@ export const useSaveIndent = ({
         fuel_type: fuelType,
         amount: Number(amount),
         quantity: Number(quantity),
-        date: date.toISOString().split('T')[0]
+        date: date.toISOString().split('T')[0],
+        source: 'mobile',
+        approval_status: 'pending'
       });
       
       // Create indent record
@@ -136,6 +137,8 @@ export const useSaveIndent = ({
           discount_amount: discountAmount,
           date: date.toISOString().split('T')[0],
           source: 'mobile',
+          approval_status: 'pending', // Mobile indents start as pending
+          status: 'Pending',
           fuel_pump_id: fuelPumpId
         }])
         .select();
@@ -159,82 +162,8 @@ export const useSaveIndent = ({
       
       console.log("Indent created successfully:", indentData);
       
-      // First, wait a moment to ensure the indent is fully saved in the database
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Now create transaction record
-      // IMPORTANT: The indent_id in transactions table should match what's in the indents table
-      // In this case, we're using the indentId which is set to indentNumber
-      const transactionId = crypto.randomUUID();
-      console.log("Creating transaction with data:", {
-        id: transactionId,
-        indent_id: indentId, // Use the indent ID which is the indent number
-        customer_id: selectedCustomer
-      });
-      
-      const { data: transactionData, error: transactionError } = await supabase
-        .from('transactions')
-        .insert([{
-          id: transactionId,
-          customer_id: selectedCustomer,
-          vehicle_id: selectedVehicle,
-          indent_id: indentId, // This needs to match the id in indents table
-          fuel_type: fuelType,
-          amount: Number(amount),
-          quantity: Number(quantity),
-          discount_amount: discountAmount,
-          payment_method: 'INDENT',
-          date: date.toISOString().split('T')[0],
-          staff_id: selectedStaff,
-          source: 'mobile',
-          fuel_pump_id: fuelPumpId
-        }])
-        .select();
-        
-      if (transactionError) {
-        console.error('Error creating transaction:', transactionError);
-        
-        // If transaction fails, delete the indent to maintain consistency
-        try {
-          await supabase
-            .from('indents')
-            .delete()
-            .eq('id', indentId);
-          
-          console.log("Rolled back indent creation due to transaction failure");
-        } catch (rollbackError) {
-          console.error("Failed to rollback indent:", rollbackError);
-        }
-        
-        throw transactionError;
-      }
-      
-      console.log("Transaction created successfully:", transactionData);
-      
-      // Update customer balance
-      try {
-        const { data: currentCustomer } = await supabase
-          .from('customers')
-          .select('balance')
-          .eq('id', selectedCustomer)
-          .eq('fuel_pump_id', fuelPumpId)
-          .maybeSingle();
-          
-        if (currentCustomer) {
-          const newBalance = (currentCustomer.balance || 0) + Number(amount);
-          
-          await supabase
-            .from('customers')
-            .update({ balance: newBalance })
-            .eq('id', selectedCustomer)
-            .eq('fuel_pump_id', fuelPumpId);
-            
-          console.log("Updated customer balance to:", newBalance);
-        }
-      } catch (balanceError) {
-        console.error('Error updating customer balance:', balanceError);
-        // Continue with success even if balance update fails, but log it
-      }
+      // For mobile, we do not automatically create a transaction
+      // Transactions will be created once the indent is approved on the web system
       
       // Update booklet used_indents count
       try {
@@ -269,11 +198,17 @@ export const useSaveIndent = ({
         fuelType
       });
       
-      console.log("All operations completed successfully, showing success dialog");
+      console.log("Mobile indent submission completed successfully, showing success dialog");
       setSuccessDialogOpen(true);
       
       // Reset form
       resetForm();
+      
+      toast({
+        title: "Success",
+        description: "Indent has been submitted for approval",
+        variant: "default"
+      });
       
     } catch (error) {
       console.error('Error saving indent:', error);

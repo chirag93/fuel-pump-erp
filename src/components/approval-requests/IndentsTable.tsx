@@ -49,6 +49,7 @@ const IndentsTable: React.FC<IndentsTableProps> = ({
             <TableHead>Fuel Type</TableHead>
             <TableHead>Amount</TableHead>
             <TableHead>Source</TableHead>
+            <TableHead>Approval</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -66,26 +67,46 @@ const IndentsTable: React.FC<IndentsTableProps> = ({
                   {indent.source || 'web'}
                 </Badge>
               </TableCell>
+              <TableCell>
+                <Badge 
+                  variant={
+                    indent.approval_status === 'approved' ? "success" : 
+                    indent.approval_status === 'rejected' ? "destructive" : 
+                    "outline"
+                  }
+                >
+                  {indent.approval_status || 'pending'}
+                </Badge>
+              </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  <Button 
-                    onClick={() => onApprove(indent)} 
-                    size="sm" 
-                    variant="outline"
-                    className="h-8 gap-1"
-                  >
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Approve
-                  </Button>
-                  <Button 
-                    onClick={() => onReject(indent)} 
-                    size="sm" 
-                    variant="outline"
-                    className="h-8 gap-1"
-                  >
-                    <XCircle className="h-4 w-4 text-red-500" />
-                    Reject
-                  </Button>
+                  {indent.approval_status === 'pending' && (
+                    <>
+                      <Button 
+                        onClick={() => onApprove(indent)} 
+                        size="sm" 
+                        variant="outline"
+                        className="h-8 gap-1"
+                      >
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        Approve
+                      </Button>
+                      <Button 
+                        onClick={() => onReject(indent)} 
+                        size="sm" 
+                        variant="outline"
+                        className="h-8 gap-1"
+                      >
+                        <XCircle className="h-4 w-4 text-red-500" />
+                        Reject
+                      </Button>
+                    </>
+                  )}
+                  {indent.approval_status !== 'pending' && (
+                    <span className="text-sm text-muted-foreground px-2">
+                      {indent.approval_status === 'approved' ? 'Approved' : 'Rejected'}
+                    </span>
+                  )}
                 </div>
               </TableCell>
             </TableRow>

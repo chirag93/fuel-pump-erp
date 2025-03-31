@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { FileText, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 
 const MobileRecordIndent = () => {
   const { toast } = useToast();
+  const [currentFuelPrice, setCurrentFuelPrice] = useState<number>(0);
+  
   const {
     fuelType,
     setFuelType,
@@ -86,6 +88,10 @@ const MobileRecordIndent = () => {
     resetForm
   });
 
+  const handleFuelPriceChange = (price: number) => {
+    setCurrentFuelPrice(price);
+  };
+
   return (
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
       <MobileHeader title="Record Indent" />
@@ -122,7 +128,15 @@ const MobileRecordIndent = () => {
               setAmount={setAmount}
               quantity={quantity}
               setQuantity={setQuantity}
+              onFuelPriceChange={handleFuelPriceChange}
+              currentFuelPrice={currentFuelPrice}
             />
+            
+            <div className="bg-muted/50 p-3 rounded-md mt-2">
+              <p className="text-sm text-muted-foreground">
+                Mobile indents require approval from the web system before being processed.
+              </p>
+            </div>
             
             <Button 
               className="w-full mt-4" 
@@ -132,9 +146,9 @@ const MobileRecordIndent = () => {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  Submitting...
                 </>
-              ) : 'Save Indent'}
+              ) : 'Submit for Approval'}
             </Button>
           </div>
         </CardContent>

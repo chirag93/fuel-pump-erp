@@ -8,9 +8,10 @@ import { getFuelPumpId } from '@/integrations/utils';
 interface FuelSelectorProps {
   fuelType: string;
   setFuelType: (type: string) => void;
+  onFuelPriceChange?: (price: number) => void;
 }
 
-export const FuelSelector = ({ fuelType, setFuelType }: FuelSelectorProps) => {
+export const FuelSelector = ({ fuelType, setFuelType, onFuelPriceChange }: FuelSelectorProps) => {
   const [fuelTypes, setFuelTypes] = useState<{type: string, price: number}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -51,6 +52,17 @@ export const FuelSelector = ({ fuelType, setFuelType }: FuelSelectorProps) => {
           // Set a default fuel type if none is selected and we have data
           if (!fuelType && formattedData.length > 0) {
             setFuelType(formattedData[0].type);
+            
+            // Call the onFuelPriceChange callback with the price of the selected fuel type
+            if (onFuelPriceChange) {
+              onFuelPriceChange(formattedData[0].price);
+            }
+          } else if (fuelType && onFuelPriceChange) {
+            // If fuel type is already selected, update the price
+            const selectedFuel = formattedData.find(fuel => fuel.type === fuelType);
+            if (selectedFuel) {
+              onFuelPriceChange(selectedFuel.price);
+            }
           }
         } else {
           // Fallback to defaults if no data
@@ -64,6 +76,9 @@ export const FuelSelector = ({ fuelType, setFuelType }: FuelSelectorProps) => {
           // Set a default fuel type if none is selected
           if (!fuelType) {
             setFuelType(defaults[0].type);
+            if (onFuelPriceChange) {
+              onFuelPriceChange(defaults[0].price);
+            }
           }
         }
       } catch (error) {
@@ -78,6 +93,9 @@ export const FuelSelector = ({ fuelType, setFuelType }: FuelSelectorProps) => {
         // Set a default fuel type if none is selected
         if (!fuelType) {
           setFuelType('Petrol');
+          if (onFuelPriceChange) {
+            onFuelPriceChange(0);
+          }
         }
       } finally {
         setIsLoading(false);
@@ -85,7 +103,19 @@ export const FuelSelector = ({ fuelType, setFuelType }: FuelSelectorProps) => {
     };
     
     fetchFuelTypes();
-  }, [fuelType, setFuelType]);
+  }, [fuelType, setFuelType, onFuelPriceChange]);
+
+  const handleFuelTypeChange = (value: string) => {
+    setFuelType(value);
+    
+    // Update the fuel price when the fuel type changes
+    if (onFuelPriceChange) {
+      const selectedFuel = fuelTypes.find(fuel => fuel.type === value);
+      if (selectedFuel) {
+        onFuelPriceChange(selectedFuel.price);
+      }
+    }
+  };
 
   return (
     <div>
@@ -94,7 +124,7 @@ export const FuelSelector = ({ fuelType, setFuelType }: FuelSelectorProps) => {
       </Label>
       <Select
         value={fuelType}
-        onValueChange={(value) => setFuelType(value)}
+        onValueChange={handleFuelTypeChange}
         disabled={isLoading}
       >
         <SelectTrigger id="fuelType">

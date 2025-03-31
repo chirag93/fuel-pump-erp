@@ -1,26 +1,27 @@
 
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { VehicleSelector } from './VehicleSelector';
 import { FuelSelector } from './FuelSelector';
 import { AmountQuantityInputs } from './AmountQuantityInputs';
-import { VehicleData } from '@/hooks/mobile/useIndentForm';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface IndentFormDetailsProps {
   indentNumber: string;
   setIndentNumber: (value: string) => void;
-  indentNumberError: string;
+  indentNumberError?: string;
   selectedCustomerName: string;
-  vehicles: VehicleData[];
+  vehicles: { id: string; number: string }[];
   selectedVehicle: string;
-  setSelectedVehicle: (id: string) => void;
-  setSelectedVehicleNumber: (number: string) => void;
+  setSelectedVehicle: (vehicleId: string) => void;
+  setSelectedVehicleNumber: (vehicleNumber: string) => void;
   fuelType: string;
-  setFuelType: (type: string) => void;
-  amount: number | '';
-  setAmount: (value: number | '') => void;
-  quantity: number | '';
-  setQuantity: (value: number | '') => void;
+  setFuelType: (fuelType: string) => void;
+  amount: number | string;
+  setAmount: (amount: number | '') => void;
+  quantity: number | string;
+  setQuantity: (quantity: number | '') => void;
+  onFuelPriceChange?: (price: number) => void;
+  currentFuelPrice?: number;
 }
 
 export const IndentFormDetails = ({
@@ -37,7 +38,9 @@ export const IndentFormDetails = ({
   amount,
   setAmount,
   quantity,
-  setQuantity
+  setQuantity,
+  onFuelPriceChange,
+  currentFuelPrice
 }: IndentFormDetailsProps) => {
   return (
     <div className="space-y-4">
@@ -49,42 +52,43 @@ export const IndentFormDetails = ({
           id="indentNumber"
           value={indentNumber}
           onChange={(e) => setIndentNumber(e.target.value)}
-          className={indentNumberError ? "border-red-500" : ""}
           placeholder="Enter indent number"
+          className={indentNumberError ? "border-red-500" : ""}
         />
-        {indentNumberError && <p className="text-red-500 text-xs mt-1">{indentNumberError}</p>}
+        {indentNumberError && (
+          <p className="text-xs text-red-500 mt-1">{indentNumberError}</p>
+        )}
       </div>
       
-      <div>
-        <Label htmlFor="customerName" className="text-sm font-medium mb-1 block">
-          Customer
-        </Label>
-        <Input
-          id="customerName"
-          value={selectedCustomerName}
-          readOnly
-          placeholder="Customer will be selected based on indent number"
-        />
-      </div>
+      {selectedCustomerName && (
+        <div>
+          <Label className="text-sm font-medium mb-1 block">Customer</Label>
+          <div className="py-2 px-3 border rounded-md bg-muted/50">
+            {selectedCustomerName}
+          </div>
+        </div>
+      )}
       
-      <VehicleSelector 
+      <VehicleSelector
         vehicles={vehicles}
         selectedVehicle={selectedVehicle}
         setSelectedVehicle={setSelectedVehicle}
         setSelectedVehicleNumber={setSelectedVehicleNumber}
       />
       
-      <FuelSelector 
+      <FuelSelector
         fuelType={fuelType}
         setFuelType={setFuelType}
+        onFuelPriceChange={onFuelPriceChange}
       />
       
-      <AmountQuantityInputs 
+      <AmountQuantityInputs
         amount={amount}
         setAmount={setAmount}
         quantity={quantity}
         setQuantity={setQuantity}
         fuelType={fuelType}
+        currentFuelPrice={currentFuelPrice}
       />
     </div>
   );

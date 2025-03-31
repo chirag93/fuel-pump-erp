@@ -11,6 +11,7 @@ interface AmountQuantityInputsProps {
   quantity: number | string;
   setQuantity: (value: number | '') => void;
   fuelType: string;
+  currentFuelPrice?: number;
 }
 
 export const AmountQuantityInputs = ({
@@ -18,15 +19,21 @@ export const AmountQuantityInputs = ({
   setAmount,
   quantity,
   setQuantity,
-  fuelType
+  fuelType,
+  currentFuelPrice
 }: AmountQuantityInputsProps) => {
-  const [fuelPrice, setFuelPrice] = useState<number>(0);
+  const [fuelPrice, setFuelPrice] = useState<number>(currentFuelPrice || 0);
   const [priceIsLoading, setPriceIsLoading] = useState(false);
   const [amountInputFocused, setAmountInputFocused] = useState(false);
   const [quantityInputFocused, setQuantityInputFocused] = useState(false);
 
-  // Fetch current fuel price whenever fuel type changes
+  // Fetch current fuel price whenever fuel type changes or currentFuelPrice is provided
   useEffect(() => {
+    if (currentFuelPrice) {
+      setFuelPrice(currentFuelPrice);
+      return;
+    }
+    
     const fetchFuelPrice = async () => {
       if (!fuelType) return;
       
@@ -68,7 +75,14 @@ export const AmountQuantityInputs = ({
     };
     
     fetchFuelPrice();
-  }, [fuelType]);
+  }, [fuelType, currentFuelPrice]);
+
+  // Update fuel price when currentFuelPrice changes
+  useEffect(() => {
+    if (currentFuelPrice) {
+      setFuelPrice(currentFuelPrice);
+    }
+  }, [currentFuelPrice]);
 
   // Calculate quantity based on amount (when amount changes and quantity is not being edited)
   useEffect(() => {
