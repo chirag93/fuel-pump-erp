@@ -105,8 +105,8 @@ export const useSaveIndent = ({
         return;
       }
       
-      // Generate a unique ID that will be used for both the indent and as a reference in the transaction
-      const indentId = `IND-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      // Generate a unique ID for the indent
+      const indentId = `IND-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`;
       
       console.log("Creating indent with data:", {
         id: indentId,
@@ -117,10 +117,10 @@ export const useSaveIndent = ({
         fuel_type: fuelType,
         amount: Number(amount),
         quantity: Number(quantity),
-        date: new Date().toISOString().split('T')[0]
+        date: date.toISOString().split('T')[0]
       });
       
-      // Create indent record with the generated ID
+      // Create indent record
       const { data: indentData, error: indentError } = await supabase
         .from('indents')
         .insert([{
@@ -158,14 +158,25 @@ export const useSaveIndent = ({
       
       console.log("Indent created successfully:", indentData);
       
-      // Now create transaction record referencing the SAME indent ID
+      // First, wait a moment to ensure the indent is fully saved in the database
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Now create transaction record
+      // Using the indent ID as the foreign key reference
+      const transactionId = crypto.randomUUID();
+      console.log("Creating transaction with data:", {
+        id: transactionId,
+        indent_id: indentId,
+        customer_id: selectedCustomer
+      });
+      
       const { data: transactionData, error: transactionError } = await supabase
         .from('transactions')
         .insert([{
-          id: crypto.randomUUID(), // Use a different ID for the transaction
+          id: transactionId,
           customer_id: selectedCustomer,
           vehicle_id: selectedVehicle,
-          indent_id: indentId, // Use the SAME ID from the indent
+          indent_id: indentId, // Use the indent ID as foreign key
           fuel_type: fuelType,
           amount: Number(amount),
           quantity: Number(quantity),
@@ -181,7 +192,7 @@ export const useSaveIndent = ({
       if (transactionError) {
         console.error('Error creating transaction:', transactionError);
         
-        // If transaction fails, let's try to delete the indent to maintain consistency
+        // If transaction fails, delete the indent to maintain consistency
         try {
           await supabase
             .from('indents')
@@ -198,14 +209,14 @@ export const useSaveIndent = ({
       
       console.log("Transaction created successfully:", transactionData);
       
-      // Update customer balance if needed
+      // Update customer balance
       try {
         const { data: currentCustomer } = await supabase
           .from('customers')
           .select('balance')
           .eq('id', selectedCustomer)
           .eq('fuel_pump_id', fuelPumpId)
-          .single();
+          .maybeSingle();
           
         if (currentCustomer) {
           const newBalance = (currentCustomer.balance || 0) + Number(amount);
@@ -230,7 +241,7 @@ export const useSaveIndent = ({
           .select('used_indents')
           .eq('id', selectedBooklet)
           .eq('fuel_pump_id', fuelPumpId)
-          .single();
+          .maybeSingle();
           
         if (booklet) {
           await supabase

@@ -84,6 +84,7 @@ export const IndentFormDetails = ({
         setAmount={setAmount}
         quantity={quantity}
         setQuantity={setQuantity}
+        fuelType={fuelType}
       />
     </div>
   );

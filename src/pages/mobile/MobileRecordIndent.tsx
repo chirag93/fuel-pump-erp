@@ -11,8 +11,10 @@ import { useSaveIndent } from '@/hooks/mobile/useSaveIndent';
 import { IndentSearchForm } from '@/components/mobile/indent/IndentSearchForm';
 import { IndentFormDetails } from '@/components/mobile/indent/IndentFormDetails';
 import { SuccessDialog } from '@/components/mobile/indent/SuccessDialog';
+import { useToast } from '@/hooks/use-toast';
 
 const MobileRecordIndent = () => {
+  const { toast } = useToast();
   const {
     fuelType,
     setFuelType,

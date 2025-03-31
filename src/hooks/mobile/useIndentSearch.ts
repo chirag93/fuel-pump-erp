@@ -1,15 +1,15 @@
 
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from '@/hooks/use-toast';
 import { getFuelPumpId } from '@/integrations/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface UseIndentSearchProps {
   setIndentNumber: (value: string) => void;
-  setSelectedBooklet: (value: string) => void;
-  setSelectedCustomer: (value: string) => void;
-  setSelectedCustomerName: (value: string) => void;
-  setSelectedVehicle: (value: string) => void;
+  setSelectedBooklet: (id: string) => void;
+  setSelectedCustomer: (id: string) => void;
+  setSelectedCustomerName: (name: string) => void;
+  setSelectedVehicle: (id: string) => void;
   searchIndentNumber: string;
 }
 
@@ -26,117 +26,119 @@ export const useIndentSearch = ({
   const [searchError, setSearchError] = useState('');
 
   const searchByIndentNumber = async () => {
-    // Clear previous error
-    setSearchError('');
-    
     if (!searchIndentNumber) {
       setSearchError('Please enter an indent number to search');
       return;
     }
 
     setIsSearching(true);
+    setSearchError('');
     
     try {
       console.log('Searching for indent number:', searchIndentNumber);
       
       const fuelPumpId = await getFuelPumpId();
-      
       if (!fuelPumpId) {
-        console.error('No fuel pump ID available');
-        toast({
-          title: "Authentication Required",
-          description: "Please log in with a fuel pump account to search indents",
-          variant: "destructive"
-        });
+        setSearchError('Could not determine your fuel pump');
         setIsSearching(false);
         return;
       }
       
-      // First check if this indent number exists in any booklet
-      const { data: bookletData, error: bookletError } = await supabase
+      // First, find the booklet that contains this indent number
+      const { data: booklets, error: bookletError } = await supabase
         .from('indent_booklets')
-        .select('*')
-        .eq('fuel_pump_id', fuelPumpId)
-        .or(`start_number.lte.${searchIndentNumber},end_number.gte.${searchIndentNumber}`)
-        .order('issued_date', { ascending: false });
-
+        .select('id, customer_id, start_number, end_number')
+        .eq('fuel_pump_id', fuelPumpId);
+        
       if (bookletError) {
-        console.error('Error searching for booklet:', bookletError);
-        throw bookletError;
-      }
-
-      if (!bookletData || bookletData.length === 0) {
-        setSearchError('No indent booklet contains this number');
+        console.error('Error fetching booklets:', bookletError);
+        setSearchError('Error searching for indent booklets');
         setIsSearching(false);
         return;
       }
-
-      // Find the booklet where this number falls within range
-      const matchingBooklet = bookletData.find(b => 
-        parseInt(b.start_number) <= parseInt(searchIndentNumber) && 
-        parseInt(b.end_number) >= parseInt(searchIndentNumber)
+      
+      if (!booklets || booklets.length === 0) {
+        setSearchError('No indent booklets found');
+        setIsSearching(false);
+        return;
+      }
+      
+      // Find a booklet where the indent number is within range
+      const indentNum = parseInt(searchIndentNumber);
+      if (isNaN(indentNum)) {
+        setSearchError('Invalid indent number');
+        setIsSearching(false);
+        return;
+      }
+      
+      const matchingBooklet = booklets.find(
+        booklet => parseInt(booklet.start_number) <= indentNum && parseInt(booklet.end_number) >= indentNum
       );
-
+      
       if (!matchingBooklet) {
-        setSearchError('The indent number is not in any active booklet range');
+        setSearchError('No booklet found for this indent number');
         setIsSearching(false);
         return;
       }
-
-      // Check if this indent number has already been used
+      
+      // Check if the indent has already been used
       const { data: existingIndent, error: existingError } = await supabase
         .from('indents')
-        .select('*')
-        .eq('fuel_pump_id', fuelPumpId)
-        .eq('indent_number', searchIndentNumber);
-
+        .select('id')
+        .eq('indent_number', searchIndentNumber)
+        .eq('booklet_id', matchingBooklet.id);
+        
       if (existingError) {
-        console.error('Error checking existing indent:', existingError);
-        throw existingError;
+        console.error('Error checking if indent exists:', existingError);
+        setSearchError('Error checking if indent number exists');
+        setIsSearching(false);
+        return;
       }
-
+      
       if (existingIndent && existingIndent.length > 0) {
         setSearchError('This indent number has already been used');
         setIsSearching(false);
         return;
       }
-
-      // Get customer details
-      const { data: customerData, error: customerError } = await supabase
+      
+      // Now get the customer details
+      const { data: customer, error: customerError } = await supabase
         .from('customers')
         .select('id, name')
-        .eq('fuel_pump_id', fuelPumpId)
         .eq('id', matchingBooklet.customer_id)
-        .single();
-
+        .eq('fuel_pump_id', fuelPumpId)
+        .maybeSingle();
+        
       if (customerError) {
         console.error('Error fetching customer:', customerError);
-        throw customerError;
+        setSearchError('Error fetching customer information');
+        setIsSearching(false);
+        return;
       }
-
-      // Set form data from search results
+      
+      if (!customer) {
+        setSearchError('Customer not found for this booklet');
+        setIsSearching(false);
+        return;
+      }
+      
+      // Set the values in the form
       setIndentNumber(searchIndentNumber);
       setSelectedBooklet(matchingBooklet.id);
-      setSelectedCustomer(customerData.id);
-      setSelectedCustomerName(customerData.name);
+      setSelectedCustomer(customer.id);
+      setSelectedCustomerName(customer.name);
       
-      // Fetch vehicles for this customer
-      const { data: vehicleData, error: vehicleError } = await supabase
-        .from('vehicles')
-        .select('id')
-        .eq('customer_id', matchingBooklet.customer_id)
-        .eq('fuel_pump_id', fuelPumpId)
-        .limit(1);
-
-      if (vehicleError) {
-        console.error('Error fetching vehicle:', vehicleError);
-      } else if (vehicleData && vehicleData.length > 0) {
-        setSelectedVehicle(vehicleData[0].id);
-      }
+      // Reset vehicle selection
+      setSelectedVehicle('');
+      
+      toast({
+        title: "Success",
+        description: `Found indent booklet for ${customer.name}`
+      });
       
     } catch (error) {
-      console.error('Error during indent search:', error);
-      setSearchError('An error occurred while searching for this indent number');
+      console.error('Error in searchByIndentNumber:', error);
+      setSearchError('An error occurred while searching');
     } finally {
       setIsSearching(false);
     }

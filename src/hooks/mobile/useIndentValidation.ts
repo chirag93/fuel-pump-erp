@@ -16,16 +16,28 @@ export const useIndentValidation = () => {
     try {
       const fuelPumpId = await getFuelPumpId();
       
+      if (!fuelPumpId) {
+        console.error('No fuel pump ID available');
+        setIndentNumberError('Could not verify fuel pump ID');
+        return false;
+      }
+      
       // Get booklet details to check range
       const { data: booklet, error: bookletError } = await supabase
         .from('indent_booklets')
         .select('start_number, end_number')
         .eq('id', selectedBooklet)
-        .single();
+        .eq('fuel_pump_id', fuelPumpId)
+        .maybeSingle();
         
-      if (bookletError || !booklet) {
+      if (bookletError) {
         console.error('Error fetching booklet details:', bookletError);
         setIndentNumberError('Could not verify booklet details');
+        return false;
+      }
+      
+      if (!booklet) {
+        setIndentNumberError('Booklet not found');
         return false;
       }
       
@@ -48,7 +60,9 @@ export const useIndentValidation = () => {
       const { data: existingIndent, error: existingError } = await supabase
         .from('indents')
         .select('id')
-        .eq('indent_number', indentNum);
+        .eq('indent_number', indentNum)
+        .eq('booklet_id', selectedBooklet)
+        .eq('fuel_pump_id', fuelPumpId);
         
       if (existingError) {
         console.error('Error checking existing indent:', existingError);
@@ -57,7 +71,7 @@ export const useIndentValidation = () => {
       }
       
       if (existingIndent && existingIndent.length > 0) {
-        setIndentNumberError('This indent number has already been used');
+        setIndentNumberError('This indent number has already been used in this booklet');
         return false;
       }
       
