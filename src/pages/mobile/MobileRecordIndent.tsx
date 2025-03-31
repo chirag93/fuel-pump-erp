@@ -1,14 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronLeft, FileText, Search, Check, X, Loader2 } from 'lucide-react';
+import { FileText, Search, Check, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getFuelPumpId } from '@/integrations/utils';
+import { MobileHeader } from '@/components/mobile/MobileHeader';
 import {
   Dialog,
   DialogContent,
@@ -370,10 +370,9 @@ const MobileRecordIndent = () => {
       }
       
       // Generate an ID for the indent
-      const indentId = `IND-${Date.now()}`;
+      const indentId = crypto.randomUUID();
       
-      // Create indent record
-      const indentData = {
+      console.log("Creating indent with data:", {
         id: indentId,
         customer_id: selectedCustomer,
         vehicle_id: selectedVehicle,
@@ -382,38 +381,47 @@ const MobileRecordIndent = () => {
         fuel_type: fuelType,
         amount: Number(amount),
         quantity: Number(quantity),
-        discount_amount: discountAmount,
-        date: date.toISOString().split('T')[0],
-        source: 'mobile',
-        fuel_pump_id: fuelPumpId // Add fuel pump ID
-      };
+        date: new Date().toISOString().split('T')[0]
+      });
       
+      // Create indent record
       const { error: indentError } = await supabase
         .from('indents')
-        .insert([indentData]);
+        .insert([{
+          id: indentId,
+          customer_id: selectedCustomer,
+          vehicle_id: selectedVehicle,
+          booklet_id: selectedBooklet,
+          indent_number: indentNumber,
+          fuel_type: fuelType,
+          amount: Number(amount),
+          quantity: Number(quantity),
+          discount_amount: discountAmount,
+          date: date.toISOString().split('T')[0],
+          source: 'mobile',
+          fuel_pump_id: fuelPumpId
+        }]);
         
       if (indentError) throw indentError;
       
-      // Create transaction record
-      const transactionData = {
-        id: `TXN-${Date.now()}`,
-        customer_id: selectedCustomer,
-        vehicle_id: selectedVehicle,
-        indent_id: indentId,
-        fuel_type: fuelType,
-        amount: Number(amount),
-        quantity: Number(quantity),
-        discount_amount: discountAmount,
-        payment_method: 'INDENT',
-        date: date.toISOString().split('T')[0],
-        staff_id: selectedStaff,
-        source: 'mobile',
-        fuel_pump_id: fuelPumpId // Add fuel pump ID
-      };
-      
+      // Create transaction record - using the indent ID (not indent_number)
       const { error: transactionError } = await supabase
         .from('transactions')
-        .insert([transactionData]);
+        .insert([{
+          id: crypto.randomUUID(),
+          customer_id: selectedCustomer,
+          vehicle_id: selectedVehicle,
+          indent_id: indentId, // Use the UUID of the indent, not indent_number
+          fuel_type: fuelType,
+          amount: Number(amount),
+          quantity: Number(quantity),
+          discount_amount: discountAmount,
+          payment_method: 'INDENT',
+          date: date.toISOString().split('T')[0],
+          staff_id: selectedStaff,
+          source: 'mobile',
+          fuel_pump_id: fuelPumpId
+        }]);
         
       if (transactionError) throw transactionError;
       
@@ -504,14 +512,7 @@ const MobileRecordIndent = () => {
   
   return (
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
-      <div className="flex items-center mb-4">
-        <Link to="/mobile">
-          <Button variant="ghost" size="icon" className="mr-2">
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <h1 className="text-xl font-semibold">Record Indent</h1>
-      </div>
+      <MobileHeader title="Record Indent" />
       
       <Card className="mb-4">
         <CardContent className="pt-4">

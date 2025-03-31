@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Droplets, CreditCard, UserRound, CalendarClock, AlertCircle } from 'lucide-react';
 import { CardFeature } from '@/components/ui/custom/CardFeature';
 import { useAuth } from '@/contexts/AuthContext';
+import { MobileHeader } from '@/components/mobile/MobileHeader';
 
 const MobileHome = () => {
   const { fuelPumpName } = useAuth();
@@ -13,6 +14,7 @@ const MobileHome = () => {
       <div className="text-center mb-4 animate-fade-in">
         <h1 className="text-2xl font-bold text-primary">{fuelPumpName || 'Fuel Pro 360'}</h1>
         <p className="text-muted-foreground text-sm mt-1">Mobile Dashboard</p>
+        <MobileHeader title="" showBackButton={false} />
       </div>
       
       <div className="mb-3 p-3 bg-muted rounded-lg animate-fade-in">
