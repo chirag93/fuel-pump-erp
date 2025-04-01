@@ -1,12 +1,15 @@
 
-import React from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { ReactNode } from 'react';
 import Layout from '@/components/layout/Layout';
 
-export const MainLayout = () => {
+interface MainLayoutProps {
+  children: ReactNode;
+}
+
+export const MainLayout = ({ children }: MainLayoutProps) => {
   return (
     <Layout>
-      <Outlet />
+      {children}
     </Layout>
   );
 };

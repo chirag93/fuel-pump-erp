@@ -1,4 +1,3 @@
-
 import { lazy, Suspense } from "react";
 import { RouteObject, Outlet } from "react-router-dom";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -34,7 +33,7 @@ const Index = lazy(() => import("@/pages/Index"));
 export const routes: RouteObject[] = [
   {
     path: "/",
-    element: <MainLayout><Index /></MainLayout>,
+    element: <MainLayout>{<Index />}</MainLayout>,
   },
   {
     path: "/login",
