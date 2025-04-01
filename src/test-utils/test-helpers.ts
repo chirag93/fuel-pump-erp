@@ -3,7 +3,6 @@ import React from 'react';
 import { render, RenderOptions, RenderResult } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { createMemoryHistory } from 'history';
 import { vi } from 'vitest';
 
 // Mock session data for testing
@@ -26,16 +25,13 @@ export function renderWithProviders(
     initialEntries?: string[];
     renderOptions?: Omit<RenderOptions, 'wrapper'>;
   } = {}
-): RenderResult & { history: ReturnType<typeof createMemoryHistory> } {
+): RenderResult {
   const {
     isAuthenticated = false,
     isSuperAdmin = false,
     initialEntries = ['/'],
     renderOptions = {}
   } = options;
-
-  // Create a memory history object
-  const history = createMemoryHistory({ initialEntries });
 
   // Provide a value for the AuthContext
   const authValue = {
@@ -64,8 +60,7 @@ export function renderWithProviders(
   const result = render(ui, { wrapper: Wrapper, ...renderOptions });
 
   return {
-    ...result,
-    history
+    ...result
   };
 }
 
@@ -111,7 +106,7 @@ export function mockSupabaseQuery(
   error: any = null
 ): void {
   // Create a mock implementation for supabase client
-  const mockSupabaseFrom = vi.hoisted(() => vi.fn());
+  const mockSupabaseFrom = vi.fn();
   
   vi.mock('@/integrations/supabase/client', () => ({
     supabase: {
