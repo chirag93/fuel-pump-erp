@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { render, RenderOptions, RenderResult } from '@testing-library/react';
+import { render, RenderOptions } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { AuthProvider } from '@/contexts/AuthContext';
 import { vi } from 'vitest';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 // Default mock session data
 const DEFAULT_MOCK_SESSION = {
@@ -29,7 +29,7 @@ type CustomRenderOptions = {
 export function renderWithProviders(
   ui: React.ReactElement,
   options: CustomRenderOptions = {}
-): RenderResult {
+): ReturnType<typeof render> {
   const {
     isAuthenticated = false,
     isSuperAdmin = false,
