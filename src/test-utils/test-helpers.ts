@@ -57,11 +57,7 @@ export function renderWithProviders(
   );
 
   // Render with the wrapper
-  const result = render(ui, { wrapper: Wrapper, ...renderOptions });
-
-  return {
-    ...result
-  };
+  return render(ui, { wrapper: Wrapper, ...renderOptions });
 }
 
 // Function to set mobile view for testing
