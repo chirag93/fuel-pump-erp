@@ -22,7 +22,6 @@ const config: Config = {
     }],
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  // Added these settings to fix potential issues
   testTimeout: 10000,
   globals: {
     'ts-jest': {

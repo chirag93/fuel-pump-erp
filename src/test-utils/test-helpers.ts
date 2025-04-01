@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { render, RenderOptions, RenderResult } from '@testing-library/react';
-import { BrowserRouter, MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { createMemoryHistory } from 'history';
 
@@ -110,9 +110,9 @@ export function mockSupabaseQuery(
   error: any = null
 ): void {
   // Create a mock implementation for supabase client
-  const mockSuabaseFrom = jest.requireMock('@/integrations/supabase/client').supabase.from;
+  const mockSupabaseFrom = jest.requireMock('@/integrations/supabase/client').supabase.from;
   
-  mockSuabaseFrom.mockImplementation((table) => {
+  mockSupabaseFrom.mockImplementation((table) => {
     if (table === tableName) {
       const methods = {
         select: jest.fn().mockReturnThis(),
