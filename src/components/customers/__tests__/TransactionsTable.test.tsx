@@ -4,9 +4,10 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TransactionsTable from '../TransactionsTable';
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 
 // Mock fetch for API calls
-global.fetch = jest.fn(() => 
+global.fetch = vi.fn(() => 
   Promise.resolve({
     ok: true,
     json: () => Promise.resolve([])
@@ -14,7 +15,7 @@ global.fetch = jest.fn(() =>
 ) as jest.Mock;
 
 // Mock the BillPreviewDialog component
-jest.mock('@/components/indent/BillPreviewDialog', () => {
+vi.mock('@/components/indent/BillPreviewDialog', () => {
   return function MockBillPreviewDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
     return open ? <div data-testid="bill-preview-dialog">Bill Preview Dialog</div> : null;
   };
@@ -65,7 +66,7 @@ describe('TransactionsTable', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders transactions correctly', () => {
