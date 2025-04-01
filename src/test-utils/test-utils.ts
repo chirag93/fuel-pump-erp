@@ -1,11 +1,11 @@
 
 import React from 'react';
 import { render, RenderOptions, RenderResult } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { vi } from 'vitest';
 
-// Simple mock session data for testing
+// Default mock session data
 const DEFAULT_MOCK_SESSION = {
   user: {
     id: 'test-user-id',
@@ -20,12 +20,11 @@ type CustomRenderOptions = {
   isAuthenticated?: boolean;
   isSuperAdmin?: boolean;
   initialEntries?: string[];
-  initialRoute?: string;
   mockSession?: typeof DEFAULT_MOCK_SESSION;
 } & Omit<RenderOptions, 'wrapper'>;
 
 /**
- * A simplified render function that wraps components with necessary providers
+ * Custom render with necessary providers
  */
 export function renderWithProviders(
   ui: React.ReactElement,
@@ -35,12 +34,11 @@ export function renderWithProviders(
     isAuthenticated = false,
     isSuperAdmin = false,
     initialEntries = ['/'],
-    initialRoute = '/',
     mockSession = DEFAULT_MOCK_SESSION,
     ...renderOptions
   } = options;
 
-  // Create auth context value
+  // Auth context value
   const authValue = {
     session: isAuthenticated ? mockSession : null,
     user: isAuthenticated ? mockSession.user : null,
@@ -54,7 +52,6 @@ export function renderWithProviders(
     setRequirePasswordChange: vi.fn()
   };
 
-  // Create a basic wrapper with providers
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <AuthProvider value={authValue}>
@@ -69,10 +66,10 @@ export function renderWithProviders(
 }
 
 /**
- * Set up the browser environment for mobile device testing
+ * Set up mobile viewport for testing
  */
 export function setupMobileViewport(): void {
-  // Set window dimensions
+  // Set window dimensions for mobile
   Object.defineProperty(window, 'innerWidth', {
     writable: true,
     configurable: true,
@@ -88,7 +85,7 @@ export function setupMobileViewport(): void {
   // Fire resize event
   window.dispatchEvent(new Event('resize'));
 
-  // Setup mock matchMedia
+  // Mock matchMedia for mobile
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation(query => ({
@@ -105,7 +102,7 @@ export function setupMobileViewport(): void {
 }
 
 /**
- * A simplified mock for Supabase queries
+ * Mock Supabase query responses
  */
 export function mockSupabaseQuery(mockData: any, mockError: any = null): void {
   vi.mock('@/integrations/supabase/client', () => ({

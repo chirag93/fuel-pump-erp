@@ -3,13 +3,13 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ApprovalRequests from '@/pages/ApprovalRequests';
-import { renderWithProviders } from '@/test-utils/test-helpers';
+import { renderWithProviders } from '@/test-utils/test-utils';
 import '@testing-library/jest-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { vi } from 'vitest';
 
 // Mock the useApprovalRequests hook
-jest.mock('@/hooks/useApprovalRequests', () => ({
-  useApprovalRequests: jest.fn(() => ({
+vi.mock('@/hooks/useApprovalRequests', () => ({
+  useApprovalRequests: vi.fn(() => ({
     pendingIndents: [
       {
         id: 'indent-1',
@@ -37,28 +37,28 @@ jest.mock('@/hooks/useApprovalRequests', () => ({
     isLoadingIndents: false,
     pendingTransactions: [],
     isLoadingTransactions: false,
-    handleApproveIndent: jest.fn().mockResolvedValue(true),
-    handleRejectIndent: jest.fn().mockResolvedValue(true),
-    handleApproveTransaction: jest.fn().mockResolvedValue(true),
-    handleRejectTransaction: jest.fn().mockResolvedValue(true),
-    refetchIndents: jest.fn(),
-    refetchTransactions: jest.fn()
+    handleApproveIndent: vi.fn().mockResolvedValue(true),
+    handleRejectIndent: vi.fn().mockResolvedValue(true),
+    handleApproveTransaction: vi.fn().mockResolvedValue(true),
+    handleRejectTransaction: vi.fn().mockResolvedValue(true),
+    refetchIndents: vi.fn(),
+    refetchTransactions: vi.fn()
   }))
 }));
 
 // Mock Supabase
-jest.mock('@/integrations/supabase/client', () => ({
+vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: jest.fn().mockReturnThis(),
-    update: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis()
+    from: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis()
   }
 }));
 
 describe('ApprovalRequests Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders the approval requests page', async () => {
@@ -87,7 +87,7 @@ describe('ApprovalRequests Component', () => {
   
   it('handles indent approval', async () => {
     const { useApprovalRequests } = require('@/hooks/useApprovalRequests');
-    const mockHandleApproveIndent = jest.fn().mockResolvedValue(true);
+    const mockHandleApproveIndent = vi.fn().mockResolvedValue(true);
     
     useApprovalRequests.mockReturnValue({
       pendingIndents: [
@@ -107,11 +107,11 @@ describe('ApprovalRequests Component', () => {
       pendingTransactions: [],
       isLoadingTransactions: false,
       handleApproveIndent: mockHandleApproveIndent,
-      handleRejectIndent: jest.fn().mockResolvedValue(true),
-      handleApproveTransaction: jest.fn().mockResolvedValue(true),
-      handleRejectTransaction: jest.fn().mockResolvedValue(true),
-      refetchIndents: jest.fn(),
-      refetchTransactions: jest.fn()
+      handleRejectIndent: vi.fn().mockResolvedValue(true),
+      handleApproveTransaction: vi.fn().mockResolvedValue(true),
+      handleRejectTransaction: vi.fn().mockResolvedValue(true),
+      refetchIndents: vi.fn(),
+      refetchTransactions: vi.fn()
     });
     
     const user = userEvent.setup();
