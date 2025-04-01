@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -109,6 +108,20 @@ export function FuelTypeSettings() {
       // Trim whitespace from fuel type
       const cleanedFuelType = newFuelType.fuel_type.trim();
       
+      // Check if a fuel type with the same name already exists
+      const existingFuelType = fuelSettings.find(
+        (fuel) => fuel.fuel_type.toLowerCase() === cleanedFuelType.toLowerCase()
+      );
+      
+      if (existingFuelType) {
+        toast({
+          title: "Fuel type already exists",
+          description: `A fuel type named '${cleanedFuelType}' already exists. Please use a different name.`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('fuel_settings')
         .insert([{
@@ -120,7 +133,18 @@ export function FuelTypeSettings() {
         }])
         .select();
         
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          toast({
+            title: "Fuel type already exists",
+            description: "A fuel type with this name already exists. Please use a different name.",
+            variant: "destructive"
+          });
+        } else {
+          throw error;
+        }
+        return;
+      }
       
       if (data) {
         setFuelSettings([...fuelSettings, data[0] as FuelSettings]);
@@ -170,6 +194,24 @@ export function FuelTypeSettings() {
       // Trim whitespace from fuel type
       const cleanedFuelType = editFuelType.fuel_type.trim();
       
+      // Check if the name is being changed and conflicts with an existing fuel type
+      if (cleanedFuelType !== editFuelType.fuel_type) {
+        const existingFuelType = fuelSettings.find(
+          (fuel) => 
+            fuel.id !== editFuelType.id && 
+            fuel.fuel_type.toLowerCase() === cleanedFuelType.toLowerCase()
+        );
+        
+        if (existingFuelType) {
+          toast({
+            title: "Fuel type already exists",
+            description: `A fuel type named '${cleanedFuelType}' already exists. Please use a different name.`,
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+      
       console.log('Updating fuel type with data:', {
         ...editFuelType,
         fuel_type: cleanedFuelType,
@@ -190,8 +232,17 @@ export function FuelTypeSettings() {
         .select();
         
       if (error) {
-        console.error('Supabase update error:', error);
-        throw error;
+        if (error.code === '23505') {
+          toast({
+            title: "Fuel type already exists",
+            description: "A fuel type with this name already exists. Please use a different name.",
+            variant: "destructive"
+          });
+        } else {
+          console.error('Supabase update error:', error);
+          throw error;
+        }
+        return;
       }
       
       if (data) {
@@ -368,7 +419,7 @@ export function FuelTypeSettings() {
                 <Input 
                   id="edit_current_price" 
                   type="number"
-                  value={editFuelType.current_price}
+                  value={editFuelType.current_price?.toString()}
                   onChange={e => setEditFuelType({...editFuelType, current_price: parseFloat(e.target.value)})}
                 />
               </div>
@@ -377,7 +428,7 @@ export function FuelTypeSettings() {
                 <Input 
                   id="edit_tank_capacity" 
                   type="number"
-                  value={editFuelType.tank_capacity}
+                  value={editFuelType.tank_capacity?.toString()}
                   onChange={e => setEditFuelType({...editFuelType, tank_capacity: parseFloat(e.target.value)})}
                 />
               </div>
@@ -386,7 +437,7 @@ export function FuelTypeSettings() {
                 <Input 
                   id="edit_current_level" 
                   type="number"
-                  value={editFuelType.current_level}
+                  value={editFuelType.current_level?.toString()}
                   onChange={e => setEditFuelType({...editFuelType, current_level: parseFloat(e.target.value)})}
                 />
               </div>
