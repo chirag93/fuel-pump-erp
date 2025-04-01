@@ -8,9 +8,9 @@
   to = "/index.html"
   status = 200
 
-# Run all tests before build
+# Updated build command to use node directly instead of require()
 [build]
-  command = "node package-scripts.js test:all && npm run build"
+  command = "npm run test:all && npm run build"
   publish = "dist"
 
 # Optional: Custom headers
