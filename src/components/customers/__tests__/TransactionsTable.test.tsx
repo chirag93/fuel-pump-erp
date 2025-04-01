@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TransactionsTable from '../TransactionsTable';
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 // Mock fetch for API calls
 global.fetch = vi.fn(() => 
@@ -12,7 +12,7 @@ global.fetch = vi.fn(() =>
     ok: true,
     json: () => Promise.resolve([])
   })
-) as jest.Mock;
+) as unknown as typeof fetch;
 
 // Mock the BillPreviewDialog component
 vi.mock('@/components/indent/BillPreviewDialog', () => {
