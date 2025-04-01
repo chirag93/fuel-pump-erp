@@ -149,7 +149,8 @@ export function mockSupabaseQuery(
       update: vi.fn().mockReturnThis(),
       delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis()
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis()
     };
   });
 }
