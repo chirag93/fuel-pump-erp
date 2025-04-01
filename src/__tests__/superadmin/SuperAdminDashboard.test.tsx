@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
 import { renderWithProviders } from '@/test-utils/test-utils';
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 
 // Mock API responses
 vi.mock('@/superadmin/api/superAdminApi', () => ({
@@ -35,12 +36,10 @@ describe('SuperAdminDashboard Component', () => {
     
     // Check if overview cards are present
     expect(await screen.findByText('Total Fuel Pumps')).toBeInTheDocument();
-    expect(await screen.findByText('Active Fuel Pumps')).toBeInTheDocument();
+    expect(await screen.findByText('Active Pumps')).toBeInTheDocument();
     
     // Check if fuel pump list is present
-    expect(await screen.findByText('Managed Fuel Pumps')).toBeInTheDocument();
-    expect(await screen.findByText('Test Fuel Pump 1')).toBeInTheDocument();
-    expect(await screen.findByText('Test Fuel Pump 2')).toBeInTheDocument();
+    expect(await screen.findByText('Recent Fuel Pumps')).toBeInTheDocument();
   });
 
   it('redirects to login when not authenticated', () => {

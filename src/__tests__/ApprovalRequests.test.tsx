@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ApprovalRequests from '@/pages/ApprovalRequests';
 import { renderWithProviders } from '@/test-utils/test-utils';
@@ -126,6 +126,4 @@ describe('ApprovalRequests Component', () => {
       id: 'indent-1'
     }));
   });
-  
-  // Additional tests would be added for comprehensive coverage
 });
