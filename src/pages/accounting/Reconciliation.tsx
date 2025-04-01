@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AccountingPageLayout } from '@/components/accounting/AccountingPageLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,20 +10,94 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from '@/hooks/use-toast';
 import { Search, Check, AlertCircle, DownloadCloud, Upload, RefreshCw } from 'lucide-react';
+import DateRangeFilter from '@/components/shared/DateRangeFilter';
+import { format, subDays, startOfMonth } from 'date-fns';
+import { DateRange } from 'react-day-picker';
+import { 
+  getReconciliationTransactions, 
+  getReconciliationSummary, 
+  getReconciliationProgress, 
+  updateReconciliationStatus,
+  ReconciliationTransaction, 
+  ReconciliationSummary, 
+  ReconciliationProgress 
+} from '@/integrations/reconciliation';
 
 const Reconciliation = () => {
   const [reconciliationType, setReconciliationType] = useState<string>('bank');
-  const [fromDate, setFromDate] = useState<Date | undefined>(
-    new Date(new Date().setMonth(new Date().getMonth() - 1))
-  );
-  const [toDate, setToDate] = useState<Date | undefined>(new Date());
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: startOfMonth(new Date()),
+    to: new Date()
+  });
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   
+  const [transactions, setTransactions] = useState<ReconciliationTransaction[]>([]);
+  const [summary, setSummary] = useState<ReconciliationSummary>({
+    systemBalance: 0,
+    bankBalance: 0,
+    difference: 0
+  });
+  const [progress, setProgress] = useState<ReconciliationProgress>({
+    bankReconciliation: 0,
+    cashReconciliation: 0,
+    inventoryReconciliation: 0
+  });
+  
+  // Load initial data
+  useEffect(() => {
+    loadReconciliationData();
+  }, []);
+  
+  // Refresh data when date range changes
+  useEffect(() => {
+    if (dateRange.from && dateRange.to) {
+      loadTransactionData();
+    }
+  }, [dateRange]);
+  
+  const loadReconciliationData = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        loadTransactionData(),
+        loadSummaryData(),
+        loadProgressData()
+      ]);
+    } catch (error) {
+      console.error('Error loading reconciliation data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  
+  const loadTransactionData = async () => {
+    if (!dateRange.from || !dateRange.to) return;
+    
+    const fromDate = format(dateRange.from, 'yyyy-MM-dd');
+    const toDate = format(dateRange.to, 'yyyy-MM-dd');
+    
+    const data = await getReconciliationTransactions(fromDate, toDate, searchTerm);
+    setTransactions(data);
+  };
+  
+  const loadSummaryData = async () => {
+    const data = await getReconciliationSummary();
+    setSummary(data);
+  };
+  
+  const loadProgressData = async () => {
+    const data = await getReconciliationProgress();
+    setProgress(data);
+  };
+  
   const handleSelectAllChange = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
-      setSelectedTransactions(transactions.map(transaction => transaction.id));
+      setSelectedTransactions(transactions
+        .filter(t => t.status !== 'reconciled')
+        .map(transaction => transaction.id)
+      );
     } else {
       setSelectedTransactions([]);
     }
@@ -37,7 +111,7 @@ const Reconciliation = () => {
     }
   };
   
-  const handleReconcile = () => {
+  const handleReconcile = async () => {
     if (selectedTransactions.length === 0) {
       toast({
         title: "No Transactions Selected",
@@ -47,23 +121,29 @@ const Reconciliation = () => {
       return;
     }
     
-    toast({
-      title: "Transactions Reconciled",
-      description: `Successfully reconciled ${selectedTransactions.length} transactions.`,
-    });
+    const success = await updateReconciliationStatus(selectedTransactions, 'reconciled');
     
-    // In a real app, this would update the database
-    // For now, we'll just clear the selection to simulate completion
-    setSelectedTransactions([]);
-    
-    // Update the transactions to show them as reconciled
-    const updatedTransactions = [...transactions];
-    selectedTransactions.forEach(id => {
-      const transaction = updatedTransactions.find(t => t.id === id);
-      if (transaction) {
-        transaction.status = 'reconciled';
-      }
-    });
+    if (success) {
+      toast({
+        title: "Transactions Reconciled",
+        description: `Successfully reconciled ${selectedTransactions.length} transactions.`,
+      });
+      
+      // Update local state to reflect changes
+      const updatedTransactions = transactions.map(transaction => {
+        if (selectedTransactions.includes(transaction.id)) {
+          return { ...transaction, status: 'reconciled' as const };
+        }
+        return transaction;
+      });
+      
+      setTransactions(updatedTransactions);
+      setSelectedTransactions([]);
+      
+      // Refresh summary data
+      loadSummaryData();
+      loadProgressData();
+    }
   };
   
   const handleImportStatement = () => {
@@ -83,45 +163,65 @@ const Reconciliation = () => {
   const handleRefreshData = () => {
     setRefreshing(true);
     
-    // Simulate a data refresh
-    setTimeout(() => {
+    loadReconciliationData().finally(() => {
       setRefreshing(false);
       toast({
         title: "Data Refreshed",
         description: "The reconciliation data has been refreshed.",
       });
-    }, 1000);
+    });
   };
   
-  const handleReconcileSingle = (transactionId: string) => {
-    toast({
-      title: "Transaction Reconciled",
-      description: `Transaction ${transactionId} has been reconciled.`,
-    });
+  const handleReconcileSingle = async (transactionId: string) => {
+    const success = await updateReconciliationStatus([transactionId], 'reconciled');
     
-    // Update the specific transaction to show it as reconciled
-    const updatedTransactions = [...transactions];
-    const transactionIndex = updatedTransactions.findIndex(t => t.id === transactionId);
-    if (transactionIndex !== -1) {
-      updatedTransactions[transactionIndex].status = 'reconciled';
+    if (success) {
+      toast({
+        title: "Transaction Reconciled",
+        description: `Transaction ${transactionId} has been reconciled.`,
+      });
+      
+      // Update the specific transaction to show it as reconciled
+      const updatedTransactions = transactions.map(transaction => {
+        if (transaction.id === transactionId) {
+          return { ...transaction, status: 'reconciled' as const };
+        }
+        return transaction;
+      });
+      
+      setTransactions(updatedTransactions);
+      
+      // Refresh summary data
+      loadSummaryData();
+      loadProgressData();
     }
   };
   
-  // Sample transaction data for reconciliation
-  const [transactions, setTransactions] = useState([
-    { id: 'TX001', date: '2023-06-15', description: 'Fuel Purchase - Truck ABC123', amount: 5200, status: 'unreconciled' },
-    { id: 'TX002', date: '2023-06-16', description: 'Payment - Global Logistics', amount: 8750, status: 'unreconciled' },
-    { id: 'TX003', date: '2023-06-18', description: 'Service Fee', amount: 1200, status: 'reconciled' },
-    { id: 'TX004', date: '2023-06-20', description: 'Fuel Purchase - Truck XYZ789', amount: 4800, status: 'unreconciled' },
-    { id: 'TX005', date: '2023-06-22', description: 'Customer Payment - Acme Corp', amount: 12500, status: 'unreconciled' },
-    { id: 'TX006', date: '2023-06-25', description: 'Bank Charges', amount: 350, status: 'reconciled' },
-  ]);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
   
-  // Filter transactions based on search term
-  const filteredTransactions = transactions.filter(transaction =>
-    transaction.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    transaction.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Apply search filter when the search term changes
+  useEffect(() => {
+    const delaySearch = setTimeout(() => {
+      loadTransactionData();
+    }, 300);
+    
+    return () => clearTimeout(delaySearch);
+  }, [searchTerm]);
+  
+  const reconciliationTypeOptions = [
+    { value: 'bank', label: 'Bank Reconciliation' },
+    { value: 'cash', label: 'Cash Reconciliation' },
+    { value: 'inventory', label: 'Inventory Reconciliation' }
+  ];
+  
+  const handleDateRangeChange = (range: DateRange) => {
+    setDateRange(range);
+  };
+  
+  // Calculate the total number of reconciled transactions
+  const reconciledCount = transactions.filter(t => t.status === 'reconciled').length;
   
   return (
     <AccountingPageLayout 
@@ -163,21 +263,22 @@ const Reconciliation = () => {
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="bank">Bank Reconciliation</SelectItem>
-                    <SelectItem value="cash">Cash Reconciliation</SelectItem>
-                    <SelectItem value="inventory">Inventory Reconciliation</SelectItem>
+                    {reconciliationTypeOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               
               <div className="space-y-2 flex-1 min-w-[200px]">
-                <label className="text-sm font-medium">From Date</label>
-                <DatePicker date={fromDate} setDate={setFromDate} />
-              </div>
-              
-              <div className="space-y-2 flex-1 min-w-[200px]">
-                <label className="text-sm font-medium">To Date</label>
-                <DatePicker date={toDate} setDate={setToDate} />
+                <label className="text-sm font-medium">Date Range</label>
+                <DateRangeFilter 
+                  dateRange={dateRange}
+                  onDateRangeChange={handleDateRangeChange}
+                  className="w-full"
+                />
               </div>
               
               <div className="space-y-2 flex-1 min-w-[200px]">
@@ -189,7 +290,7 @@ const Reconciliation = () => {
                     placeholder="Search transactions..."
                     className="pl-8"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={handleSearchChange}
                   />
                 </div>
               </div>
@@ -202,7 +303,10 @@ const Reconciliation = () => {
                     <TableRow>
                       <TableHead className="w-[50px]">
                         <Checkbox 
-                          checked={selectedTransactions.length === filteredTransactions.filter(t => t.status !== 'reconciled').length && filteredTransactions.filter(t => t.status !== 'reconciled').length > 0}
+                          checked={
+                            selectedTransactions.length === transactions.filter(t => t.status !== 'reconciled').length && 
+                            transactions.filter(t => t.status !== 'reconciled').length > 0
+                          }
                           onCheckedChange={handleSelectAllChange}
                         />
                       </TableHead>
@@ -215,7 +319,7 @@ const Reconciliation = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredTransactions.map((transaction) => (
+                    {transactions.map((transaction) => (
                       <TableRow key={transaction.id}>
                         <TableCell>
                           <Checkbox 
@@ -248,7 +352,7 @@ const Reconciliation = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {filteredTransactions.length === 0 && (
+                    {transactions.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
                           No transactions found
@@ -262,7 +366,7 @@ const Reconciliation = () => {
           </CardContent>
           <CardFooter className="flex justify-between">
             <div className="text-sm text-muted-foreground">
-              <span className="font-medium">{transactions.filter(t => t.status === 'reconciled').length}</span> of {transactions.length} transactions reconciled
+              <span className="font-medium">{reconciledCount}</span> of {transactions.length} transactions reconciled
             </div>
             <Button variant="outline" onClick={handleRefreshData} disabled={refreshing}>
               {refreshing ? (
@@ -291,11 +395,11 @@ const Reconciliation = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 border rounded-md">
                     <div className="text-sm text-muted-foreground">System Balance</div>
-                    <div className="text-2xl font-bold mt-1">₹124,850.00</div>
+                    <div className="text-2xl font-bold mt-1">₹{summary.systemBalance.toLocaleString()}</div>
                   </div>
                   <div className="p-4 border rounded-md">
                     <div className="text-sm text-muted-foreground">Bank Balance</div>
-                    <div className="text-2xl font-bold mt-1">₹123,500.00</div>
+                    <div className="text-2xl font-bold mt-1">₹{summary.bankBalance.toLocaleString()}</div>
                   </div>
                 </div>
                 
@@ -304,7 +408,7 @@ const Reconciliation = () => {
                     <AlertCircle className="h-5 w-5 text-yellow-500" />
                     <div className="text-sm font-medium">Difference</div>
                   </div>
-                  <div className="text-xl font-bold mt-1 text-yellow-600">₹1,350.00</div>
+                  <div className="text-xl font-bold mt-1 text-yellow-600">₹{summary.difference.toLocaleString()}</div>
                 </div>
               </div>
             </CardContent>
@@ -319,26 +423,35 @@ const Reconciliation = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Bank Reconciliation</span>
-                  <span className="text-sm font-medium">68%</span>
+                  <span className="text-sm font-medium">{progress.bankReconciliation}%</span>
                 </div>
                 <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full" style={{ width: '68%' }}></div>
+                  <div 
+                    className="h-full bg-primary rounded-full" 
+                    style={{ width: `${progress.bankReconciliation}%` }}
+                  />
                 </div>
                 
                 <div className="flex items-center justify-between mt-4">
                   <span className="text-sm">Cash Reconciliation</span>
-                  <span className="text-sm font-medium">92%</span>
+                  <span className="text-sm font-medium">{progress.cashReconciliation}%</span>
                 </div>
                 <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full" style={{ width: '92%' }}></div>
+                  <div 
+                    className="h-full bg-primary rounded-full" 
+                    style={{ width: `${progress.cashReconciliation}%` }}
+                  />
                 </div>
                 
                 <div className="flex items-center justify-between mt-4">
                   <span className="text-sm">Inventory Reconciliation</span>
-                  <span className="text-sm font-medium">45%</span>
+                  <span className="text-sm font-medium">{progress.inventoryReconciliation}%</span>
                 </div>
                 <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full" style={{ width: '45%' }}></div>
+                  <div 
+                    className="h-full bg-primary rounded-full" 
+                    style={{ width: `${progress.inventoryReconciliation}%` }}
+                  />
                 </div>
               </div>
             </CardContent>

@@ -17,6 +17,7 @@ import SignIn from "@/pages/SignIn";
 import SignUp from "@/pages/SignUp";
 import DailySalesReport from "@/pages/DailySalesReport";
 import FuelTests from "@/pages/FuelTests";
+import Reconciliation from "@/pages/accounting/Reconciliation";
 
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const DailySalesRecord = lazy(() => import("@/pages/DailySalesRecord"));
@@ -184,6 +185,14 @@ export const routes: RouteObject[] = [
         element: (
           <Suspense fallback={<>Loading...</>}>
             <StaffManagement />
+          </Suspense>
+        ),
+      },
+      {
+        path: "accounting/reconciliation",
+        element: (
+          <Suspense fallback={<>Loading...</>}>
+            <Reconciliation />
           </Suspense>
         ),
       },
