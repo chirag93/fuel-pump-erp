@@ -5,10 +5,11 @@ import userEvent from '@testing-library/user-event';
 import MobileShiftManagement from '@/pages/mobile/MobileShiftManagement';
 import { renderWithProviders, setMobileMode } from '@/test-utils/test-helpers';
 import '@testing-library/jest-dom';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 // Mock the useShiftManagement hook
-jest.mock('@/hooks/useShiftManagement', () => ({
-  useShiftManagement: jest.fn(() => ({
+vi.mock('@/hooks/useShiftManagement', () => ({
+  useShiftManagement: vi.fn(() => ({
     staffList: [
       { id: 'staff-1', name: 'John Doe' },
       { id: 'staff-2', name: 'Jane Smith' }
@@ -32,23 +33,23 @@ jest.mock('@/hooks/useShiftManagement', () => ({
       opening_reading: 0,
       starting_cash_balance: 0
     },
-    setNewShift: jest.fn(),
-    handleAddShift: jest.fn().mockResolvedValue(true),
+    setNewShift: vi.fn(),
+    handleAddShift: vi.fn().mockResolvedValue(true),
     isLoading: false,
-    fetchShifts: jest.fn()
+    fetchShifts: vi.fn()
   }))
 }));
 
 // Mock toast
-jest.mock('@/hooks/use-toast', () => ({
-  useToast: jest.fn(() => ({
-    toast: jest.fn()
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: vi.fn(() => ({
+    toast: vi.fn()
   }))
 }));
 
 describe('MobileShiftManagement Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     setMobileMode(true);
   });
 

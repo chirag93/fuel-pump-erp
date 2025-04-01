@@ -5,9 +5,9 @@ const { execSync } = require('child_process');
 try {
   console.log('Running tests...');
   
-  // Run Jest tests with CI=true to ensure they don't hang
+  // Run Vitest tests
   try {
-    execSync('CI=true npx jest', { stdio: 'inherit' });
+    execSync('CI=true npx vitest run', { stdio: 'inherit' });
     console.log('✅ All tests passed!');
   } catch (error) {
     console.error('❌ Tests failed:', error.message);

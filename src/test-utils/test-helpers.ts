@@ -4,6 +4,7 @@ import { render, RenderOptions, RenderResult } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { createMemoryHistory } from 'history';
+import { vi } from 'vitest';
 
 // Mock session data for testing
 const mockSession = {

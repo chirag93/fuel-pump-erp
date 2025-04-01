@@ -5,76 +5,77 @@ import userEvent from '@testing-library/user-event';
 import MobileRecordIndent from '@/pages/mobile/MobileRecordIndent';
 import { renderWithProviders, setMobileMode, mockSupabaseQuery } from '@/test-utils/test-helpers';
 import '@testing-library/jest-dom';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 // Mock hooks and services
-jest.mock('@/hooks/mobile/useIndentForm', () => ({
-  useIndentForm: jest.fn(() => ({
+vi.mock('@/hooks/mobile/useIndentForm', () => ({
+  useIndentForm: vi.fn(() => ({
     fuelType: 'Petrol',
-    setFuelType: jest.fn(),
+    setFuelType: vi.fn(),
     amount: 0,
-    setAmount: jest.fn(),
+    setAmount: vi.fn(),
     quantity: 0,
-    setQuantity: jest.fn(),
+    setQuantity: vi.fn(),
     discountAmount: 0,
     date: new Date(),
     selectedStaff: '',
     isSubmitting: false,
     staff: [],
     indentNumber: '',
-    setIndentNumber: jest.fn(),
+    setIndentNumber: vi.fn(),
     indentNumberError: '',
-    setIndentNumberError: jest.fn(),
+    setIndentNumberError: vi.fn(),
     searchIndentNumber: '',
-    setSearchIndentNumber: jest.fn(),
+    setSearchIndentNumber: vi.fn(),
     selectedCustomer: '',
-    setSelectedCustomer: jest.fn(),
+    setSelectedCustomer: vi.fn(),
     selectedCustomerName: '',
-    setSelectedCustomerName: jest.fn(),
+    setSelectedCustomerName: vi.fn(),
     selectedVehicle: '',
-    setSelectedVehicle: jest.fn(),
+    setSelectedVehicle: vi.fn(),
     selectedVehicleNumber: '',
-    setSelectedVehicleNumber: jest.fn(),
+    setSelectedVehicleNumber: vi.fn(),
     selectedBooklet: '',
-    setSelectedBooklet: jest.fn(),
+    setSelectedBooklet: vi.fn(),
     successDialogOpen: false,
-    setSuccessDialogOpen: jest.fn(),
+    setSuccessDialogOpen: vi.fn(),
     successDetails: null,
-    setSuccessDetails: jest.fn(),
+    setSuccessDetails: vi.fn(),
     vehicles: [
       { id: 'veh-1', number: 'ABC123', type: 'Car', customer_id: 'cust-1' },
       { id: 'veh-2', number: 'XYZ789', type: 'Truck', customer_id: 'cust-1' }
     ],
-    resetForm: jest.fn()
+    resetForm: vi.fn()
   }))
 }));
 
-jest.mock('@/hooks/mobile/useIndentValidation', () => ({
-  useIndentValidation: jest.fn(() => ({
+vi.mock('@/hooks/mobile/useIndentValidation', () => ({
+  useIndentValidation: vi.fn(() => ({
     indentNumberError: '',
-    setIndentNumberError: jest.fn(),
-    validateIndentNumber: jest.fn().mockResolvedValue(true)
+    setIndentNumberError: vi.fn(),
+    validateIndentNumber: vi.fn().mockResolvedValue(true)
   }))
 }));
 
-jest.mock('@/hooks/mobile/useIndentSearch', () => ({
-  useIndentSearch: jest.fn(() => ({
+vi.mock('@/hooks/mobile/useIndentSearch', () => ({
+  useIndentSearch: vi.fn(() => ({
     isSearching: false,
     searchError: '',
-    searchByIndentNumber: jest.fn(),
-    setSearchError: jest.fn()
+    searchByIndentNumber: vi.fn(),
+    setSearchError: vi.fn()
   }))
 }));
 
-jest.mock('@/hooks/mobile/useSaveIndent', () => ({
-  useSaveIndent: jest.fn(() => ({
+vi.mock('@/hooks/mobile/useSaveIndent', () => ({
+  useSaveIndent: vi.fn(() => ({
     isSubmitting: false,
-    handleSaveIndent: jest.fn()
+    handleSaveIndent: vi.fn()
   }))
 }));
 
 describe('MobileRecordIndent Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     setMobileMode(true);
   });
 
