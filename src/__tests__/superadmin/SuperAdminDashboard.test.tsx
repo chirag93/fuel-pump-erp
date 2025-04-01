@@ -1,10 +1,10 @@
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
 import { renderWithProviders } from '@/test-utils/test-utils';
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 // Mock API responses
 vi.mock('@/superadmin/api/superAdminApi', () => ({

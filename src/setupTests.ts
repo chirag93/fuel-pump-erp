@@ -1,5 +1,6 @@
+
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, beforeEach } from 'vitest';
 
 // Mock fetch API globally for all tests
 global.fetch = vi.fn(() => 

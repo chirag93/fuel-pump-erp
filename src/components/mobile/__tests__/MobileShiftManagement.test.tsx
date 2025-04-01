@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MobileShiftManagement from '@/pages/mobile/MobileShiftManagement';
 import { renderWithProviders, setupMobileViewport } from '@/test-utils/test-utils';
@@ -68,6 +68,4 @@ describe('MobileShiftManagement Component', () => {
     expect(screen.getByText('John Doe')).toBeInTheDocument();
     expect(screen.getByText('End Shift')).toBeInTheDocument();
   });
-
-  // Additional tests would be added for comprehensive coverage
 });

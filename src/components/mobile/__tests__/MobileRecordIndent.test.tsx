@@ -1,9 +1,8 @@
 
 import React from 'react';
 import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import MobileRecordIndent from '@/pages/mobile/MobileRecordIndent';
-import { renderWithProviders, setupMobileViewport, mockSupabaseQuery } from '@/test-utils/test-utils';
+import { renderWithProviders, setupMobileViewport } from '@/test-utils/test-utils';
 import '@testing-library/jest-dom';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
@@ -92,6 +91,4 @@ describe('MobileRecordIndent Component', () => {
     expect(screen.getByText('Submit for Approval')).toBeInTheDocument();
     expect(screen.getByText('Mobile indents require approval from the web system before being processed.')).toBeInTheDocument();
   });
-
-  // Additional tests would be added here for comprehensive coverage
 });

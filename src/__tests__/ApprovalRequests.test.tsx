@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ApprovalRequests from '@/pages/ApprovalRequests';
 import { renderWithProviders } from '@/test-utils/test-utils';
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 // Mock the useApprovalRequests hook
 vi.mock('@/hooks/useApprovalRequests', () => ({
