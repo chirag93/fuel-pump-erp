@@ -44,18 +44,24 @@ export function renderWithProviders(
   // Set up history with the initial route
   window.history.pushState({}, 'Test page', route);
 
-  return render(ui, {
-    wrapper: ({ children }) => (
-      <BrowserRouter>
-        <AuthProvider overrideValue={authContextValue}>
-          <SuperAdminAuthProvider overrideValue={superAdminAuthValue}>
-            {children}
-          </SuperAdminAuthProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    ),
-    ...renderOptions,
-  });
+  return {
+    ...render(ui, {
+      wrapper: ({ children }) => (
+        <BrowserRouter>
+          <AuthProvider overrideValue={authContextValue}>
+            <SuperAdminAuthProvider overrideValue={superAdminAuthValue}>
+              {children}
+            </SuperAdminAuthProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      ),
+      ...renderOptions,
+    }),
+    history: {
+      location: window.location,
+      push: (newPath: string) => window.history.pushState({}, '', newPath)
+    }
+  };
 }
 
 // Mock the useIsMobile hook for mobile testing
