@@ -2,7 +2,7 @@
 import React from 'react';
 import { screen } from '@testing-library/react';
 import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
-import { renderWithProviders } from '@/test-utils/test-utils';
+import { renderWithProviders } from '@/test-utils/testing-helpers';
 import '@testing-library/jest-dom';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 

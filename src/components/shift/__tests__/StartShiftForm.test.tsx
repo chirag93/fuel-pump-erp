@@ -1,14 +1,15 @@
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StartShiftForm } from '@/components/shift/StartShiftForm';
 import '@testing-library/jest-dom';
+import { vi, describe, it, expect } from 'vitest';
 
 describe('StartShiftForm Component', () => {
-  const mockSetFormOpen = jest.fn();
-  const mockSetNewShift = jest.fn();
-  const mockHandleAddShift = jest.fn().mockResolvedValue(true);
+  const mockSetFormOpen = vi.fn();
+  const mockSetNewShift = vi.fn();
+  const mockHandleAddShift = vi.fn().mockResolvedValue(true);
   
   const defaultProps = {
     formOpen: true,
@@ -70,7 +71,7 @@ describe('StartShiftForm Component', () => {
   });
 
   it('keeps dialog open if handleAddShift returns false', async () => {
-    const mockFailedAddShift = jest.fn().mockResolvedValue(false);
+    const mockFailedAddShift = vi.fn().mockResolvedValue(false);
     const user = userEvent.setup();
     
     render(

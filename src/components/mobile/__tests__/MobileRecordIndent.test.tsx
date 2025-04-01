@@ -2,7 +2,7 @@
 import React from 'react';
 import { screen } from '@testing-library/react';
 import MobileRecordIndent from '@/pages/mobile/MobileRecordIndent';
-import { renderWithProviders, setupMobileViewport } from '@/test-utils/test-utils';
+import { renderWithProviders, setupMobileViewport } from '@/test-utils/testing-helpers';
 import '@testing-library/jest-dom';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
