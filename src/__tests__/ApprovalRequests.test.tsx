@@ -3,7 +3,7 @@ import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ApprovalRequests from '@/pages/ApprovalRequests';
-import { renderWithProviders } from '@/test-utils/test-utils';
+import { renderWithProviders } from '@/test-utils/testing-helpers';
 import '@testing-library/jest-dom';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
