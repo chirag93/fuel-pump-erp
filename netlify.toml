@@ -10,7 +10,7 @@
 
 # Run all tests before build
 [build]
-  command = "npm run test:all && npm run build"
+  command = "node package-scripts.js test:all && npm run build"
   publish = "dist"
 
 # Optional: Custom headers
