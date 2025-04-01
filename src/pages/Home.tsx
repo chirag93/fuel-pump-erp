@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -22,6 +21,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { getFuelPumpId } from '@/integrations/utils';
+import { toast } from '@/components/ui/use-toast';
 
 interface QuickActionProps {
   title: string;
@@ -75,23 +76,39 @@ const QuickAction = ({
 
 const Home = () => {
   const { fuelPumpName } = useAuth();
-  const [fuelLevels, setFuelLevels] = useState<FuelLevel[]>([
-    { fuelType: 'Petrol', lastUpdated: 'Loading...' },
-    { fuelType: 'Diesel', lastUpdated: 'Loading...' }
-  ]);
+  const [fuelLevels, setFuelLevels] = useState<FuelLevel[]>([]);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
+  const [isLoadingFuelLevels, setIsLoadingFuelLevels] = useState(true);
 
   // Fetch fuel levels from the database with tank capacities from settings
   useEffect(() => {
     const fetchFuelLevels = async () => {
       try {
+        setIsLoadingFuelLevels(true);
         console.log('Fetching fuel settings and levels for Home page');
+        
+        // Get the current fuel pump ID
+        const fuelPumpId = await getFuelPumpId();
+        
+        if (!fuelPumpId) {
+          console.log('No fuel pump ID available');
+          toast({
+            title: "Authentication Required",
+            description: "Please log in with a fuel pump account to view fuel settings",
+            variant: "destructive"
+          });
+          setIsLoadingFuelLevels(false);
+          return;
+        }
+        
+        console.log(`Fetching fuel data for fuel pump ID: ${fuelPumpId}`);
         
         // First, get the fuel settings to get tank capacities and current levels
         const { data: fuelSettingsData, error: fuelSettingsError } = await supabase
           .from('fuel_settings')
-          .select('fuel_type, tank_capacity, current_level, updated_at');
+          .select('fuel_type, tank_capacity, current_level, updated_at')
+          .eq('fuel_pump_id', fuelPumpId);
           
         if (fuelSettingsError) {
           console.error('Error fetching fuel settings:', fuelSettingsError);
@@ -115,6 +132,7 @@ const Home = () => {
           
           if (fuelData.length > 0) {
             setFuelLevels(fuelData);
+            setIsLoadingFuelLevels(false);
             return; // Exit early if we have good data from settings
           }
         }
@@ -124,6 +142,7 @@ const Home = () => {
         const { data, error } = await supabase
           .from('inventory')
           .select('*')
+          .eq('fuel_pump_id', fuelPumpId)
           .order('date', { ascending: false });
           
         if (error) {
@@ -135,9 +154,7 @@ const Home = () => {
           // Group the latest entries by fuel type
           const latestByFuelType: Record<string, any> = {};
           data.forEach(item => {
-            // Only process Petrol and Diesel fuel types (no CNG)
-            if ((item.fuel_type === 'Petrol' || item.fuel_type === 'Diesel' || item.fuel_type === 'Premium') && 
-                (!latestByFuelType[item.fuel_type] || new Date(item.date) > new Date(latestByFuelType[item.fuel_type].date))) {
+            if (!latestByFuelType[item.fuel_type] || new Date(item.date) > new Date(latestByFuelType[item.fuel_type].date)) {
               latestByFuelType[item.fuel_type] = item;
             }
           });
@@ -168,6 +185,8 @@ const Home = () => {
         }
       } catch (error) {
         console.error('Error fetching fuel levels:', error);
+      } finally {
+        setIsLoadingFuelLevels(false);
       }
     };
     
@@ -287,14 +306,14 @@ const Home = () => {
   };
 
   // Helper function to parse time ago format back to milliseconds
-  const parseTimeAgo = (timeAgo: string): number => {
-    if (timeAgo.includes('min')) {
-      const mins = parseInt(timeAgo);
+  const parseTimeAgo = (timeString: string): number => {
+    if (timeString.includes('min')) {
+      const mins = parseInt(timeString);
       return mins * 60 * 1000;
-    } else if (timeAgo.includes('hour')) {
-      const hours = parseInt(timeAgo);
+    } else if (timeString.includes('hour')) {
+      const hours = parseInt(timeString);
       return hours * 60 * 60 * 1000;
-    } else if (timeAgo === 'Yesterday') {
+    } else if (timeString === 'Yesterday') {
       return 24 * 60 * 60 * 1000;
     }
     return 0;
@@ -379,16 +398,26 @@ const Home = () => {
 
         <div>
           <h3 className="mb-4 text-xl font-semibold">Fuel Storage Status</h3>
-          <div className="grid gap-4 md:grid-cols-2">
-            {fuelLevels.map((fuel, index) => (
-              <FuelTankDisplay 
-                key={index}
-                fuelType={fuel.fuelType} 
-                lastUpdated={fuel.lastUpdated}
-                showTankIcon={true}
-              />
-            ))}
-          </div>
+          {isLoadingFuelLevels ? (
+            <div className="text-center py-4">
+              <p className="text-muted-foreground">Loading fuel storage data...</p>
+            </div>
+          ) : fuelLevels.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-muted-foreground">No fuel storage data available</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {fuelLevels.map((fuel, index) => (
+                <FuelTankDisplay 
+                  key={index}
+                  fuelType={fuel.fuelType} 
+                  lastUpdated={fuel.lastUpdated}
+                  showTankIcon={true}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mt-8">
