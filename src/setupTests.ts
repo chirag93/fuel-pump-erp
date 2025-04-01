@@ -1,4 +1,3 @@
-
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
@@ -35,6 +34,18 @@ const localStorageMock = (() => {
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 });
+
+// Suppress console.error during tests to keep logs clean
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  if (
+    typeof args[0] === 'string' && 
+    (args[0].includes('Warning:') || args[0].includes('React does not recognize'))
+  ) {
+    return;
+  }
+  originalConsoleError(...args);
+};
 
 // Reset mocks before each test
 beforeEach(() => {

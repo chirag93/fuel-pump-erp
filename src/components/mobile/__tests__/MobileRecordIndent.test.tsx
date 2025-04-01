@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MobileRecordIndent from '@/pages/mobile/MobileRecordIndent';
-import { renderWithProviders, setMobileMode, mockSupabaseQuery } from '@/test-utils/test-helpers';
+import { renderWithProviders, setupMobileViewport, mockSupabaseQuery } from '@/test-utils/test-utils';
 import '@testing-library/jest-dom';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
@@ -76,7 +76,7 @@ vi.mock('@/hooks/mobile/useSaveIndent', () => ({
 describe('MobileRecordIndent Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    setMobileMode(true);
+    setupMobileViewport();
   });
 
   it('renders the mobile record indent form', async () => {
@@ -94,5 +94,4 @@ describe('MobileRecordIndent Component', () => {
   });
 
   // Additional tests would be added here for comprehensive coverage
-  // These would test form submission, validation, searching, etc.
 });

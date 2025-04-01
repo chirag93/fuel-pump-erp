@@ -3,11 +3,11 @@
 const { execSync } = require('child_process');
 
 try {
-  console.log('Running tests...');
+  console.log('🧪 Running tests...');
   
   // Run Vitest tests
   try {
-    execSync('CI=true npx vitest run', { stdio: 'inherit' });
+    execSync('npx vitest run', { stdio: 'inherit' });
     console.log('✅ All tests passed!');
   } catch (error) {
     console.error('❌ Tests failed:', error.message);

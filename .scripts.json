@@ -4,11 +4,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:indent": "node run-indent-tests.js",
-    "test:all": "node run-all-tests.js",
-    "test:mobile": "vitest run --mode=mobile",
-    "test:web": "vitest run web",
-    "test:superadmin": "vitest run superadmin",
-    "test:integration": "vitest run integration"
+    "test:indent": "vitest run \"**/__tests__/**/indent*.test.{ts,tsx}\"",
+    "test:all": "vitest run",
+    "test:mobile": "vitest run \"**/__tests__/**/mobile*.test.{ts,tsx}\"",
+    "test:web": "vitest run \"**/__tests__/**/!(mobile|superadmin)*.test.{ts,tsx}\"",
+    "test:superadmin": "vitest run \"**/__tests__/**/superadmin*.test.{ts,tsx}\"",
+    "test:integration": "vitest run \"integrations/__tests__/**/*.test.ts\""
   }
 }

@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MobileShiftManagement from '@/pages/mobile/MobileShiftManagement';
-import { renderWithProviders, setMobileMode } from '@/test-utils/test-helpers';
+import { renderWithProviders, setupMobileViewport } from '@/test-utils/test-utils';
 import '@testing-library/jest-dom';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
@@ -50,7 +50,7 @@ vi.mock('@/hooks/use-toast', () => ({
 describe('MobileShiftManagement Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    setMobileMode(true);
+    setupMobileViewport();
   });
 
   it('renders the mobile shift management page', async () => {
