@@ -17,10 +17,10 @@ console.log(`${colors.blue}Running comprehensive test suite for Fuel Pro 360${co
 console.log('===============================================');
 
 const testSuites = [
-  { name: 'Web Application Core', command: 'npx jest --selectProjects web' },
-  { name: 'Mobile Interface', command: 'npx jest --selectProjects mobile' },
-  { name: 'Super Admin Portal', command: 'npx jest --selectProjects superadmin' },
-  { name: 'Integration Tests', command: 'npx jest --selectProjects integration' }
+  { name: 'Web Application Core', command: 'npx vitest run "src/__tests__/(?!mobile|superadmin).*\\.test\\.(ts|tsx)$"' },
+  { name: 'Mobile Interface', command: 'npx vitest run "src/__tests__/mobile.*\\.test\\.(ts|tsx)$"' },
+  { name: 'Super Admin Portal', command: 'npx vitest run "src/__tests__/superadmin.*\\.test\\.(ts|tsx)$"' },
+  { name: 'Integration Tests', command: 'npx vitest run "src/integrations/__tests__/.*\\.test\\.ts$"' }
 ];
 
 let allTestsPassed = true;
@@ -31,7 +31,7 @@ for (const suite of testSuites) {
   console.log('-----------------------------------------------');
   
   try {
-    execSync(`CI=true ${suite.command} --silent`, { stdio: 'inherit' });
+    execSync(`${suite.command}`, { stdio: 'inherit' });
     console.log(`${colors.green}✓ ${suite.name} tests passed${colors.reset}`);
   } catch (error) {
     console.error(`${colors.red}✗ ${suite.name} tests failed${colors.reset}`);

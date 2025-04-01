@@ -1,14 +1,14 @@
 
 {
   "scripts": {
-    "test": "npx jest",
-    "test:watch": "npx jest --watch",
-    "test:coverage": "npx jest --coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "test:indent": "node run-indent-tests.js",
     "test:all": "node run-all-tests.js",
-    "test:mobile": "npx jest --selectProjects mobile",
-    "test:web": "npx jest --selectProjects web",
-    "test:superadmin": "npx jest --selectProjects superadmin",
-    "test:integration": "npx jest --selectProjects integration"
+    "test:mobile": "vitest run --mode=mobile",
+    "test:web": "vitest run web",
+    "test:superadmin": "vitest run superadmin",
+    "test:integration": "vitest run integration"
   }
 }

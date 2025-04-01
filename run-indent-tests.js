@@ -8,7 +8,7 @@ try {
   // Run React component tests
   console.log('\n🧪 Running component tests:');
   try {
-    execSync('npx jest "indent/__tests__" "pages/__tests__/RecordIndent.test.tsx"', { stdio: 'inherit' });
+    execSync('npx vitest run "indent/__tests__" "pages/__tests__/RecordIndent.test.tsx"', { stdio: 'inherit' });
   } catch (error) {
     console.error('Component tests failed:', error.message);
     if (!process.env.NETLIFY) {
@@ -21,7 +21,7 @@ try {
   // Run integration tests
   console.log('\n🧪 Running integration tests:');
   try {
-    execSync('npx jest "integrations/__tests__/indents.test.ts"', { stdio: 'inherit' });
+    execSync('npx vitest run "integrations/__tests__/indents.test.ts"', { stdio: 'inherit' });
   } catch (error) {
     console.error('Integration tests failed:', error.message);
     if (!process.env.NETLIFY) {
@@ -34,7 +34,7 @@ try {
   // Run backend API tests
   console.log('\n🧪 Running backend API tests:');
   try {
-    execSync('npx jest "backend/__tests__/app.test.js"', { stdio: 'inherit' });
+    execSync('npx vitest run "backend/__tests__/app.test.js"', { stdio: 'inherit' });
   } catch (error) {
     console.error('Backend API tests failed:', error.message);
     if (!process.env.NETLIFY) {

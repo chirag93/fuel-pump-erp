@@ -40,14 +40,14 @@ export function renderWithProviders(
   const authValue = {
     session: isAuthenticated ? mockSession : null,
     user: isAuthenticated ? mockSession.user : null,
-    signIn: jest.fn().mockResolvedValue({ error: null }),
-    signOut: jest.fn().mockResolvedValue({ error: null }),
+    signIn: vi.fn().mockResolvedValue({ error: null }),
+    signOut: vi.fn().mockResolvedValue({ error: null }),
     loading: false,
     isSuperAdmin: isSuperAdmin,
     fuelPumpName: 'Test Fuel Pump',
-    refreshSession: jest.fn(),
+    refreshSession: vi.fn(),
     requirePasswordChange: false,
-    setRequirePasswordChange: jest.fn()
+    setRequirePasswordChange: vi.fn()
   };
 
   // Wrap component with necessary providers
@@ -89,15 +89,15 @@ export function setMobileMode(isMobile: boolean): void {
   // Set matchMedia
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: jest.fn().mockImplementation(query => ({
+    value: vi.fn().mockImplementation(query => ({
       matches: isMobile ? query.includes('max-width: 768px') : !query.includes('max-width: 768px'),
       media: query,
       onchange: null,
-      addListener: jest.fn(),
-      removeListener: jest.fn(),
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-      dispatchEvent: jest.fn()
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn()
     }))
   });
 }
@@ -110,19 +110,25 @@ export function mockSupabaseQuery(
   error: any = null
 ): void {
   // Create a mock implementation for supabase client
-  const mockSupabaseFrom = jest.requireMock('@/integrations/supabase/client').supabase.from;
+  const mockSupabaseFrom = vi.hoisted(() => vi.fn());
+  
+  vi.mock('@/integrations/supabase/client', () => ({
+    supabase: {
+      from: mockSupabaseFrom
+    }
+  }));
   
   mockSupabaseFrom.mockImplementation((table) => {
     if (table === tableName) {
       const methods = {
-        select: jest.fn().mockReturnThis(),
-        insert: jest.fn().mockReturnThis(),
-        update: jest.fn().mockReturnThis(),
-        delete: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        single: jest.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        single: vi.fn().mockReturnThis(),
         data: responseData,
         error: error
       };
@@ -142,12 +148,12 @@ export function mockSupabaseQuery(
     }
     
     return {
-      select: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis()
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis()
     };
   });
 }
