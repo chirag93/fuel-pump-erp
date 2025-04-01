@@ -1,109 +1,153 @@
 
-import { render, RenderOptions } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
-import React, { ReactElement } from 'react';
+import React from 'react';
+import { render, RenderOptions, RenderResult } from '@testing-library/react';
+import { BrowserRouter, MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { SuperAdminAuthProvider } from '@/superadmin/contexts/SuperAdminAuthContext';
+import { createMemoryHistory } from 'history';
 
-// Custom renderer that wraps components with necessary providers
+// Mock session data for testing
+const mockSession = {
+  user: {
+    id: 'test-user-id',
+    email: 'test@example.com',
+    role: 'manager'
+  },
+  access_token: 'mock-access-token',
+  refresh_token: 'mock-refresh-token'
+};
+
+// Create a special render function that includes providers
 export function renderWithProviders(
-  ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'> & {
-    route?: string;
+  ui: React.ReactElement,
+  options: {
     isAuthenticated?: boolean;
     isSuperAdmin?: boolean;
-  }
-) {
-  const { 
-    route = '/', 
+    initialEntries?: string[];
+    renderOptions?: Omit<RenderOptions, 'wrapper'>;
+  } = {}
+): RenderResult & { history: ReturnType<typeof createMemoryHistory> } {
+  const {
     isAuthenticated = false,
     isSuperAdmin = false,
-    ...renderOptions 
-  } = options || {};
+    initialEntries = ['/'],
+    renderOptions = {}
+  } = options;
 
-  // Mock the auth context values
-  const authContextValue = {
-    isAuthenticated,
-    isLoading: false,
-    user: isAuthenticated ? { id: 'test-user-id', email: 'test@example.com' } : null,
-    login: jest.fn(),
-    logout: jest.fn(),
-    isSuperAdmin,
+  // Create a memory history object
+  const history = createMemoryHistory({ initialEntries });
+
+  // Provide a value for the AuthContext
+  const authValue = {
+    session: isAuthenticated ? mockSession : null,
+    user: isAuthenticated ? mockSession.user : null,
+    signIn: jest.fn().mockResolvedValue({ error: null }),
+    signOut: jest.fn().mockResolvedValue({ error: null }),
+    loading: false,
+    isSuperAdmin: isSuperAdmin,
     fuelPumpName: 'Test Fuel Pump',
-    fuelPumpId: 'test-pump-id'
+    refreshSession: jest.fn(),
+    requirePasswordChange: false,
+    setRequirePasswordChange: jest.fn()
   };
 
-  const superAdminAuthValue = {
-    isAuthenticated: isSuperAdmin,
-    isLoading: false,
-    user: isSuperAdmin ? { id: 'super-admin-id', email: 'admin@example.com' } : null,
-    login: jest.fn(),
-    logout: jest.fn()
-  };
+  // Wrap component with necessary providers
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <AuthProvider value={authValue}>
+      <MemoryRouter initialEntries={initialEntries}>
+        {children}
+      </MemoryRouter>
+    </AuthProvider>
+  );
 
-  // Set up history with the initial route
-  window.history.pushState({}, 'Test page', route);
+  // Render with the wrapper
+  const result = render(ui, { wrapper: Wrapper, ...renderOptions });
 
   return {
-    ...render(ui, {
-      wrapper: ({ children }) => (
-        <BrowserRouter>
-          <AuthProvider overrideValue={authContextValue}>
-            <SuperAdminAuthProvider overrideValue={superAdminAuthValue}>
-              {children}
-            </SuperAdminAuthProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      ),
-      ...renderOptions,
-    }),
-    history: {
-      location: window.location,
-      push: (newPath: string) => window.history.pushState({}, '', newPath)
-    }
+    ...result,
+    history
   };
 }
 
-// Mock the useIsMobile hook for mobile testing
-jest.mock('@/hooks/use-mobile', () => ({
-  useIsMobile: jest.fn(() => false)
-}));
+// Function to set mobile view for testing
+export function setMobileMode(isMobile: boolean): void {
+  // Set window dimensions
+  Object.defineProperty(window, 'innerWidth', {
+    writable: true,
+    configurable: true,
+    value: isMobile ? 375 : 1024
+  });
 
-// Helper to toggle mobile mode for tests
-export function setMobileMode(isMobile: boolean) {
-  const useMobileMock = require('@/hooks/use-mobile');
-  useMobileMock.useIsMobile.mockImplementation(() => isMobile);
+  Object.defineProperty(window, 'innerHeight', {
+    writable: true,
+    configurable: true,
+    value: isMobile ? 812 : 768
+  });
+
+  // Fire resize event
+  window.dispatchEvent(new Event('resize'));
+
+  // Set matchMedia
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation(query => ({
+      matches: isMobile ? query.includes('max-width: 768px') : !query.includes('max-width: 768px'),
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn()
+    }))
+  });
 }
 
-// Helper to mock Supabase responses
-export function mockSupabaseQuery(table: string, mockData: any, mockError: any = null) {
-  const { supabase } = require('@/integrations/supabase/client');
+// Helper to mock Supabase queries
+export function mockSupabaseQuery(
+  tableName: string,
+  operation: 'select' | 'insert' | 'update' | 'delete',
+  responseData: any,
+  error: any = null
+): void {
+  // Create a mock implementation for supabase client
+  const mockSuabaseFrom = jest.requireMock('@/integrations/supabase/client').supabase.from;
   
-  if (mockData) {
-    (supabase.from as jest.Mock).mockImplementation((queryTable) => {
-      if (queryTable === table) {
-        return {
-          select: jest.fn().mockReturnThis(),
-          insert: jest.fn().mockReturnThis(),
-          update: jest.fn().mockReturnThis(),
-          delete: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          order: jest.fn().mockReturnThis(),
-          limit: jest.fn().mockReturnValue({
-            data: mockData,
-            error: mockError
-          })
-        };
-      }
-      return {
+  mockSuabaseFrom.mockImplementation((table) => {
+    if (table === tableName) {
+      const methods = {
         select: jest.fn().mockReturnThis(),
         insert: jest.fn().mockReturnThis(),
         update: jest.fn().mockReturnThis(),
         delete: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis()
+        limit: jest.fn().mockReturnThis(),
+        single: jest.fn().mockReturnThis(),
+        data: responseData,
+        error: error
       };
-    });
-  }
+      
+      // For chained methods like .select().eq().data
+      Object.keys(methods).forEach(key => {
+        if (typeof methods[key] === 'function') {
+          methods[key].mockReturnValue({
+            ...methods,
+            data: responseData,
+            error: error
+          });
+        }
+      });
+      
+      return methods;
+    }
+    
+    return {
+      select: jest.fn().mockReturnThis(),
+      insert: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis()
+    };
+  });
 }

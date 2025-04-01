@@ -7,7 +7,7 @@ try {
   
   // Run Jest tests with CI=true to ensure they don't hang
   try {
-    execSync('CI=true node package-scripts.js test', { stdio: 'inherit' });
+    execSync('CI=true npx jest', { stdio: 'inherit' });
     console.log('✅ All tests passed!');
   } catch (error) {
     console.error('❌ Tests failed:', error.message);

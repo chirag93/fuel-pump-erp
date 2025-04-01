@@ -18,6 +18,7 @@ const config: Config = {
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: 'tsconfig.json',
+      useESM: true,
     }],
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
@@ -25,7 +26,8 @@ const config: Config = {
   testTimeout: 10000,
   globals: {
     'ts-jest': {
-      isolatedModules: true
+      isolatedModules: true,
+      useESM: true
     }
   },
   // Mock fetch globally

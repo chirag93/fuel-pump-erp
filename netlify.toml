@@ -8,9 +8,9 @@
   to = "/index.html"
   status = 200
 
-# Updated build command to use npm run directly instead of requiring files
+# Updated build command to use npm run directly
 [build]
-  command = "npm run test:all && npm run build"
+  command = "CI=true npm run test:all && npm run build"
   publish = "dist"
 
 # Optional: Custom headers

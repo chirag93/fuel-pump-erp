@@ -1,14 +1,14 @@
 
 {
   "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "npx jest",
+    "test:watch": "npx jest --watch",
+    "test:coverage": "npx jest --coverage",
     "test:indent": "node run-indent-tests.js",
     "test:all": "node run-all-tests.js",
-    "test:mobile": "jest \"__tests__/mobile.*\\.test\\.(ts|tsx)$\"",
-    "test:web": "jest \"__tests__/((?!mobile|superadmin).)*\\.test\\.(ts|tsx)$\"",
-    "test:superadmin": "jest \"__tests__/superadmin.*\\.test\\.(ts|tsx)$\"",
-    "test:integration": "jest \"integrations/__tests__/.*\\.test\\.ts$\""
+    "test:mobile": "npx jest --selectProjects mobile",
+    "test:web": "npx jest --selectProjects web",
+    "test:superadmin": "npx jest --selectProjects superadmin",
+    "test:integration": "npx jest --selectProjects integration"
   }
 }
