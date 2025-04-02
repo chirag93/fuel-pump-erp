@@ -48,6 +48,23 @@ console.error = (...args) => {
   originalConsoleError(...args);
 };
 
+// Mock Supabase client for tests
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: {
+    from: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    single: vi.fn().mockReturnThis(),
+    rpc: vi.fn().mockReturnThis(),
+    data: null,
+    error: null
+  }
+}));
+
 // Reset mocks before each test
 beforeEach(() => {
   vi.resetAllMocks();

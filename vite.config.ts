@@ -20,5 +20,14 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Remove test command since we're using Jest separately
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/setupTests.ts', './src/setupMobileTests.ts'],
+    include: ['**/__tests__/**/*.test.{ts,tsx}'],
+    coverage: {
+      reporter: ['text', 'html'],
+      exclude: ['node_modules/']
+    }
+  }
 }));

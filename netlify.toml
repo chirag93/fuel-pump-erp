@@ -8,9 +8,9 @@
   to = "/index.html"
   status = 200
 
-# Updated build command to use Vitest instead of Jest
+# Updated build command to use Vitest
 [build]
-  command = "CI=true npx vitest run && npm run build"
+  command = "npm run test && npm run build"
   publish = "dist"
 
 # Optional: Custom headers
