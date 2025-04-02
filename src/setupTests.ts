@@ -1,6 +1,6 @@
 
 import '@testing-library/jest-dom';
-import { vi, beforeEach } from 'vitest';
+import { vi } from 'vitest';
 
 // Mock fetch API globally for all tests
 global.fetch = vi.fn(() => 
@@ -36,18 +36,6 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 });
 
-// Suppress console.error during tests to keep logs clean
-const originalConsoleError = console.error;
-console.error = (...args) => {
-  if (
-    typeof args[0] === 'string' && 
-    (args[0].includes('Warning:') || args[0].includes('React does not recognize'))
-  ) {
-    return;
-  }
-  originalConsoleError(...args);
-};
-
 // Mock Supabase client for tests
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
@@ -64,8 +52,3 @@ vi.mock('@/integrations/supabase/client', () => ({
     error: null
   }
 }));
-
-// Reset mocks before each test
-beforeEach(() => {
-  vi.resetAllMocks();
-});

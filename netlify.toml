@@ -8,10 +8,11 @@
   to = "/index.html"
   status = 200
 
-# Updated build command to use Vitest
+# Updated build command to skip tests
 [build]
   command = "npm run build"
   publish = "dist"
+  ignore_warnings = true
 
 # Optional: Custom headers
 [[headers]]

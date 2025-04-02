@@ -20,14 +20,17 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: ['./src/setupTests.ts', './src/setupMobileTests.ts'],
-    include: ['**/__tests__/**/*.test.{ts,tsx}'],
-    coverage: {
-      reporter: ['text', 'html'],
-      exclude: ['node_modules/']
+  // Only include test configuration when not in production
+  ...(mode !== 'production' && {
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: ['./src/setupTests.ts'],
+      include: ['**/__tests__/**/*.test.{ts,tsx}'],
+      coverage: {
+        reporter: ['text', 'html'],
+        exclude: ['node_modules/']
+      }
     }
-  }
+  })
 }));

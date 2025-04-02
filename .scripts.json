@@ -1,14 +1,12 @@
 
 {
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:indent": "vitest run \"**/__tests__/**/indent*.test.{ts,tsx}\"",
-    "test:all": "vitest run",
-    "test:mobile": "vitest run \"**/__tests__/**/mobile*.test.{ts,tsx}\"",
-    "test:web": "vitest run \"**/__tests__/**/!(mobile|superadmin)*.test.{ts,tsx}\"",
-    "test:superadmin": "vitest run \"**/__tests__/**/superadmin*.test.{ts,tsx}\"",
-    "test:integration": "vitest run \"integrations/__tests__/**/*.test.ts\""
+    "test:coverage": "vitest run --coverage"
   }
 }
