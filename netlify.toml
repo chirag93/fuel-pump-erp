@@ -10,7 +10,7 @@
 
 # Updated build command to skip tests
 [build]
-  command = "npm run build"
+  command = "npm run build && npm run test"
   publish = "dist"
   ignore_warnings = true
 

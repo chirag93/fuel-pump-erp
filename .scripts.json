@@ -7,6 +7,11 @@
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:frontend": "vitest run \"src/__tests__/frontend/**/*.test.{ts,tsx}\"",
+    "test:mobile": "vitest run \"src/__tests__/mobile/**/*.test.{ts,tsx}\"",
+    "test:superadmin": "vitest run \"src/__tests__/superadmin/**/*.test.{ts,tsx}\"",
+    "test:integrations": "vitest run \"src/__tests__/integrations/**/*.test.ts\"",
+    "test:backend": "vitest run \"src/__tests__/backend/**/*.test.ts\""
   }
 }

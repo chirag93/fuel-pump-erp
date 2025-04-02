@@ -49,6 +49,19 @@ vi.mock('@/integrations/supabase/client', () => ({
     single: vi.fn().mockReturnThis(),
     rpc: vi.fn().mockReturnThis(),
     data: null,
-    error: null
+    error: null,
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
+      signInWithPassword: vi.fn(),
+      signOut: vi.fn()
+    },
+    functions: {
+      invoke: vi.fn()
+    }
   }
 }));
+
+// Reset all mocks before each test
+beforeEach(() => {
+  vi.resetAllMocks();
+});
