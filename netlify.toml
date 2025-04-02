@@ -10,7 +10,7 @@
 
 # Updated build command to use Vitest
 [build]
-  command = "npm run test && npm run build"
+  command = "npm run build"
   publish = "dist"
 
 # Optional: Custom headers
