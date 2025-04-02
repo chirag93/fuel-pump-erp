@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AccountingPageLayout } from '@/components/accounting/AccountingPageLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -163,7 +162,7 @@ const ExportData = () => {
           
         case 'invoices':
           const { data: invoices, error: invoiceError } = await supabase
-            .rpc('get_invoices_with_customer_names', { pump_id: fuelPumpId });
+            .rpc('get_invoices_with_customer_names', { pump_id: fuelPumpId as any });
           
           if (invoiceError) throw invoiceError;
           data = invoices;
