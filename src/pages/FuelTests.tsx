@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,11 +23,35 @@ const FuelTests = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [tests, setTests] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<string>('new-test');
+  const [staffId, setStaffId] = useState<string>('');
 
   // Fetch tests on component mount
-  React.useEffect(() => {
+  useEffect(() => {
     fetchTests();
+    fetchCurrentStaffId();
   }, []);
+
+  const fetchCurrentStaffId = async () => {
+    try {
+      // Get the current user's ID
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) return;
+      
+      // Try to find staff record associated with this auth ID
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+      
+      if (staffData) {
+        setStaffId(staffData.id);
+      }
+    } catch (error) {
+      console.error("Error fetching staff ID:", error);
+    }
+  };
 
   const fetchTests = async () => {
     try {
@@ -44,9 +68,9 @@ const FuelTests = () => {
       
       const { data, error } = await supabase
         .from('fuel_tests')
-        .select('*')
+        .select('*, staff:tested_by(name)')
         .eq('fuel_pump_id', fuelPumpId)
-        .order('date', { ascending: false });
+        .order('test_date', { ascending: false });
       
       if (error) throw error;
       
@@ -64,7 +88,7 @@ const FuelTests = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!date || !fuelType || !testType || !result) {
+    if (!date || !fuelType || !testType || !result || !staffId) {
       toast({
         title: "Missing Fields",
         description: "Please fill all required fields",
@@ -88,19 +112,27 @@ const FuelTests = () => {
         return;
       }
       
-      const { data, error } = await supabase
+      // Convert the result to a number for density test type
+      const numericResult = testType === 'density' ? parseFloat(result) : 0;
+      const formattedTime = new Date().toTimeString().split(' ')[0];
+      
+      // Create an object with the correct structure for the fuel_tests table
+      const newTest = {
+        fuel_pump_id: fuelPumpId,
+        fuel_type: fuelType,
+        test_date: date.toISOString().split('T')[0],
+        test_time: formattedTime,
+        temperature: 25, // Default temperature
+        density: testType === 'density' ? numericResult : 0,
+        appearance: testType === 'color' ? result : 'Normal',
+        litres_tested: 1,
+        notes: remarks,
+        tested_by: staffId
+      };
+      
+      const { error } = await supabase
         .from('fuel_tests')
-        .insert([
-          {
-            fuel_pump_id: fuelPumpId,
-            date: date.toISOString().split('T')[0],
-            fuel_type: fuelType,
-            test_type: testType,
-            result,
-            remarks
-          }
-        ])
-        .select();
+        .insert([newTest]);
       
       if (error) throw error;
       
@@ -118,11 +150,11 @@ const FuelTests = () => {
       
       // Switch to history tab
       setActiveTab('test-history');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error recording fuel test:", error);
       toast({
         title: "Error",
-        description: "Failed to record fuel test",
+        description: error.message || "Failed to record fuel test",
         variant: "destructive"
       });
     } finally {
@@ -254,19 +286,32 @@ const FuelTests = () => {
                       <TableHead>Fuel Type</TableHead>
                       <TableHead>Test Type</TableHead>
                       <TableHead>Result</TableHead>
-                      <TableHead>Remarks</TableHead>
+                      <TableHead>Tested By</TableHead>
+                      <TableHead>Notes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {tests.map((test) => (
-                      <TableRow key={test.id}>
-                        <TableCell>{new Date(test.date).toLocaleDateString()}</TableCell>
-                        <TableCell className="capitalize">{test.fuel_type.replace('_', ' ')}</TableCell>
-                        <TableCell className="capitalize">{test.test_type.replace('_', ' ')}</TableCell>
-                        <TableCell>{test.result}</TableCell>
-                        <TableCell>{test.remarks || '-'}</TableCell>
-                      </TableRow>
-                    ))}
+                    {tests.map((test) => {
+                      // Determine test type and result based on which field has a non-zero/non-default value
+                      let testType = "Density";
+                      let testResult = test.density.toString();
+                      
+                      if (test.appearance !== "Normal") {
+                        testType = "Color";
+                        testResult = test.appearance;
+                      }
+                      
+                      return (
+                        <TableRow key={test.id}>
+                          <TableCell>{new Date(test.test_date).toLocaleDateString()}</TableCell>
+                          <TableCell className="capitalize">{test.fuel_type.replace('_', ' ')}</TableCell>
+                          <TableCell>{testType}</TableCell>
+                          <TableCell>{testResult}</TableCell>
+                          <TableCell>{test.staff?.name || 'Unknown'}</TableCell>
+                          <TableCell>{test.notes || '-'}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               ) : (
