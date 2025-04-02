@@ -80,7 +80,7 @@ describe('FuelTests Component', () => {
     render(<FuelTests />);
     
     // Click on Test History tab
-    fireEvent.click(screen.getByText('Test History'));
+    fireEvent.click(screen.getByRole('tab', { name: 'Test History' }));
     
     // Check for test history content
     await waitFor(() => {
