@@ -83,7 +83,7 @@ describe('Customers Component', () => {
     });
     
     // Get search input and enter search term
-    const searchInput = screen.getByPlaceholderText(/search customers/i);
+    const searchInput = screen.getByPlaceholderText(/search customers/i) as HTMLInputElement;
     searchInput.focus();
     searchInput.value = 'Unknown';
     searchInput.dispatchEvent(new Event('input', { bubbles: true }));

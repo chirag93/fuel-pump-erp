@@ -99,7 +99,8 @@ describe('Customer Integration Functions', () => {
       contact: 'New Contact',
       phone: '9876543210',
       email: 'new@example.com',
-      gst: 'GST654321'
+      gst: 'GST654321',
+      balance: 0 // Added the required balance field
     };
 
     const customer = await createCustomer(newCustomerData);

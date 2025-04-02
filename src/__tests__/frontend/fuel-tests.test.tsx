@@ -114,7 +114,7 @@ describe('FuelTests Component', () => {
     fireEvent.change(screen.getByLabelText('Remarks'), { target: { value: 'Test remarks' } });
     
     // Submit form
-    fireEvent.click(screen.getByText('Record Test'));
+    fireEvent.click(screen.getByRole('button', { name: 'Record Test' }));
     
     // Check that form submission was attempted
     expect(supabase.from).toHaveBeenCalledWith('fuel_tests');

@@ -69,7 +69,10 @@ describe('Transaction Integration Functions', () => {
         fuel_type: 'diesel',
         quantity: 5,
         payment_method: 'card',
-        staff_id: 'staff1'
+        staff_id: 'staff1',
+        vehicle_id: null,
+        indent_id: null,
+        discount_amount: 0
       },
       error: null
     } as any);
@@ -81,7 +84,10 @@ describe('Transaction Integration Functions', () => {
       fuel_type: 'diesel',
       quantity: 5,
       payment_method: 'card',
-      staff_id: 'staff1'
+      staff_id: 'staff1',
+      vehicle_id: null,
+      indent_id: null,
+      discount_amount: 0
     };
 
     const transaction = await createTransaction(newTransactionData);
