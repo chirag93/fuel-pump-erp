@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Calculator, DownloadCloud, Upload, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { getFuelPumpId } from '@/integrations/utils';
 
 const TaxCalculation = () => {
   const [fromDate, setFromDate] = useState<Date | undefined>(
@@ -34,6 +35,19 @@ const TaxCalculation = () => {
     setIsGenerating(true);
     
     try {
+      // Get fuel pump ID
+      const fuelPumpId = await getFuelPumpId();
+      
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to generate tax reports",
+          variant: "destructive"
+        });
+        setIsGenerating(false);
+        return;
+      }
+      
       // Format dates for the query
       const fromDateStr = fromDate.toISOString().split('T')[0];
       const toDateStr = toDate.toISOString().split('T')[0];
@@ -47,7 +61,7 @@ const TaxCalculation = () => {
         netGSTPayable: 0
       };
       
-      // Fetch transactions based on the type of report
+      // Fetch transactions based on the type of report and fuel pump ID
       if (taxType === 'gstr1') {
         // GSTR-1 is for outward supplies (sales)
         const { data: transactions, error } = await supabase
@@ -61,6 +75,7 @@ const TaxCalculation = () => {
             payment_method,
             discount_amount
           `)
+          .eq('fuel_pump_id', fuelPumpId)
           .gte('date', fromDateStr)
           .lte('date', toDateStr);
         
@@ -98,6 +113,7 @@ const TaxCalculation = () => {
         const { data: purchases, error } = await supabase
           .from('tank_unloads')
           .select('*')
+          .eq('fuel_pump_id', fuelPumpId)
           .gte('date', fromDateStr)
           .lte('date', toDateStr);
         
@@ -130,13 +146,45 @@ const TaxCalculation = () => {
         }
       } else if (taxType === 'gstr3b') {
         // GSTR-3B is a summary return
-        // For demo we'll generate example data
+        // For demo we'll generate example data based on both sales and purchases
+        
+        // Get sales data
+        const { data: salesData, error: salesError } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('fuel_pump_id', fuelPumpId)
+          .gte('date', fromDateStr)
+          .lte('date', toDateStr);
+          
+        if (salesError) throw salesError;
+        
+        // Get purchase data
+        const { data: purchaseData, error: purchaseError } = await supabase
+          .from('tank_unloads')
+          .select('amount')
+          .eq('fuel_pump_id', fuelPumpId)
+          .gte('date', fromDateStr)
+          .lte('date', toDateStr);
+          
+        if (purchaseError) throw purchaseError;
+        
+        // Calculate summary based on real data
+        const totalSales = (salesData || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+        const totalPurchases = (purchaseData || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+        
+        const gstRate = 0.18;
+        const salesBaseAmount = totalSales / (1 + gstRate);
+        const outputGST = totalSales - salesBaseAmount;
+        
+        const purchaseBaseAmount = totalPurchases / (1 + gstRate);
+        const inputGST = totalPurchases - purchaseBaseAmount;
+        
         summary = {
-          totalTaxableSales: 125680.00,
-          outputCGST: 11311.20,
-          outputSGST: 11311.20,
-          inputTaxCredit: 8750.00,
-          netGSTPayable: 13872.40
+          totalTaxableSales: parseFloat(salesBaseAmount.toFixed(2)),
+          outputCGST: parseFloat((outputGST / 2).toFixed(2)),
+          outputSGST: parseFloat((outputGST / 2).toFixed(2)),
+          inputTaxCredit: parseFloat(inputGST.toFixed(2)),
+          netGSTPayable: parseFloat((outputGST - inputGST).toFixed(2))
         };
         
         setReportData(summary);

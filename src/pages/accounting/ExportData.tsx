@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DownloadCloud, FileSpreadsheet, FileText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { getFuelPumpId } from '@/integrations/utils';
 
 // Define a type for the available data types to export
 type ExportDataType = 
@@ -62,6 +63,19 @@ const ExportData = () => {
     setIsExporting(true);
     
     try {
+      // Get fuel pump ID
+      const fuelPumpId = await getFuelPumpId();
+      
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to export data",
+          variant: "destructive"
+        });
+        setIsExporting(false);
+        return;
+      }
+      
       // Format dates for the query
       const fromDateStr = fromDate.toISOString().split('T')[0];
       const toDateStr = toDate.toISOString().split('T')[0];
@@ -87,6 +101,7 @@ const ExportData = () => {
               vehicles:vehicle_id(number),
               staff:staff_id(name)
             `)
+            .eq('fuel_pump_id', fuelPumpId)
             .gte('date', fromDateStr)
             .lte('date', toDateStr);
           
@@ -110,7 +125,8 @@ const ExportData = () => {
         case 'customers':
           const { data: customers, error: customerError } = await supabase
             .from('customers')
-            .select('*');
+            .select('*')
+            .eq('fuel_pump_id', fuelPumpId);
           
           if (customerError) throw customerError;
           data = customers;
@@ -128,6 +144,7 @@ const ExportData = () => {
               notes,
               customers:customer_id(name)
             `)
+            .eq('fuel_pump_id', fuelPumpId)
             .gte('date', fromDateStr)
             .lte('date', toDateStr);
           
@@ -146,7 +163,7 @@ const ExportData = () => {
           
         case 'invoices':
           const { data: invoices, error: invoiceError } = await supabase
-            .rpc('get_invoices_with_customer_names');
+            .rpc('get_invoices_with_customer_names', { pump_id: fuelPumpId });
           
           if (invoiceError) throw invoiceError;
           data = invoices;
@@ -155,7 +172,8 @@ const ExportData = () => {
         case 'stock':
           const { data: inventory, error: inventoryError } = await supabase
             .from('inventory')
-            .select('*');
+            .select('*')
+            .eq('fuel_pump_id', fuelPumpId);
           
           if (inventoryError) throw inventoryError;
           data = inventory;
@@ -177,6 +195,7 @@ const ExportData = () => {
               customers:customer_id(name),
               vehicles:vehicle_id(number)
             `)
+            .eq('fuel_pump_id', fuelPumpId)
             .gte('date', fromDateStr)
             .lte('date', toDateStr);
           
@@ -208,7 +227,8 @@ const ExportData = () => {
               capacity,
               created_at,
               customers:customer_id(name)
-            `);
+            `)
+            .eq('fuel_pump_id', fuelPumpId);
           
           if (vehiclesError) throw vehiclesError;
           
@@ -227,6 +247,7 @@ const ExportData = () => {
           const { data: readings, error: readingsError } = await supabase
             .from('daily_readings')
             .select('*')
+            .eq('fuel_pump_id', fuelPumpId)
             .gte('date', fromDateStr)
             .lte('date', toDateStr);
           
@@ -237,7 +258,8 @@ const ExportData = () => {
         case 'fuel_settings':
           const { data: fuelSettings, error: fuelSettingsError } = await supabase
             .from('fuel_settings')
-            .select('*');
+            .select('*')
+            .eq('fuel_pump_id', fuelPumpId);
           
           if (fuelSettingsError) throw fuelSettingsError;
           data = fuelSettings;

@@ -1211,19 +1211,35 @@ export type Database = {
           updated_at: string | null
         }[]
       }
-      get_invoices_with_customer_names: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          id: string
-          customer_id: string
-          customer_name: string
-          date: string
-          amount: number
-          status: string
-          created_at: string
-          updated_at: string
-        }[]
-      }
+      get_invoices_with_customer_names:
+        | {
+            Args: Record<PropertyKey, never>
+            Returns: {
+              id: string
+              customer_id: string
+              customer_name: string
+              date: string
+              amount: number
+              status: string
+              created_at: string
+              updated_at: string
+            }[]
+          }
+        | {
+            Args: {
+              pump_id?: string
+            }
+            Returns: {
+              id: string
+              customer_id: string
+              customer_name: string
+              date: string
+              amount: number
+              status: string
+              created_at: string
+              updated_at: string
+            }[]
+          }
       get_pump_settings_for_fuel_pump: {
         Args: {
           pump_id_param: string

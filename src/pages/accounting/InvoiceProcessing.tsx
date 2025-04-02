@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AccountingPageLayout } from '@/components/accounting/AccountingPageLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +13,7 @@ import { Receipt, Search, Printer, FileCheck, FileX, Loader2, FilePenLine } from
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DatePicker } from '@/components/ui/date-picker';
+import { getFuelPumpId } from '@/integrations/utils';
 
 interface Invoice {
   id: string;
@@ -42,9 +42,23 @@ const InvoiceProcessing = () => {
     const fetchInvoices = async () => {
       setIsLoading(true);
       try {
-        // Use the custom function to get invoices with customer names
+        // Get the current fuel pump ID
+        const fuelPumpId = await getFuelPumpId();
+        
+        if (!fuelPumpId) {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to view invoice data",
+            variant: "destructive"
+          });
+          setInvoices([]);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Use the updated function with fuel_pump_id parameter
         const { data, error } = await supabase
-          .rpc('get_invoices_with_customer_names');
+          .rpc('get_invoices_with_customer_names', { pump_id: fuelPumpId });
 
         if (error) {
           throw error;
@@ -135,6 +149,18 @@ const InvoiceProcessing = () => {
   
   const handleStatusUpdate = async (invoiceId: string, newStatus: 'pending' | 'approved' | 'rejected') => {
     try {
+      // Get fuel pump ID to ensure we're updating the right invoice
+      const fuelPumpId = await getFuelPumpId();
+      
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to update invoice status",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Update the invoice status in the database
       const { error } = await supabase
         .from('invoices')
@@ -142,7 +168,8 @@ const InvoiceProcessing = () => {
           status: newStatus, 
           updated_at: new Date().toISOString() 
         })
-        .eq('id', invoiceId);
+        .eq('id', invoiceId)
+        .eq('fuel_pump_id', fuelPumpId);
         
       if (error) throw error;
       
