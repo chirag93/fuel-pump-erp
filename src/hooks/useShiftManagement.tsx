@@ -96,7 +96,10 @@ export function useShiftManagement() {
       
       // Process the joined data
       const processedShifts = shiftsData.map(shift => {
-        const readings = shift.readings && shift.readings.length > 0 ? shift.readings[0] : {};
+        // Ensure readings is always an array and not null
+        const readingsArray = Array.isArray(shift.readings) ? shift.readings : [];
+        // Get the first reading or use an empty object with default values
+        const readings = readingsArray.length > 0 ? readingsArray[0] : {};
         const staffData = shift.staff || { name: 'Unknown Staff', staff_numeric_id: null };
         
         return {
