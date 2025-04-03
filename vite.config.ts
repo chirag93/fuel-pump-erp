@@ -26,7 +26,8 @@ export default defineConfig(({ mode }) => ({
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.ts'],
     include: ['**/__tests__/**/*.test.{ts,tsx}'],
-    reporters: ['default', 'verbose'],
+    reporters: ['verbose'],
+    outputFile: 'test-results.json',
     coverage: {
       reporter: ['text', 'html'],
       exclude: ['node_modules/']
