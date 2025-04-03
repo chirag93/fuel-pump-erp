@@ -32,16 +32,18 @@ export const useCustomerData = (customerId: string) => {
     enabled: !!customerId,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false,
-    onSuccess: (data) => {
-      console.log('Customer data fetched successfully:', data);
-    },
-    onError: (error) => {
-      console.error('Error fetching customer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load customer data",
-        variant: "destructive"
-      });
+    meta: {
+      onSuccess: (data: Customer) => {
+        console.log('Customer data fetched successfully:', data);
+      },
+      onError: (error: Error) => {
+        console.error('Error fetching customer:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load customer data",
+          variant: "destructive"
+        });
+      }
     }
   });
 
@@ -55,8 +57,10 @@ export const useCustomerData = (customerId: string) => {
     enabled: !!customerId,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error('Error fetching vehicles:', error);
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching vehicles:', error);
+      }
     }
   });
 
@@ -70,8 +74,10 @@ export const useCustomerData = (customerId: string) => {
     enabled: !!customerId,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error('Error fetching indents:', error);
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching indents:', error);
+      }
     }
   });
 
@@ -85,13 +91,15 @@ export const useCustomerData = (customerId: string) => {
     enabled: !!customerId,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error('Error fetching indent booklets:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load indent booklets",
-        variant: "destructive"
-      });
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching indent booklets:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load indent booklets",
+          variant: "destructive"
+        });
+      }
     }
   });
 
@@ -105,8 +113,10 @@ export const useCustomerData = (customerId: string) => {
     enabled: !!customerId,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error('Error fetching transactions:', error);
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching transactions:', error);
+      }
     }
   });
 

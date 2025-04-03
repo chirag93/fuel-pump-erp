@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,13 +55,15 @@ const Customers = () => {
     enabled: !!fuelPumpId,
     staleTime: 1000 * 60 * 5, // 5 minutes cache
     refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error('Error fetching customers:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load customer data. Please try again.",
-        variant: "destructive"
-      });
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching customers:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load customer data. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   });
 
@@ -84,8 +87,10 @@ const Customers = () => {
     enabled: !!fuelPumpId,
     staleTime: 1000 * 60 * 5, // 5 minutes cache
     refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error('Error fetching booklets:', error);
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching booklets:', error);
+      }
     }
   });
 
