@@ -79,8 +79,9 @@ describe('FuelTests Component', () => {
   test('displays test history when tab is clicked', async () => {
     render(<FuelTests />);
     
-    // Click on Test History tab
-    fireEvent.click(screen.getByRole('tab', { name: 'Test History' }));
+    // Click on Test History tab - Fixed: Pass HTMLElement to fireEvent.click
+    const testHistoryTab = screen.getByRole('tab', { name: 'Test History' });
+    fireEvent.click(testHistoryTab);
     
     // Check for test history content
     await waitFor(() => {
