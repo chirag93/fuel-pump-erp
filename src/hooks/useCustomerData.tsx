@@ -32,6 +32,9 @@ export const useCustomerData = (customerId: string) => {
     enabled: !!customerId,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false,
+    onSuccess: (data) => {
+      console.log('Customer data fetched successfully:', data);
+    },
     onError: (error) => {
       console.error('Error fetching customer:', error);
       toast({

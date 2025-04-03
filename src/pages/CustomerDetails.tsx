@@ -2,7 +2,7 @@
 import { useParams } from 'react-router-dom';
 import CustomerHeader from '@/components/customers/CustomerHeader';
 import CustomerTabs from '@/components/customers/CustomerTabs';
-import { useCustomerData } from '@/components/customers/hooks/useCustomerData';
+import { useCustomerData } from '@/hooks/useCustomerData';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 
