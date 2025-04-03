@@ -489,8 +489,6 @@ const DailyReadings = () => {
         receipt_quantity: readingFormData.receipt_quantity || null,
         closing_stock: readingFormData.closing_stock,
         actual_meter_sales: readingFormData.actual_meter_sales,
-        // Remove sales_per_tank_stock as it's a generated column
-        stock_variation: calculations.stock_variation,
         fuel_pump_id: fuelPumpId
       }));
       

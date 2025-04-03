@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { Card, CardContent } from '@/components/ui/card';
@@ -157,7 +156,7 @@ const MobileDailyReadings = () => {
         throw new Error("Could not determine fuel pump ID");
       }
       
-      // Create the reading entry without sales_per_tank_stock field
+      // Create the reading entry without sales_per_tank_stock and stock_variation fields
       const readingEntry = {
         date: formData.date,
         fuel_type: formData.fuel_type,
@@ -169,8 +168,7 @@ const MobileDailyReadings = () => {
         closing_stock: parseFloat(formData.closing_stock),
         actual_meter_sales: parseFloat(formData.actual_meter_sales),
         // Don't include the sales_per_tank_stock field as it's generated
-        // stock_variation is not generated, so we can include it
-        stock_variation: calculations.stockVariation,
+        // Don't include the stock_variation field as it's generated
         fuel_pump_id: pumpId
       };
       
