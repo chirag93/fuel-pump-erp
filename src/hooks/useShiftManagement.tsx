@@ -99,23 +99,35 @@ export function useShiftManagement() {
         // Ensure readings is always an array and not null
         const readingsArray = Array.isArray(shift.readings) ? shift.readings : [];
         // Get the first reading or use an empty object with default values
-        const readings = readingsArray.length > 0 ? readingsArray[0] : {};
+        const reading = readingsArray.length > 0 ? readingsArray[0] : {
+          date: new Date().toISOString().split('T')[0],
+          pump_id: '',
+          opening_reading: 0,
+          closing_reading: null,
+          cash_given: 0,
+          cash_remaining: null,
+          card_sales: null,
+          upi_sales: null,
+          cash_sales: null,
+          testing_fuel: null
+        };
+        
         const staffData = shift.staff || { name: 'Unknown Staff', staff_numeric_id: null };
         
         return {
           ...shift,
           staff_name: staffData.name,
           staff_numeric_id: staffData.staff_numeric_id,
-          date: readings.date || new Date().toISOString().split('T')[0],
-          pump_id: readings.pump_id || 'Unknown',
-          opening_reading: readings.opening_reading || 0,
-          closing_reading: readings.closing_reading || null,
-          starting_cash_balance: readings.cash_given || 0,
-          ending_cash_balance: readings.cash_remaining || null,
-          card_sales: readings.card_sales || null,
-          upi_sales: readings.upi_sales || null,
-          cash_sales: readings.cash_sales || null,
-          testing_fuel: readings.testing_fuel || null,
+          date: reading.date || new Date().toISOString().split('T')[0],
+          pump_id: reading.pump_id || 'Unknown',
+          opening_reading: reading.opening_reading || 0,
+          closing_reading: reading.closing_reading || null,
+          starting_cash_balance: reading.cash_given || 0,
+          ending_cash_balance: reading.cash_remaining || null,
+          card_sales: reading.card_sales || null,
+          upi_sales: reading.upi_sales || null,
+          cash_sales: reading.cash_sales || null,
+          testing_fuel: reading.testing_fuel || null,
           fuel_pump_id: fuelPumpId
         } as Shift;
       });
