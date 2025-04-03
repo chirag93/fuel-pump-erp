@@ -1,4 +1,3 @@
-
 import { ReadingFormData } from './TankReadingsForm';
 
 // Calculate dependent values
@@ -41,6 +40,8 @@ export const processReadingsData = (data: any[]) => {
       const closingStock = item.closing_stock || 0;
       const actualMeterSales = item.actual_meter_sales || 0;
       
+      // Use the value from DB if available, otherwise calculate it
+      // Note: since sales_per_tank_stock is a generated column, it should always be available from the DB
       const salesPerTankStock = item.sales_per_tank_stock !== null ? 
         item.sales_per_tank_stock : 
         (openingStock + receiptQuantity - closingStock);
@@ -56,7 +57,7 @@ export const processReadingsData = (data: any[]) => {
         opening_stock: openingStock,
         receipt_quantity: receiptQuantity,
         closing_stock: closingStock,
-        sales_per_tank_stock: salesPerTankStock,
+        sales_per_tank_stock: salesPerTankStock, // For display only
         actual_meter_sales: actualMeterSales,
         stock_variation: stockVariation,
         created_at: item.created_at,
