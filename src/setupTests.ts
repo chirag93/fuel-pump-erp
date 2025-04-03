@@ -80,12 +80,21 @@ window.ResizeObserver = ResizeObserverMock;
 
 // Mock the date-picker component since it's causing issues in tests
 vi.mock('@/components/ui/date-picker', () => ({
-  DatePicker: ({ date, setDate }: any) => (
-    <div data-testid="mock-date-picker">
-      <button onClick={() => setDate(new Date())}>Select Date</button>
-    </div>
-  )
+  DatePicker: ({ date, setDate }) => {
+    const handleClick = () => {
+      if (setDate) setDate(new Date());
+    };
+    return (
+      <div data-testid="mock-date-picker">
+        <button onClick={handleClick}>Select Date</button>
+      </div>
+    );
+  }
 }));
+
+// Helper function for within() in tests
+import { within } from '@testing-library/react';
+import { fireEvent } from '@testing-library/react';
 
 // Reset all mocks before each test
 beforeEach(() => {

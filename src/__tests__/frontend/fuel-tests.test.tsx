@@ -4,6 +4,7 @@ import { userEvent } from '@testing-library/user-event';
 import { vi } from 'vitest';
 import FuelTests from '@/pages/FuelTests';
 import { supabase } from '@/integrations/supabase/client';
+import { within, fireEvent } from '@testing-library/react';
 
 // Mock necessary functions and modules
 vi.mock('@/integrations/utils', () => ({
@@ -123,7 +124,6 @@ describe('FuelTests Component', () => {
     // Select fuel type (using a workaround for shadcn select)
     // We'll directly call the onChange handler since UI interaction is difficult
     const fuelTypeField = screen.getByLabelText('Fuel Type');
-    // Using testing library's fireEvent for direct change event
     fireEvent.change(fuelTypeField, { target: { value: 'diesel' } });
     
     // Select test type with same approach
