@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarClock, DollarSign, Loader2 } from 'lucide-react';
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { CurrentShiftData, SelectedShiftData } from '@/types/shift';
 import { useShiftManagement } from '@/hooks/useShiftManagement';
 import { StartShiftForm } from '@/components/shift/StartShiftForm';
@@ -26,6 +26,7 @@ const ShiftManagement = () => {
   } = useShiftManagement();
 
   const [formOpen, setFormOpen] = useState(false);
+  const { toast } = useToast();
 
   // Dialog states
   const [endShiftDialogOpen, setEndShiftDialogOpen] = useState(false);
