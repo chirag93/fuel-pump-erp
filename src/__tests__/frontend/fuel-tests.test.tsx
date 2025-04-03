@@ -1,5 +1,6 @@
 
-import { render, screen, waitFor, fireEvent } from '../utils/test-utils';
+import { render, screen, waitFor } from '../utils/test-utils';
+import { userEvent } from '@testing-library/user-event';
 import { vi } from 'vitest';
 import FuelTests from '@/pages/FuelTests';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,11 +78,12 @@ describe('FuelTests Component', () => {
   });
   
   test('displays test history when tab is clicked', async () => {
+    const user = userEvent.setup();
     render(<FuelTests />);
     
-    // Click on Test History tab - Fixed: Pass HTMLElement to fireEvent.click
+    // Click on Test History tab using userEvent
     const testHistoryTab = screen.getByRole('tab', { name: 'Test History' });
-    fireEvent.click(testHistoryTab);
+    await user.click(testHistoryTab);
     
     // Check for test history content
     await waitFor(() => {
@@ -97,25 +99,31 @@ describe('FuelTests Component', () => {
   });
 
   test('submits new test when form is filled out', async () => {
+    const user = userEvent.setup();
     render(<FuelTests />);
     
     // Fill out form fields
     // Select fuel type
-    fireEvent.click(screen.getAllByRole('combobox')[0]);
-    fireEvent.click(screen.getByText('Diesel'));
+    const fuelTypeSelect = screen.getAllByRole('combobox')[0];
+    await user.click(fuelTypeSelect);
+    await user.click(screen.getByText('Diesel'));
     
     // Select test type
-    fireEvent.click(screen.getAllByRole('combobox')[1]);
-    fireEvent.click(screen.getByText('Density Test'));
+    const testTypeSelect = screen.getAllByRole('combobox')[1];
+    await user.click(testTypeSelect);
+    await user.click(screen.getByText('Density Test'));
     
     // Enter test result
-    fireEvent.change(screen.getByLabelText('Test Result'), { target: { value: '0.85' } });
+    const testResultInput = screen.getByLabelText('Test Result');
+    await user.type(testResultInput, '0.85');
     
     // Enter remarks
-    fireEvent.change(screen.getByLabelText('Remarks'), { target: { value: 'Test remarks' } });
+    const remarksInput = screen.getByLabelText('Remarks');
+    await user.type(remarksInput, 'Test remarks');
     
     // Submit form
-    fireEvent.click(screen.getByRole('button', { name: 'Record Test' }));
+    const submitButton = screen.getByRole('button', { name: 'Record Test' });
+    await user.click(submitButton);
     
     // Check that form submission was attempted
     expect(supabase.from).toHaveBeenCalledWith('fuel_tests');

@@ -1,5 +1,6 @@
 
 import { render, screen, waitFor } from '../utils/test-utils';
+import { userEvent } from '@testing-library/user-event';
 import { vi } from 'vitest';
 import Customers from '@/pages/Customers';
 import { supabase } from '@/integrations/supabase/client';
@@ -75,6 +76,7 @@ describe('Customers Component', () => {
   });
 
   test('filters customers when search term is entered', async () => {
+    const user = userEvent.setup();
     render(<Customers />);
     
     // Wait for customers to load
@@ -83,10 +85,8 @@ describe('Customers Component', () => {
     });
     
     // Get search input and enter search term
-    const searchInput = screen.getByPlaceholderText(/search customers/i) as HTMLInputElement;
-    searchInput.focus();
-    searchInput.value = 'Unknown';
-    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    const searchInput = screen.getByPlaceholderText(/search customers/i);
+    await user.type(searchInput, 'Unknown');
     
     // Check that "No customers found" message appears
     await waitFor(() => {
