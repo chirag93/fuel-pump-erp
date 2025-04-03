@@ -18,16 +18,33 @@ try {
   if (scriptsConfig.scripts[scriptToRun]) {
     try {
       console.log(`Running script: ${scriptToRun}`);
+      
+      // Use a more detailed output for test runs
+      if (scriptToRun === 'test' || scriptToRun.startsWith('test:')) {
+        console.log('----------------------------------------------');
+        console.log(`RUNNING TESTS: ${scriptsConfig.scripts[scriptToRun]}`);
+        console.log('----------------------------------------------');
+      }
+      
       execSync(scriptsConfig.scripts[scriptToRun], { stdio: 'inherit' });
+      
+      if (scriptToRun === 'test' || scriptToRun.startsWith('test:')) {
+        console.log('----------------------------------------------');
+        console.log('TESTS COMPLETED SUCCESSFULLY');
+        console.log('----------------------------------------------');
+      }
     } catch (error) {
       console.error(`Error running script "${scriptToRun}":`, error.message);
-      // Exit with proper error code to indicate test failure
-      if (scriptToRun === 'test') {
-        console.error('Tests failed. Check test output for details.');
-        process.exit(1); // Signal test failure to Netlify
+      
+      // More detailed error output for tests
+      if (scriptToRun === 'test' || scriptToRun.startsWith('test:')) {
+        console.error('----------------------------------------------');
+        console.error('TESTS FAILED');
+        console.error('----------------------------------------------');
       }
-      // For other scripts, exit with non-zero code
-      process.exit(1);
+      
+      // Exit with proper error code to indicate test failure
+      process.exit(1); // Signal failure to Netlify
     }
   } else {
     console.error(`Script "${scriptToRun}" not found in .scripts.json`);

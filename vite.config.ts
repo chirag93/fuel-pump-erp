@@ -20,12 +20,13 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Include test configuration in all modes
+  // Always include test configuration regardless of mode
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.ts'],
     include: ['**/__tests__/**/*.test.{ts,tsx}'],
+    reporters: ['default', 'verbose'],
     coverage: {
       reporter: ['text', 'html'],
       exclude: ['node_modules/']

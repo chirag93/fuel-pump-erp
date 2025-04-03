@@ -10,7 +10,7 @@
 
 # Update build command to run tests properly and continue build even if tests fail
 [build]
-  command = "npm run build && node package-scripts.js test || echo 'Tests completed with issues, continuing build'"
+  command = "npm run build && (node package-scripts.js test || (echo '============================'; echo 'TESTS FAILED BUT CONTINUING BUILD'; echo '============================'; exit 0))"
   publish = "dist"
   ignore_warnings = true
 
