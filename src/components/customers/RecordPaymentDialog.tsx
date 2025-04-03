@@ -49,6 +49,8 @@ export default function RecordPaymentDialog({
 
     setIsSubmitting(true);
     try {
+      console.log(`Recording payment for customer: ${customerId}, amount: ${amount}`);
+      
       const success = await recordPayment({
         customer_id: customerId,
         amount: amount,
