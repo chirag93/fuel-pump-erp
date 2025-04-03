@@ -12,7 +12,7 @@ try {
 
   if (!scriptToRun) {
     console.error('Please provide a script name to run');
-    process.exit(0); // Changed to 0 to not fail the build
+    process.exit(0); // Exit with code 0 to not fail the build
   }
 
   if (scriptsConfig.scripts[scriptToRun]) {
