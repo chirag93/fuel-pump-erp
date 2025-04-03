@@ -36,10 +36,9 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 });
 
-// Mock Supabase client for tests
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: vi.fn().mockReturnThis(),
+// Mock Supabase client for tests with more comprehensive mocks
+vi.mock('@/integrations/supabase/client', () => {
+  const mockFrom = vi.fn().mockImplementation(() => ({
     select: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
@@ -48,19 +47,44 @@ vi.mock('@/integrations/supabase/client', () => ({
     order: vi.fn().mockReturnThis(),
     single: vi.fn().mockReturnThis(),
     rpc: vi.fn().mockReturnThis(),
+    then: vi.fn(),
     data: null,
-    error: null,
-    auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
-      getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
-      signInWithPassword: vi.fn(),
-      signOut: vi.fn(),
-      updateUser: vi.fn()
-    },
-    functions: {
-      invoke: vi.fn()
+    error: null
+  }));
+
+  return {
+    supabase: {
+      from: mockFrom,
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
+        getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+        signInWithPassword: vi.fn(),
+        signOut: vi.fn(),
+        updateUser: vi.fn()
+      },
+      functions: {
+        invoke: vi.fn()
+      }
     }
-  }
+  };
+});
+
+// Mock ResizeObserver which isn't available in test environment but used by some UI components
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+window.ResizeObserver = ResizeObserverMock;
+
+// Mock the date-picker component since it's causing issues in tests
+vi.mock('@/components/ui/date-picker', () => ({
+  DatePicker: ({ date, setDate }: any) => (
+    <div data-testid="mock-date-picker">
+      <button onClick={() => setDate(new Date())}>Select Date</button>
+    </div>
+  )
 }));
 
 // Reset all mocks before each test
