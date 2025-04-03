@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -26,66 +26,297 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { 
-  getSalesData, 
-  getFuelVolumeData, 
-  getRecentTransactions, 
-  getCurrentFuelLevels,
-  getDashboardMetrics
-} from '@/utils/dashboardUtils';
+import { useQuery } from '@tanstack/react-query';
+import { getFuelPumpId } from '@/integrations/utils';
+import { supabase } from '@/integrations/supabase/client';
+
+// Cache keys for React Query
+const QUERY_KEYS = {
+  dashboardData: 'dashboardData',
+  fuelPumpId: 'fuelPumpId',
+  salesData: (startDate: Date, endDate: Date) => ['salesData', startDate.toISOString(), endDate.toISOString()],
+  fuelVolume: (startDate: Date, endDate: Date) => ['fuelVolume', startDate.toISOString(), endDate.toISOString()],
+  recentTransactions: 'recentTransactions',
+  fuelLevels: 'fuelLevels',
+  metrics: (startDate: Date, endDate: Date) => ['metrics', startDate.toISOString(), endDate.toISOString()]
+};
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
-  const [isLoading, setIsLoading] = useState(true);
-  const [salesData, setSalesData] = useState<any[]>([]);
-  const [fuelData, setFuelData] = useState<any[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
-  const [fuelLevels, setFuelLevels] = useState<Record<string, number>>({});
-  const [metrics, setMetrics] = useState({
-    totalSales: '₹0',
-    customers: '0',
-    fuelVolume: '0 L',
-    growth: '0%'
-  });
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   // Date range state for filtering
   const [dateRange, setDateRange] = useState<DateRange>({
     from: startOfMonth(new Date()),
     to: new Date()
   });
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [dateRange]);
+  // Get fuel pump ID once with React Query - this will be cached
+  const { data: fuelPumpId } = useQuery({
+    queryKey: [QUERY_KEYS.fuelPumpId],
+    queryFn: getFuelPumpId,
+    staleTime: 1000 * 60 * 60, // 1 hour
+    retry: 1
+  });
 
-  const loadDashboardData = async () => {
-    setIsLoading(true);
-    try {
-      const startDate = dateRange.from || startOfMonth(new Date());
-      const endDate = dateRange.to || new Date();
+  // Format date strings for API calls
+  const formattedStartDate = useMemo(() => 
+    dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : format(startOfMonth(new Date()), 'yyyy-MM-dd'), 
+    [dateRange.from]
+  );
 
-      // Load all dashboard data
-      const [salesChartData, fuelChartData, transactions, levels, dashboardMetrics] = await Promise.all([
-        getSalesData(startDate, endDate),
-        getFuelVolumeData(startDate, endDate),
-        getRecentTransactions(),
-        getCurrentFuelLevels(),
-        getDashboardMetrics(startDate, endDate)
-      ]);
+  const formattedEndDate = useMemo(() => 
+    dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+    [dateRange.to]
+  );
 
-      setSalesData(salesChartData);
-      setFuelData(fuelChartData);
-      setRecentTransactions(transactions);
-      setFuelLevels(levels);
-      setMetrics(dashboardMetrics);
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Query for sales data with proper caching
+  const { data: salesData = [], isLoading: isLoadingSales } = useQuery({
+    queryKey: QUERY_KEYS.salesData(dateRange.from || startOfMonth(new Date()), dateRange.to || new Date()),
+    queryFn: async () => {
+      if (!fuelPumpId) return [];
+      
+      console.log(`Fetching sales data for date range: ${formattedStartDate} to ${formattedEndDate}`);
+      
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('date, amount, fuel_type')
+        .eq('fuel_pump_id', fuelPumpId)
+        .gte('date', formattedStartDate)
+        .lte('date', formattedEndDate)
+        .order('date', { ascending: true });
+        
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        return [];
+      }
+      
+      // Group data by date
+      const groupedByDate: Record<string, number> = {};
+      
+      data.forEach(transaction => {
+        const dateStr = transaction.date;
+        const formattedDate = format(new Date(dateStr), 'dd MMM');
+        
+        if (!groupedByDate[formattedDate]) {
+          groupedByDate[formattedDate] = 0;
+        }
+        
+        groupedByDate[formattedDate] += Number(transaction.amount) || 0;
+      });
+      
+      // Convert to chart data format
+      return Object.keys(groupedByDate).map(date => ({
+        name: date,
+        total: Math.round(groupedByDate[date])
+      }));
+    },
+    enabled: !!fuelPumpId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false
+  });
+
+  // Query for fuel volume data with proper caching
+  const { data: fuelData = [], isLoading: isLoadingFuel } = useQuery({
+    queryKey: QUERY_KEYS.fuelVolume(dateRange.from || startOfMonth(new Date()), dateRange.to || new Date()),
+    queryFn: async () => {
+      if (!fuelPumpId) return [];
+      
+      const { data, error } = await supabase
+        .from('daily_readings')
+        .select('date, fuel_type, sales_per_tank_stock')
+        .eq('fuel_pump_id', fuelPumpId)
+        .gte('date', formattedStartDate)
+        .lte('date', formattedEndDate)
+        .order('date', { ascending: true });
+        
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        return [];
+      }
+      
+      // Group data by date and fuel type
+      const groupedByDate: Record<string, { petrol: number, diesel: number }> = {};
+      
+      data.forEach(reading => {
+        if (!reading.sales_per_tank_stock) return;
+        
+        const dateStr = reading.date;
+        const formattedDate = format(new Date(dateStr), 'dd MMM');
+        
+        if (!groupedByDate[formattedDate]) {
+          groupedByDate[formattedDate] = { petrol: 0, diesel: 0 };
+        }
+        
+        if (reading.fuel_type.toLowerCase().includes('petrol')) {
+          groupedByDate[formattedDate].petrol += Number(reading.sales_per_tank_stock) || 0;
+        } else if (reading.fuel_type.toLowerCase().includes('diesel')) {
+          groupedByDate[formattedDate].diesel += Number(reading.sales_per_tank_stock) || 0;
+        }
+      });
+      
+      // Convert to chart data format
+      return Object.keys(groupedByDate).map(date => ({
+        name: date,
+        petrol: Math.round(groupedByDate[date].petrol),
+        diesel: Math.round(groupedByDate[date].diesel)
+      }));
+    },
+    enabled: !!fuelPumpId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false
+  });
+
+  // Query for recent transactions with proper caching
+  const { data: recentTransactions = [], isLoading: isLoadingTransactions } = useQuery({
+    queryKey: [QUERY_KEYS.recentTransactions, fuelPumpId],
+    queryFn: async () => {
+      if (!fuelPumpId) return [];
+      
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('id, fuel_type, amount, created_at, quantity')
+        .eq('fuel_pump_id', fuelPumpId)
+        .order('created_at', { ascending: false })
+        .limit(3);
+        
+      if (error) throw error;
+      
+      return data || [];
+    },
+    enabled: !!fuelPumpId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false
+  });
+
+  // Query for fuel levels with proper caching
+  const { data: fuelLevels = {}, isLoading: isLoadingFuelLevels } = useQuery({
+    queryKey: [QUERY_KEYS.fuelLevels, fuelPumpId],
+    queryFn: async () => {
+      if (!fuelPumpId) return {};
+      
+      const { data, error } = await supabase
+        .from('fuel_settings')
+        .select('fuel_type, current_level, tank_capacity')
+        .eq('fuel_pump_id', fuelPumpId);
+        
+      if (error) throw error;
+      
+      const fuelLevels: Record<string, number> = {};
+      
+      if (data && data.length > 0) {
+        data.forEach(fuel => {
+          if (fuel.current_level !== null && fuel.tank_capacity !== null && fuel.tank_capacity > 0) {
+            const percentage = (fuel.current_level / fuel.tank_capacity) * 100;
+            fuelLevels[fuel.fuel_type] = Math.min(Math.round(percentage), 100);
+          } else {
+            fuelLevels[fuel.fuel_type] = 0;
+          }
+        });
+      }
+      
+      return fuelLevels;
+    },
+    enabled: !!fuelPumpId,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false
+  });
+
+  // Query for dashboard metrics with proper caching
+  const { data: metrics = {
+    totalSales: '₹0',
+    customers: '0',
+    fuelVolume: '0 L',
+    growth: '0%'
+  }, isLoading: isLoadingMetrics } = useQuery({
+    queryKey: QUERY_KEYS.metrics(dateRange.from || startOfMonth(new Date()), dateRange.to || new Date()),
+    queryFn: async () => {
+      if (!fuelPumpId) {
+        return {
+          totalSales: '₹0',
+          customers: '0',
+          fuelVolume: '0 L',
+          growth: '0%'
+        };
+      }
+      
+      // Get total sales amount for the selected period
+      const { data: salesData, error: salesError } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('fuel_pump_id', fuelPumpId)
+        .gte('date', formattedStartDate)
+        .lte('date', formattedEndDate);
+        
+      if (salesError) throw salesError;
+      
+      // Get total sales amount for the previous period of same length
+      const prevPeriodDays = dateRange.from && dateRange.to 
+        ? Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))
+        : 30;
+        
+      const prevStartDate = format(subDays(dateRange.from || startOfMonth(new Date()), prevPeriodDays), 'yyyy-MM-dd');
+      const prevEndDate = format(subDays(dateRange.to || new Date(), 1), 'yyyy-MM-dd');
+      
+      const { data: prevSalesData, error: prevSalesError } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('fuel_pump_id', fuelPumpId)
+        .gte('date', prevStartDate)
+        .lte('date', prevEndDate);
+        
+      if (prevSalesError) throw prevSalesError;
+      
+      // Get fuel volume
+      const { data: fuelData, error: fuelError } = await supabase
+        .from('transactions')
+        .select('quantity')
+        .eq('fuel_pump_id', fuelPumpId)
+        .gte('date', formattedStartDate)
+        .lte('date', formattedEndDate);
+        
+      if (fuelError) throw fuelError;
+      
+      // Get total customers for this fuel pump
+      const { count: customerCount, error: customerError } = await supabase
+        .from('customers')
+        .select('id', { count: 'exact', head: true })
+        .eq('fuel_pump_id', fuelPumpId);
+        
+      if (customerError) throw customerError;
+      
+      // Calculate total sales
+      const totalSales = salesData?.reduce((sum, item) => sum + (Number(item.amount) || 0), 0) || 0;
+      const prevTotalSales = prevSalesData?.reduce((sum, item) => sum + (Number(item.amount) || 0), 0) || 0;
+      
+      // Calculate growth percentage
+      let growthPercentage = '0%';
+      if (prevTotalSales > 0) {
+        const growth = ((totalSales - prevTotalSales) / prevTotalSales) * 100;
+        growthPercentage = `${growth > 0 ? '+' : ''}${growth.toFixed(1)}%`;
+      }
+      
+      // Calculate total fuel volume
+      const totalFuelVolume = fuelData?.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0) || 0;
+      
+      return {
+        totalSales: `₹${Math.round(totalSales).toLocaleString()}`,
+        customers: `${customerCount || 0}`,
+        fuelVolume: `${Math.round(totalFuelVolume).toLocaleString()} L`,
+        growth: growthPercentage
+      };
+    },
+    enabled: !!fuelPumpId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false
+  });
+
+  // Calculate loading state
+  const isLoading = isLoadingSales || isLoadingFuel || isLoadingTransactions || 
+                   isLoadingFuelLevels || isLoadingMetrics;
 
   const handleDateRangeSelect = (range: DateRange) => {
     setDateRange(range);

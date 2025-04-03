@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,20 +17,17 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Users, FileText, Plus, Search, Download } from 'lucide-react';
-import { getAllCustomers, createCustomer } from '@/integrations/customers';
-import { Customer } from '@/integrations/supabase/client';
-import { getFuelPumpId } from '@/integrations/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { Customer } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getAllCustomers, createCustomer } from '@/integrations/customers';
+import { getFuelPumpId } from '@/integrations/utils';
 
 const Customers = () => {
   const navigate = useNavigate();
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [booklets, setBooklets] = useState<any[]>([]);
-  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
-  
   const [newCustomer, setNewCustomer] = useState<Partial<Customer>>({
     name: '',
     gst: '',
@@ -38,64 +36,95 @@ const Customers = () => {
     contact: '',
     balance: 0
   });
-  
-  useEffect(() => {
-    const initFuelPumpId = async () => {
-      const id = await getFuelPumpId();
-      setFuelPumpId(id);
-      if (id) {
-        fetchCustomers();
-        fetchBooklets(id);
-      } else {
-        console.log('No fuel pump ID available');
-        toast({
-          title: "Authentication Required",
-          description: "Please log in with a fuel pump account to view customers",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-      }
-    };
-    
-    initFuelPumpId();
-  }, []);
-  
-  const fetchCustomers = async () => {
-    try {
-      setIsLoading(true);
-      const customerData = await getAllCustomers();
-      setCustomers(customerData);
-    } catch (error) {
+
+  // Query for fuel pump ID
+  const { data: fuelPumpId } = useQuery({
+    queryKey: ['fuelPumpId'],
+    queryFn: getFuelPumpId,
+    staleTime: 1000 * 60 * 60, // 1 hour cache
+    retry: 1
+  });
+
+  // Query for customers with caching
+  const { 
+    data: customers = [], 
+    isLoading: isLoadingCustomers 
+  } = useQuery({
+    queryKey: ['customers', fuelPumpId],
+    queryFn: getAllCustomers,
+    enabled: !!fuelPumpId,
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    refetchOnWindowFocus: false,
+    onError: (error) => {
       console.error('Error fetching customers:', error);
       toast({
         title: "Error",
         description: "Failed to load customer data. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
-  
-  const fetchBooklets = async (pumpId: string) => {
-    try {
+  });
+
+  // Query for booklets with caching
+  const { 
+    data: booklets = [], 
+    isLoading: isLoadingBooklets 
+  } = useQuery({
+    queryKey: ['indentBooklets', fuelPumpId],
+    queryFn: async () => {
+      if (!fuelPumpId) return [];
+      
       const { data, error } = await supabase
         .from('indent_booklets')
         .select('*')
-        .eq('fuel_pump_id', pumpId);
+        .eq('fuel_pump_id', fuelPumpId);
         
-      if (error) {
-        throw error;
-      }
-      
-      if (data) {
-        setBooklets(data);
-      }
-    } catch (error) {
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!fuelPumpId,
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    refetchOnWindowFocus: false,
+    onError: (error) => {
       console.error('Error fetching booklets:', error);
     }
-  };
-  
+  });
+
+  // Create customer mutation
+  const createCustomerMutation = useMutation({
+    mutationFn: (customerData: Omit<Customer, 'id' | 'created_at' | 'fuel_pump_id'>) => 
+      createCustomer(customerData),
+    onSuccess: (newCustomer) => {
+      if (newCustomer) {
+        // Update cache with the new customer
+        queryClient.setQueryData(['customers', fuelPumpId], (old: Customer[] = []) => [...old, newCustomer]);
+        
+        setIsDialogOpen(false);
+        setNewCustomer({
+          name: '',
+          gst: '',
+          email: '',
+          phone: '',
+          contact: '',
+          balance: 0
+        });
+        
+        toast({
+          title: "Success",
+          description: "Customer added successfully"
+        });
+      }
+    },
+    onError: (error) => {
+      console.error('Error adding customer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add customer. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleAddCustomer = async () => {
     try {
       if (!newCustomer.name || !newCustomer.gst || !newCustomer.email || 
@@ -108,7 +137,7 @@ const Customers = () => {
         return;
       }
       
-      const createdCustomer = await createCustomer({
+      createCustomerMutation.mutate({
         name: newCustomer.name,
         gst: newCustomer.gst,
         email: newCustomer.email,
@@ -116,26 +145,8 @@ const Customers = () => {
         contact: newCustomer.contact,
         balance: newCustomer.balance || 0
       });
-      
-      if (createdCustomer) {
-        setCustomers([...customers, createdCustomer]);
-        setIsDialogOpen(false);
-        setNewCustomer({
-          name: '',
-          gst: '',
-          email: '',
-          phone: '',
-          contact: '',
-          balance: 0
-        });
-      }
     } catch (error) {
-      console.error('Error adding customer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add customer. Please try again.",
-        variant: "destructive"
-      });
+      console.error('Error in handleAddCustomer:', error);
     }
   };
   
@@ -207,6 +218,9 @@ const Customers = () => {
     link.click();
     document.body.removeChild(link);
   };
+
+  // Combined loading state
+  const isLoading = isLoadingCustomers || isLoadingBooklets;
   
   return (
     <div className="space-y-6">
@@ -299,7 +313,16 @@ const Customers = () => {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleAddCustomer}>Add Customer</Button>
+                <Button onClick={handleAddCustomer} disabled={createCustomerMutation.isPending}>
+                  {createCustomerMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    'Add Customer'
+                  )}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

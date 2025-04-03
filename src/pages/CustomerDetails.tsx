@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import CustomerHeader from '@/components/customers/CustomerHeader';
 import CustomerTabs from '@/components/customers/CustomerTabs';
 import { useCustomerData } from '@/components/customers/hooks/useCustomerData';
-import { useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 
@@ -25,14 +24,6 @@ const CustomerDetails = () => {
     setIndentBooklets,
     refreshData
   } = useCustomerData(customerId);
-
-  useEffect(() => {
-    if (indentBooklets && indentBooklets.length > 0) {
-      console.log(`Customer details has ${indentBooklets.length} booklets:`, indentBooklets);
-    } else {
-      console.log('No indent booklets found in customer details');
-    }
-  }, [indentBooklets]);
 
   if (isLoading) {
     return (
