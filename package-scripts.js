@@ -12,7 +12,7 @@ try {
 
   if (!scriptToRun) {
     console.error('Please provide a script name to run');
-    process.exit(0); // Exit with code 0 to not fail the build
+    process.exit(1); // Exit with failure code to properly signal error
   }
 
   if (scriptsConfig.scripts[scriptToRun]) {
@@ -21,19 +21,19 @@ try {
       execSync(scriptsConfig.scripts[scriptToRun], { stdio: 'inherit' });
     } catch (error) {
       console.error(`Error running script "${scriptToRun}":`, error.message);
-      // Exit with code 0 to prevent Netlify build failures when running tests
-      console.warn('Continuing build despite script failure');
-      process.exit(0);
+      // Exit with proper error code to indicate test failure
+      if (scriptToRun === 'test') {
+        console.error('Tests failed. Check test output for details.');
+        process.exit(1); // Signal test failure to Netlify
+      }
+      // For other scripts, exit with non-zero code
+      process.exit(1);
     }
   } else {
     console.error(`Script "${scriptToRun}" not found in .scripts.json`);
-    // Exit with code 0 for missing scripts to allow build to continue
-    console.warn('Continuing build despite missing script');
-    process.exit(0);
+    process.exit(1); // Exit with failure code
   }
 } catch (error) {
   console.error('Failed to read scripts configuration:', error.message);
-  // Exit with code 0 for errors to allow build to continue
-  console.warn('Continuing build despite configuration error');
-  process.exit(0);
+  process.exit(1); // Exit with failure code
 }
