@@ -12,6 +12,51 @@ interface Payment {
 }
 
 /**
+ * Get a valid staff ID for the current user/fuel pump
+ */
+const getValidStaffId = async (fuelPumpId: string): Promise<string> => {
+  try {
+    // First try to get the current authenticated user's staff record
+    const { data: authUser } = await supabase.auth.getUser();
+    
+    if (authUser && authUser.user) {
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('id')
+        .eq('auth_id', authUser.user.id)
+        .eq('fuel_pump_id', fuelPumpId)
+        .eq('is_active', true)
+        .single();
+      
+      if (staffData) {
+        console.log(`Using authenticated user's staff ID: ${staffData.id}`);
+        return staffData.id;
+      }
+    }
+    
+    // Fallback to any active staff member for this fuel pump
+    const { data: anyStaff } = await supabase
+      .from('staff')
+      .select('id')
+      .eq('fuel_pump_id', fuelPumpId)
+      .eq('is_active', true)
+      .limit(1)
+      .single();
+    
+    if (anyStaff) {
+      console.log(`Using fallback staff ID: ${anyStaff.id}`);
+      return anyStaff.id;
+    }
+    
+    console.warn('No valid staff ID found, payment may fail due to foreign key constraint');
+    throw new Error('No valid staff member found for this fuel pump');
+  } catch (error) {
+    console.error('Error getting valid staff ID:', error);
+    throw new Error('Could not find a valid staff ID');
+  }
+};
+
+/**
  * Record a payment for a customer
  */
 export const recordPayment = async (
@@ -55,9 +100,26 @@ export const recordPayment = async (
 
     console.log('Payment recorded successfully:', paymentData);
 
+    // Get a valid staff ID to avoid foreign key constraint violation
+    let staffId;
+    try {
+      staffId = await getValidStaffId(fuelPumpId);
+    } catch (error) {
+      console.error('Failed to get valid staff ID:', error);
+      toast({
+        title: "Warning",
+        description: "Payment recorded but transaction creation failed: No valid staff member found.",
+        variant: "destructive"
+      });
+      
+      // Update the customer balance even if transaction creation fails
+      await updateCustomerBalance(payment.customer_id, payment.amount, currentBalance);
+      return true;
+    }
+
     // Record a transaction with type PAYMENT
     const transactionId = crypto.randomUUID();
-    console.log(`Creating transaction with ID: ${transactionId}`);
+    console.log(`Creating transaction with ID: ${transactionId} and staff ID: ${staffId}`);
 
     const { data: transactionData, error: transactionError } = await supabase
       .from('transactions')
@@ -69,7 +131,7 @@ export const recordPayment = async (
         amount: payment.amount,
         quantity: 0,
         payment_method: payment.payment_method,
-        staff_id: '00000000-0000-0000-0000-000000000000', // Placeholder staff ID
+        staff_id: staffId,
         fuel_pump_id: fuelPumpId
       })
       .select();
@@ -82,21 +144,7 @@ export const recordPayment = async (
     console.log('Transaction created successfully:', transactionData);
 
     // Update the customer balance
-    const newBalance = ((currentBalance || 0) - payment.amount);
-    
-    const { data: balanceData, error: updateError } = await supabase
-      .from('customers')
-      .update({ balance: newBalance })
-      .eq('id', payment.customer_id)
-      .select()
-      .single();
-
-    if (updateError) {
-      console.error('Error updating customer balance:', updateError);
-      throw updateError;
-    }
-
-    console.log('Customer balance updated successfully:', balanceData);
+    await updateCustomerBalance(payment.customer_id, payment.amount, currentBalance);
 
     toast({
       title: "Payment Recorded",
@@ -113,4 +161,30 @@ export const recordPayment = async (
     });
     return false;
   }
+};
+
+/**
+ * Update customer balance after payment
+ */
+const updateCustomerBalance = async (
+  customerId: string,
+  paymentAmount: number,
+  currentBalance: number | null = 0
+): Promise<void> => {
+  // Calculate new balance (reduce debt when payment is made)
+  const newBalance = ((currentBalance || 0) - paymentAmount);
+  
+  const { data: balanceData, error: updateError } = await supabase
+    .from('customers')
+    .update({ balance: newBalance })
+    .eq('id', customerId)
+    .select()
+    .single();
+
+  if (updateError) {
+    console.error('Error updating customer balance:', updateError);
+    throw updateError;
+  }
+
+  console.log('Customer balance updated successfully:', balanceData);
 };
