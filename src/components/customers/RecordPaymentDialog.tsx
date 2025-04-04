@@ -49,7 +49,7 @@ export default function RecordPaymentDialog({
 
     setIsSubmitting(true);
     try {
-      console.log(`Recording payment for customer: ${customerId}, amount: ${amount}`);
+      console.log(`Recording payment for customer: ${customerId}, amount: ${amount}, balance: ${currentBalance}`);
       
       const success = await recordPayment({
         customer_id: customerId,
@@ -71,6 +71,12 @@ export default function RecordPaymentDialog({
         setNotes('');
         onOpenChange(false);
         onPaymentRecorded();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to record payment. Please check the console for details.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error recording payment:', error);
@@ -91,6 +97,9 @@ export default function RecordPaymentDialog({
           <DialogTitle>Record Payment</DialogTitle>
           <DialogDescription>
             Record a new payment for {customerName || 'customer'}
+            {currentBalance !== undefined && currentBalance !== null && (
+              <span className="block mt-1">Current balance: ₹{currentBalance.toLocaleString()}</span>
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">

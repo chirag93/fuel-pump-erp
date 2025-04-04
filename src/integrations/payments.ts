@@ -35,7 +35,7 @@ export const recordPayment = async (
     console.log(`Recording payment with fuel_pump_id: ${fuelPumpId}`);
     
     // Create a new payment record
-    const { error: paymentError } = await supabase
+    const { data: paymentData, error: paymentError } = await supabase
       .from('customer_payments')
       .insert({
         customer_id: payment.customer_id,
@@ -44,15 +44,25 @@ export const recordPayment = async (
         notes: payment.notes,
         date: payment.date,
         fuel_pump_id: fuelPumpId
-      });
+      })
+      .select()
+      .single();
 
-    if (paymentError) throw paymentError;
+    if (paymentError) {
+      console.error('Error recording payment:', paymentError);
+      throw paymentError;
+    }
+
+    console.log('Payment recorded successfully:', paymentData);
 
     // Record a transaction with type PAYMENT
-    const { error: transactionError } = await supabase
+    const transactionId = crypto.randomUUID();
+    console.log(`Creating transaction with ID: ${transactionId}`);
+
+    const { data: transactionData, error: transactionError } = await supabase
       .from('transactions')
       .insert({
-        id: crypto.randomUUID(),
+        id: transactionId,
         customer_id: payment.customer_id,
         date: payment.date.split('T')[0],
         fuel_type: 'PAYMENT',
@@ -61,19 +71,37 @@ export const recordPayment = async (
         payment_method: payment.payment_method,
         staff_id: '00000000-0000-0000-0000-000000000000', // Placeholder staff ID
         fuel_pump_id: fuelPumpId
-      });
+      })
+      .select();
 
-    if (transactionError) throw transactionError;
+    if (transactionError) {
+      console.error('Error creating transaction:', transactionError);
+      throw transactionError;
+    }
+
+    console.log('Transaction created successfully:', transactionData);
 
     // Update the customer balance
     const newBalance = ((currentBalance || 0) - payment.amount);
     
-    const { error: updateError } = await supabase
+    const { data: balanceData, error: updateError } = await supabase
       .from('customers')
       .update({ balance: newBalance })
-      .eq('id', payment.customer_id);
+      .eq('id', payment.customer_id)
+      .select()
+      .single();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('Error updating customer balance:', updateError);
+      throw updateError;
+    }
+
+    console.log('Customer balance updated successfully:', balanceData);
+
+    toast({
+      title: "Payment Recorded",
+      description: `Successfully recorded payment of ₹${payment.amount}`,
+    });
 
     return true;
   } catch (error) {
