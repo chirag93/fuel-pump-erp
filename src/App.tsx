@@ -1,4 +1,3 @@
-
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
@@ -13,7 +12,7 @@ import CustomerDetails from '@/pages/CustomerDetails';
 import RecordIndent from '@/pages/RecordIndent';
 import AllTransactions from '@/pages/AllTransactions';
 import ShiftManagement from '@/pages/ShiftManagement';
-import DailyReadings from '@/pages/DailyReadings';
+import DailySalesRecord from '@/pages/DailySalesRecord';
 import StaffManagement from '@/pages/StaffManagement';
 import BookletIndents from '@/pages/BookletIndents';
 import StockLevels from '@/pages/StockLevels';
@@ -40,7 +39,7 @@ import MobileHome from '@/pages/mobile/MobileHome';
 import MobileCustomers from '@/pages/mobile/MobileCustomers';
 import MobileShiftManagement from '@/pages/mobile/MobileShiftManagement';
 import MobileRecordIndent from '@/pages/mobile/MobileRecordIndent';
-import MobileDailyReadings from '@/pages/mobile/MobileDailyReadings';
+import MobileDailySalesRecord from '@/pages/mobile/MobileDailySalesRecord';
 
 // Other pages
 import NotFound from '@/pages/NotFound';
@@ -75,7 +74,7 @@ function App() {
         <Route path="/record-indent" element={<RecordIndent />} />
         <Route path="/all-transactions" element={<AllTransactions />} />
         <Route path="/shift-management" element={<ShiftManagement />} />
-        <Route path="/daily-readings" element={<DailyReadings />} />
+        <Route path="/dsr" element={<DailySalesRecord />} />
         <Route path="/staff-management" element={<StaffManagement />} />
         <Route path="/booklet-indents/:bookletId" element={<BookletIndents />} />
         <Route path="/customers/:customerId/booklets/:bookletId/indents" element={<BookletIndents />} />
@@ -115,7 +114,7 @@ function App() {
       <Route path="/mobile" element={<MobileHome />} />
       <Route path="/mobile/customers" element={<MobileCustomers />} />
       <Route path="/mobile/shift-management" element={<MobileShiftManagement />} />
-      <Route path="/mobile/daily-readings" element={<MobileDailyReadings />} />
+      <Route path="/mobile/dsr" element={<MobileDailySalesRecord />} />
       <Route path="/mobile/record-indent" element={<MobileRecordIndent />} />
       
       {/* Customer Details route should be accessible on mobile too */}

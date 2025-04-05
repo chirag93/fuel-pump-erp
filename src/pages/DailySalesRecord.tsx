@@ -1,16 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, Download } from 'lucide-react';
+import { Loader2, Plus, Download, RefreshCw } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-
-// Import the components
-import ReadingsTable from '@/components/daily-readings/ReadingsTable';
-import ReadingFormDialog from '@/components/daily-readings/ReadingFormDialog';
-import DeleteReadingDialog from '@/components/daily-readings/DeleteReadingDialog';
-import { ReadingFormData } from '@/components/daily-readings/TankReadingsForm';
-import { calculateValues, processReadingsData, exportReadingsAsCSV } from '@/components/daily-readings/readingUtils';
+import { getFuelPumpId } from '@/integrations/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TankReading {
   tank_number: number;
@@ -35,7 +30,14 @@ interface DailyReading {
   tanks?: TankReading[];
 }
 
+import ReadingsTable from '@/components/daily-readings/ReadingsTable';
+import ReadingFormDialog from '@/components/daily-readings/ReadingFormDialog';
+import DeleteReadingDialog from '@/components/daily-readings/DeleteReadingDialog';
+import { ReadingFormData } from '@/components/daily-readings/TankReadingsForm';
+import { calculateValues, processReadingsData, exportReadingsAsCSV } from '@/components/daily-readings/readingUtils';
+
 const DailySalesRecord = () => {
+  const { fuelPumpId: contextFuelPumpId, isAuthenticated } = useAuth();
   const [readings, setReadings] = useState<DailyReading[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,6 +48,9 @@ const DailySalesRecord = () => {
   const [selectedReadingFuelType, setSelectedReadingFuelType] = useState<string | null>(null);
   const [tankCount, setTankCount] = useState<number>(1);
   const [fuelTypes, setFuelTypes] = useState<string[]>([]);
+  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [refreshCounter, setRefreshCounter] = useState(0);
   
   const [readingFormData, setReadingFormData] = useState<ReadingFormData>({
     date: new Date().toISOString().split('T')[0],
@@ -62,47 +67,87 @@ const DailySalesRecord = () => {
   const calculatedValues = calculateValues(readingFormData);
 
   useEffect(() => {
-    fetchReadings();
-    fetchFuelTypes();
-  }, []);
+    const initializeData = async () => {
+      setIsInitializing(true);
+      try {
+        // Check if user is authenticated
+        if (!isAuthenticated) {
+          console.log('User is not authenticated. Please sign in to fetch data.');
+          setIsLoading(false);
+          setIsInitializing(false);
+          toast({
+            title: "Authentication required",
+            description: "Please sign in to view and manage daily readings",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // First try to get the fuel pump ID from the context (most reliable)
+        let pumpId = contextFuelPumpId;
+        console.log(`DailyReadings initialization - Context fuel pump ID: ${pumpId || 'none'}`);
+        
+        // If not available in context, try to get it from the utility function
+        if (!pumpId) {
+          pumpId = await getFuelPumpId();
+          console.log(`DailyReadings initialization - Utility function fuel pump ID: ${pumpId || 'none'}`);
+        }
+        
+        if (pumpId) {
+          setFuelPumpId(pumpId);
+          // Fetch data
+          await fetchReadings(pumpId);
+          await fetchFuelTypes(pumpId);
+          toast({
+            title: "Connected to fuel pump",
+            description: `Successfully connected to fuel pump ID: ${pumpId}`
+          });
+        } else {
+          console.warn("No fuel pump ID available");
+          toast({
+            title: "No fuel pump configured",
+            description: "Could not find an existing fuel pump. Please contact administrator."
+          });
+        }
+      } catch (error) {
+        console.error("Error during initialization:", error);
+        toast({
+          title: "Error connecting to fuel pump",
+          description: "Failed to connect to the database",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+        setIsInitializing(false);
+      }
+    };
+    
+    initializeData();
+  }, [contextFuelPumpId, isAuthenticated, refreshCounter]);
 
-  const fetchReadings = async () => {
-    setIsLoading(true);
+  const fetchFuelTypes = async (pumpId: string | null = fuelPumpId) => {
     try {
-      const { data, error } = await supabase
-        .from('daily_readings')
-        .select('*')
-        .order('date', { ascending: false });
+      console.log(`DailyReadings - Fetching fuel types with fuel pump ID: ${pumpId || 'none'}`);
+      
+      if (!pumpId) {
+        console.log('No fuel pump ID available, cannot fetch fuel types');
+        return;
+      }
+      
+      let query = supabase
+        .from('fuel_settings')
+        .select('fuel_type')
+        .eq('fuel_pump_id', pumpId);
+        
+      const { data, error } = await query;
         
       if (error) throw error;
       
-      if (data) {
-        // Group readings by date and fuel type to display them properly
-        const processedData = processReadingsData(data);
-        setReadings(processedData);
-      }
-    } catch (error) {
-      console.error('Error fetching readings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load readings. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchFuelTypes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('fuel_settings')
-        .select('fuel_type');
-        
-      if (error) throw error;
+      console.log(`Retrieved ${data?.length || 0} fuel types`);
       
       if (data && data.length > 0) {
         const types = data.map(item => item.fuel_type);
+        console.log('Fuel types:', types);
         setFuelTypes(types);
         // Set default fuel type if none is selected
         if (!readingFormData.fuel_type && types.length > 0) {
@@ -111,22 +156,106 @@ const DailySalesRecord = () => {
             fuel_type: types[0]
           }));
         }
+      } else {
+        console.log('No fuel types found, using defaults');
+        setFuelTypes(['Petrol', 'Diesel']);
       }
     } catch (error) {
       console.error('Error fetching fuel types:', error);
+      setFuelTypes(['Petrol', 'Diesel']);
+    }
+  };
+
+  const fetchReadings = async (pumpId: string | null = fuelPumpId) => {
+    setIsLoading(true);
+    
+    try {
+      // Check if user is authenticated
+      if (!isAuthenticated) {
+        console.log('User is not authenticated. Please sign in to fetch data.');
+        setIsLoading(false);
+        return;
+      }
+      
+      // If no pumpId provided, try to get it first
+      if (!pumpId) {
+        if (contextFuelPumpId) {
+          pumpId = contextFuelPumpId;
+          console.log(`Using fuel pump ID from context: ${pumpId}`);
+        } else {
+          pumpId = await getFuelPumpId();
+          console.log(`Using fuel pump ID from utility function: ${pumpId || 'none'}`);
+        }
+        
+        if (!pumpId) {
+          console.log('No fuel pump ID available, cannot fetch readings');
+          setIsLoading(false);
+          setReadings([]);
+          return;
+        }
+      }
+      
+      console.log(`DailyReadings - Fetching readings with fuel pump ID: ${pumpId || 'none'}`);
+      
+      let query = supabase
+        .from('daily_readings')
+        .select('*')
+        .eq('fuel_pump_id', pumpId)
+        .order('date', { ascending: false });
+        
+      console.log(`SQL query filter: daily_readings.fuel_pump_id = '${pumpId}'`);
+      
+      const { data, error } = await query;
+        
+      if (error) {
+        console.error('Error fetching readings:', error);
+        throw error;
+      }
+      
+      const readingsCount = data?.length || 0;
+      console.log(`Retrieved ${readingsCount} daily readings for fuel pump ID: ${pumpId}`);
+      
+      if (data && data.length > 0) {
+        // Group readings by date and fuel type to display them properly
+        const processedData = processReadingsData(data);
+        console.log('Processed readings data:', processedData);
+        setReadings(processedData);
+      } else {
+        console.log(`No daily readings found for fuel pump ID: ${pumpId}`);
+        setReadings([]);
+      }
+    } catch (error) {
+      console.error('Error fetching readings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load readings from database.",
+        variant: "destructive"
+      });
+      setReadings([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const fetchPreviousDayClosingStock = async (date: string, fuelType: string): Promise<number | null> => {
     try {
+      const fuelPumpId = await getFuelPumpId();
+      
       // Find the most recent reading before the selected date
-      const { data, error } = await supabase
+      const query = supabase
         .from('daily_readings')
         .select('closing_stock, date')
         .eq('fuel_type', fuelType)
         .lt('date', date)
         .order('date', { ascending: false })
         .limit(1);
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        query.eq('fuel_pump_id', fuelPumpId);
+      }
+      
+      const { data, error } = await query;
         
       if (error) throw error;
       
@@ -219,6 +348,19 @@ const DailySalesRecord = () => {
     setDeleteDialogOpen(true);
   };
 
+  const handleTankInputChange = (tankNumber: number, field: string, value: string) => {
+    setReadingFormData(prev => ({
+      ...prev,
+      readings: {
+        ...prev.readings,
+        [tankNumber]: {
+          ...prev.readings[tankNumber],
+          [field]: value === '' ? '' : parseFloat(value) || 0
+        }
+      }
+    }));
+  };
+
   const handleInputChange = async (field: string, value: string) => {
     if (field === 'fuel_type' && !isEditing) {
       // When fuel type changes, fetch the previous day's closing stock
@@ -272,19 +414,6 @@ const DailySalesRecord = () => {
         [field]: field === 'date' || field === 'fuel_type' ? value : (value === '' ? '' : parseFloat(value) || 0)
       }));
     }
-  };
-
-  const handleTankInputChange = (tankNumber: number, field: string, value: string) => {
-    setReadingFormData(prev => ({
-      ...prev,
-      readings: {
-        ...prev.readings,
-        [tankNumber]: {
-          ...prev.readings[tankNumber],
-          [field]: value === '' ? '' : parseFloat(value) || 0
-        }
-      }
-    }));
   };
 
   const addTank = () => {
@@ -346,6 +475,9 @@ const DailySalesRecord = () => {
           .eq('id', readingFormData.id);
       }
       
+      // Get fuel pump ID
+      const fuelPumpId = await getFuelPumpId();
+      
       // Create entries for each tank
       const entries = Object.values(readingFormData.readings).map(tank => ({
         date: readingFormData.date,
@@ -356,9 +488,8 @@ const DailySalesRecord = () => {
         opening_stock: calculations.opening_stock,
         receipt_quantity: readingFormData.receipt_quantity || null,
         closing_stock: readingFormData.closing_stock,
-        actual_meter_sales: readingFormData.actual_meter_sales
-        // Don't include sales_per_tank_stock as it's a generated column
-        // Don't include stock_variation as it's a generated column
+        actual_meter_sales: readingFormData.actual_meter_sales,
+        fuel_pump_id: fuelPumpId
       }));
       
       // Insert entries
@@ -369,13 +500,20 @@ const DailySalesRecord = () => {
       if (error) throw error;
       
       // Update fuel_settings with the new closing stock (tank level)
-      const { error: updateError } = await supabase
+      const updateQuery = supabase
         .from('fuel_settings')
         .update({
           current_level: readingFormData.closing_stock,
           updated_at: new Date().toISOString()
         })
         .eq('fuel_type', readingFormData.fuel_type.trim());
+        
+      // Apply fuel pump filter if available
+      if (fuelPumpId) {
+        updateQuery.eq('fuel_pump_id', fuelPumpId);
+      }
+      
+      const { error: updateError } = await updateQuery;
         
       if (updateError) {
         console.error('Error updating fuel settings:', updateError);
@@ -438,11 +576,19 @@ const DailySalesRecord = () => {
     }
   };
 
+  const handleManualRefresh = () => {
+    setRefreshCounter(prev => prev + 1);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Daily Sales Record (DSR)</h1>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleManualRefresh} disabled={isLoading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           {readings.length > 0 && (
             <Button variant="outline" onClick={() => exportReadingsAsCSV(readings)}>
               <Download className="mr-2 h-4 w-4" />
@@ -451,7 +597,7 @@ const DailySalesRecord = () => {
           )}
           <Button onClick={() => handleOpenDialog()}>
             <Plus className="mr-2 h-4 w-4" />
-            Add DSR
+            Add Reading
           </Button>
         </div>
       </div>
@@ -459,18 +605,42 @@ const DailySalesRecord = () => {
       <Card>
         <CardHeader>
           <CardDescription>
-            Track daily fuel levels and sales
+            Track daily fuel sales and stock levels
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading records...
+              Loading readings...
+            </div>
+          ) : !isAuthenticated ? (
+            <div className="flex flex-col items-center justify-center py-10 space-y-4">
+              <div className="text-muted-foreground text-center">
+                <p className="mb-2">You need to be logged in to view daily readings.</p>
+                <p className="text-sm text-muted-foreground">Please sign in to access this feature.</p>
+              </div>
             </div>
           ) : readings.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-muted-foreground">
-              No sales records found. Add a new record to start tracking.
+            <div className="flex flex-col items-center justify-center py-10 space-y-4">
+              <div className="text-muted-foreground text-center">
+                <p className="mb-2">No readings found. Add a new reading to start tracking.</p>
+                <p className="text-sm text-muted-foreground">
+                  {fuelPumpId ? 
+                    `Using fuel pump ID: ${fuelPumpId.substring(0, 8)}...` : 
+                    isInitializing ? 
+                      'Initializing fuel pump connection...' :
+                      'No fuel pump ID available'}
+                </p>
+              </div>
+              <Button onClick={() => handleOpenDialog()} variant="outline">
+                <Plus className="mr-2 h-4 w-4" />
+                Add First Reading
+              </Button>
+              <Button onClick={handleManualRefresh} variant="secondary" className="mt-2">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Try Again
+              </Button>
             </div>
           ) : (
             <ReadingsTable

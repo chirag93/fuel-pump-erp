@@ -52,10 +52,10 @@ const MobileHome = () => {
           />
         </Link>
         
-        <Link to="/mobile/daily-readings" className="w-full animate-fade-in delay-400">
+        <Link to="/mobile/dsr" className="w-full animate-fade-in delay-400">
           <CardFeature
-            title="Meter"
-            description="Read"
+            title="Sales"
+            description="Record"
             icon={<Droplets className="text-blue-500" size={28} />}
             className="p-4"
           />
