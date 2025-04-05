@@ -346,10 +346,10 @@ const Home = () => {
           <h3 className="mb-4 text-xl font-semibold">Quick Actions</h3>
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             <QuickAction
-              title="Daily Readings"
+              title="Daily Sales Record"
               description="Add shift-wise opening and closing readings"
               icon={<Droplets size={20} />}
-              href="/daily-readings"
+              href="/dsr"
             />
             
             <QuickAction
