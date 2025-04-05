@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Save } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { getBusinessSettings, updateBusinessSettings, BusinessSettings as BusinessSettingsType } from '@/integrations/businessSettings';
 import { getFuelPumpId } from '@/integrations/utils';
 
@@ -63,13 +63,11 @@ export function BusinessSettings() {
     
     try {
       setLoading(true);
-      // Ensure the fuel_pump_id is included
-      const settingsWithPumpId = {
+      const success = await updateBusinessSettings({
         ...businessSettings,
         fuel_pump_id: fuelPumpId
-      };
+      });
       
-      const success = await updateBusinessSettings(settingsWithPumpId);
       if (success) {
         toast({
           title: "Success",
@@ -78,6 +76,11 @@ export function BusinessSettings() {
       }
     } catch (error) {
       console.error('Error updating business settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update business settings. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }

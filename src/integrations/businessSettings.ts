@@ -28,13 +28,20 @@ export const getBusinessSettings = async (): Promise<BusinessSettings | null> =>
       return null;
     }
     
+    console.log('Fetching business settings for fuel pump:', fuelPumpId);
+    
     const { data, error } = await supabase
       .from('business_settings')
       .select('*')
       .eq('fuel_pump_id', fuelPumpId)
       .maybeSingle();
       
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error fetching business settings:', error);
+      throw error;
+    }
+    
+    console.log('Retrieved business settings:', data);
     return data as BusinessSettings;
   } catch (error) {
     console.error('Error fetching business settings:', error);
@@ -64,46 +71,55 @@ export const updateBusinessSettings = async (settings: BusinessSettings): Promis
       return false;
     }
     
-    if (!settings.gst_number) {
-      toast({
-        title: "Missing information",
-        description: "Please enter GST number",
-        variant: "destructive"
-      });
-      return false;
-    }
+    console.log('Updating business settings for fuel pump:', fuelPumpId, 'with data:', settings);
+    
+    // Ensure we're setting the correct fuel_pump_id
+    const settingsToUpdate = {
+      ...settings,
+      fuel_pump_id: fuelPumpId
+    };
     
     const { data: existingData, error: existingError } = await supabase
       .from('business_settings')
       .select('*')
-      .eq('fuel_pump_id', fuelPumpId);
+      .eq('fuel_pump_id', fuelPumpId)
+      .maybeSingle();
       
-    if (existingError) throw existingError;
+    if (existingError) {
+      console.error('Supabase error checking existing settings:', existingError);
+      throw existingError;
+    }
     
-    if (existingData && existingData.length > 0) {
-      const { error } = await supabase
+    let result;
+    
+    if (existingData) {
+      console.log('Updating existing business settings record with ID:', existingData.id);
+      result = await supabase
         .from('business_settings')
         .update({
-          gst_number: settings.gst_number,
-          business_name: settings.business_name,
-          address: settings.address,
-          fuel_pump_id: fuelPumpId
+          gst_number: settingsToUpdate.gst_number,
+          business_name: settingsToUpdate.business_name,
+          address: settingsToUpdate.address
         })
-        .eq('id', existingData[0].id);
-        
-      if (error) throw error;
+        .eq('id', existingData.id);
     } else {
-      const { error } = await supabase
+      console.log('Creating new business settings record');
+      result = await supabase
         .from('business_settings')
         .insert([{
-          gst_number: settings.gst_number,
-          business_name: settings.business_name,
-          address: settings.address,
+          gst_number: settingsToUpdate.gst_number,
+          business_name: settingsToUpdate.business_name,
+          address: settingsToUpdate.address,
           fuel_pump_id: fuelPumpId
         }]);
-        
-      if (error) throw error;
     }
+    
+    if (result.error) {
+      console.error('Supabase error updating business settings:', result.error);
+      throw result.error;
+    }
+    
+    console.log('Business settings update successful');
     
     toast({
       title: "Success",
