@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -57,7 +56,7 @@ export function useShiftManagement() {
     queryFn: async () => {
       if (!fuelPumpId) return [];
       
-      // First, get shifts data
+      // First, get shifts data with staff details
       const { data: shiftsData, error: shiftsError } = await supabase
         .from('shifts')
         .select(`
@@ -117,7 +116,8 @@ export function useShiftManagement() {
         return {
           ...shift,
           staff_name: staffData.name,
-          staff_numeric_id: staffData.staff_numeric_id,
+          // Convert staff_numeric_id to string if it exists, otherwise use 'N/A'
+          staff_numeric_id: staffData.staff_numeric_id ? String(staffData.staff_numeric_id) : 'N/A',
           date: reading.date || new Date().toISOString().split('T')[0],
           pump_id: reading.pump_id || 'Unknown',
           opening_reading: reading.opening_reading || 0,
