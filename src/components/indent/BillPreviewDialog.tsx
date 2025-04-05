@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -10,7 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Indent, Transaction } from '@/integrations/supabase/client';
 import { generateBill } from '@/utils/billGenerator';
-import { supabase } from '@/integrations/supabase/client';
+import { getBusinessSettings } from '@/integrations/businessSettings';
 
 interface BillPreviewDialogProps {
   open: boolean;
@@ -52,18 +51,13 @@ const BillPreviewDialog = ({
     // Fetch business details
     const fetchBusinessInfo = async () => {
       try {
-        const { data, error } = await supabase
-          .from('business_settings')
-          .select('*')
-          .single();
-
-        if (error) throw error;
+        const businessSettings = await getBusinessSettings();
         
-        if (data) {
+        if (businessSettings) {
           setBusinessInfo({
-            business_name: data.business_name,
-            gst_number: data.gst_number || 'Not Available',
-            address: data.address || 'Address not available'
+            business_name: businessSettings.business_name || 'Fuel Station',
+            gst_number: businessSettings.gst_number || 'Not Available',
+            address: businessSettings.address || 'Address not available'
           });
         }
       } catch (error) {
@@ -117,6 +111,7 @@ const BillPreviewDialog = ({
     return quantity > 0 ? amount / quantity : 0;
   };
 
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">

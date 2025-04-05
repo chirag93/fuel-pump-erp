@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Customer, Transaction } from '@/integrations/supabase/client';
+import { getBusinessSettings } from '@/integrations/businessSettings';
 
 interface BusinessInfo {
   id?: string;
@@ -29,22 +30,23 @@ export const generateGSTInvoice = async (
   }
 
   try {
-    // Get business details for the invoice from business_settings table
-    const { data: businessSettings, error: businessError } = await supabase
-      .from('business_settings')
-      .select('*')
-      .single();
-
-    if (businessError) {
-      console.error('Error fetching business settings:', businessError);
-      throw new Error('Could not fetch business information');
+    // Get business details from business_settings
+    const businessSettings = await getBusinessSettings();
+    
+    let businessInfo: BusinessInfo;
+    if (businessSettings) {
+      businessInfo = {
+        business_name: businessSettings.business_name,
+        gst_number: businessSettings.gst_number,
+        address: businessSettings.address
+      };
+    } else {
+      businessInfo = {
+        business_name: 'Fuel Station',
+        gst_number: 'Not Available',
+        address: 'Address not available'
+      };
     }
-
-    const businessInfo: BusinessInfo = businessSettings || {
-      business_name: 'Fuel Station',
-      gst_number: 'Not Available',
-      address: 'Address not available'
-    };
 
     // Calculate totals
     let totalAmount = 0;

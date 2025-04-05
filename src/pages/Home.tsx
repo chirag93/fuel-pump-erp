@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -23,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { getFuelPumpId } from '@/integrations/utils';
 import { toast } from '@/components/ui/use-toast';
+import { getBusinessSettings } from '@/integrations/businessSettings';
 
 interface QuickActionProps {
   title: string;
@@ -75,11 +77,28 @@ const QuickAction = ({
 };
 
 const Home = () => {
+  const [businessName, setBusinessName] = useState<string>('Fuel Pro 360');
   const { fuelPumpName } = useAuth();
   const [fuelLevels, setFuelLevels] = useState<FuelLevel[]>([]);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
   const [isLoadingFuelLevels, setIsLoadingFuelLevels] = useState(true);
+
+  // Get business name from business_settings
+  useEffect(() => {
+    const fetchBusinessName = async () => {
+      try {
+        const businessSettings = await getBusinessSettings();
+        if (businessSettings && businessSettings.business_name) {
+          setBusinessName(businessSettings.business_name);
+        }
+      } catch (error) {
+        console.error('Error fetching business name:', error);
+      }
+    };
+
+    fetchBusinessName();
+  }, []);
 
   // Fetch fuel levels from the database with tank capacities from settings
   useEffect(() => {
@@ -337,7 +356,7 @@ const Home = () => {
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {fuelPumpName ? `${fuelPumpName} Dashboard` : 'Fuel Pro 360 Dashboard'}
+            {businessName ? `${businessName} Dashboard` : 'Fuel Pro 360 Dashboard'}
           </h2>
           <p className="text-muted-foreground">Quick access to frequent operations</p>
         </div>

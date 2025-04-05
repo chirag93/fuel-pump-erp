@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Indent, Transaction } from '@/integrations/supabase/client';
+import { getBusinessSettings } from '@/integrations/businessSettings';
 
 interface BusinessInfo {
   business_name: string;
