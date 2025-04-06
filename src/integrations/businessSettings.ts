@@ -7,7 +7,7 @@ export interface BusinessSettings {
   id?: string;
   gst_number: string;
   business_name: string;
-  address: string;
+  address: string | null;
   fuel_pump_id?: string;
 }
 
@@ -59,64 +59,66 @@ export const getBusinessSettings = async (): Promise<BusinessSettings | null> =>
  */
 export const updateBusinessSettings = async (settings: BusinessSettings): Promise<boolean> => {
   try {
-    const fuelPumpId = await getFuelPumpId();
-    
-    if (!fuelPumpId) {
-      console.log('No fuel pump ID available, cannot update business settings');
-      toast({
-        title: "Authentication Required",
-        description: "Please log in with a fuel pump account to update business settings",
-        variant: "destructive"
-      });
-      return false;
+    if (!settings.fuel_pump_id) {
+      const fuelPumpId = await getFuelPumpId();
+      
+      if (!fuelPumpId) {
+        console.log('No fuel pump ID available, cannot update business settings');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to update business settings",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      // Ensure we're setting the correct fuel_pump_id
+      settings.fuel_pump_id = fuelPumpId;
     }
     
-    console.log('Updating business settings for fuel pump:', fuelPumpId, 'with data:', settings);
+    console.log('Updating business settings for fuel pump:', settings.fuel_pump_id, 'with data:', settings);
     
-    // Ensure we're setting the correct fuel_pump_id
-    const settingsToUpdate = {
-      ...settings,
-      fuel_pump_id: fuelPumpId
-    };
-    
+    // Check if a record already exists for this fuel pump
     const { data: existingData, error: existingError } = await supabase
       .from('business_settings')
-      .select('*')
-      .eq('fuel_pump_id', fuelPumpId)
+      .select('id')
+      .eq('fuel_pump_id', settings.fuel_pump_id)
       .maybeSingle();
       
-    if (existingError) {
+    if (existingError && existingError.code !== 'PGRST116') {
+      // Only throw if it's not a "no rows returned" error
       console.error('Supabase error checking existing settings:', existingError);
       throw existingError;
     }
     
     let result;
     
-    if (existingData) {
-      console.log('Updating existing business settings record with ID:', existingData.id);
-      result = await supabase
-        .from('business_settings')
-        .update({
-          gst_number: settingsToUpdate.gst_number,
-          business_name: settingsToUpdate.business_name,
-          address: settingsToUpdate.address,
-          fuel_pump_id: fuelPumpId // Explicitly set fuel_pump_id to ensure RLS works
-        })
-        .eq('id', existingData.id);
-    } else {
-      console.log('Creating new business settings record');
-      result = await supabase
-        .from('business_settings')
-        .insert([{
-          gst_number: settingsToUpdate.gst_number,
-          business_name: settingsToUpdate.business_name,
-          address: settingsToUpdate.address,
-          fuel_pump_id: fuelPumpId
-        }]);
-    }
+    // Use upsert to handle both insert and update cases
+    result = await supabase
+      .from('business_settings')
+      .upsert({
+        id: existingData?.id || undefined,
+        gst_number: settings.gst_number,
+        business_name: settings.business_name,
+        address: settings.address,
+        fuel_pump_id: settings.fuel_pump_id // Explicitly set fuel_pump_id to ensure RLS works
+      }, { 
+        onConflict: 'fuel_pump_id' 
+      });
     
     if (result.error) {
       console.error('Supabase error updating business settings:', result.error);
+      
+      // Provide more detailed error information for debugging
+      if (result.error.message.includes('violates row-level security policy')) {
+        console.error('RLS policy violation details:', {
+          fuelPumpId: settings.fuel_pump_id,
+          errorCode: result.error.code,
+          errorDetails: result.error.details,
+          userMetadata: await getCurrentUserMetadata()
+        });
+      }
+      
       throw result.error;
     }
     
@@ -134,7 +136,15 @@ export const updateBusinessSettings = async (settings: BusinessSettings): Promis
     
     // Add more detailed error message for RLS violations
     if (error instanceof Error && error.message.includes('violates row-level security policy')) {
-      errorMessage = "Permission denied: You don't have access to update these settings.";
+      errorMessage = "Permission denied: You don't have access to update these settings. Please ensure you're logged in with the correct account.";
+      
+      // Log additional debug info
+      const { data } = await supabase.auth.getSession();
+      console.error('User session during RLS violation:', {
+        hasSession: !!data.session,
+        userId: data.session?.user?.id,
+        userMetadata: data.session?.user?.user_metadata
+      });
     }
     
     toast({
@@ -143,5 +153,16 @@ export const updateBusinessSettings = async (settings: BusinessSettings): Promis
       variant: "destructive"
     });
     return false;
+  }
+};
+
+// Helper function to get current user metadata for debugging
+const getCurrentUserMetadata = async () => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user?.user_metadata || null;
+  } catch (error) {
+    console.error('Error getting user metadata:', error);
+    return null;
   }
 };

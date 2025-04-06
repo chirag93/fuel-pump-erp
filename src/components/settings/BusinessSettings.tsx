@@ -8,6 +8,7 @@ import { Save, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getBusinessSettings, updateBusinessSettings, BusinessSettings as BusinessSettingsType } from '@/integrations/businessSettings';
 import { getFuelPumpId } from '@/integrations/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function BusinessSettings() {
   const [businessSettings, setBusinessSettings] = useState<BusinessSettingsType>({
@@ -16,32 +17,34 @@ export function BusinessSettings() {
     address: '',
   });
   const [loading, setLoading] = useState(false);
-  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  
+  // Use auth context to get fuel pump ID
+  const { fuelPumpId } = useAuth();
 
   useEffect(() => {
-    const initFuelPumpId = async () => {
+    const fetchBusinessSettings = async () => {
       try {
-        setLoading(true);
-        const id = await getFuelPumpId();
-        console.log("Fetched fuel pump ID:", id);
-        setFuelPumpId(id);
+        if (!fuelPumpId) {
+          console.log('No fuel pump ID available. Waiting for authentication...');
+          return;
+        }
         
-        if (id) {
-          await fetchBusinessSettings();
+        setLoading(true);
+        console.log("Fetching business settings with fuel pump ID:", fuelPumpId);
+        
+        const data = await getBusinessSettings();
+        if (data) {
+          console.log("Fetched business settings:", data);
+          setBusinessSettings(data);
         } else {
-          console.log('No fuel pump ID available');
-          toast({
-            title: "Authentication Required",
-            description: "Please log in with a fuel pump account to view business settings",
-            variant: "destructive"
-          });
+          console.log("No business settings found, using default empty values");
         }
       } catch (error) {
-        console.error("Error initializing fuel pump ID:", error);
+        console.error('Error fetching business settings:', error);
         toast({
           title: "Error",
-          description: "Failed to initialize settings. Please refresh the page.",
+          description: "Failed to load business settings. Please try again.",
           variant: "destructive"
         });
       } finally {
@@ -49,29 +52,11 @@ export function BusinessSettings() {
         setInitialLoadComplete(true);
       }
     };
-    
-    initFuelPumpId();
-  }, []);
 
-  const fetchBusinessSettings = async () => {
-    try {
-      setLoading(true);
-      const data = await getBusinessSettings();
-      if (data) {
-        console.log("Fetched business settings:", data);
-        setBusinessSettings(data);
-      }
-    } catch (error) {
-      console.error('Error fetching business settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load business settings. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
+    if (fuelPumpId) {
+      fetchBusinessSettings();
     }
-  };
+  }, [fuelPumpId]);
 
   const handleUpdateBusinessSettings = async () => {
     if (!fuelPumpId) {
@@ -95,7 +80,8 @@ export function BusinessSettings() {
 
     try {
       setLoading(true);
-      console.log("Updating business settings:", businessSettings);
+      console.log("Updating business settings with fuel pump ID:", fuelPumpId);
+      console.log("Settings to update:", { ...businessSettings, fuel_pump_id: fuelPumpId });
       
       const success = await updateBusinessSettings({
         ...businessSettings,
@@ -111,6 +97,11 @@ export function BusinessSettings() {
       }
     } catch (error) {
       console.error('Error updating business settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update settings. Please check your access rights and try again.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -123,6 +114,18 @@ export function BusinessSettings() {
           <div className="flex flex-col items-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
             <p className="text-muted-foreground">Loading business settings...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!fuelPumpId && initialLoadComplete) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center p-4">
+            <p className="text-muted-foreground">You need to be logged in as a fuel pump administrator to view and edit business settings.</p>
           </div>
         </CardContent>
       </Card>
@@ -163,7 +166,7 @@ export function BusinessSettings() {
           <Label htmlFor="address">Business Address</Label>
           <Input 
             id="address" 
-            value={businessSettings.address} 
+            value={businessSettings.address || ''} 
             onChange={e => setBusinessSettings({...businessSettings, address: e.target.value})}
             disabled={loading}
             placeholder="Enter full address"
@@ -172,7 +175,7 @@ export function BusinessSettings() {
         <div className="flex justify-end">
           <Button 
             onClick={handleUpdateBusinessSettings} 
-            disabled={loading}
+            disabled={loading || !fuelPumpId}
           >
             {loading ? (
               <>
