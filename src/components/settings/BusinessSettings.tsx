@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Save, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getBusinessSettings, updateBusinessSettings, BusinessSettings as BusinessSettingsType } from '@/integrations/businessSettings';
-import { getFuelPumpId } from '@/integrations/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function BusinessSettings() {
@@ -20,7 +19,7 @@ export function BusinessSettings() {
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   // Use auth context to get fuel pump ID
-  const { fuelPumpId } = useAuth();
+  const { fuelPumpId, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchBusinessSettings = async () => {
@@ -53,13 +52,15 @@ export function BusinessSettings() {
       }
     };
 
-    if (fuelPumpId) {
+    if (fuelPumpId && isAuthenticated) {
       fetchBusinessSettings();
+    } else {
+      setInitialLoadComplete(true); // Mark as complete even if we can't fetch to show the proper UI state
     }
-  }, [fuelPumpId]);
+  }, [fuelPumpId, isAuthenticated]);
 
   const handleUpdateBusinessSettings = async () => {
-    if (!fuelPumpId) {
+    if (!fuelPumpId || !isAuthenticated) {
       toast({
         title: "Authentication Required",
         description: "Please log in with a fuel pump account to update business settings",
@@ -90,18 +91,9 @@ export function BusinessSettings() {
       
       if (success) {
         console.log("Business settings updated successfully");
-        toast({
-          title: "Success",
-          description: "Business settings updated successfully"
-        });
       }
     } catch (error) {
-      console.error('Error updating business settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update settings. Please check your access rights and try again.",
-        variant: "destructive"
-      });
+      console.error('Error in component while updating business settings:', error);
     } finally {
       setLoading(false);
     }
@@ -120,7 +112,7 @@ export function BusinessSettings() {
     );
   }
 
-  if (!fuelPumpId && initialLoadComplete) {
+  if (!fuelPumpId || !isAuthenticated) {
     return (
       <Card>
         <CardContent className="pt-6">

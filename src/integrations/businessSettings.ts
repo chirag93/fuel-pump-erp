@@ -93,18 +93,29 @@ export const updateBusinessSettings = async (settings: BusinessSettings): Promis
     
     let result;
     
-    // Use upsert to handle both insert and update cases
-    result = await supabase
-      .from('business_settings')
-      .upsert({
-        id: existingData?.id || undefined,
-        gst_number: settings.gst_number,
-        business_name: settings.business_name,
-        address: settings.address,
-        fuel_pump_id: settings.fuel_pump_id // Explicitly set fuel_pump_id to ensure RLS works
-      }, { 
-        onConflict: 'fuel_pump_id' 
-      });
+    if (existingData?.id) {
+      // Update existing record
+      console.log('Updating existing business settings with ID:', existingData.id);
+      result = await supabase
+        .from('business_settings')
+        .update({
+          gst_number: settings.gst_number,
+          business_name: settings.business_name,
+          address: settings.address
+        })
+        .eq('id', existingData.id);
+    } else {
+      // Insert new record
+      console.log('Creating new business settings record');
+      result = await supabase
+        .from('business_settings')
+        .insert({
+          gst_number: settings.gst_number,
+          business_name: settings.business_name,
+          address: settings.address,
+          fuel_pump_id: settings.fuel_pump_id
+        });
+    }
     
     if (result.error) {
       console.error('Supabase error updating business settings:', result.error);
@@ -135,12 +146,16 @@ export const updateBusinessSettings = async (settings: BusinessSettings): Promis
     let errorMessage = "Failed to update business settings. Please try again.";
     
     // Add more detailed error message for RLS violations
-    if (error instanceof Error && error.message.includes('violates row-level security policy')) {
-      errorMessage = "Permission denied: You don't have access to update these settings. Please ensure you're logged in with the correct account.";
+    if (error instanceof Error) {
+      if (error.message.includes('violates row-level security policy')) {
+        errorMessage = "Permission denied: You don't have access to update these settings. Please ensure you're logged in with the correct account.";
+      } else if (error.message.includes('constraint')) {
+        errorMessage = "Database error: There was an issue with data constraints. Please check your input and try again.";
+      }
       
       // Log additional debug info
       const { data } = await supabase.auth.getSession();
-      console.error('User session during RLS violation:', {
+      console.error('User session during error:', {
         hasSession: !!data.session,
         userId: data.session?.user?.id,
         userMetadata: data.session?.user?.user_metadata
