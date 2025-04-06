@@ -99,7 +99,8 @@ export const updateBusinessSettings = async (settings: BusinessSettings): Promis
         .update({
           gst_number: settingsToUpdate.gst_number,
           business_name: settingsToUpdate.business_name,
-          address: settingsToUpdate.address
+          address: settingsToUpdate.address,
+          fuel_pump_id: fuelPumpId // Explicitly set fuel_pump_id to ensure RLS works
         })
         .eq('id', existingData.id);
     } else {
@@ -129,9 +130,16 @@ export const updateBusinessSettings = async (settings: BusinessSettings): Promis
     return true;
   } catch (error) {
     console.error('Error updating business settings:', error);
+    let errorMessage = "Failed to update business settings. Please try again.";
+    
+    // Add more detailed error message for RLS violations
+    if (error instanceof Error && error.message.includes('violates row-level security policy')) {
+      errorMessage = "Permission denied: You don't have access to update these settings.";
+    }
+    
     toast({
       title: "Error",
-      description: "Failed to update business settings. Please try again.",
+      description: errorMessage,
       variant: "destructive"
     });
     return false;

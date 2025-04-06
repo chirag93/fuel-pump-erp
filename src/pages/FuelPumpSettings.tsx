@@ -8,13 +8,14 @@ import { BusinessSettings } from '@/components/settings/BusinessSettings';
 
 const FuelPumpSettings = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('business');
   
   useEffect(() => {
     const loadSettings = async () => {
       try {
         setIsLoading(true);
         // This is now just for initial loading state
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
       } catch (error) {
         console.error("Error loading settings:", error);
       } finally {
@@ -24,6 +25,10 @@ const FuelPumpSettings = () => {
     
     loadSettings();
   }, []);
+  
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
   
   if (isLoading) {
     return (
@@ -41,7 +46,7 @@ const FuelPumpSettings = () => {
         <Settings className="h-8 w-8 text-muted-foreground" />
       </div>
       
-      <Tabs defaultValue="business" className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="business" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Settings className="mr-2 h-4 w-4" />
