@@ -29,7 +29,15 @@ const TransactionActions = ({
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   
   const handleGenerateInvoice = (selectedDateRange: DateRange) => {
+    if (!selectedDateRange.from || !selectedDateRange.to) {
+      return; // Don't proceed if date range is incomplete
+    }
+    
+    // Process the invoice generation with the selected date range
     onGenerateInvoice(selectedDateRange);
+    
+    // Close dialog only on successful generation, which should happen in the parent component
+    // by setting isGeneratingInvoice to false once done
   };
 
   return (

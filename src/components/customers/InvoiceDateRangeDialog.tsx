@@ -70,6 +70,7 @@ const InvoiceDateRangeDialog = ({
   const handleCalendarSelect = (range: DateRange | undefined) => {
     if (range) {
       setTempDateRange(range);
+      // Don't close the popover automatically when selecting dates
     }
   };
   
@@ -144,7 +145,10 @@ const InvoiceDateRangeDialog = ({
             
             <div className="flex flex-col space-y-1.5">
               <h3 className="text-sm font-medium">Select Date Range</h3>
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <Popover 
+                open={isCalendarOpen} 
+                onOpenChange={setIsCalendarOpen}
+              >
                 <PopoverTrigger asChild>
                   <Button
                     id="date"
