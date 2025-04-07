@@ -68,6 +68,16 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
     setIsGeneratingInvoice(true);
     
     try {
+      if (!selectedDateRange.from || !selectedDateRange.to) {
+        toast({
+          title: "Date Selection Required",
+          description: "Please select both start and end dates for the invoice period.",
+          variant: "destructive"
+        });
+        setIsGeneratingInvoice(false);
+        return;
+      }
+      
       // Apply the selected date range rather than the filter range
       const invoiceDateRange = {
         from: selectedDateRange.from,
@@ -95,12 +105,26 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
         return;
       }
       
-      const result = await generateGSTInvoice(customer, invoiceTransactions, invoiceDateRange);
+      // Process transactions to ensure correct typing of source field
+      const formattedTransactions = invoiceTransactions.map(transaction => ({
+        ...transaction,
+        // Ensure source is properly typed as 'mobile' | 'web'
+        source: (transaction.source === 'mobile' ? 'mobile' : 'web') as 'mobile' | 'web',
+      }));
+      
+      const result = await generateGSTInvoice(customer, formattedTransactions, invoiceDateRange);
       
       toast({
         title: result.success ? "Invoice Generated" : "Error",
         description: result.message,
         variant: result.success ? "default" : "destructive"
+      });
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate invoice. Please try again.",
+        variant: "destructive"
       });
     } finally {
       setIsGeneratingInvoice(false);

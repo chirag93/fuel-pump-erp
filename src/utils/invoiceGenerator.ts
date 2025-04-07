@@ -79,6 +79,10 @@ export const generateGSTInvoice = async (
     // Create an invoice record in the database
     const invoiceDate = new Date();
     
+    // Format dates for the invoice period
+    const formattedFromDate = dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : '';
+    const formattedToDate = dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : '';
+    
     // Using the explicit parameter names matching the database function
     const invoiceParams = {
       p_customer_id: customer.id,
@@ -130,7 +134,7 @@ export const generateGSTInvoice = async (
     // Invoice details
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Invoice Date: ${invoiceDate.toLocaleDateString()}`, 14, 55);
+    pdf.text(`Invoice Date: ${format(invoiceDate, 'dd/MM/yyyy')}`, 14, 55);
     pdf.text(`Period: ${invoicePeriod}`, 14, 61);
     pdf.text(`Invoice No: ${displayInvoiceId}`, 14, 67);
     
@@ -142,8 +146,8 @@ export const generateGSTInvoice = async (
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     pdf.text(`Name: ${customer.name}`, 14, 84);
-    pdf.text(`Contact: ${customer.contact}`, 14, 90);
-    pdf.text(`Phone: ${customer.phone}`, 14, 96);
+    pdf.text(`Contact: ${customer.contact || 'N/A'}`, 14, 90);
+    pdf.text(`Phone: ${customer.phone || 'N/A'}`, 14, 96);
     pdf.text(`GSTIN: ${customer.gst || 'Not Available'}`, 14, 102);
     
     // Add transaction table
@@ -152,10 +156,10 @@ export const generateGSTInvoice = async (
       body: fuelTransactions.map(trans => [
         format(new Date(trans.date), 'dd/MM/yyyy'),
         trans.vehicle_number || 'N/A',
-        trans.fuel_type,
+        trans.fuel_type || 'N/A',
         trans.quantity ? trans.quantity.toString() : '0',
         trans.amount.toString(),
-        trans.payment_method
+        trans.payment_method || 'N/A'
       ]),
       startY: 110,
       styles: { fontSize: 9 },
@@ -195,8 +199,12 @@ export const generateGSTInvoice = async (
     pdf.text("2. Please pay within 30 days of the invoice date.", 14, 265);
     pdf.text("3. For any queries related to this invoice, please contact us.", 14, 270);
     
-    // Save the PDF
-    pdf.save(`${customer.name}-GST-Invoice-${new Date().toISOString().split('T')[0]}.pdf`);
+    // Save the PDF with a clear date range in the filename
+    const filenameDatePart = dateRange.from && dateRange.to 
+      ? `${format(dateRange.from, 'yyyy-MM-dd')}_to_${format(dateRange.to, 'yyyy-MM-dd')}` 
+      : format(new Date(), 'yyyy-MM-dd');
+      
+    pdf.save(`${customer.name}-GST-Invoice-${filenameDatePart}.pdf`);
     
     return {
       success: true,

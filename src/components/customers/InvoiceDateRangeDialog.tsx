@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { DateRange } from 'react-day-picker';
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -36,28 +36,34 @@ const InvoiceDateRangeDialog = ({
   customer,
   isGenerating
 }: InvoiceDateRangeDialogProps) => {
+  // Initialize with the current month for better UX
+  const today = new Date();
+  const firstDayOfMonth = startOfMonth(today);
+  
   const [dateRange, setDateRange] = useState<DateRange>({
-    from: undefined,
-    to: undefined,
+    from: firstDayOfMonth,
+    to: today,
   });
   
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [tempDateRange, setTempDateRange] = useState<DateRange>({
-    from: undefined,
-    to: undefined,
+    from: firstDayOfMonth,
+    to: today,
   });
   
   useEffect(() => {
     if (open) {
-      // Reset date range when dialog opens
-      setDateRange({
-        from: undefined,
-        to: undefined,
-      });
-      setTempDateRange({
-        from: undefined,
-        to: undefined,
-      });
+      // Set default date range to current month when dialog opens
+      const today = new Date();
+      const firstDayOfMonth = startOfMonth(today);
+      
+      const defaultRange = {
+        from: firstDayOfMonth,
+        to: today,
+      };
+      
+      setDateRange(defaultRange);
+      setTempDateRange(defaultRange);
     }
   }, [open]);
   
@@ -76,6 +82,35 @@ const InvoiceDateRangeDialog = ({
     onGenerate(dateRange);
   };
   
+  const setLastMonth = () => {
+    const today = new Date();
+    const lastMonth = new Date(today);
+    lastMonth.setMonth(today.getMonth() - 1);
+    const firstDayLastMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
+    const lastDayLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+    
+    const range = {
+      from: firstDayLastMonth,
+      to: lastDayLastMonth,
+    };
+    
+    setDateRange(range);
+    setTempDateRange(range);
+  };
+  
+  const setThisMonth = () => {
+    const today = new Date();
+    const firstDayThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    const range = {
+      from: firstDayThisMonth,
+      to: today,
+    };
+    
+    setDateRange(range);
+    setTempDateRange(range);
+  };
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -88,6 +123,25 @@ const InvoiceDateRangeDialog = ({
         
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
+            <div className="flex gap-2 mb-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={setThisMonth}
+                className="flex-1"
+              >
+                This Month
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={setLastMonth}
+                className="flex-1"
+              >
+                Last Month
+              </Button>
+            </div>
+            
             <div className="flex flex-col space-y-1.5">
               <h3 className="text-sm font-medium">Select Date Range</h3>
               <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
@@ -120,7 +174,7 @@ const InvoiceDateRangeDialog = ({
                     <Calendar
                       initialFocus
                       mode="range"
-                      defaultMonth={tempDateRange.from}
+                      defaultMonth={dateRange.from || new Date()}
                       selected={tempDateRange}
                       onSelect={handleCalendarSelect}
                       numberOfMonths={2}

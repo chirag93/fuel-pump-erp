@@ -30,11 +30,10 @@ const TransactionActions = ({
   
   const handleGenerateInvoice = (selectedDateRange: DateRange) => {
     onGenerateInvoice(selectedDateRange);
-    setIsInvoiceDialogOpen(false);
   };
 
   return (
-    <div className="flex space-x-2">
+    <div className="flex gap-2 flex-wrap">
       <DateRangeSelector 
         dateRange={dateRange}
         setDateRange={setDateRange}
@@ -44,7 +43,7 @@ const TransactionActions = ({
       <Button 
         onClick={() => setIsInvoiceDialogOpen(true)} 
         variant="outline"
-        className="gap-1"
+        className="gap-1 whitespace-nowrap"
         disabled={isGeneratingInvoice}
       >
         <FileText className="h-4 w-4" />
@@ -53,7 +52,7 @@ const TransactionActions = ({
       
       <Button 
         onClick={onRecordPayment}
-        className="gap-1"
+        className="gap-1 whitespace-nowrap"
       >
         <Plus className="h-4 w-4" />
         Record Payment
