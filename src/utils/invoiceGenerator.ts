@@ -79,12 +79,12 @@ export const generateGSTInvoice = async (
     // Create an invoice record in the database
     const invoiceDate = new Date();
     
-    // Using the updated function parameters
+    // Using the explicit parameter names matching the database function
     const invoiceParams = {
       p_customer_id: customer.id,
       p_amount: totalAmount,
       p_date: invoiceDate.toISOString().split('T')[0],
-      pump_id: fuelPumpId // Updated parameter name to match database function
+      pump_id: fuelPumpId
     };
     
     const { data: invoiceId, error: invoiceError } = await supabase

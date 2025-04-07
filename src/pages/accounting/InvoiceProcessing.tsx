@@ -58,7 +58,7 @@ const InvoiceProcessing = () => {
         
         console.log('Fetching invoices with pump_id:', fuelPumpId);
         
-        // Using the correct parameter name as defined in our updated function
+        // Using the explicit parameter name matching the database function
         const { data, error } = await supabase
           .rpc('get_invoices_with_customer_names', { pump_id: fuelPumpId });
 
@@ -94,7 +94,6 @@ const InvoiceProcessing = () => {
     
     fetchInvoices();
   }, [activeTab]);
-  
   
   const handleSelectAllChange = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
