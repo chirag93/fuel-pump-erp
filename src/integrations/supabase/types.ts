@@ -1153,7 +1153,14 @@ export type Database = {
     }
     Functions: {
       create_invoice_record: {
-        Args: { p_customer_id: string; p_amount: number; p_date?: string }
+        Args:
+          | { p_customer_id: string; p_amount: number; p_date?: string }
+          | {
+              p_customer_id: string
+              p_amount: number
+              p_date?: string
+              pump_id?: string
+            }
         Returns: string
       }
       decrement_balance: {

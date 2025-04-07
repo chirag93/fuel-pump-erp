@@ -79,17 +79,16 @@ export const generateGSTInvoice = async (
     // Create an invoice record in the database
     const invoiceDate = new Date();
     
-    // Fixed: This is a TypeScript casting to make TypeScript understand we know what we're doing
-    // We're calling the function with the pump_id parameter even though TypeScript doesn't know about it
+    // Using the updated function parameters
     const invoiceParams = {
       p_customer_id: customer.id,
       p_amount: totalAmount,
       p_date: invoiceDate.toISOString().split('T')[0],
-      fuel_pump_id: fuelPumpId // Changed parameter name to match what the database expects
+      pump_id: fuelPumpId // Updated parameter name to match database function
     };
     
     const { data: invoiceId, error: invoiceError } = await supabase
-      .rpc('create_invoice_record', invoiceParams as any);
+      .rpc('create_invoice_record', invoiceParams);
 
     if (invoiceError) {
       console.error('Error creating invoice record:', invoiceError);

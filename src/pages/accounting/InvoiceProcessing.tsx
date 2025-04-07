@@ -56,13 +56,18 @@ const InvoiceProcessing = () => {
           return;
         }
         
-        // Explicitly pass the parameter with named argument to avoid ambiguity
+        console.log('Fetching invoices with pump_id:', fuelPumpId);
+        
+        // Using the correct parameter name as defined in our updated function
         const { data, error } = await supabase
           .rpc('get_invoices_with_customer_names', { pump_id: fuelPumpId });
 
         if (error) {
+          console.error('Database error:', error);
           throw error;
         }
+        
+        console.log('Fetched invoices:', data);
         
         // Type assertion to match our Invoice interface
         const fetchedInvoices = data as Invoice[];
@@ -89,6 +94,7 @@ const InvoiceProcessing = () => {
     
     fetchInvoices();
   }, [activeTab]);
+  
   
   const handleSelectAllChange = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
