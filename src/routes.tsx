@@ -189,10 +189,10 @@ export const routes: RouteObject[] = [
         ),
       },
       {
-        path: "accounting/reconciliation",
+        path: "accounting/invoices",
         element: (
           <Suspense fallback={<>Loading...</>}>
-            <Reconciliation />
+            <InvoiceProcessing />
           </Suspense>
         ),
       },

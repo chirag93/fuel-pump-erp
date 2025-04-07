@@ -28,7 +28,6 @@ import FuelPumpSettings from '@/pages/FuelPumpSettings';
 
 // Accounting
 import FinancialReports from '@/pages/accounting/FinancialReports';
-import Reconciliation from '@/pages/accounting/Reconciliation';
 import InvoiceProcessing from '@/pages/accounting/InvoiceProcessing';
 import TaxCalculation from '@/pages/accounting/TaxCalculation';
 import ExportData from '@/pages/accounting/ExportData';
@@ -92,22 +91,11 @@ function App() {
         
         {/* Accounting Routes */}
         <Route path="/accounting" element={<FinancialReports />} />
-        <Route path="/accounting/reconciliation" element={<Reconciliation />} />
+        {/* Removed reconciliation route */}
         <Route path="/accounting/invoices" element={<InvoiceProcessing />} />
         <Route path="/accounting/tax" element={<TaxCalculation />} />
         <Route path="/accounting/export" element={<ExportData />} />
         <Route path="/accounting/expense-categories" element={<ExpenseCategories />} />
-      </Route>
-      
-      {/* Super Admin Routes */}
-      <Route element={<SuperAdminProtectedRoute />}>
-        <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
-        <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
-        <Route path="/super-admin/analytics" element={<SuperAdminAnalytics />} />
-        <Route path="/super-admin/fuel-pumps" element={<FuelPumpsPage />} />
-        <Route path="/super-admin/pumps" element={<FuelPumpsPage />} />
-        <Route path="/super-admin/provision" element={<ProvisionPump />} />
-        <Route path="/super-admin/fuel-pumps/:id" element={<FuelPumpUserPage />} />
       </Route>
       
       {/* Mobile Routes - Not protected to allow direct access */}
@@ -119,6 +107,17 @@ function App() {
       
       {/* Customer Details route should be accessible on mobile too */}
       <Route path="/customers/:id" element={<CustomerDetails />} />
+      
+      {/* Super Admin Routes */}
+      <Route element={<SuperAdminProtectedRoute />}>
+        <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+        <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
+        <Route path="/super-admin/analytics" element={<SuperAdminAnalytics />} />
+        <Route path="/super-admin/fuel-pumps" element={<FuelPumpsPage />} />
+        <Route path="/super-admin/pumps" element={<FuelPumpsPage />} />
+        <Route path="/super-admin/provision" element={<ProvisionPump />} />
+        <Route path="/super-admin/fuel-pumps/:id" element={<FuelPumpUserPage />} />
+      </Route>
       
       {/* Fallback Route */}
       <Route path="*" element={<NotFound />} />

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -99,7 +98,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
   const accountingNavigation = [
     { href: "/accounting", icon: <DollarSign className="h-4 w-4" />, label: "Financial Reports" },
-    { href: "/accounting/reconciliation", icon: <Calculator className="h-4 w-4" />, label: "Reconciliation" },
     { href: "/accounting/invoices", icon: <Receipt className="h-4 w-4" />, label: "Invoice Processing" },
     { href: "/accounting/tax", icon: <FileSpreadsheet className="h-4 w-4" />, label: "Tax Calculation" },
     { href: "/accounting/export", icon: <DownloadCloud className="h-4 w-4" />, label: "Export Data" },
