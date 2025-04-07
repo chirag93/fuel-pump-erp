@@ -126,7 +126,7 @@ const InvoiceProcessing = () => {
       
       // Get all transactions for this invoice date
       // We're fetching transactions from the invoice date
-      const { data: transactions, error } = await supabase
+      const { data: transactionsData, error } = await supabase
         .from('transactions')
         .select('*')
         .eq('customer_id', invoice.customer_id)
@@ -137,15 +137,24 @@ const InvoiceProcessing = () => {
       if (error) throw error;
       
       // If no transactions found, show warning but still attempt to generate invoice
-      if (!transactions || transactions.length === 0) {
+      if (!transactionsData || transactionsData.length === 0) {
         toast({
           title: "Warning",
           description: "No transactions found for this invoice date. The invoice may be incomplete.",
         });
       }
       
+      // Process transactions to ensure correct typing of source field
+      const formattedTransactions = transactionsData?.map(transaction => ({
+        ...transaction,
+        // Ensure source is properly typed as 'mobile' | 'web'
+        source: (transaction.source === 'mobile' ? 'mobile' : 'web') as 'mobile' | 'web',
+        // Add vehicle_number property expected by TransactionWithDetails
+        vehicle_number: 'Unknown' // We could fetch this if needed
+      })) || [];
+      
       // Generate and download the PDF
-      const result = await generateGSTInvoice(customer, transactions, {
+      const result = await generateGSTInvoice(customer, formattedTransactions, {
         from: new Date(invoice.date),
         to: new Date(invoice.date)
       });
