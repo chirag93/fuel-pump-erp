@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DateRange } from 'react-day-picker';
 import { format, startOfMonth } from 'date-fns';
@@ -75,12 +74,23 @@ const InvoiceDateRangeDialog = ({
   };
   
   const handleCalendarDone = () => {
+    // Save the selected date range
     setDateRange(tempDateRange);
+    // Close the date picker popover but keep the main dialog open
     setIsCalendarOpen(false);
   };
   
   const handleGenerate = () => {
+    if (!dateRange.from || !dateRange.to) {
+      return; // Don't proceed if the date range is incomplete
+    }
+    
+    // Pass the selected date range to the parent component
     onGenerate(dateRange);
+    
+    // Note: We deliberately don't close the dialog here
+    // The parent component should handle closing the dialog after successful generation
+    // or keep it open if there's an error
   };
   
   const setLastMonth = () => {
@@ -113,7 +123,7 @@ const InvoiceDateRangeDialog = ({
   };
   
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={isGenerating ? undefined : onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Generate Invoice</DialogTitle>

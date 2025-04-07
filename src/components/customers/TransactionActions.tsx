@@ -36,8 +36,16 @@ const TransactionActions = ({
     // Process the invoice generation with the selected date range
     onGenerateInvoice(selectedDateRange);
     
-    // Close dialog only on successful generation, which should happen in the parent component
-    // by setting isGeneratingInvoice to false once done
+    // Note: We don't close the dialog here
+    // It will be closed by the parent component after successful generation
+    // or kept open if there's an error
+  };
+
+  // This function will be called by the parent component after successful invoice generation
+  const handleCloseInvoiceDialog = () => {
+    if (!isGeneratingInvoice) {
+      setIsInvoiceDialogOpen(false);
+    }
   };
 
   return (

@@ -65,19 +65,18 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
   };
 
   const handleGenerateInvoice = async (selectedDateRange: DateRange) => {
+    if (!selectedDateRange.from || !selectedDateRange.to) {
+      toast({
+        title: "Date Selection Required",
+        description: "Please select both start and end dates for the invoice period.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsGeneratingInvoice(true);
     
     try {
-      if (!selectedDateRange.from || !selectedDateRange.to) {
-        toast({
-          title: "Date Selection Required",
-          description: "Please select both start and end dates for the invoice period.",
-          variant: "destructive"
-        });
-        setIsGeneratingInvoice(false);
-        return;
-      }
-      
       // Apply the selected date range rather than the filter range
       const invoiceDateRange = {
         from: selectedDateRange.from,
@@ -119,6 +118,11 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
         description: result.message,
         variant: result.success ? "default" : "destructive"
       });
+      
+      if (result.success) {
+        // Close the invoice dialog only on success
+        // Let the user see the error if there's a problem
+      }
     } catch (error) {
       console.error('Error generating invoice:', error);
       toast({
