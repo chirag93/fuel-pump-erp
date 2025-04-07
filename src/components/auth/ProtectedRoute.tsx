@@ -55,22 +55,20 @@ const ProtectedRoute = () => {
           </div>
         )}
         
-        {fuelPumpName && (
+        {fuelPumpName && !isMobile && (
           <div className="mb-6 p-3 bg-muted rounded-md flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Fuel className="h-5 w-5 text-primary" />
               <span className="font-medium">
-                You are logged into: <span className="text-primary">{fuelPumpName}</span> ERP System
+                <span className="text-primary">{fuelPumpName}</span> ERP System
               </span>
             </div>
-            {!isMobile && (
-              <Link to="/mobile">
-                <Button variant="outline" size="sm" className="flex items-center gap-1">
-                  <Smartphone className="h-4 w-4" />
-                  Mobile View
-                </Button>
-              </Link>
-            )}
+            <Link to="/mobile">
+              <Button variant="outline" size="sm" className="flex items-center gap-1">
+                <Smartphone className="h-4 w-4" />
+                Mobile View
+              </Button>
+            </Link>
           </div>
         )}
         

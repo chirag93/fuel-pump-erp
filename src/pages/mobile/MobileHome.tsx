@@ -1,18 +1,36 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Droplets, CreditCard, UserRound, CalendarClock, AlertCircle } from 'lucide-react';
 import { CardFeature } from '@/components/ui/custom/CardFeature';
 import { useAuth } from '@/contexts/AuthContext';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
+import { getBusinessSettings } from '@/integrations/businessSettings';
 
 const MobileHome = () => {
   const { fuelPumpName } = useAuth();
+  const [businessName, setBusinessName] = useState<string>('');
+  
+  // Fetch business name from settings
+  useEffect(() => {
+    const fetchBusinessName = async () => {
+      try {
+        const businessSettings = await getBusinessSettings();
+        if (businessSettings && businessSettings.business_name) {
+          setBusinessName(businessSettings.business_name);
+        }
+      } catch (error) {
+        console.error('Error fetching business name:', error);
+      }
+    };
+
+    fetchBusinessName();
+  }, []);
   
   return (
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
       <div className="text-center mb-4 animate-fade-in">
-        <h1 className="text-2xl font-bold text-primary">{fuelPumpName || 'Fuel Pro 360'}</h1>
+        <h1 className="text-2xl font-bold text-primary">{businessName || fuelPumpName || 'Fuel Pro 360'}</h1>
         <p className="text-muted-foreground text-sm mt-1">Mobile Dashboard</p>
         <MobileHeader title="" showBackButton={false} />
       </div>
