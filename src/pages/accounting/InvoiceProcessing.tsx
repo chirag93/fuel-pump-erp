@@ -14,6 +14,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DatePicker } from '@/components/ui/date-picker';
 import { getFuelPumpId } from '@/integrations/utils';
+import { generateGSTInvoice } from '@/utils/invoiceGenerator';
+import { getCustomerById } from '@/integrations/customers';
 
 interface Invoice {
   id: string;
@@ -36,8 +38,8 @@ const InvoiceProcessing = () => {
   const [showUpdateDialog, setShowUpdateDialog] = useState<boolean>(false);
   const [currentInvoice, setCurrentInvoice] = useState<Invoice | null>(null);
   const [updatedStatus, setUpdatedStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [isPrinting, setIsPrinting] = useState<string | null>(null);
   
-  // Fetch invoices from the database
   useEffect(() => {
     const fetchInvoices = async () => {
       setIsLoading(true);
@@ -94,6 +96,79 @@ const InvoiceProcessing = () => {
     
     fetchInvoices();
   }, [activeTab]);
+  
+  const handlePrintInvoice = async (invoiceId: string) => {
+    try {
+      setIsPrinting(invoiceId);
+      
+      // Get the current fuel pump ID
+      const fuelPumpId = await getFuelPumpId();
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to generate invoice",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Find the invoice in our state
+      const invoice = invoices.find(inv => inv.id === invoiceId);
+      if (!invoice) {
+        throw new Error("Invoice not found");
+      }
+      
+      // Get the customer data
+      const customer = await getCustomerById(invoice.customer_id);
+      if (!customer) {
+        throw new Error("Customer not found");
+      }
+      
+      // Get all transactions for this invoice date
+      // We're fetching transactions from the invoice date
+      const { data: transactions, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('customer_id', invoice.customer_id)
+        .eq('date', invoice.date)
+        .eq('fuel_pump_id', fuelPumpId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // If no transactions found, show warning but still attempt to generate invoice
+      if (!transactions || transactions.length === 0) {
+        toast({
+          title: "Warning",
+          description: "No transactions found for this invoice date. The invoice may be incomplete.",
+        });
+      }
+      
+      // Generate and download the PDF
+      const result = await generateGSTInvoice(customer, transactions, {
+        from: new Date(invoice.date),
+        to: new Date(invoice.date)
+      });
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: result.message,
+        });
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      console.error("Error generating invoice:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate invoice PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPrinting(null);
+    }
+  };
   
   const handleSelectAllChange = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
@@ -365,8 +440,18 @@ const InvoiceProcessing = () => {
                                     </Button>
                                   </>
                                 )}
-                                <Button variant="ghost" size="icon" title="Print">
-                                  <Printer className="h-4 w-4" />
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  title="Print"
+                                  onClick={() => handlePrintInvoice(invoice.id)}
+                                  disabled={isPrinting === invoice.id}
+                                >
+                                  {isPrinting === invoice.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Printer className="h-4 w-4" />
+                                  )}
                                 </Button>
                               </div>
                             </TableCell>
