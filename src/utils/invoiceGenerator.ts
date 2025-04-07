@@ -1,10 +1,10 @@
-
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Customer, Transaction } from '@/integrations/supabase/client';
 import { getBusinessSettings } from '@/integrations/businessSettings';
+import { getFuelPumpId } from '@/integrations/utils';
 
 interface BusinessInfo {
   id?: string;
@@ -30,6 +30,16 @@ export const generateGSTInvoice = async (
   }
 
   try {
+    // Get the current fuel pump ID
+    const fuelPumpId = await getFuelPumpId();
+    
+    if (!fuelPumpId) {
+      return {
+        success: false,
+        message: "Authentication required to generate invoice"
+      };
+    }
+    
     // Get business details from business_settings
     const businessSettings = await getBusinessSettings();
     
@@ -71,7 +81,8 @@ export const generateGSTInvoice = async (
       .rpc('create_invoice_record', {
         p_customer_id: customer.id,
         p_amount: totalAmount,
-        p_date: invoiceDate.toISOString().split('T')[0]
+        p_date: invoiceDate.toISOString().split('T')[0],
+        p_fuel_pump_id: fuelPumpId
       });
 
     if (invoiceError) {

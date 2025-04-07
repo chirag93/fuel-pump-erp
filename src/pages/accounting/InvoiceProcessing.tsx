@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AccountingPageLayout } from '@/components/accounting/AccountingPageLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,10 +56,9 @@ const InvoiceProcessing = () => {
           return;
         }
         
-        // Use the updated function with fuel_pump_id parameter
-        // Cast the fuelPumpId to any to avoid TypeScript errors
+        // Explicitly pass the parameter with named argument to avoid ambiguity
         const { data, error } = await supabase
-          .rpc('get_invoices_with_customer_names', { pump_id: fuelPumpId as any });
+          .rpc('get_invoices_with_customer_names', { pump_id: fuelPumpId });
 
         if (error) {
           throw error;
