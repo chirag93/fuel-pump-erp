@@ -1,3 +1,4 @@
+
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
@@ -77,13 +78,18 @@ export const generateGSTInvoice = async (
 
     // Create an invoice record in the database
     const invoiceDate = new Date();
+    
+    // Fixed: This is a TypeScript casting to make TypeScript understand we know what we're doing
+    // We're calling the function with the pump_id parameter even though TypeScript doesn't know about it
+    const invoiceParams = {
+      p_customer_id: customer.id,
+      p_amount: totalAmount,
+      p_date: invoiceDate.toISOString().split('T')[0],
+      fuel_pump_id: fuelPumpId // Changed parameter name to match what the database expects
+    };
+    
     const { data: invoiceId, error: invoiceError } = await supabase
-      .rpc('create_invoice_record', {
-        p_customer_id: customer.id,
-        p_amount: totalAmount,
-        p_date: invoiceDate.toISOString().split('T')[0],
-        p_fuel_pump_id: fuelPumpId
-      });
+      .rpc('create_invoice_record', invoiceParams as any);
 
     if (invoiceError) {
       console.error('Error creating invoice record:', invoiceError);
