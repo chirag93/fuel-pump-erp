@@ -1,3 +1,4 @@
+
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -117,16 +118,22 @@ const Home = () => {
         
         if (settingsData && settingsData.length > 0) {
           // Format the data from settings, ensuring to normalize fuel type names
-          const fuelData = settingsData.map(item => ({
-            fuelType: normalizeFuelType(item.fuel_type),
-            capacity: item.tank_capacity || (normalizeFuelType(item.fuel_type) === 'Petrol' ? 10000 : 12000),
-            lastUpdated: item.updated_at ? new Date(item.updated_at).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric'
-            }) : 'Unknown'
-          }));
+          const fuelData = settingsData.map(item => {
+            const normalizedType = normalizeFuelType(item.fuel_type);
+            console.log(`Normalizing fuel type: ${item.fuel_type} -> ${normalizedType}`);
+            
+            return {
+              fuelType: normalizedType,
+              capacity: item.tank_capacity || (normalizedType === 'Petrol' ? 10000 : 12000),
+              lastUpdated: item.updated_at ? new Date(item.updated_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              }) : 'Unknown'
+            };
+          });
           
+          console.log("Processed fuel data:", fuelData);
           setFuelLevels(fuelData);
           setIsLoadingFuelLevels(false);
           return;

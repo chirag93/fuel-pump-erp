@@ -49,7 +49,7 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
         const { data: settingsData, error: settingsError } = await supabase
           .from('fuel_settings')
           .select('current_level, current_price, tank_capacity, updated_at')
-          .eq('fuel_type', normalizedFuelType)
+          .filter('fuel_type', 'ilike', `%${normalizedFuelType}%`)
           .eq('fuel_pump_id', fuelPumpId)
           .maybeSingle();
 
@@ -78,40 +78,63 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
             }));
           }
         } else {
-          console.log('No settings data found, falling back to inventory');
-          // Fallback to inventory table
-          const { data, error } = await supabase
-            .from('inventory')
-            .select('*')
-            .eq('fuel_type', normalizedFuelType)
+          console.log('No settings data found for ' + normalizedFuelType + ', falling back to inventory');
+          
+          // Try to get the latest daily reading as a second option
+          const { data: readingData, error: readingError } = await supabase
+            .from('daily_readings')
+            .select('closing_stock, date')
+            .filter('fuel_type', 'ilike', `%${normalizedFuelType}%`)
             .eq('fuel_pump_id', fuelPumpId)
             .order('date', { ascending: false })
             .limit(1);
+
+          if (!readingError && readingData && readingData.length > 0) {
+            console.log('Daily reading data found:', readingData[0]);
+            setCurrentLevel(Number(readingData[0].closing_stock));
             
-          if (error) {
-            throw error;
-          }
-          
-          if (data && data.length > 0) {
-            console.log('Inventory data found:', data[0]);
-            setCurrentLevel(Number(data[0].quantity));
-            setPricePerUnit(Number(data[0].price_per_unit));
-            
-            // Keep using provided capacity or default if still needed
-            if (capacity) {
-              setTankCapacity(Number(capacity));
-            }
-            
-            // Update last updated time from inventory if provided one isn't available
-            if (!lastUpdated && data[0].updated_at) {
-              setLastUpdatedTime(new Date(data[0].updated_at).toLocaleDateString('en-US', {
+            if (readingData[0].date) {
+              setLastUpdatedTime(new Date(readingData[0].date).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric'
               }));
             }
           } else {
-            setError(`No data found for ${normalizedFuelType} tank`);
+            // Fallback to inventory table
+            const { data, error } = await supabase
+              .from('inventory')
+              .select('*')
+              .filter('fuel_type', 'ilike', `%${normalizedFuelType}%`)
+              .eq('fuel_pump_id', fuelPumpId)
+              .order('date', { ascending: false })
+              .limit(1);
+              
+            if (error) {
+              throw error;
+            }
+            
+            if (data && data.length > 0) {
+              console.log('Inventory data found:', data[0]);
+              setCurrentLevel(Number(data[0].quantity));
+              setPricePerUnit(Number(data[0].price_per_unit));
+              
+              // Keep using provided capacity or default if still needed
+              if (capacity) {
+                setTankCapacity(Number(capacity));
+              }
+              
+              // Update last updated time from inventory if provided one isn't available
+              if (!lastUpdated && data[0].updated_at) {
+                setLastUpdatedTime(new Date(data[0].updated_at).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                }));
+              }
+            } else {
+              setError(`No data found for ${normalizedFuelType} tank`);
+            }
           }
         }
       } catch (error) {

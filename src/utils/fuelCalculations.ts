@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { getFuelPumpId } from "@/integrations/utils";
 import { toast } from '@/hooks/use-toast';
@@ -9,6 +8,13 @@ export const normalizeFuelType = (fuelType: string): string => {
   
   // Trim whitespace and capitalize first letter of each word
   const trimmed = fuelType.trim();
+  
+  // Return a standardized version of common fuel types to handle different casing and spacing issues
+  const lowerCased = trimmed.toLowerCase();
+  if (lowerCased.includes('diesel')) return 'Diesel';
+  if (lowerCased.includes('petrol')) return 'Petrol';
+  if (lowerCased.includes('premium')) return 'Premium';
+  if (lowerCased.includes('cng')) return 'CNG';
   
   return trimmed;
 };
@@ -52,7 +58,7 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
     console.log(`Retrieved ${fuelTypesData?.length || 0} fuel types`);
     
     // Initialize fuel usage for each fuel type to 0
-    const fuelTypes = fuelTypesData?.map(f => f.fuel_type) || [];
+    const fuelTypes = fuelTypesData?.map(f => normalizeFuelType(f.fuel_type)) || [];
     
     if (fuelTypes.length === 0) {
       console.log('No fuel types found for this fuel pump');
@@ -82,7 +88,7 @@ export const calculateFuelUsage = async (readings: Reading[]): Promise<{ [key: s
     const pumpFuelTypeMap: { [key: string]: string } = {};
     pumpData?.forEach(pump => {
       if (pump.fuel_types && pump.fuel_types.length > 0) {
-        pumpFuelTypeMap[pump.pump_number] = pump.fuel_types[0]; // Using first fuel type for simplicity
+        pumpFuelTypeMap[pump.pump_number] = normalizeFuelType(pump.fuel_types[0]); // Using first fuel type for simplicity
       }
     });
     
@@ -152,6 +158,8 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
     
     data.forEach(item => {
       const normalizedType = normalizeFuelType(item.fuel_type);
+      console.log(`Processing fuel type: ${item.fuel_type}, normalized: ${normalizedType}, capacity: ${item.tank_capacity}, level: ${item.current_level}`);
+      
       fuelLevels[normalizedType] = {
         capacity: item.tank_capacity || 0,
         current: item.current_level || 0,
@@ -162,6 +170,7 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
     // Update tank levels based on the latest daily readings
     await updateTankLevelsFromReadings(fuelLevels, fuelPumpId);
     
+    console.log("Final fuel levels after updateTankLevelsFromReadings:", fuelLevels);
     return fuelLevels;
   } catch (error) {
     console.error("Error in getFuelLevels:", error);
@@ -180,11 +189,13 @@ const updateTankLevelsFromReadings = async (
       // Normalize the fuel type when querying
       const normalizedType = normalizeFuelType(fuelType);
       
+      console.log(`Looking for latest reading for fuel type: ${normalizedType}`);
+      
       let query = supabase
         .from('daily_readings')
         .select('closing_stock, date, receipt_quantity, sales_per_tank_stock')
-        .eq('fuel_type', normalizedType)
         .eq('fuel_pump_id', fuelPumpId)
+        .like('fuel_type', `%${normalizedType}%`)
         .order('date', { ascending: false })
         .limit(1);
         
@@ -211,8 +222,8 @@ const updateTankLevelsFromReadings = async (
               current_level: latestReading.closing_stock,
               updated_at: new Date().toISOString()
             })
-            .eq('fuel_type', normalizedType)
-            .eq('fuel_pump_id', fuelPumpId);
+            .eq('fuel_pump_id', fuelPumpId)
+            .filter('fuel_type', 'ilike', `%${normalizedType}%`);
             
           const { error: updateError } = await updateQuery;
             
