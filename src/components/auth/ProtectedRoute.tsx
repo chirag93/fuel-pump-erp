@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { Navigate, Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,12 +5,12 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Shield, Fuel, Smartphone } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-
 interface ProtectedRouteProps {
   children?: React.ReactNode;
 }
-
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+const ProtectedRoute = ({
+  children
+}: ProtectedRouteProps) => {
   const {
     isAuthenticated,
     isLoading,
@@ -29,7 +28,6 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       navigate('/mobile');
     }
   }, [isMobile, isAuthenticated, location.pathname, navigate]);
-  
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center">
         <div className="text-center">
@@ -38,7 +36,6 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         </div>
       </div>;
   }
-  
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{
       from: location
@@ -49,7 +46,6 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   if (isMobile && !location.pathname.includes('/mobile')) {
     return <Navigate to="/mobile" replace />;
   }
-  
   return <DashboardLayout>
       <div className="container py-6">
         {isSuperAdmin && <div className="mb-6 p-3 bg-muted rounded-md flex items-center justify-between">
@@ -64,8 +60,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         
         {fuelPumpName && !isMobile && <div className="mb-4">
             <div className="flex items-center gap-2">
-              <Fuel className="h-5 w-5 text-primary" />
-              <span className="font-medium text-lg">{fuelPumpName}</span>
+              
+              
             </div>
           </div>}
         
@@ -73,5 +69,4 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       </div>
     </DashboardLayout>;
 };
-
 export default ProtectedRoute;
