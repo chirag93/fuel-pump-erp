@@ -1,13 +1,10 @@
 
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 
 const Transactions = () => {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Transactions</h1>
-      <p className="text-muted-foreground">View and manage all transactions</p>
-    </div>
-  );
+  // This component now redirects to the AllTransactions page
+  return <Navigate to="/all-transactions" replace />;
 };
 
 export default Transactions;

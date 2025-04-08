@@ -1,232 +1,187 @@
+import { createBrowserRouter } from "react-router-dom";
+import App from "./App";
+import AuthRequired from "./components/AuthRequired";
+import Customers from "./pages/Customers";
+import Dashboard from "./pages/Dashboard";
+import Indents from "./pages/Indents";
+import Layout from "./components/Layout";
+import Login from "./pages/Login";
+import NotFound from "./pages/NotFound";
+import Pricing from "./pages/Pricing";
+import Profile from "./pages/Profile";
+import Reconciliation from "./pages/Reconciliation";
+import Register from "./pages/Register";
+import Settings from "./pages/Settings";
+import SuperAdminDashboard from "./superadmin/pages/SuperAdminDashboard";
+import SuperAdminLayout from "./superadmin/components/SuperAdminLayout";
+import SuperAdminLogin from "./superadmin/pages/SuperAdminLogin";
+import SuperAdminNotFound from "./superadmin/pages/SuperAdminNotFound";
+import SuperAdminPricing from "./superadmin/pages/SuperAdminPricing";
+import SuperAdminProfile from "./superadmin/pages/SuperAdminProfile";
+import SuperAdminRegister from "./superadmin/pages/SuperAdminRegister";
+import SuperAdminSettings from "./superadmin/pages/SuperAdminSettings";
+import SuperAdminCustomers from "./superadmin/pages/SuperAdminCustomers";
+import Transactions from "./pages/Transactions";
+import SuperAdminTransactions from "./superadmin/pages/SuperAdminTransactions";
+import AllTransactions from './pages/AllTransactions';
 
-import { lazy, Suspense } from "react";
-import { RouteObject, Outlet } from "react-router-dom";
-import DashboardLayout from "@/components/layout/DashboardLayout";
-import Layout from "@/components/layout/Layout";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import SuperAdminProtectedRoute from "@/components/auth/SuperAdminProtectedRoute";
-import TankMonitor from "@/pages/TankMonitor";
-import MainLayout from "@/layouts/MainLayout";
-import AuthLayout from "@/layouts/AuthLayout";
-import Shell from "@/components/ui/shell";
-import AuthRequired from "@/components/auth-required";
-import SuperAdminDashboard from "@/superadmin/pages/SuperAdminDashboard";
-import Indents from "@/pages/Indents";
-import Staff from "@/pages/Staff";
-import Transactions from "@/pages/Transactions";
-import SignIn from "@/pages/SignIn";
-import SignUp from "@/pages/SignUp";
-import DailySalesReport from "@/pages/DailySalesReport";
-import FuelTests from "@/pages/FuelTests";
-import InvoiceProcessing from "@/pages/accounting/InvoiceProcessing";
-
-const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const DailySalesRecord = lazy(() => import("@/pages/DailySalesRecord"));
-const TankUnload = lazy(() => import("@/pages/TankUnload"));
-const AllTransactions = lazy(() => import("@/pages/AllTransactions"));
-const Customers = lazy(() => import("@/pages/Customers"));
-const FuelPumpSettings = lazy(() => import("@/pages/FuelPumpSettings"));
-const StaffManagement = lazy(() => import("@/pages/StaffManagement"));
-const MobileRecordIndent = lazy(() => import("@/pages/mobile/MobileRecordIndent"));
-const Login = lazy(() => import("@/pages/Login"));
-const SuperAdminLogin = lazy(() => import("@/pages/SuperAdminLogin"));
-const Index = lazy(() => import("@/pages/Index"));
-
-export const routes: RouteObject[] = [
+const routes = [
   {
     path: "/",
-    element: <MainLayout>{<Index />}</MainLayout>,
+    element: <App />,
   },
   {
     path: "/login",
+    element: <Login />,
+  },
+  {
+    path: "/register",
+    element: <Register />,
+  },
+  {
+    path: "/pricing",
+    element: <Pricing />,
+  },
+  {
+    path: "/dashboard",
     element: (
-      <AuthLayout>
-        <Suspense fallback={<>Loading...</>}>
-          <Login />
-        </Suspense>
-      </AuthLayout>
+      <AuthRequired>
+        <Layout>
+          <Dashboard />
+        </Layout>
+      </AuthRequired>
     ),
   },
   {
-    path: "/signin",
+    path: "/customers",
     element: (
-      <AuthLayout>
-        <SignIn />
-      </AuthLayout>
+      <AuthRequired>
+        <Layout>
+          <Customers />
+        </Layout>
+      </AuthRequired>
     ),
   },
   {
-    path: "/signup",
+    path: "/transactions",
     element: (
-      <AuthLayout>
-        <SignUp />
-      </AuthLayout>
+      <AuthRequired>
+        <Layout>
+          <Transactions />
+        </Layout>
+      </AuthRequired>
     ),
   },
   {
-    path: "/super-admin/login",
+    path: "/indents",
     element: (
-      <AuthLayout>
-        <Suspense fallback={<>Loading...</>}>
-          <SuperAdminLogin />
-        </Suspense>
-      </AuthLayout>
+      <AuthRequired>
+        <Layout>
+          <Indents />
+        </Layout>
+      </AuthRequired>
     ),
   },
   {
-    path: "/",
-    element: <ProtectedRoute />,
+    path: "/reconciliation",
+    element: (
+      <AuthRequired>
+        <Layout>
+          <Reconciliation />
+        </Layout>
+      </AuthRequired>
+    ),
+  },
+  {
+    path: "/profile",
+    element: (
+      <AuthRequired>
+        <Layout>
+          <Profile />
+        </Layout>
+      </AuthRequired>
+    ),
+  },
+  {
+    path: "/settings",
+    element: (
+      <AuthRequired>
+        <Layout>
+          <Settings />
+        </Layout>
+      </AuthRequired>
+    ),
+  },
+  {
+    path: "/superadmin",
+    element: <SuperAdminLayout />,
     children: [
       {
-        index: true,
-        element: (
-          <Suspense fallback={<>Loading...</>}>
-            <Dashboard />
-          </Suspense>
-        ),
+        path: "login",
+        element: <SuperAdminLogin />,
+      },
+      {
+        path: "register",
+        element: <SuperAdminRegister />,
+      },
+      {
+        path: "pricing",
+        element: <SuperAdminPricing />,
       },
       {
         path: "dashboard",
         element: (
-          <Suspense fallback={<>Loading...</>}>
-            <Dashboard />
-          </Suspense>
-        ),
-      },
-      {
-        path: "dsr",
-        element: (
-          <Suspense fallback={<>Loading...</>}>
-            <DailySalesRecord />
-          </Suspense>
-        ),
-      },
-      {
-        path: "daily-sales-report",
-        element: (
-          <Suspense fallback={<>Loading...</>}>
-            <DailySalesReport />
-          </Suspense>
-        ),
-      },
-      {
-        path: "tank-monitor",
-        element: (
-          <Suspense fallback={<>Loading...</>}>
-            <TankMonitor />
-          </Suspense>
-        ),
-      },
-      {
-        path: "tank-unload",
-        element: (
-          <Suspense fallback={<>Loading...</>}>
-            <TankUnload />
-          </Suspense>
-        ),
-      },
-      {
-        path: "all-transactions",
-        element: (
-          <Suspense fallback={<>Loading...</>}>
-            <AllTransactions />
-          </Suspense>
-        ),
-      },
-      {
-        path: "transactions",
-        element: (
-          <Suspense fallback={<>Loading...</>}>
-            <Transactions />
-          </Suspense>
+          <AuthRequired superAdmin={true}>
+            <SuperAdminDashboard />
+          </AuthRequired>
         ),
       },
       {
         path: "customers",
         element: (
-          <Suspense fallback={<>Loading...</>}>
-            <Customers />
-          </Suspense>
+          <AuthRequired superAdmin={true}>
+            <SuperAdminCustomers />
+          </AuthRequired>
         ),
       },
       {
-        path: "staff",
+        path: "transactions",
         element: (
-          <Suspense fallback={<>Loading...</>}>
-            <Staff />
-          </Suspense>
+          <AuthRequired superAdmin={true}>
+            <SuperAdminTransactions />
+          </AuthRequired>
         ),
       },
       {
-        path: "indents",
+        path: "profile",
         element: (
-          <Suspense fallback={<>Loading...</>}>
-            <Indents />
-          </Suspense>
-        ),
-      },
-      {
-        path: "fuel-tests",
-        element: (
-          <Suspense fallback={<>Loading...</>}>
-            <FuelTests />
-          </Suspense>
+          <AuthRequired superAdmin={true}>
+            <SuperAdminProfile />
+          </AuthRequired>
         ),
       },
       {
         path: "settings",
         element: (
-          <Suspense fallback={<>Loading...</>}>
-            <FuelPumpSettings />
-          </Suspense>
+          <AuthRequired superAdmin={true}>
+            <SuperAdminSettings />
+          </AuthRequired>
         ),
       },
       {
-        path: "staff-management",
-        element: (
-          <Suspense fallback={<>Loading...</>}>
-            <StaffManagement />
-          </Suspense>
-        ),
-      },
-      {
-        path: "accounting/invoices",
-        element: (
-          <Suspense fallback={<>Loading...</>}>
-            <InvoiceProcessing />
-          </Suspense>
-        ),
+        path: "*",
+        element: <SuperAdminNotFound />,
       },
     ],
   },
   {
-    path: "/mobile",
-    element: <Layout>
-      <Outlet />
-    </Layout>,
-    children: [
-      {
-        path: "record-indent",
-        element: (
-          <Suspense fallback={<>Loading...</>}>
-            <MobileRecordIndent />
-          </Suspense>
-        ),
-      },
-    ],
+    path: "/all-transactions",
+    element: <AuthRequired><AllTransactions /></AuthRequired>,
   },
   {
-    path: "/super-admin",
-    element: <SuperAdminProtectedRoute />,
-    children: [
-      {
-        index: true,
-        element: <SuperAdminDashboard />,
-      },
-      {
-        path: "dashboard",
-        element: <SuperAdminDashboard />,
-      },
-    ],
+    path: "*",
+    element: <NotFound />,
   },
 ];
+
+export const router = createBrowserRouter(routes);

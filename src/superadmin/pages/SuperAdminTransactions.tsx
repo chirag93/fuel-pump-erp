@@ -1,13 +1,10 @@
 
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 
 const SuperAdminTransactions = () => {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Transaction Management</h1>
-      <p className="text-muted-foreground">View and manage transactions across all fuel pumps.</p>
-    </div>
-  );
+  // Redirect to the AllTransactions page
+  return <Navigate to="/all-transactions" replace />;
 };
 
 export default SuperAdminTransactions;

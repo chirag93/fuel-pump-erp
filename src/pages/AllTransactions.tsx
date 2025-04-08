@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -5,11 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Download, Calendar, Loader2, FileText } from 'lucide-react';
+import { Download, Calendar, Loader2, FileText, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getFuelPumpId } from '@/integrations/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Transaction {
   id: string;
@@ -34,9 +36,84 @@ const AllTransactions = () => {
     endDate: ''
   });
   const [isFiltering, setIsFiltering] = useState(false);
-  const { fuelPumpId } = useAuth(); // Use fuel pump ID from auth context
+  const { fuelPumpId } = useAuth();
+  
+  // New filter states
+  const [customers, setCustomers] = useState<{id: string, name: string}[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [fuelTypes, setFuelTypes] = useState<string[]>([]);
+  const [selectedFuelType, setSelectedFuelType] = useState<string>('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
+  const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
   
   const PAGE_SIZE = 10;
+
+  // Fetch customer list for filter dropdown
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const fuelPumpId = await getFuelPumpId();
+        if (!fuelPumpId) return;
+        
+        const { data, error } = await supabase
+          .from('customers')
+          .select('id, name')
+          .eq('fuel_pump_id', fuelPumpId)
+          .order('name');
+          
+        if (error) throw error;
+        if (data) setCustomers(data);
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+      }
+    };
+    
+    fetchCustomers();
+  }, []);
+  
+  // Fetch available fuel types and payment methods
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
+        const fuelPumpId = await getFuelPumpId();
+        if (!fuelPumpId) return;
+        
+        // Get distinct fuel types
+        const { data: fuelTypeData, error: fuelTypeError } = await supabase
+          .from('transactions')
+          .select('fuel_type')
+          .eq('fuel_pump_id', fuelPumpId)
+          .not('fuel_type', 'is', null)
+          .distinctOn('fuel_type');
+          
+        if (fuelTypeError) throw fuelTypeError;
+        
+        if (fuelTypeData) {
+          const types = fuelTypeData.map(item => item.fuel_type).filter(Boolean);
+          setFuelTypes(types);
+        }
+        
+        // Get distinct payment methods
+        const { data: paymentData, error: paymentError } = await supabase
+          .from('transactions')
+          .select('payment_method')
+          .eq('fuel_pump_id', fuelPumpId)
+          .not('payment_method', 'is', null)
+          .distinctOn('payment_method');
+          
+        if (paymentError) throw paymentError;
+        
+        if (paymentData) {
+          const methods = paymentData.map(item => item.payment_method).filter(Boolean);
+          setPaymentMethods(methods);
+        }
+      } catch (error) {
+        console.error('Error fetching filter options:', error);
+      }
+    };
+    
+    fetchFilterOptions();
+  }, []);
 
   useEffect(() => {
     if (fuelPumpId) {
@@ -64,7 +141,7 @@ const AllTransactions = () => {
     }
   }, [currentPage, fuelPumpId]);
 
-  const fetchTransactions = async (start?: string, end?: string) => {
+  const fetchTransactions = async (start?: string, end?: string, customerId?: string, fuelType?: string, paymentMethod?: string) => {
     setIsLoading(true);
     
     try {
@@ -101,6 +178,21 @@ const AllTransactions = () => {
       // Add date filtering if provided
       if (start && end) {
         query = query.gte('date', start).lte('date', end);
+      }
+      
+      // Add customer filtering if provided
+      if (customerId) {
+        query = query.eq('customer_id', customerId);
+      }
+      
+      // Add fuel type filtering if provided
+      if (fuelType) {
+        query = query.eq('fuel_type', fuelType);
+      }
+      
+      // Add payment method filtering if provided
+      if (paymentMethod) {
+        query = query.eq('payment_method', paymentMethod);
       }
       
       // Add pagination and ordering
@@ -160,25 +252,35 @@ const AllTransactions = () => {
     }
   };
 
-  const handleFilterByDate = () => {
+  const handleFilterByAll = () => {
     const { startDate, endDate } = dateRange;
+    const filterActive = startDate || endDate || selectedCustomerId || selectedFuelType || selectedPaymentMethod;
     
-    if (!startDate || !endDate) {
+    if (!filterActive) {
       toast({
-        title: "Missing dates",
-        description: "Please select both start and end dates",
+        title: "No filters selected",
+        description: "Please select at least one filter option",
         variant: "destructive"
       });
       return;
     }
     
-    setIsFiltering(true);
+    setIsFiltering(filterActive);
     setCurrentPage(1); // Reset to first page when filtering
-    fetchTransactions(startDate, endDate);
+    fetchTransactions(
+      dateRange.startDate || undefined, 
+      dateRange.endDate || undefined,
+      selectedCustomerId || undefined,
+      selectedFuelType || undefined,
+      selectedPaymentMethod || undefined
+    );
   };
 
   const clearFilters = () => {
     setDateRange({ startDate: '', endDate: '' });
+    setSelectedCustomerId('');
+    setSelectedFuelType('');
+    setSelectedPaymentMethod('');
     setIsFiltering(false);
     setCurrentPage(1);
     fetchTransactions();
@@ -212,9 +314,23 @@ const AllTransactions = () => {
         `)
         .eq('fuel_pump_id', currentFuelPumpId); // Add fuel pump filter
       
-      // Add date filtering if requested
-      if (filtered && dateRange.startDate && dateRange.endDate) {
-        query = query.gte('date', dateRange.startDate).lte('date', dateRange.endDate);
+      // Add filters if requested
+      if (filtered) {
+        if (dateRange.startDate && dateRange.endDate) {
+          query = query.gte('date', dateRange.startDate).lte('date', dateRange.endDate);
+        }
+        
+        if (selectedCustomerId) {
+          query = query.eq('customer_id', selectedCustomerId);
+        }
+        
+        if (selectedFuelType) {
+          query = query.eq('fuel_type', selectedFuelType);
+        }
+        
+        if (selectedPaymentMethod) {
+          query = query.eq('payment_method', selectedPaymentMethod);
+        }
       }
       
       // Add ordering
@@ -258,11 +374,29 @@ const AllTransactions = () => {
         const link = document.createElement('a');
         link.setAttribute('href', url);
         
-        // Set filename with date range if filtered
+        // Set filename with filters indication
         const today = new Date().toISOString().split('T')[0];
-        const filename = filtered && dateRange.startDate && dateRange.endDate
-          ? `transactions_${dateRange.startDate}_to_${dateRange.endDate}.csv`
-          : `all_transactions_${today}.csv`;
+        let filename = `transactions_${today}.csv`;
+        
+        if (filtered) {
+          const filterParts = [];
+          
+          if (dateRange.startDate && dateRange.endDate) {
+            filterParts.push(`${dateRange.startDate}_to_${dateRange.endDate}`);
+          }
+          
+          if (selectedCustomerId) {
+            const customerName = customers.find(c => c.id === selectedCustomerId)?.name;
+            if (customerName) filterParts.push(`customer_${customerName.replace(/\s+/g, '_')}`);
+          }
+          
+          if (selectedFuelType) filterParts.push(`fuel_${selectedFuelType}`);
+          if (selectedPaymentMethod) filterParts.push(`payment_${selectedPaymentMethod}`);
+          
+          if (filterParts.length > 0) {
+            filename = `transactions_${filterParts.join('_')}_${today}.csv`;
+          }
+        }
           
         link.setAttribute('download', filename);
         document.body.appendChild(link);
@@ -353,6 +487,34 @@ const AllTransactions = () => {
     return items;
   };
 
+  // Generate filter description text
+  const getFilterDescription = () => {
+    const parts = [];
+    
+    if (dateRange.startDate && dateRange.endDate) {
+      parts.push(`from ${new Date(dateRange.startDate).toLocaleDateString()} to ${new Date(dateRange.endDate).toLocaleDateString()}`);
+    }
+    
+    if (selectedCustomerId) {
+      const customerName = customers.find(c => c.id === selectedCustomerId)?.name;
+      if (customerName) parts.push(`for customer: ${customerName}`);
+    }
+    
+    if (selectedFuelType) {
+      parts.push(`fuel type: ${selectedFuelType}`);
+    }
+    
+    if (selectedPaymentMethod) {
+      parts.push(`payment method: ${selectedPaymentMethod}`);
+    }
+    
+    if (parts.length === 0) {
+      return 'Showing all transactions';
+    }
+    
+    return `Showing transactions ${parts.join(', ')}`;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -376,41 +538,92 @@ const AllTransactions = () => {
         <CardHeader>
           <CardTitle>Filter Transactions</CardTitle>
           <CardDescription>
-            Filter transactions by date range
+            Filter transactions by date, customer, fuel type and payment method
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="start-date">Start Date</Label>
-              <Input
-                id="start-date"
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange({...dateRange, startDate: e.target.value})}
-              />
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="start-date">Start Date</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={dateRange.startDate}
+                  onChange={(e) => setDateRange({...dateRange, startDate: e.target.value})}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="end-date">End Date</Label>
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={dateRange.endDate}
+                  onChange={(e) => setDateRange({...dateRange, endDate: e.target.value})}
+                />
+              </div>
             </div>
             
-            <div className="grid gap-2">
-              <Label htmlFor="end-date">End Date</Label>
-              <Input
-                id="end-date"
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange({...dateRange, endDate: e.target.value})}
-              />
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="grid gap-2 w-[200px]">
+                <Label htmlFor="customer">Customer</Label>
+                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                  <SelectTrigger id="customer">
+                    <SelectValue placeholder="All customers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All customers</SelectItem>
+                    {customers.map(customer => (
+                      <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid gap-2 w-[200px]">
+                <Label htmlFor="fuel-type">Fuel Type</Label>
+                <Select value={selectedFuelType} onValueChange={setSelectedFuelType}>
+                  <SelectTrigger id="fuel-type">
+                    <SelectValue placeholder="All fuel types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All fuel types</SelectItem>
+                    {fuelTypes.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid gap-2 w-[200px]">
+                <Label htmlFor="payment-method">Payment Method</Label>
+                <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                  <SelectTrigger id="payment-method">
+                    <SelectValue placeholder="All payment methods" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All payment methods</SelectItem>
+                    {paymentMethods.map(method => (
+                      <SelectItem key={method} value={method}>{method}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex mt-6 gap-2">
+                <Button onClick={handleFilterByAll} disabled={isLoading}>
+                  <Filter className="mr-2 h-4 w-4" />
+                  Apply Filters
+                </Button>
+                
+                {isFiltering && (
+                  <Button variant="outline" onClick={clearFilters} disabled={isLoading}>
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
             </div>
-            
-            <Button onClick={handleFilterByDate} disabled={isLoading}>
-              <Calendar className="mr-2 h-4 w-4" />
-              Apply Filter
-            </Button>
-            
-            {isFiltering && (
-              <Button variant="outline" onClick={clearFilters} disabled={isLoading}>
-                Clear Filters
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -419,10 +632,7 @@ const AllTransactions = () => {
         <CardHeader>
           <CardTitle>Transaction Records</CardTitle>
           <CardDescription>
-            {isFiltering && dateRange.startDate && dateRange.endDate
-              ? `Showing transactions from ${new Date(dateRange.startDate).toLocaleDateString()} to ${new Date(dateRange.endDate).toLocaleDateString()}`
-              : 'Showing all transactions'
-            }
+            {isFiltering ? getFilterDescription() : 'Showing all transactions'}
           </CardDescription>
         </CardHeader>
         <CardContent>
