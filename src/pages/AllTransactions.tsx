@@ -265,7 +265,8 @@ const AllTransactions = () => {
       return;
     }
     
-    setIsFiltering(filterActive);
+    // Fixed: setIsFiltering now only receives a boolean value
+    setIsFiltering(true);
     setCurrentPage(1); // Reset to first page when filtering
     fetchTransactions(
       dateRange.startDate || undefined, 
