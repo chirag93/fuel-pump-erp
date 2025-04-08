@@ -7,12 +7,23 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { getFuelPumpId } from '@/integrations/utils';
+import { toast } from '@/hooks/use-toast';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 
+interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  contact: string;
+  email: string;
+  balance: number;
+}
+
 const MobileCustomers = () => {
-  const [customers, setCustomers] = useState([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCustomers();
@@ -21,26 +32,40 @@ const MobileCustomers = () => {
   const fetchCustomers = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       
       const fuelPumpId = await getFuelPumpId();
       
       if (!fuelPumpId) {
         console.error('No fuel pump ID available');
+        setError('Authentication failed. Please log in again.');
         setIsLoading(false);
         return;
       }
       
+      console.log('Fetching customers for fuel pump ID:', fuelPumpId);
+      
       const { data, error } = await supabase
         .from('customers')
-        .select('id, name, phone, address, balance')
+        .select('id, name, phone, contact, email, balance')
         .eq('fuel_pump_id', fuelPumpId)
         .order('name', { ascending: true });
         
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
       
+      console.log('Fetched customers:', data);
       setCustomers(data || []);
     } catch (error) {
       console.error('Error fetching customers:', error);
+      setError('Failed to load customers. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to load customers",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -72,15 +97,24 @@ const MobileCustomers = () => {
           <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
           <span>Loading customers...</span>
         </div>
+      ) : error ? (
+        <div className="text-center py-10 text-muted-foreground">
+          <p className="mb-4">{error}</p>
+          <Button onClick={fetchCustomers}>Try Again</Button>
+        </div>
       ) : filteredCustomers.length === 0 ? (
         <div className="text-center py-10 text-muted-foreground">
           <UserRound className="h-10 w-10 mx-auto mb-2 opacity-40" />
-          <p>No customers found</p>
+          {searchTerm ? (
+            <p>No customers found matching "{searchTerm}"</p>
+          ) : (
+            <p>No customers found</p>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
           {filteredCustomers.map((customer) => (
-            <Link to={`/customers/${customer.id}`} key={customer.id}>
+            <Link to={`/mobile/customers/${customer.id}`} key={customer.id}>
               <Card className="hover:bg-muted/40 transition-colors">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
@@ -97,10 +131,10 @@ const MobileCustomers = () => {
                         </div>
                       )}
                       
-                      {customer.address && (
+                      {customer.contact && (
                         <div className="flex items-center mt-1 text-sm text-muted-foreground">
-                          <MapPin className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-                          <span className="truncate">{customer.address}</span>
+                          <UserRound className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                          <span className="truncate">{customer.contact}</span>
                         </div>
                       )}
                     </div>

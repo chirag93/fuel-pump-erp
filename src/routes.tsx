@@ -1,7 +1,7 @@
 
 import { createBrowserRouter } from "react-router-dom";
 import App from "./App";
-import AuthRequired from "@/components/auth-required";
+import AuthRequired from "@/components/auth/AuthRequired";
 import Customers from "./pages/Customers";
 import Dashboard from "./pages/Dashboard";
 import Indents from "./pages/Indents";
@@ -12,6 +12,9 @@ import AllTransactions from './pages/AllTransactions';
 import Transactions from './pages/Transactions';
 import ShiftManagement from './pages/ShiftManagement';
 import MobileShiftManagement from './pages/mobile/MobileShiftManagement';
+import MobileCustomers from './pages/mobile/MobileCustomers';
+import MobileCustomerDetails from './pages/mobile/MobileCustomerDetails';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Define routes
 const routes = [
@@ -86,9 +89,25 @@ const routes = [
   {
     path: "/mobile/shift-management",
     element: (
-      <AuthRequired>
+      <ProtectedRoute>
         <MobileShiftManagement />
-      </AuthRequired>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/mobile/customers",
+    element: (
+      <ProtectedRoute>
+        <MobileCustomers />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/mobile/customers/:id",
+    element: (
+      <ProtectedRoute>
+        <MobileCustomerDetails />
+      </ProtectedRoute>
     ),
   },
   {
