@@ -1,7 +1,7 @@
 
 import { createBrowserRouter } from "react-router-dom";
 import App from "./App";
-import AuthRequired from "@/components/auth/ProtectedRoute";
+import AuthRequired from "@/components/auth-required";
 import Customers from "./pages/Customers";
 import Dashboard from "./pages/Dashboard";
 import Indents from "./pages/Indents";
