@@ -5,7 +5,7 @@ import AuthRequired from "@/components/auth/ProtectedRoute";
 import Customers from "./pages/Customers";
 import Dashboard from "./pages/Dashboard";
 import Indents from "./pages/Indents";
-import Layout from "@/components/layout/DashboardLayout";
+import Layout from "@/components/layout/Layout";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import AllTransactions from './pages/AllTransactions';
@@ -27,7 +27,7 @@ const routes = [
     path: "/dashboard",
     element: (
       <AuthRequired>
-        <Layout>{/*@ts-ignore*/}
+        <Layout>
           <Dashboard />
         </Layout>
       </AuthRequired>
@@ -37,7 +37,7 @@ const routes = [
     path: "/customers",
     element: (
       <AuthRequired>
-        <Layout>{/*@ts-ignore*/}
+        <Layout>
           <Customers />
         </Layout>
       </AuthRequired>
@@ -47,7 +47,7 @@ const routes = [
     path: "/transactions",
     element: (
       <AuthRequired>
-        <Layout>{/*@ts-ignore*/}
+        <Layout>
           <Transactions />
         </Layout>
       </AuthRequired>
@@ -57,7 +57,7 @@ const routes = [
     path: "/indents",
     element: (
       <AuthRequired>
-        <Layout>{/*@ts-ignore*/}
+        <Layout>
           <Indents />
         </Layout>
       </AuthRequired>
@@ -67,7 +67,7 @@ const routes = [
     path: "/all-transactions",
     element: (
       <AuthRequired>
-        <Layout>{/*@ts-ignore*/}
+        <Layout>
           <AllTransactions />
         </Layout>
       </AuthRequired>
@@ -77,7 +77,7 @@ const routes = [
     path: "/shift-management",
     element: (
       <AuthRequired>
-        <Layout>{/*@ts-ignore*/}
+        <Layout>
           <ShiftManagement />
         </Layout>
       </AuthRequired>

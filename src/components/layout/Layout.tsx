@@ -2,7 +2,11 @@
 import React from 'react';
 import DashboardLayout from './DashboardLayout';
 
-export const Layout = ({ children }: { children: React.ReactNode }) => {
+interface LayoutProps {
+  children: React.ReactNode;
+}
+
+export const Layout = ({ children }: LayoutProps) => {
   return (
     <DashboardLayout>
       <div className="container mx-auto py-6 px-4">
