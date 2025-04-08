@@ -13,6 +13,7 @@ import Transactions from './pages/Transactions';
 import ShiftManagement from './pages/ShiftManagement';
 import MobileShiftManagement from './pages/mobile/MobileShiftManagement';
 
+// Define routes
 const routes = [
   {
     path: "/",
