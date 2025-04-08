@@ -3,6 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { getFuelPumpId } from "@/integrations/utils";
 import { toast } from '@/hooks/use-toast';
 
+// Normalize fuel type names - trim whitespace and ensure consistent naming
+export const normalizeFuelType = (fuelType: string): string => {
+  if (!fuelType) return '';
+  
+  // Trim whitespace and capitalize first letter of each word
+  const trimmed = fuelType.trim();
+  
+  return trimmed;
+};
+
 interface Reading {
   pumpId: string;
   openingReading: number;
@@ -137,11 +147,12 @@ export const getFuelLevels = async (): Promise<{ [key: string]: { capacity: numb
       return {};
     }
     
-    // Convert data to the expected format
+    // Convert data to the expected format - be sure to normalize fuel types
     const fuelLevels: { [key: string]: { capacity: number, current: number, price: number } } = {};
     
     data.forEach(item => {
-      fuelLevels[item.fuel_type] = {
+      const normalizedType = normalizeFuelType(item.fuel_type);
+      fuelLevels[normalizedType] = {
         capacity: item.tank_capacity || 0,
         current: item.current_level || 0,
         price: item.current_price || 0
@@ -166,10 +177,13 @@ const updateTankLevelsFromReadings = async (
   try {
     // For each fuel type, get the latest daily reading
     for (const fuelType of Object.keys(fuelLevels)) {
+      // Normalize the fuel type when querying
+      const normalizedType = normalizeFuelType(fuelType);
+      
       let query = supabase
         .from('daily_readings')
         .select('closing_stock, date, receipt_quantity, sales_per_tank_stock')
-        .eq('fuel_type', fuelType)
+        .eq('fuel_type', normalizedType)
         .eq('fuel_pump_id', fuelPumpId)
         .order('date', { ascending: false })
         .limit(1);
@@ -197,7 +211,7 @@ const updateTankLevelsFromReadings = async (
               current_level: latestReading.closing_stock,
               updated_at: new Date().toISOString()
             })
-            .eq('fuel_type', fuelType)
+            .eq('fuel_type', normalizedType)
             .eq('fuel_pump_id', fuelPumpId);
             
           const { error: updateError } = await updateQuery;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -6,6 +5,7 @@ import { Fuel, Droplets, Loader2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getFuelPumpId } from '@/integrations/utils';
 import { toast } from '@/hooks/use-toast';
+import { normalizeFuelType } from '@/utils/fuelCalculations';
 
 interface FuelTankProps {
   fuelType: string;
@@ -22,6 +22,9 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
   const [error, setError] = useState<string | null>(null);
   const [tankCapacity, setTankCapacity] = useState<number>(capacity || 10000);
   const [lastUpdatedTime, setLastUpdatedTime] = useState<string | undefined>(lastUpdated);
+  
+  // Normalize the fuel type to handle any trailing or leading whitespaces
+  const normalizedFuelType = normalizeFuelType(fuelType);
   
   // Fetch the current fuel level from the database
   useEffect(() => {
@@ -40,13 +43,13 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
           return;
         }
         
-        console.log(`Fetching data for ${fuelType} (fuel pump: ${fuelPumpId}), provided capacity: ${capacity}`);
+        console.log(`Fetching data for ${normalizedFuelType} (fuel pump: ${fuelPumpId}), provided capacity: ${capacity}`);
         
         // Try to get data from fuel_settings first
         const { data: settingsData, error: settingsError } = await supabase
           .from('fuel_settings')
           .select('current_level, current_price, tank_capacity, updated_at')
-          .eq('fuel_type', fuelType.trim())
+          .eq('fuel_type', normalizedFuelType)
           .eq('fuel_pump_id', fuelPumpId)
           .maybeSingle();
 
@@ -80,7 +83,7 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
           const { data, error } = await supabase
             .from('inventory')
             .select('*')
-            .eq('fuel_type', fuelType.trim())
+            .eq('fuel_type', normalizedFuelType)
             .eq('fuel_pump_id', fuelPumpId)
             .order('date', { ascending: false })
             .limit(1);
@@ -108,19 +111,19 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
               }));
             }
           } else {
-            setError(`No data found for ${fuelType} tank`);
+            setError(`No data found for ${normalizedFuelType} tank`);
           }
         }
       } catch (error) {
-        console.error(`Error fetching ${fuelType} data:`, error);
-        setError(`Failed to load ${fuelType} data`);
+        console.error(`Error fetching ${normalizedFuelType} data:`, error);
+        setError(`Failed to load ${normalizedFuelType} data`);
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchFuelData();
-  }, [fuelType, capacity, lastUpdated, refreshTrigger]);
+  }, [normalizedFuelType, capacity, lastUpdated, refreshTrigger]);
   
   const fillPercentage = Math.round((currentLevel / tankCapacity) * 100);
   const isLow = fillPercentage < 20;
@@ -131,25 +134,25 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
   let colorBg = '';
   let fillColor = '';
   
-  if (fuelType.toLowerCase().includes('petrol')) {
+  if (normalizedFuelType.toLowerCase().includes('petrol')) {
     // Solid orange/red for petrol
     color = 'bg-orange-500';
     colorText = 'text-orange-600';
     colorBg = 'bg-orange-100';
     fillColor = '#f97316'; // orange-500
-  } else if (fuelType.toLowerCase().includes('diesel')) {
+  } else if (normalizedFuelType.toLowerCase().includes('diesel')) {
     // Solid blue for diesel
     color = 'bg-blue-600';
     colorText = 'text-blue-600';
     colorBg = 'bg-blue-100';
     fillColor = '#2563eb'; // blue-600
-  } else if (fuelType.toLowerCase().includes('premium')) {
+  } else if (normalizedFuelType.toLowerCase().includes('premium')) {
     // Premium gets a gold/yellow
     color = 'bg-amber-400';
     colorText = 'text-amber-600';
     colorBg = 'bg-amber-100';
     fillColor = '#f59e0b'; // amber-500
-  } else if (fuelType.toLowerCase().includes('cng')) {
+  } else if (normalizedFuelType.toLowerCase().includes('cng')) {
     // CNG gets a green
     color = 'bg-green-500';
     colorText = 'text-green-600';
@@ -199,9 +202,9 @@ const FuelTankDisplay = ({ fuelType, capacity, lastUpdated, showTankIcon = false
         <div className="flex justify-between items-center">
           <div className="flex gap-2 items-center">
             <div className={`flex h-10 w-10 items-center justify-center rounded-full ${color} text-white`}>
-              {fuelType.toLowerCase().includes('diesel') ? <Droplets size={20} /> : <Fuel size={20} />}
+              {normalizedFuelType.toLowerCase().includes('diesel') ? <Droplets size={20} /> : <Fuel size={20} />}
             </div>
-            <CardTitle>{fuelType} Tank</CardTitle>
+            <CardTitle>{normalizedFuelType} Tank</CardTitle>
           </div>
           <div className={`text-sm font-semibold rounded-full py-1 px-2 ${isLow ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
             {isLow ? 'Low' : 'Normal'}

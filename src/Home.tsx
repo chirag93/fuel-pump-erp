@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -24,6 +23,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getFuelPumpId } from '@/integrations/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { normalizeFuelType } from '@/utils/fuelCalculations';
 
 interface QuickActionProps {
   title: string;
@@ -116,10 +116,10 @@ const Home = () => {
         }
         
         if (settingsData && settingsData.length > 0) {
-          // Format the data from settings
+          // Format the data from settings, ensuring to normalize fuel type names
           const fuelData = settingsData.map(item => ({
-            fuelType: item.fuel_type,
-            capacity: item.tank_capacity || (item.fuel_type === 'Petrol' ? 10000 : 12000),
+            fuelType: normalizeFuelType(item.fuel_type),
+            capacity: item.tank_capacity || (normalizeFuelType(item.fuel_type) === 'Petrol' ? 10000 : 12000),
             lastUpdated: item.updated_at ? new Date(item.updated_at).toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'short',
@@ -147,10 +147,13 @@ const Home = () => {
           // Group the latest entries by fuel type
           const latestByFuelType: Record<string, any> = {};
           data.forEach(item => {
+            // Normalize the fuel type
+            const normalizedType = normalizeFuelType(item.fuel_type);
+            
             // Only process Petrol and Diesel fuel types (no CNG)
-            if ((item.fuel_type === 'Petrol' || item.fuel_type === 'Diesel' || item.fuel_type === 'Premium') && 
-                (!latestByFuelType[item.fuel_type] || new Date(item.date) > new Date(latestByFuelType[item.fuel_type].date))) {
-              latestByFuelType[item.fuel_type] = item;
+            if ((normalizedType === 'Petrol' || normalizedType === 'Diesel' || normalizedType === 'Premium') && 
+                (!latestByFuelType[normalizedType] || new Date(item.date) > new Date(latestByFuelType[normalizedType].date))) {
+              latestByFuelType[normalizedType] = item;
             }
           });
           
@@ -158,9 +161,10 @@ const Home = () => {
           const fuelData = Object.values(latestByFuelType).map(item => {
             // Ensure we have a valid fuel_type before using it
             if (item && typeof item.fuel_type === 'string') {
+              const normalizedType = normalizeFuelType(item.fuel_type);
               return {
-                fuelType: item.fuel_type,
-                capacity: item.fuel_type === 'Petrol' ? 10000 : 12000, // Default capacities
+                fuelType: normalizedType,
+                capacity: normalizedType === 'Petrol' ? 10000 : 12000, // Default capacities
                 lastUpdated: item.date ? new Date(item.date).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'short',
