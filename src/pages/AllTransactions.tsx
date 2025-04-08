@@ -83,13 +83,13 @@ const AllTransactions = () => {
           .from('transactions')
           .select('fuel_type')
           .eq('fuel_pump_id', fuelPumpId)
-          .not('fuel_type', 'is', null)
-          .distinctOn('fuel_type');
+          .not('fuel_type', 'is', null);
           
         if (fuelTypeError) throw fuelTypeError;
         
         if (fuelTypeData) {
-          const types = fuelTypeData.map(item => item.fuel_type).filter(Boolean);
+          // Extract unique fuel types
+          const types = Array.from(new Set(fuelTypeData.map(item => item.fuel_type))).filter(Boolean);
           setFuelTypes(types);
         }
         
@@ -98,13 +98,13 @@ const AllTransactions = () => {
           .from('transactions')
           .select('payment_method')
           .eq('fuel_pump_id', fuelPumpId)
-          .not('payment_method', 'is', null)
-          .distinctOn('payment_method');
+          .not('payment_method', 'is', null);
           
         if (paymentError) throw paymentError;
         
         if (paymentData) {
-          const methods = paymentData.map(item => item.payment_method).filter(Boolean);
+          // Extract unique payment methods
+          const methods = Array.from(new Set(paymentData.map(item => item.payment_method))).filter(Boolean);
           setPaymentMethods(methods);
         }
       } catch (error) {
