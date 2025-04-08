@@ -20,6 +20,13 @@ const TransactionsTable = ({ transactions, customer }: TransactionsTableProps) =
   const [selectedTransaction, setSelectedTransaction] = useState<TransactionWithDetails | null>(null);
   const [billDialogOpen, setBillDialogOpen] = useState(false);
 
+  // Sort transactions by date in descending order (most recent first)
+  const sortedTransactions = [...transactions].sort((a, b) => {
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+    return dateB - dateA;
+  });
+
   if (transactions.length === 0) {
     return (
       <p className="text-muted-foreground text-center py-4">
@@ -49,7 +56,7 @@ const TransactionsTable = ({ transactions, customer }: TransactionsTableProps) =
           </TableRow>
         </TableHeader>
         <TableBody>
-          {transactions.map((transaction) => (
+          {sortedTransactions.map((transaction) => (
             <TableRow key={transaction.id}>
               <TableCell>
                 {transaction.date ? format(new Date(transaction.date), 'dd/MM/yyyy') : 'Unknown'}
