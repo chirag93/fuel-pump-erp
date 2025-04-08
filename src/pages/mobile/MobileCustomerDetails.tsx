@@ -48,10 +48,8 @@ const MobileCustomerDetails = () => {
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen pb-20">
       <MobileHeader 
         title={customer.name} 
-        leftAction={{
-          icon: <ArrowLeft className="h-5 w-5" />,
-          onClick: () => navigate('/mobile/customers')
-        }}
+        showBackButton={true}
+        backPath="/mobile/customers"
       />
       
       {/* Customer Info Card */}
