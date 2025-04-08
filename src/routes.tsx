@@ -9,6 +9,7 @@ import Layout from "@/components/layout/DashboardLayout";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import AllTransactions from './pages/AllTransactions';
+import Transactions from './pages/Transactions';
 
 const routes = [
   {
@@ -44,7 +45,7 @@ const routes = [
     element: (
       <AuthRequired>
         <Layout>
-          <AllTransactions />
+          <Transactions />
         </Layout>
       </AuthRequired>
     ),
@@ -61,7 +62,13 @@ const routes = [
   },
   {
     path: "/all-transactions",
-    element: <AuthRequired><AllTransactions /></AuthRequired>,
+    element: (
+      <AuthRequired>
+        <Layout>
+          <AllTransactions />
+        </Layout>
+      </AuthRequired>
+    ),
   },
   {
     path: "*",

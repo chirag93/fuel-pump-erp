@@ -40,10 +40,10 @@ const AllTransactions = () => {
   
   // New filter states
   const [customers, setCustomers] = useState<{id: string, name: string}[]>([]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('all');
   const [fuelTypes, setFuelTypes] = useState<string[]>([]);
-  const [selectedFuelType, setSelectedFuelType] = useState<string>('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
+  const [selectedFuelType, setSelectedFuelType] = useState<string>('all');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('all');
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
   
   const PAGE_SIZE = 10;
@@ -181,17 +181,17 @@ const AllTransactions = () => {
       }
       
       // Add customer filtering if provided
-      if (customerId) {
+      if (customerId && customerId !== 'all') {
         query = query.eq('customer_id', customerId);
       }
       
       // Add fuel type filtering if provided
-      if (fuelType) {
+      if (fuelType && fuelType !== 'all') {
         query = query.eq('fuel_type', fuelType);
       }
       
       // Add payment method filtering if provided
-      if (paymentMethod) {
+      if (paymentMethod && paymentMethod !== 'all') {
         query = query.eq('payment_method', paymentMethod);
       }
       
@@ -254,7 +254,7 @@ const AllTransactions = () => {
 
   const handleFilterByAll = () => {
     const { startDate, endDate } = dateRange;
-    const filterActive = startDate || endDate || selectedCustomerId || selectedFuelType || selectedPaymentMethod;
+    const filterActive = startDate || endDate || (selectedCustomerId !== 'all') || (selectedFuelType !== 'all') || (selectedPaymentMethod !== 'all');
     
     if (!filterActive) {
       toast({
@@ -270,17 +270,17 @@ const AllTransactions = () => {
     fetchTransactions(
       dateRange.startDate || undefined, 
       dateRange.endDate || undefined,
-      selectedCustomerId || undefined,
-      selectedFuelType || undefined,
-      selectedPaymentMethod || undefined
+      selectedCustomerId !== 'all' ? selectedCustomerId : undefined,
+      selectedFuelType !== 'all' ? selectedFuelType : undefined,
+      selectedPaymentMethod !== 'all' ? selectedPaymentMethod : undefined
     );
   };
 
   const clearFilters = () => {
     setDateRange({ startDate: '', endDate: '' });
-    setSelectedCustomerId('');
-    setSelectedFuelType('');
-    setSelectedPaymentMethod('');
+    setSelectedCustomerId('all');
+    setSelectedFuelType('all');
+    setSelectedPaymentMethod('all');
     setIsFiltering(false);
     setCurrentPage(1);
     fetchTransactions();
@@ -320,15 +320,15 @@ const AllTransactions = () => {
           query = query.gte('date', dateRange.startDate).lte('date', dateRange.endDate);
         }
         
-        if (selectedCustomerId) {
+        if (selectedCustomerId && selectedCustomerId !== 'all') {
           query = query.eq('customer_id', selectedCustomerId);
         }
         
-        if (selectedFuelType) {
+        if (selectedFuelType && selectedFuelType !== 'all') {
           query = query.eq('fuel_type', selectedFuelType);
         }
         
-        if (selectedPaymentMethod) {
+        if (selectedPaymentMethod && selectedPaymentMethod !== 'all') {
           query = query.eq('payment_method', selectedPaymentMethod);
         }
       }
@@ -385,13 +385,13 @@ const AllTransactions = () => {
             filterParts.push(`${dateRange.startDate}_to_${dateRange.endDate}`);
           }
           
-          if (selectedCustomerId) {
+          if (selectedCustomerId && selectedCustomerId !== 'all') {
             const customerName = customers.find(c => c.id === selectedCustomerId)?.name;
             if (customerName) filterParts.push(`customer_${customerName.replace(/\s+/g, '_')}`);
           }
           
-          if (selectedFuelType) filterParts.push(`fuel_${selectedFuelType}`);
-          if (selectedPaymentMethod) filterParts.push(`payment_${selectedPaymentMethod}`);
+          if (selectedFuelType && selectedFuelType !== 'all') filterParts.push(`fuel_${selectedFuelType}`);
+          if (selectedPaymentMethod && selectedPaymentMethod !== 'all') filterParts.push(`payment_${selectedPaymentMethod}`);
           
           if (filterParts.length > 0) {
             filename = `transactions_${filterParts.join('_')}_${today}.csv`;
@@ -495,16 +495,16 @@ const AllTransactions = () => {
       parts.push(`from ${new Date(dateRange.startDate).toLocaleDateString()} to ${new Date(dateRange.endDate).toLocaleDateString()}`);
     }
     
-    if (selectedCustomerId) {
+    if (selectedCustomerId && selectedCustomerId !== 'all') {
       const customerName = customers.find(c => c.id === selectedCustomerId)?.name;
       if (customerName) parts.push(`for customer: ${customerName}`);
     }
     
-    if (selectedFuelType) {
+    if (selectedFuelType && selectedFuelType !== 'all') {
       parts.push(`fuel type: ${selectedFuelType}`);
     }
     
-    if (selectedPaymentMethod) {
+    if (selectedPaymentMethod && selectedPaymentMethod !== 'all') {
       parts.push(`payment method: ${selectedPaymentMethod}`);
     }
     
@@ -573,7 +573,7 @@ const AllTransactions = () => {
                     <SelectValue placeholder="All customers" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All customers</SelectItem>
+                    <SelectItem value="all">All customers</SelectItem>
                     {customers.map(customer => (
                       <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
                     ))}
@@ -588,7 +588,7 @@ const AllTransactions = () => {
                     <SelectValue placeholder="All fuel types" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All fuel types</SelectItem>
+                    <SelectItem value="all">All fuel types</SelectItem>
                     {fuelTypes.map(type => (
                       <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
@@ -603,7 +603,7 @@ const AllTransactions = () => {
                     <SelectValue placeholder="All payment methods" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All payment methods</SelectItem>
+                    <SelectItem value="all">All payment methods</SelectItem>
                     {paymentMethods.map(method => (
                       <SelectItem key={method} value={method}>{method}</SelectItem>
                     ))}
