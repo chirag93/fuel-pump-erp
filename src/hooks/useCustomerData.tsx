@@ -1,184 +1,146 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Customer, Vehicle, Indent, IndentBooklet, Transaction } from '@/integrations/supabase/client';
-import { getCustomerById, updateCustomerBalance } from '@/integrations/customers';
-import { getVehiclesByCustomerId } from '@/integrations/vehicles';
-import { getIndentsByCustomerId } from '@/integrations/indents';
-import { getIndentBookletsByCustomerId } from '@/integrations/indentBooklets';
-import { getTransactionsByCustomerId, TransactionWithDetails } from '@/integrations/transactions';
+import { getFuelPumpId } from '@/integrations/utils';
 
-// Define query keys for better cache management
-const QUERY_KEYS = {
-  customer: (id: string) => ['customer', id],
-  vehicles: (id: string) => ['vehicles', id],
-  indents: (id: string) => ['indents', id],
-  indentBooklets: (id: string) => ['indentBooklets', id],
-  transactions: (id: string) => ['transactions', id],
-};
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  contact: string;
+  email: string;
+  balance: number;
+}
+
+export interface Vehicle {
+  id: string;
+  number: string;
+  type: string;
+  capacity: string;
+  customer_id: string;
+}
+
+export interface Transaction {
+  id: string;
+  date: string;
+  fuel_type: string;
+  quantity: number;
+  amount: number;
+  payment_method: string;
+  vehicle_number?: string;
+}
 
 export const useCustomerData = (customerId: string) => {
-  const queryClient = useQueryClient();
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Customer data query
-  const { 
-    data: customer, 
-    isLoading: isLoadingCustomer 
-  } = useQuery({
-    queryKey: QUERY_KEYS.customer(customerId),
-    queryFn: () => getCustomerById(customerId),
-    enabled: !!customerId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
-    meta: {
-      onSuccess: (data: Customer) => {
-        console.log('Customer data fetched successfully:', data);
-      },
-      onError: (error: Error) => {
-        console.error('Error fetching customer:', error);
+  useEffect(() => {
+    const fetchCustomerData = async () => {
+      if (!customerId) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const fuelPumpId = await getFuelPumpId();
+        
+        if (!fuelPumpId) {
+          console.error('No fuel pump ID available');
+          setError('Authentication failed. Please log in again.');
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log(`Fetching data for customer ID: ${customerId} from fuel pump: ${fuelPumpId}`);
+        
+        // Fetch customer details
+        const { data: customerData, error: customerError } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('id', customerId)
+          .eq('fuel_pump_id', fuelPumpId)
+          .single();
+          
+        if (customerError) {
+          console.error('Error fetching customer:', customerError);
+          throw new Error('Failed to fetch customer details');
+        }
+        
+        if (!customerData) {
+          setError('Customer not found');
+          setIsLoading(false);
+          return;
+        }
+        
+        setCustomer(customerData);
+        
+        // Fetch vehicles
+        const { data: vehicleData, error: vehicleError } = await supabase
+          .from('vehicles')
+          .select('*')
+          .eq('customer_id', customerId)
+          .eq('fuel_pump_id', fuelPumpId);
+          
+        if (vehicleError) {
+          console.error('Error fetching vehicles:', vehicleError);
+          throw new Error('Failed to fetch customer vehicles');
+        }
+        
+        setVehicles(vehicleData || []);
+        
+        // Fetch transactions
+        const { data: transactionData, error: transactionError } = await supabase
+          .from('transactions')
+          .select('id, date, fuel_type, quantity, amount, payment_method, vehicle_id')
+          .eq('customer_id', customerId)
+          .eq('fuel_pump_id', fuelPumpId)
+          .order('date', { ascending: false });
+          
+        if (transactionError) {
+          console.error('Error fetching transactions:', transactionError);
+          throw new Error('Failed to fetch customer transactions');
+        }
+        
+        // Get vehicle numbers for transactions
+        const enhancedTransactions = await Promise.all((transactionData || []).map(async (transaction) => {
+          if (transaction.vehicle_id) {
+            const { data: vehicleData } = await supabase
+              .from('vehicles')
+              .select('number')
+              .eq('id', transaction.vehicle_id)
+              .maybeSingle();
+              
+            return {
+              ...transaction,
+              vehicle_number: vehicleData?.number || 'Unknown'
+            };
+          }
+          return transaction;
+        }));
+        
+        setTransactions(enhancedTransactions);
+      } catch (error) {
+        console.error('Error in fetchCustomerData:', error);
+        setError(error instanceof Error ? error.message : 'An unknown error occurred');
         toast({
           title: "Error",
-          description: "Failed to load customer data",
+          description: "Failed to load customer data. Please try again.",
           variant: "destructive"
         });
+      } finally {
+        setIsLoading(false);
       }
-    }
-  });
-
-  // Vehicles query
-  const { 
-    data: vehicles = [], 
-    isLoading: isLoadingVehicles,
-  } = useQuery({
-    queryKey: QUERY_KEYS.vehicles(customerId),
-    queryFn: () => getVehiclesByCustomerId(customerId),
-    enabled: !!customerId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
-    meta: {
-      onError: (error: Error) => {
-        console.error('Error fetching vehicles:', error);
-      }
-    }
-  });
-
-  // Indents query
-  const { 
-    data: indents = [], 
-    isLoading: isLoadingIndents 
-  } = useQuery({
-    queryKey: QUERY_KEYS.indents(customerId),
-    queryFn: () => getIndentsByCustomerId(customerId),
-    enabled: !!customerId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
-    meta: {
-      onError: (error: Error) => {
-        console.error('Error fetching indents:', error);
-      }
-    }
-  });
-
-  // Indent booklets query
-  const { 
-    data: indentBooklets = [], 
-    isLoading: isLoadingBooklets 
-  } = useQuery({
-    queryKey: QUERY_KEYS.indentBooklets(customerId),
-    queryFn: () => getIndentBookletsByCustomerId(customerId),
-    enabled: !!customerId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
-    meta: {
-      onError: (error: Error) => {
-        console.error('Error fetching indent booklets:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load indent booklets",
-          variant: "destructive"
-        });
-      }
-    }
-  });
-
-  // Transactions query
-  const { 
-    data: transactions = [], 
-    isLoading: isLoadingTransactions 
-  } = useQuery({
-    queryKey: QUERY_KEYS.transactions(customerId),
-    queryFn: () => getTransactionsByCustomerId(customerId),
-    enabled: !!customerId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
-    meta: {
-      onError: (error: Error) => {
-        console.error('Error fetching transactions:', error);
-      }
-    }
-  });
-
-  // Update balance mutation
-  const updateBalanceMutation = useMutation({
-    mutationFn: (newBalance: number) => updateCustomerBalance(customerId, newBalance),
-    onSuccess: () => {
-      // Invalidate customer data cache to trigger a refetch
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.customer(customerId) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.transactions(customerId) });
-      
-      toast({
-        title: "Success",
-        description: "Customer balance updated successfully"
-      });
-    },
-    onError: (error) => {
-      console.error('Error updating balance:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update customer balance",
-        variant: "destructive"
-      });
-    }
-  });
-
-  const updateBalance = async (newBalance: number) => {
-    if (!customer || !customer.id) return false;
-    return updateBalanceMutation.mutate(newBalance);
-  };
-
-  const refreshData = useCallback(() => {
-    console.log('Refreshing customer data');
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.customer(customerId) });
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.vehicles(customerId) });
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.indents(customerId) });
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.indentBooklets(customerId) });
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.transactions(customerId) });
-    setRefreshTrigger(prev => prev + 1);
-  }, [customerId, queryClient]);
-
-  // Helper to update vehicles
-  const setVehicles = useCallback((newVehicles: Vehicle[]) => {
-    queryClient.setQueryData(QUERY_KEYS.vehicles(customerId), newVehicles);
-  }, [customerId, queryClient]);
-
-  // Helper to update booklets
-  const setIndentBooklets = useCallback((newBooklets: IndentBooklet[]) => {
-    queryClient.setQueryData(QUERY_KEYS.indentBooklets(customerId), newBooklets);
-  }, [customerId, queryClient]);
-
-  return {
-    customer,
-    vehicles,
-    indents,
-    indentBooklets,
-    transactions,
-    isLoading: isLoadingCustomer || isLoadingVehicles || isLoadingIndents,
-    isLoadingBooklets,
-    setVehicles,
-    setIndentBooklets,
-    updateBalance,
-    refreshData
-  };
+    };
+    
+    fetchCustomerData();
+  }, [customerId]);
+  
+  return { customer, vehicles, transactions, isLoading, error };
 };

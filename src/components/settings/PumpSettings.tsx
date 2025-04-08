@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Edit, Plus, Settings } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { FuelSettings } from './FuelTypeSettings';
 import { getFuelPumpId } from '@/integrations/utils';
 
@@ -33,11 +33,13 @@ export function PumpSettings() {
   const [pumpSettings, setPumpSettings] = useState<PumpSettings[]>([]);
   const [fuelSettings, setFuelSettings] = useState<FuelSettings[]>([]);
   const [isAddPumpDialogOpen, setIsAddPumpDialogOpen] = useState(false);
+  const [isEditPumpDialogOpen, setIsEditPumpDialogOpen] = useState(false);
   const [newPump, setNewPump] = useState<Partial<PumpSettings>>({
     pump_number: '',
     nozzle_count: 1,
     fuel_types: []
   });
+  const [currentPump, setCurrentPump] = useState<PumpSettings | null>(null);
   const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -150,6 +152,50 @@ export function PumpSettings() {
       toast({
         title: "Error",
         description: "Failed to add pump. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditPump = (pump: PumpSettings) => {
+    setCurrentPump(pump);
+    setIsEditPumpDialogOpen(true);
+  };
+
+  const handleUpdatePump = async () => {
+    try {
+      if (!fuelPumpId || !currentPump) {
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('pump_settings')
+        .update({
+          pump_number: currentPump.pump_number,
+          nozzle_count: currentPump.nozzle_count,
+          fuel_types: currentPump.fuel_types
+        })
+        .eq('id', currentPump.id)
+        .eq('fuel_pump_id', fuelPumpId);
+        
+      if (error) throw error;
+      
+      setPumpSettings(pumpSettings.map(pump => 
+        pump.id === currentPump.id ? currentPump : pump
+      ));
+      
+      setIsEditPumpDialogOpen(false);
+      setCurrentPump(null);
+      
+      toast({
+        title: "Success",
+        description: "Pump updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating pump:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update pump. Please try again.",
         variant: "destructive"
       });
     }
@@ -284,7 +330,11 @@ export function PumpSettings() {
                         : 'N/A'}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleEditPump(pump)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -295,6 +345,73 @@ export function PumpSettings() {
           )}
         </CardContent>
       </Card>
+      
+      {/* Edit Pump Dialog */}
+      <Dialog open={isEditPumpDialogOpen} onOpenChange={setIsEditPumpDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Pump</DialogTitle>
+            <DialogDescription>
+              Update pump configuration
+            </DialogDescription>
+          </DialogHeader>
+          {currentPump && (
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit_pump_number">Pump Number</Label>
+                <Input 
+                  id="edit_pump_number" 
+                  value={currentPump.pump_number}
+                  onChange={e => setCurrentPump({...currentPump, pump_number: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit_nozzle_count">Number of Nozzles</Label>
+                <Input 
+                  id="edit_nozzle_count" 
+                  type="number"
+                  min="1"
+                  max="4"
+                  value={currentPump.nozzle_count.toString()}
+                  onChange={e => setCurrentPump({...currentPump, nozzle_count: parseInt(e.target.value)})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Available Fuel Types</Label>
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {fuelSettings.map(fuel => (
+                    <Button
+                      key={fuel.fuel_type}
+                      variant={currentPump.fuel_types?.includes(fuel.fuel_type) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        const updatedFuelTypes = [...currentPump.fuel_types];
+                        if (updatedFuelTypes.includes(fuel.fuel_type)) {
+                          setCurrentPump({
+                            ...currentPump, 
+                            fuel_types: updatedFuelTypes.filter(f => f !== fuel.fuel_type)
+                          });
+                        } else {
+                          setCurrentPump({
+                            ...currentPump,
+                            fuel_types: [...updatedFuelTypes, fuel.fuel_type]
+                          });
+                        }
+                      }}
+                    >
+                      {fuel.fuel_type}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditPumpDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdatePump}>Update Pump</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

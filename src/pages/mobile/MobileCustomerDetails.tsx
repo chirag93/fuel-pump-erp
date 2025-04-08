@@ -1,14 +1,12 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Phone, MapPin, ArrowLeft, UserRound, Calendar, Car, Banknote, Loader2 } from 'lucide-react';
+import { Phone, UserRound, Calendar, Car, Banknote, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { useCustomerData } from '@/hooks/useCustomerData';
-import { getFuelPumpId } from '@/integrations/utils';
 
 const MobileCustomerDetails = () => {
   const { id } = useParams<{ id: string }>();
