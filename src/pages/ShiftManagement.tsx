@@ -22,7 +22,8 @@ const ShiftManagement = () => {
     fetchShifts,
     handleAddShift,
     activeShifts,
-    completedShifts
+    completedShifts,
+    fuelPumpId
   } = useShiftManagement();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -42,6 +43,8 @@ const ShiftManagement = () => {
   const [selectedShiftData, setSelectedShiftData] = useState<SelectedShiftData | null>(null);
 
   const openEndShiftDialog = (shift: typeof shifts[0]) => {
+    console.log('Opening end shift dialog for shift:', shift);
+    
     // Use the original EndShiftDialog for editing completed shifts
     if (shift.status === 'completed') {
       setCurrentShiftId(shift.id);
@@ -112,11 +115,31 @@ const ShiftManagement = () => {
             </TabsList>
             
             <TabsContent value="active">
-              <ActiveShiftsTable activeShifts={activeShifts} onEndShift={openEndShiftDialog} />
+              {activeShifts.length === 0 ? (
+                <div className="text-center py-12 border rounded-md bg-muted/20">
+                  <CalendarClock className="h-12 w-12 text-muted mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-1">No Active Shifts</h3>
+                  <p className="text-muted-foreground">
+                    There are currently no active shifts. Use the "Start New Shift" button to begin a new shift.
+                  </p>
+                </div>
+              ) : (
+                <ActiveShiftsTable activeShifts={activeShifts} onEndShift={openEndShiftDialog} />
+              )}
             </TabsContent>
             
             <TabsContent value="completed">
-              <CompletedShiftsTable completedShifts={completedShifts} onEditShift={editCompletedShift} />
+              {completedShifts.length === 0 ? (
+                <div className="text-center py-12 border rounded-md bg-muted/20">
+                  <DollarSign className="h-12 w-12 text-muted mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-1">No Completed Shifts</h3>
+                  <p className="text-muted-foreground">
+                    There are no completed shifts yet. Completed shifts will appear here after ending active shifts.
+                  </p>
+                </div>
+              ) : (
+                <CompletedShiftsTable completedShifts={completedShifts} onEditShift={editCompletedShift} />
+              )}
             </TabsContent>
           </Tabs>
         </>

@@ -10,6 +10,8 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import AllTransactions from './pages/AllTransactions';
 import Transactions from './pages/Transactions';
+import ShiftManagement from './pages/ShiftManagement';
+import MobileShiftManagement from './pages/mobile/MobileShiftManagement';
 
 const routes = [
   {
@@ -67,6 +69,24 @@ const routes = [
         <Layout>
           <AllTransactions />
         </Layout>
+      </AuthRequired>
+    ),
+  },
+  {
+    path: "/shift-management",
+    element: (
+      <AuthRequired>
+        <Layout>
+          <ShiftManagement />
+        </Layout>
+      </AuthRequired>
+    ),
+  },
+  {
+    path: "/mobile/shift-management",
+    element: (
+      <AuthRequired>
+        <MobileShiftManagement />
       </AuthRequired>
     ),
   },

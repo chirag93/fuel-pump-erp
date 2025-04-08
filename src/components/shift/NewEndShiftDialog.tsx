@@ -13,7 +13,6 @@ import { EndShiftCashExpenses } from './EndShiftCashExpenses';
 import { EndShiftConsumables } from './EndShiftConsumables';
 import { EndShiftStaff } from './EndShiftStaff';
 import { SelectedShiftData } from '@/types/shift';
-import { SelectedConsumable } from './ConsumableSelection';
 
 interface EndShiftDialogProps {
   isOpen: boolean;
@@ -46,8 +45,17 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
     handleEndShift,
     testingFuelAmount,
     fuelLiters,
-    expectedSalesAmount
+    expectedSalesAmount,
+    validationErrors
   } = useEndShift(isOpen ? shiftData : null, onShiftEnded, onClose);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    // Debugging info
+    console.log('Dialog opened with shift data:', shiftData);
+    console.log('Staff available:', staff.length);
+  }, [isOpen, shiftData, staff]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -70,6 +78,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             fuelLiters={fuelLiters}
             expectedSalesAmount={expectedSalesAmount}
             fuelPrice={fuelPrice}
+            error={validationErrors.closingReading}
           />
           
           <EndShiftSales
@@ -92,6 +101,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             setCashRemaining={(value) => updateFormData('cashRemaining', value)}
             cashSales={formData.cashSales}
             cashReconciliation={cashReconciliation}
+            error={validationErrors.cashRemaining}
           />
           
           <EndShiftConsumables
@@ -107,6 +117,11 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
             selectedStaff={formData.selectedStaff}
             setSelectedStaff={(value) => updateFormData('selectedStaff', value)}
             staff={staff}
+            validation={{
+              error: validationErrors.selectedStaff || false,
+              message: formData.createNewShift && validationErrors.selectedStaff ? 
+                "Please select a staff member for the new shift" : undefined
+            }}
           />
           
           {error && (
@@ -128,7 +143,7 @@ export function NewEndShiftDialog({ isOpen, onClose, shiftData, onShiftEnded }: 
                 Processing...
               </>
             ) : (
-              'End Shift'
+              formData.createNewShift ? 'End & Start New Shift' : 'End Shift'
             )}
           </Button>
         </DialogFooter>

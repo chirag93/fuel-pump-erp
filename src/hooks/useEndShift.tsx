@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { SelectedConsumable } from '@/components/shift/ConsumableSelection';
 import { SelectedShiftData } from '@/types/shift';
+import { getFuelPumpId } from '@/integrations/utils';
 
 export interface EndShiftFormData {
   closingReading: string;
@@ -35,6 +36,7 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
   const [staff, setStaff] = useState<any[]>([]);
   const [fuelPrice, setFuelPrice] = useState<number>(0);
   const [totalSales, setTotalSales] = useState<number>(0);
+  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
   
   const [cashReconciliation, setCashReconciliation] = useState({
     expected: 0,
@@ -44,6 +46,24 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
   const [allocatedConsumables, setAllocatedConsumables] = useState<SelectedConsumable[]>([]);
   const [returnedConsumables, setReturnedConsumables] = useState<SelectedConsumable[]>([]);
   const [consumablesExpense, setConsumablesExpense] = useState(0);
+  const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({});
+  
+  // Get the fuel pump ID once
+  useEffect(() => {
+    const fetchFuelPumpId = async () => {
+      try {
+        const pumpId = await getFuelPumpId();
+        if (pumpId) {
+          setFuelPumpId(pumpId);
+          console.log('Fetched fuel pump ID:', pumpId);
+        }
+      } catch (err) {
+        console.error('Error fetching fuel pump ID:', err);
+      }
+    };
+    
+    fetchFuelPumpId();
+  }, []);
   
   // Calculate total sales whenever sales input changes
   useEffect(() => {
@@ -105,6 +125,7 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
         createNewShift: true
       });
       setError(null);
+      setValidationErrors({});
     }
   }, [shiftData]);
 
@@ -112,14 +133,22 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
   useEffect(() => {
     const fetchStaff = async () => {
       try {
+        if (!fuelPumpId) {
+          console.warn('No fuel pump ID available for staff fetch');
+          return;
+        }
+        
         const { data, error } = await supabase
           .from('staff')
-          .select('id, name, role, assigned_pumps')
+          .select('id, name, role, assigned_pumps, staff_numeric_id')
+          .eq('fuel_pump_id', fuelPumpId)
+          .eq('is_active', true)
           .order('name', { ascending: true });
           
         if (error) throw error;
         
         if (data) {
+          console.log('Staff loaded:', data.length);
           setStaff(data);
         }
       } catch (error) {
@@ -132,10 +161,10 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
       }
     };
     
-    if (shiftData) {
+    if (shiftData && fuelPumpId) {
       fetchStaff();
     }
-  }, [shiftData]);
+  }, [shiftData, fuelPumpId]);
   
   // Add function to fetch allocated consumables
   useEffect(() => {
@@ -218,29 +247,34 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
   }, [allocatedConsumables, returnedConsumables]);
 
   const validateForm = () => {
+    const errors: Record<string, boolean> = {};
+    let hasError = false;
     setError(null);
     
     if (!formData.closingReading || Number(formData.closingReading) <= 0) {
-      setError('Please enter a valid closing reading');
-      return false;
+      errors.closingReading = true;
+      hasError = true;
     }
     
     if (shiftData && Number(formData.closingReading) <= shiftData.opening_reading) {
+      errors.closingReading = true;
+      hasError = true;
       setError('Closing reading must be greater than opening reading');
-      return false;
     }
     
     if (!formData.cashRemaining || Number(formData.cashRemaining) < 0) {
-      setError('Please enter a valid cash remaining amount');
-      return false;
+      errors.cashRemaining = true;
+      hasError = true;
     }
     
     if (formData.createNewShift && !formData.selectedStaff) {
+      errors.selectedStaff = true;
+      hasError = true;
       setError('Please select a staff member for the new shift');
-      return false;
     }
     
-    return true;
+    setValidationErrors(errors);
+    return !hasError;
   };
 
   const handleEndShift = async () => {
@@ -340,6 +374,8 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
           nextShiftType = 'night';
         }
         
+        console.log('Creating new shift with fuel_pump_id:', fuelPumpId);
+        
         // Create new shift
         const { data: newShiftData, error: newShiftError } = await supabase
           .from('shifts')
@@ -347,13 +383,19 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
             staff_id: formData.selectedStaff,
             shift_type: nextShiftType,
             start_time: now.toISOString(),
-            status: 'active'
+            status: 'active',
+            fuel_pump_id: fuelPumpId
           }])
           .select();
         
-        if (newShiftError) throw newShiftError;
+        if (newShiftError) {
+          console.error('Error creating new shift:', newShiftError);
+          throw newShiftError;
+        }
         
         if (newShiftData && newShiftData.length > 0) {
+          console.log('New shift created:', newShiftData[0].id);
+          
           // Create new reading for the new shift
           const { error: newReadingError } = await supabase
             .from('readings')
@@ -362,10 +404,18 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
               staff_id: formData.selectedStaff,
               pump_id: shiftData.pump_id,
               date: now.toISOString().split('T')[0],
-              opening_reading: Number(formData.closingReading)
+              opening_reading: Number(formData.closingReading),
+              fuel_pump_id: fuelPumpId
             }]);
           
-          if (newReadingError) throw newReadingError;
+          if (newReadingError) {
+            console.error('Error creating new reading:', newReadingError);
+            throw newReadingError;
+          }
+          
+          console.log('New reading created successfully');
+        } else {
+          throw new Error('Failed to create new shift - no data returned');
         }
       }
       
@@ -408,6 +458,14 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
       ...prev,
       [field]: value
     }));
+    
+    // Clear validation error when field is updated
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [field]: false
+      }));
+    }
   };
   
   const updateReturnedConsumable = (id: string, quantity: number) => {
@@ -452,6 +510,7 @@ export function useEndShift(shiftData: SelectedShiftData | null, onShiftEnded: (
     handleEndShift,
     testingFuelAmount,
     fuelLiters,
-    expectedSalesAmount
+    expectedSalesAmount,
+    validationErrors
   };
 }
