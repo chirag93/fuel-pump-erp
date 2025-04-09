@@ -1,5 +1,5 @@
 
-import { Dispatch, SetStateAction, useState } from 'react';
+import { Dispatch, SetStateAction, useState, useEffect } from 'react';
 import { Shift, Staff } from '@/types/shift';
 import { 
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger
@@ -10,15 +10,18 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
 import { ConsumableSelection } from './ConsumableSelection';
+import { supabase } from '@/integrations/supabase/client';
+import { PumpSettingsType } from '@/integrations/fuelPumps';
+import { useToast } from '@/hooks/use-toast';
 
 export interface StartShiftFormProps {
   formOpen: boolean;
   setFormOpen: Dispatch<SetStateAction<boolean>>;
   newShift: Partial<Shift>;
   setNewShift: Dispatch<SetStateAction<Partial<Shift>>>;
-  handleAddShift: (selectedConsumables?: SelectedConsumable[]) => Promise<boolean>;
+  handleAddShift: (selectedConsumables?: SelectedConsumable[], nozzleReadings?: NozzleReading[]) => Promise<boolean>;
   staffList: Staff[];
-  isMobile?: boolean; // Added isMobile as an optional prop
+  isMobile?: boolean;
 }
 
 export interface SelectedConsumable {
@@ -30,6 +33,11 @@ export interface SelectedConsumable {
   unit: string;
 }
 
+export interface NozzleReading {
+  fuel_type: string;
+  opening_reading: number;
+}
+
 export function StartShiftForm({ 
   formOpen, 
   setFormOpen, 
@@ -37,22 +45,112 @@ export function StartShiftForm({
   setNewShift, 
   handleAddShift,
   staffList,
-  isMobile = false // Default value for backwards compatibility
+  isMobile = false
 }: StartShiftFormProps) {
   const [selectedConsumables, setSelectedConsumables] = useState<SelectedConsumable[]>([]);
+  const [pumpSettings, setPumpSettings] = useState<PumpSettingsType[]>([]);
+  const [nozzleReadings, setNozzleReadings] = useState<NozzleReading[]>([]);
+  const [selectedPumpFuelTypes, setSelectedPumpFuelTypes] = useState<string[]>([]);
+  const { toast } = useToast();
   
+  // Fetch pump settings when form opens
+  useEffect(() => {
+    if (formOpen) {
+      fetchPumpSettings();
+    }
+  }, [formOpen]);
+  
+  // Update nozzle readings when pump changes
+  useEffect(() => {
+    if (newShift.pump_id) {
+      const selectedPump = pumpSettings.find(pump => pump.pump_number === newShift.pump_id);
+      if (selectedPump) {
+        setSelectedPumpFuelTypes(selectedPump.fuel_types || []);
+        
+        // Initialize nozzle readings for each fuel type in the selected pump
+        const initialNozzleReadings = selectedPump.fuel_types.map(fuelType => ({
+          fuel_type: fuelType,
+          opening_reading: 0
+        }));
+        
+        setNozzleReadings(initialNozzleReadings);
+      } else {
+        setSelectedPumpFuelTypes([]);
+        setNozzleReadings([]);
+      }
+    }
+  }, [newShift.pump_id, pumpSettings]);
+  
+  const fetchPumpSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pump_settings')
+        .select('*');
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setPumpSettings(data as PumpSettingsType[]);
+      }
+    } catch (error) {
+      console.error('Error fetching pump settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch pump settings",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleNozzleReadingChange = (fuelType: string, value: string) => {
+    setNozzleReadings(prev => 
+      prev.map(reading => 
+        reading.fuel_type === fuelType 
+          ? { ...reading, opening_reading: parseFloat(value) || 0 } 
+          : reading
+      )
+    );
+  };
+
   const onSubmit = async () => {
-    const success = await handleAddShift(selectedConsumables);
+    // Check if we have at least one nozzle reading
+    if (nozzleReadings.length === 0) {
+      toast({
+        title: "Missing readings",
+        description: "Please select a pump with configured fuel types",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Check if all nozzle readings are filled
+    const emptyReadings = nozzleReadings.filter(r => r.opening_reading === 0);
+    if (emptyReadings.length > 0) {
+      toast({
+        title: "Missing readings",
+        description: `Please enter opening readings for all nozzles`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const success = await handleAddShift(selectedConsumables, nozzleReadings);
     if (success) {
       setFormOpen(false);
       setSelectedConsumables([]);
+      setNozzleReadings([]);
     }
   };
 
   return (
     <Dialog open={formOpen} onOpenChange={(open) => {
       setFormOpen(open);
-      if (!open) setSelectedConsumables([]);
+      if (!open) {
+        setSelectedConsumables([]);
+        setNozzleReadings([]);
+      }
     }}>
       <DialogTrigger asChild>
         <Button className="gap-2">
@@ -97,9 +195,11 @@ export function StartShiftForm({
                 <SelectValue placeholder="Select pump" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="P001">Pump 1 - Petrol</SelectItem>
-                <SelectItem value="P002">Pump 2 - Diesel</SelectItem>
-                <SelectItem value="P003">Pump 3 - Petrol Premium</SelectItem>
+                {pumpSettings.map((pump) => (
+                  <SelectItem key={pump.id} value={pump.pump_number}>
+                    {pump.pump_number} - {pump.fuel_types.join(', ')}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -112,17 +212,27 @@ export function StartShiftForm({
               onChange={(e) => setNewShift({...newShift, date: e.target.value})}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="openingReading">Opening Reading</Label>
-              <Input
-                id="openingReading"
-                type="number"
-                value={newShift.opening_reading?.toString()}
-                onChange={(e) => setNewShift({...newShift, opening_reading: parseFloat(e.target.value)})}
-              />
+          
+          {/* Nozzle Readings */}
+          {selectedPumpFuelTypes.length > 0 && (
+            <div className="border-t pt-4 mt-2">
+              <Label className="mb-2 block">Opening Readings</Label>
+              <div className="space-y-3">
+                {nozzleReadings.map((nozzle) => (
+                  <div key={nozzle.fuel_type} className="grid grid-cols-2 gap-3 items-center">
+                    <div className="text-sm font-medium">{nozzle.fuel_type}</div>
+                    <Input
+                      type="number"
+                      placeholder="Enter reading"
+                      value={nozzle.opening_reading || ''}
+                      onChange={(e) => handleNozzleReadingChange(nozzle.fuel_type, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+          
           <div className="grid gap-2">
             <Label htmlFor="cashGiven">Starting Cash Balance</Label>
             <Input

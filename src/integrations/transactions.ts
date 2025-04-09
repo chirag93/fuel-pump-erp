@@ -3,9 +3,9 @@ import { supabase, Transaction } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getFuelPumpId } from './utils';
 
-export interface TransactionWithDetails extends Transaction {
+export interface TransactionWithDetails extends Omit<Transaction, 'indent_id'> {
   vehicle_number?: string;
-  // Make sure the TransactionWithDetails inherits the optionality of indent_id from Transaction
+  indent_id?: string | null;
 }
 
 /**

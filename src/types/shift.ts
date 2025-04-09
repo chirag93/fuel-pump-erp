@@ -1,3 +1,4 @@
+
 export interface Shift {
   id: string;
   staff_id: string;
@@ -18,7 +19,14 @@ export interface Shift {
   cash_sales: number | null;
   testing_fuel: number | null;
   created_at?: string | null;
-  fuel_pump_id?: string; // Add this property
+  fuel_pump_id?: string;
+  all_readings?: ShiftReading[];
+}
+
+export interface ShiftReading {
+  fuel_type: string;
+  opening_reading: number;
+  closing_reading: number | null;
 }
 
 export interface Staff {
@@ -42,4 +50,5 @@ export interface SelectedShiftData {
   pump_id: string;
   opening_reading: number;
   shift_type: string;
+  all_readings?: ShiftReading[];
 }

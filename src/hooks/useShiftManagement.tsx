@@ -1,8 +1,9 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Shift, Staff } from '@/types/shift';
-import { SelectedConsumable } from '@/components/shift/StartShiftForm';
+import { SelectedConsumable, NozzleReading } from '@/components/shift/StartShiftForm';
 import { getFuelPumpId } from '@/integrations/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -12,8 +13,6 @@ export function useShiftManagement() {
     start_time: new Date().toISOString(),
     staff_id: '',
     pump_id: '',
-    opening_reading: 0,
-    starting_cash_balance: 0,
     status: 'active',
     shift_type: 'day'
   });
@@ -78,7 +77,8 @@ export function useShiftManagement() {
             card_sales, 
             upi_sales, 
             cash_sales, 
-            testing_fuel
+            testing_fuel,
+            fuel_type
           )
         `)
         .eq('fuel_pump_id', fuelPumpId)
@@ -108,7 +108,8 @@ export function useShiftManagement() {
           card_sales: null,
           upi_sales: null,
           cash_sales: null,
-          testing_fuel: null
+          testing_fuel: null,
+          fuel_type: null
         };
         
         const staffData = shift.staff || { name: 'Unknown Staff', staff_numeric_id: null };
@@ -128,7 +129,8 @@ export function useShiftManagement() {
           upi_sales: reading.upi_sales || null,
           cash_sales: reading.cash_sales || null,
           testing_fuel: reading.testing_fuel || null,
-          fuel_pump_id: fuelPumpId
+          fuel_pump_id: fuelPumpId,
+          all_readings: readingsArray
         } as Shift;
       });
       
@@ -141,15 +143,23 @@ export function useShiftManagement() {
   
   // Add a new shift with mutation
   const addShiftMutation = useMutation({
-    mutationFn: async (data: { newShift: Partial<Shift>, selectedConsumables: SelectedConsumable[] }) => {
-      const { newShift, selectedConsumables = [] } = data;
+    mutationFn: async (data: { 
+      newShift: Partial<Shift>, 
+      selectedConsumables: SelectedConsumable[], 
+      nozzleReadings: NozzleReading[] 
+    }) => {
+      const { newShift, selectedConsumables = [], nozzleReadings = [] } = data;
       
       if (!fuelPumpId) {
         throw new Error("Authentication Required");
       }
       
-      if (!newShift.staff_id || !newShift.pump_id || !newShift.opening_reading) {
+      if (!newShift.staff_id || !newShift.pump_id) {
         throw new Error("Missing information");
+      }
+      
+      if (nozzleReadings.length === 0) {
+        throw new Error("No nozzle readings provided");
       }
       
       const staffName = staffList.find(s => s.id === newShift.staff_id)?.name || 'Unknown Staff';
@@ -174,22 +184,25 @@ export function useShiftManagement() {
         throw new Error("Failed to create shift record");
       }
       
-      // 2. Create reading record
-      const { error: readingError } = await supabase
-        .from('readings')
-        .insert([{
-          shift_id: shiftData[0].id,
-          staff_id: newShift.staff_id,
-          pump_id: newShift.pump_id,
-          date: newShift.date,
-          opening_reading: newShift.opening_reading,
-          closing_reading: null,
-          cash_given: newShift.starting_cash_balance || 0,
-          fuel_pump_id: fuelPumpId
-        }]);
-        
-      if (readingError) {
-        throw readingError;
+      // 2. Create reading records for each nozzle
+      for (const nozzle of nozzleReadings) {
+        const { error: readingError } = await supabase
+          .from('readings')
+          .insert([{
+            shift_id: shiftData[0].id,
+            staff_id: newShift.staff_id,
+            pump_id: newShift.pump_id,
+            date: newShift.date,
+            opening_reading: nozzle.opening_reading,
+            closing_reading: null,
+            cash_given: newShift.starting_cash_balance || 0,
+            fuel_type: nozzle.fuel_type,
+            fuel_pump_id: fuelPumpId
+          }]);
+          
+        if (readingError) {
+          throw readingError;
+        }
       }
       
       // 3. Handle consumables if any
@@ -238,8 +251,6 @@ export function useShiftManagement() {
         staff_name: staffName,
         date: newShift.date || new Date().toISOString().split('T')[0],
         pump_id: newShift.pump_id || '',
-        opening_reading: newShift.opening_reading || 0,
-        closing_reading: null,
         starting_cash_balance: newShift.starting_cash_balance || 0,
         ending_cash_balance: null,
         card_sales: null,
@@ -247,7 +258,12 @@ export function useShiftManagement() {
         cash_sales: null,
         testing_fuel: null,
         status: 'active',
-        fuel_pump_id: fuelPumpId
+        fuel_pump_id: fuelPumpId,
+        all_readings: nozzleReadings.map(n => ({
+          fuel_type: n.fuel_type,
+          opening_reading: n.opening_reading,
+          closing_reading: null
+        }))
       } as Shift;
     },
     onSuccess: () => {
@@ -266,7 +282,6 @@ export function useShiftManagement() {
         staff_id: '',
         pump_id: '',
         starting_cash_balance: 0,
-        opening_reading: 0,
         status: 'active',
         shift_type: 'day'
       });
@@ -281,7 +296,10 @@ export function useShiftManagement() {
     }
   });
   
-  const handleAddShift = async (selectedConsumables: SelectedConsumable[] = []) => {
+  const handleAddShift = async (
+    selectedConsumables: SelectedConsumable[] = [], 
+    nozzleReadings: NozzleReading[] = []
+  ) => {
     try {
       if (!fuelPumpId) {
         toast({
@@ -292,7 +310,7 @@ export function useShiftManagement() {
         return false;
       }
       
-      await addShiftMutation.mutateAsync({ newShift, selectedConsumables });
+      await addShiftMutation.mutateAsync({ newShift, selectedConsumables, nozzleReadings });
       return true;
     } catch (error) {
       // Error already handled by mutation

@@ -46,7 +46,7 @@ const MobileShiftManagement = () => {
             <CardTitle>Start New Shift</CardTitle>
           </div>
           <CardDescription>
-            Record shift details including staff and opening cash amount.
+            Record shift details including staff, pump readings, and opening cash amount.
           </CardDescription>
         </CardHeader>
         <CardContent>
