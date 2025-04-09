@@ -24,9 +24,15 @@ type EndShiftFormData = {
 };
 
 interface ReadingData {
+  id?: string;
   fuel_type: string;
   opening_reading: number;
   closing_reading: number | null;
+  shift_id?: string;
+  staff_id?: string;
+  pump_id?: string;
+  date?: string;
+  cash_given?: number;
   cash_remaining?: number;
   card_sales?: number;
   upi_sales?: number;
@@ -34,6 +40,8 @@ interface ReadingData {
   testing_fuel?: number;
   expenses?: number;
   consumable_expenses?: number;
+  created_at?: string;
+  fuel_pump_id?: string;
 }
 
 interface NewEndShiftDialogProps {
@@ -82,7 +90,7 @@ export function NewEndShiftDialog({
       }
       
       if (data) {
-        // Process the readings data - ensure we have fuel_type
+        // Process the readings data with explicit typing
         const shiftReadings = data.map((reading: ReadingData) => ({
           fuel_type: reading.fuel_type || 'Unknown',
           opening_reading: reading.opening_reading,

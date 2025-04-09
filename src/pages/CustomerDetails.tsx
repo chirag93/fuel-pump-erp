@@ -48,7 +48,7 @@ const CustomerDetails = () => {
           setVehicles={setVehicles}
           indentBooklets={indentBooklets || []} 
           setIndentBooklets={setIndentBooklets}
-          transactions={transactions as TransactionWithDetails[]} 
+          transactions={transactions} 
           customerId={customerId}
           refreshData={refreshData}
           isLoadingBooklets={isLoadingBooklets}

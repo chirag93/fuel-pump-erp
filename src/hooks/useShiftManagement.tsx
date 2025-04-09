@@ -94,7 +94,7 @@ export function useShiftManagement() {
         // Ensure we have readings as an array
         const readingsArray = readingsData || [];
         
-        // Convert readings to the proper format
+        // Convert readings to the proper format with explicit type checking
         const shiftReadings: ShiftReading[] = readingsArray.map((reading: any) => ({
           fuel_type: reading.fuel_type || 'Unknown',
           opening_reading: reading.opening_reading || 0,
@@ -123,10 +123,10 @@ export function useShiftManagement() {
           testing_fuel: firstReading?.testing_fuel || null,
           fuel_pump_id: fuelPumpId,
           all_readings: shiftReadings
-        } as Shift;
+        };
       }));
       
-      return processedShifts;
+      return processedShifts as Shift[];
     },
     enabled: !!fuelPumpId,
     staleTime: 1000 * 60, // 1 minute cache

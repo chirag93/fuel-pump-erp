@@ -4,9 +4,25 @@ import { toast } from '@/hooks/use-toast';
 import { getFuelPumpId } from './utils';
 
 // Update the type definition to make indent_id optional
-export interface TransactionWithDetails extends Omit<Transaction, 'indent_id'> {
+export interface TransactionWithDetails {
+  id: string;
+  date: string;
+  fuel_type: string;
+  quantity: number;
+  amount: number;
+  payment_method: string;
+  customer_id: string;
+  vehicle_id: string | null;
+  staff_id: string;
   vehicle_number?: string;
-  indent_id?: string | null; // Make indent_id optional
+  indent_id?: string | null; 
+  discount_amount: number;
+  source: 'mobile' | 'web';
+  created_at?: string;
+  approval_status?: string;
+  approval_notes?: string | null;
+  approved_by?: string | null;
+  approval_date?: string | null;
 }
 
 /**

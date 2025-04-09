@@ -104,7 +104,7 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
         ...transaction,
         indent_id: transaction.indent_id || null,
         source: transaction.source || 'web' as 'web' | 'mobile',
-      })) as TransactionWithDetails[];
+      }));
       
       const result = await generateGSTInvoice(customer, formattedTransactions, invoiceDateRange);
       
