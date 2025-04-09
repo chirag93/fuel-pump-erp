@@ -10,8 +10,8 @@ export interface Shift {
   status: 'active' | 'completed';
   date: string;
   pump_id: string;
-  opening_reading: number;
-  closing_reading: number | null;
+  opening_reading?: number; // Make optional as we're using all_readings now
+  closing_reading?: number | null; // Make optional as we're using all_readings now
   starting_cash_balance: number;
   ending_cash_balance: number | null;
   card_sales: number | null;

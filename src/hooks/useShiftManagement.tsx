@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Shift, Staff } from '@/types/shift';
+import { Shift, Staff, ShiftReading } from '@/types/shift';
 import { SelectedConsumable, NozzleReading } from '@/components/shift/StartShiftForm';
 import { getFuelPumpId } from '@/integrations/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -66,20 +66,7 @@ export function useShiftManagement() {
           end_time,
           status,
           created_at,
-          staff:staff_id (name, staff_numeric_id),
-          readings:readings (
-            date, 
-            pump_id, 
-            opening_reading, 
-            closing_reading, 
-            cash_given, 
-            cash_remaining, 
-            card_sales, 
-            upi_sales, 
-            cash_sales, 
-            testing_fuel,
-            fuel_type
-          )
+          staff:staff_id (name, staff_numeric_id)
         `)
         .eq('fuel_pump_id', fuelPumpId)
         .order('created_at', { ascending: false })
@@ -93,46 +80,52 @@ export function useShiftManagement() {
         return [];
       }
       
-      // Process the joined data
-      const processedShifts = shiftsData.map(shift => {
-        // Ensure readings is always an array and not null
-        const readingsArray = Array.isArray(shift.readings) ? shift.readings : [];
-        // Get the first reading or use an empty object with default values
-        const reading = readingsArray.length > 0 ? readingsArray[0] : {
-          date: new Date().toISOString().split('T')[0],
-          pump_id: '',
-          opening_reading: 0,
-          closing_reading: null,
-          cash_given: 0,
-          cash_remaining: null,
-          card_sales: null,
-          upi_sales: null,
-          cash_sales: null,
-          testing_fuel: null,
-          fuel_type: null
-        };
+      // Process the shifts data with separate fetch for readings
+      const processedShifts = await Promise.all(shiftsData.map(async (shift) => {
+        // Get readings for this shift
+        const { data: readingsData, error: readingsError } = await supabase
+          .from('readings')
+          .select('*')
+          .eq('shift_id', shift.id);
+          
+        if (readingsError) {
+          console.error('Error fetching readings:', readingsError);
+        }
+        
+        // Ensure we have readings as an array
+        const readingsArray = readingsData || [];
+        
+        // Convert readings to the proper format
+        const shiftReadings: ShiftReading[] = readingsArray.map(reading => ({
+          fuel_type: reading.fuel_type || 'Unknown',
+          opening_reading: reading.opening_reading || 0,
+          closing_reading: reading.closing_reading || null
+        }));
+        
+        // Get the first reading to use its values for backward compatibility
+        const firstReading = readingsArray.length > 0 ? readingsArray[0] : null;
         
         const staffData = shift.staff || { name: 'Unknown Staff', staff_numeric_id: null };
         
+        // Build the shift object with all needed fields
         return {
           ...shift,
           staff_name: staffData.name,
-          // Convert staff_numeric_id to string if it exists, otherwise use 'N/A'
           staff_numeric_id: staffData.staff_numeric_id ? String(staffData.staff_numeric_id) : 'N/A',
-          date: reading.date || new Date().toISOString().split('T')[0],
-          pump_id: reading.pump_id || 'Unknown',
-          opening_reading: reading.opening_reading || 0,
-          closing_reading: reading.closing_reading || null,
-          starting_cash_balance: reading.cash_given || 0,
-          ending_cash_balance: reading.cash_remaining || null,
-          card_sales: reading.card_sales || null,
-          upi_sales: reading.upi_sales || null,
-          cash_sales: reading.cash_sales || null,
-          testing_fuel: reading.testing_fuel || null,
+          date: firstReading?.date || new Date().toISOString().split('T')[0],
+          pump_id: firstReading?.pump_id || 'Unknown',
+          opening_reading: firstReading?.opening_reading || 0,
+          closing_reading: firstReading?.closing_reading || null,
+          starting_cash_balance: firstReading?.cash_given || 0,
+          ending_cash_balance: firstReading?.cash_remaining || null,
+          card_sales: firstReading?.card_sales || null,
+          upi_sales: firstReading?.upi_sales || null,
+          cash_sales: firstReading?.cash_sales || null,
+          testing_fuel: firstReading?.testing_fuel || null,
           fuel_pump_id: fuelPumpId,
-          all_readings: readingsArray
+          all_readings: shiftReadings
         } as Shift;
-      });
+      }));
       
       return processedShifts;
     },
@@ -245,10 +238,22 @@ export function useShiftManagement() {
         }
       }
       
+      // Convert nozzle readings to shift readings for the return value
+      const allReadings: ShiftReading[] = nozzleReadings.map(n => ({
+        fuel_type: n.fuel_type,
+        opening_reading: n.opening_reading,
+        closing_reading: null
+      }));
+      
       // Return new shift data for optimistic updates
-      return {
-        ...shiftData[0],
+      const newShiftData: Shift = {
+        id: shiftData[0].id,
+        staff_id: newShift.staff_id || '',
         staff_name: staffName,
+        shift_type: newShift.shift_type || 'day',
+        start_time: new Date().toISOString(),
+        end_time: null,
+        status: 'active',
         date: newShift.date || new Date().toISOString().split('T')[0],
         pump_id: newShift.pump_id || '',
         starting_cash_balance: newShift.starting_cash_balance || 0,
@@ -257,14 +262,11 @@ export function useShiftManagement() {
         upi_sales: null,
         cash_sales: null,
         testing_fuel: null,
-        status: 'active',
         fuel_pump_id: fuelPumpId,
-        all_readings: nozzleReadings.map(n => ({
-          fuel_type: n.fuel_type,
-          opening_reading: n.opening_reading,
-          closing_reading: null
-        }))
-      } as Shift;
+        all_readings: allReadings
+      };
+      
+      return newShiftData;
     },
     onSuccess: () => {
       // Invalidate and refetch shifts data

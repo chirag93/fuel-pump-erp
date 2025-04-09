@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { SelectedShiftData, ShiftReading } from '@/types/shift';
 
 type EndShiftFormData = {
@@ -24,6 +23,19 @@ type EndShiftFormData = {
   expenses: number;
   consumable_expenses: number;
 };
+
+interface ReadingData {
+  fuel_type: string;
+  opening_reading: number;
+  closing_reading: number | null;
+  cash_remaining?: number;
+  card_sales?: number;
+  upi_sales?: number;
+  cash_sales?: number;
+  testing_fuel?: number;
+  expenses?: number;
+  consumable_expenses?: number;
+}
 
 interface NewEndShiftDialogProps {
   isOpen: boolean;
@@ -71,9 +83,9 @@ export function NewEndShiftDialog({
       }
       
       if (data) {
-        // Process the readings data
-        const shiftReadings = data.map(reading => ({
-          fuel_type: reading.fuel_type,
+        // Process the readings data - ensure we have fuel_type
+        const shiftReadings = data.map((reading: ReadingData) => ({
+          fuel_type: reading.fuel_type || 'Unknown',
           opening_reading: reading.opening_reading,
           closing_reading: reading.closing_reading || 0
         }));

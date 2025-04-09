@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { FileText } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Transaction, Customer } from '@/integrations/supabase/client';
+import { Customer } from '@/integrations/supabase/client';
 import BillPreviewDialog from '@/components/indent/BillPreviewDialog';
 import { TransactionWithDetails } from '@/integrations/transactions';
 

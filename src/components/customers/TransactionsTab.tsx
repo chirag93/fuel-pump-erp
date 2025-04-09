@@ -101,13 +101,14 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
         return;
       }
       
-      // Process transactions to ensure correct typing
+      // Safely type the transactions for the invoice generator
       const formattedTransactions = invoiceTransactions.map(transaction => ({
         ...transaction,
-        source: transaction.source || 'web',
+        indent_id: transaction.indent_id || null,
+        source: transaction.source || 'web' as 'web' | 'mobile',
       }));
       
-      const result = await generateGSTInvoice(customer, formattedTransactions, invoiceDateRange);
+      const result = await generateGSTInvoice(customer, formattedTransactions as TransactionWithDetails[], invoiceDateRange);
       
       toast({
         title: result.success ? "Invoice Generated" : "Error",

@@ -5,7 +5,7 @@ import { getFuelPumpId } from './utils';
 
 export interface TransactionWithDetails extends Omit<Transaction, 'indent_id'> {
   vehicle_number?: string;
-  indent_id?: string | null;
+  indent_id?: string | null; // Make indent_id optional to match the actual data
 }
 
 /**

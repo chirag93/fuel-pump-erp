@@ -5,6 +5,7 @@ import CustomerTabs from '@/components/customers/CustomerTabs';
 import { useCustomerData } from '@/hooks/useCustomerData';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { TransactionWithDetails } from '@/integrations/transactions';
 
 const CustomerDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -47,7 +48,7 @@ const CustomerDetails = () => {
           setVehicles={setVehicles}
           indentBooklets={indentBooklets || []} 
           setIndentBooklets={setIndentBooklets}
-          transactions={transactions}
+          transactions={transactions as TransactionWithDetails[]} // Add type assertion
           customerId={customerId}
           refreshData={refreshData}
           isLoadingBooklets={isLoadingBooklets}

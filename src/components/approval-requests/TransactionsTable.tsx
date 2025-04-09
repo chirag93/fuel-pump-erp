@@ -1,5 +1,4 @@
 
-import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,7 +63,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
               <TableCell>{transaction.fuel_type}</TableCell>
               <TableCell>₹{transaction.amount.toFixed(2)}</TableCell>
               <TableCell>
-                <Badge variant="outline">{transaction.source}</Badge>
+                <Badge variant="outline">{transaction.source || 'web'}</Badge>
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
