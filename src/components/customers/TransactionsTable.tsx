@@ -104,7 +104,7 @@ const TransactionsTable = ({ transactions, customer }: TransactionsTableProps) =
         <BillPreviewDialog
           open={billDialogOpen}
           onOpenChange={setBillDialogOpen}
-          transaction={selectedTransaction}
+          transaction={selectedTransaction as any}
           vehicleNumber={selectedTransaction.vehicle_number}
           customerName={customer.name}
         />
