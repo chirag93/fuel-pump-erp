@@ -4,12 +4,9 @@ import CustomerDetailsTab from './CustomerDetailsTab';
 import VehiclesTab from './VehiclesTab';
 import BookletsTab from './BookletsTab';
 import TransactionsTab from './TransactionsTab';
-import { Customer, Vehicle, IndentBooklet, Transaction } from '@/integrations/supabase/client';
+import { Customer, Vehicle, IndentBooklet } from '@/integrations/supabase/client';
 import { useState, useCallback } from 'react';
-
-interface TransactionWithDetails extends Transaction {
-  vehicle_number?: string;
-}
+import { TransactionWithDetails } from '@/integrations/transactions';
 
 interface CustomerTabsProps {
   customer: Customer;

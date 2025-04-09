@@ -90,8 +90,11 @@ export function NewEndShiftDialog({
       }
       
       if (data) {
+        // Ensure all data is properly typed
+        const readingsData = data as ReadingData[];
+        
         // Process the readings data with explicit typing
-        const shiftReadings = data.map((reading: ReadingData) => ({
+        const shiftReadings = readingsData.map((reading) => ({
           fuel_type: reading.fuel_type || 'Unknown',
           opening_reading: reading.opening_reading,
           closing_reading: reading.closing_reading || 0

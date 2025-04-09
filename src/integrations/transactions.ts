@@ -1,9 +1,8 @@
-
 import { supabase, Transaction } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getFuelPumpId } from './utils';
 
-// Update the type definition to make indent_id optional
+// Update the type definition to make indent_id optional and source required
 export interface TransactionWithDetails {
   id: string;
   date: string;
