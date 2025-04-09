@@ -2,13 +2,7 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-
-interface SalesFormData {
-  card_sales: number;
-  upi_sales: number;
-  cash_sales: number;
-  testing_fuel: number;
-}
+import { SalesFormData } from './NewEndShiftDialog';
 
 interface EndShiftSalesProps {
   salesData: SalesFormData;

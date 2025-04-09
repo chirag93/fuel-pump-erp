@@ -11,7 +11,7 @@ import { EndShiftReadings, FuelReading } from './EndShiftReadings';
 import { EndShiftSales } from './EndShiftSales';
 import { EndShiftCashExpenses } from './EndShiftCashExpenses';
 
-// Simple explicit types to avoid deep instantiation
+// Simple explicit type for readings
 interface ReadingData {
   id?: string;
   fuel_type: string;
@@ -23,7 +23,7 @@ interface ReadingData {
   date?: string;
 }
 
-// Use concrete form data type with no type parameters
+// Fixed form data type with explicit fields
 interface FormData {
   readings: FuelReading[];
   cash_remaining: number;
@@ -33,6 +33,14 @@ interface FormData {
   testing_fuel: number;
   expenses: number;
   consumable_expenses: number;
+}
+
+// Sales form data type for the EndShiftSales component
+export interface SalesFormData {
+  card_sales: number;
+  upi_sales: number;
+  cash_sales: number;
+  testing_fuel: number;
 }
 
 interface NewEndShiftDialogProps {
@@ -51,7 +59,7 @@ export function NewEndShiftDialog({
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   
-  // Simplify state using explicit types
+  // Explicitly typed state
   const [formData, setFormData] = useState<FormData>({
     readings: [],
     cash_remaining: 0,
@@ -106,13 +114,14 @@ export function NewEndShiftDialog({
       }
       
       if (data) {
-        // Handle the type conversion safely by accessing properties directly
+        // Safely map the data to our FuelReading[] type
         const fuelReadings: FuelReading[] = data.map((reading: any) => ({
           fuel_type: reading.fuel_type,
           opening_reading: reading.opening_reading,
           closing_reading: reading.closing_reading || reading.opening_reading
         }));
         
+        // Update state with the explicitly typed readings
         setFormData(prev => ({
           ...prev,
           readings: fuelReadings
@@ -128,7 +137,7 @@ export function NewEndShiftDialog({
     }
   };
 
-  // Handler for reading changes
+  // Handler for reading changes - explicitly typed
   const handleReadingChange = (fuelType: string, value: number) => {
     setFormData(prev => ({
       ...prev,
@@ -140,14 +149,12 @@ export function NewEndShiftDialog({
     }));
   };
 
-  // Handler for sales and other numeric inputs - use string indexing to avoid type issues
+  // Fixed handler for sales and other numeric inputs
   const handleInputChange = (field: keyof Omit<FormData, 'readings'>, value: number) => {
-    // Use type assertion to solve the deep instantiation error
-    setFormData(prev => {
-      const updated = { ...prev };
-      updated[field] = value;
-      return updated;
-    });
+    // Create a new object to avoid deep nesting issues
+    const newFormData = { ...formData };
+    newFormData[field] = value;
+    setFormData(newFormData);
   };
 
   const handleSubmit = async () => {
@@ -256,7 +263,7 @@ export function NewEndShiftDialog({
               cash_sales: formData.cash_sales,
               testing_fuel: formData.testing_fuel
             }}
-            onSalesChange={(field, value) => handleInputChange(field, value)}
+            onSalesChange={(field, value) => handleInputChange(field as keyof Omit<FormData, 'readings'>, value)}
             totalSales={totalSales}
             totalLiters={totalLiters}
           />
