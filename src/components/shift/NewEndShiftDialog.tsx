@@ -241,44 +241,6 @@ export function NewEndShiftDialog({
     }
   };
 
-  const calculateTotals = () => {
-    // Calculate total sales
-    const totalSales = formData.card_sales + formData.upi_sales + formData.cash_sales;
-    
-    // Calculate total liters dispensed for all fuel types
-    let totalLiters = 0;
-    
-    Object.keys(formData.closingReadings).forEach(fuelType => {
-      const reading = formData.closingReadings[fuelType];
-      totalLiters += Math.max(0, reading.closing_reading - reading.opening_reading);
-    });
-    
-    return {
-      totalSales,
-      totalLiters
-    };
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData({
-      ...formData,
-      [field]: parseFloat(value) || 0
-    });
-  };
-  
-  const handleReadingChange = (fuelType: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      closingReadings: {
-        ...prev.closingReadings,
-        [fuelType]: {
-          ...prev.closingReadings[fuelType],
-          closing_reading: parseFloat(value) || 0
-        }
-      }
-    }));
-  };
-
   const { totalSales, totalLiters } = calculateTotals();
 
   return (
