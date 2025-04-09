@@ -8,19 +8,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SelectedShiftData, ShiftReading } from '@/types/shift';
 import { EndShiftReadings, FuelReading } from './EndShiftReadings';
-import { EndShiftSales } from './EndShiftSales';
+import { EndShiftSales, SalesFormData } from './EndShiftSales';
 import { EndShiftCashExpenses } from './EndShiftCashExpenses';
 
-// Explicitly define FormData type to avoid deep instantiation error
+// Define a specific interface for the form data to avoid deep instantiation
 interface EndShiftFormData {
   readings: FuelReading[];
   cash_remaining: number;
+  expenses: number;
+  consumable_expenses: number;
   card_sales: number;
   upi_sales: number;
   cash_sales: number;
   testing_fuel: number;
-  expenses: number;
-  consumable_expenses: number;
 }
 
 interface NewEndShiftDialogProps {
@@ -39,7 +39,6 @@ export function NewEndShiftDialog({
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   
-  // Use the explicitly defined type for state
   const [formData, setFormData] = useState<EndShiftFormData>({
     readings: [],
     cash_remaining: 0,
@@ -138,7 +137,7 @@ export function NewEndShiftDialog({
     }
   };
 
-  // Handler for reading changes - explicitly typed
+  // Handler for reading changes
   const handleReadingChange = (fuelType: string, value: number) => {
     setFormData(prev => ({
       ...prev,
@@ -156,6 +155,11 @@ export function NewEndShiftDialog({
       ...prev,
       [field]: value
     }));
+  };
+
+  // Handler for sales form data changes
+  const handleSalesChange = (field: keyof SalesFormData, value: number) => {
+    handleInputChange(field, value);
   };
 
   const handleSubmit = async () => {
@@ -304,10 +308,7 @@ export function NewEndShiftDialog({
               cash_sales: formData.cash_sales,
               testing_fuel: formData.testing_fuel
             }}
-            onSalesChange={(field, value) => {
-              // Use type assertion to fix the deep instantiation error
-              handleInputChange(field as keyof Omit<EndShiftFormData, 'readings'>, value);
-            }}
+            onSalesChange={handleSalesChange}
             totalSales={totalSales}
             totalLiters={totalLiters}
           />

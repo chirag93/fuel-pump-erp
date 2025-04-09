@@ -48,7 +48,7 @@ export function ActiveShiftsTable({ activeShifts, onEndShift }: ActiveShiftsTabl
             </TableHeader>
             <TableBody>
               {activeShifts.map((shift) => {
-                // Format the pump ID for display - display N/A if empty or undefined
+                // Format the pump ID for display - display N/A if empty or null
                 const pumpDisplay = shift.pump_id ? shift.pump_id : 'N/A';
                 
                 return (

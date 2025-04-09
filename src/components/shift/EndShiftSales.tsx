@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 
+// Define the interface explicitly to avoid deep type instantiation
 export interface SalesFormData {
   card_sales: number;
   upi_sales: number;

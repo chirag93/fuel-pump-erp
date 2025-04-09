@@ -684,6 +684,7 @@ export type Database = {
           date: string
           expenses: number | null
           fuel_pump_id: string | null
+          fuel_type: string | null
           id: string
           opening_reading: number
           pump_id: string
@@ -703,6 +704,7 @@ export type Database = {
           date: string
           expenses?: number | null
           fuel_pump_id?: string | null
+          fuel_type?: string | null
           id?: string
           opening_reading: number
           pump_id: string
@@ -722,6 +724,7 @@ export type Database = {
           date?: string
           expenses?: number | null
           fuel_pump_id?: string | null
+          fuel_type?: string | null
           id?: string
           opening_reading?: number
           pump_id?: string
