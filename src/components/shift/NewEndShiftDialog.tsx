@@ -23,6 +23,7 @@ interface ReadingData {
   date?: string;
 }
 
+// Use concrete form data type with no type parameters
 interface FormData {
   readings: FuelReading[];
   cash_remaining: number;
@@ -139,12 +140,14 @@ export function NewEndShiftDialog({
     }));
   };
 
-  // Handler for sales and other numeric inputs
+  // Handler for sales and other numeric inputs - use string indexing to avoid type issues
   const handleInputChange = (field: keyof Omit<FormData, 'readings'>, value: number) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    // Use type assertion to solve the deep instantiation error
+    setFormData(prev => {
+      const updated = { ...prev };
+      updated[field] = value;
+      return updated;
+    });
   };
 
   const handleSubmit = async () => {
