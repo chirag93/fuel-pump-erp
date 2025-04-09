@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getFuelPumpId } from '@/integrations/utils';
+import { TransactionWithDetails } from '@/integrations/transactions';
 
 export interface Customer {
   id: string;
@@ -36,6 +37,7 @@ export interface Transaction {
   staff_id: string;
   indent_id?: string;
   discount_amount: number;
+  source?: 'mobile' | 'web';
 }
 
 export interface Indent {
@@ -61,12 +63,14 @@ export interface IndentBooklet {
   total_indents: number;
   used_indents: number;
   status: 'Active' | 'Completed' | 'Cancelled';
+  created_at?: string;
+  fuel_pump_id?: string;
 }
 
 export const useCustomerData = (customerId: string) => {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]);
   const [indents, setIndents] = useState<Indent[]>([]);
   const [indentBooklets, setIndentBooklets] = useState<IndentBooklet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -136,7 +140,7 @@ export const useCustomerData = (customerId: string) => {
       // Fetch transactions
       const { data: transactionData, error: transactionError } = await supabase
         .from('transactions')
-        .select('id, date, fuel_type, quantity, amount, payment_method, vehicle_id, customer_id, staff_id, indent_id, discount_amount')
+        .select('id, date, fuel_type, quantity, amount, payment_method, vehicle_id, customer_id, staff_id, indent_id, discount_amount, source')
         .eq('customer_id', customerId)
         .eq('fuel_pump_id', fuelPumpId)
         .order('date', { ascending: false });
@@ -157,10 +161,14 @@ export const useCustomerData = (customerId: string) => {
             
           return {
             ...transaction,
-            vehicle_number: vehicleData?.number || 'Unknown'
-          };
+            vehicle_number: vehicleData?.number || 'Unknown',
+            source: transaction.source || 'web'
+          } as TransactionWithDetails;
         }
-        return transaction;
+        return {
+          ...transaction,
+          source: transaction.source || 'web'
+        } as TransactionWithDetails;
       }));
       
       setTransactions(enhancedTransactions);
@@ -176,7 +184,12 @@ export const useCustomerData = (customerId: string) => {
       if (bookletError) {
         console.error('Error fetching booklets:', bookletError);
       } else {
-        setIndentBooklets(bookletData || []);
+        // Ensure the status field is properly typed
+        const typedBooklets = (bookletData || []).map(booklet => ({
+          ...booklet,
+          status: booklet.status as 'Active' | 'Completed' | 'Cancelled'
+        }));
+        setIndentBooklets(typedBooklets);
       }
       setIsLoadingBooklets(false);
 

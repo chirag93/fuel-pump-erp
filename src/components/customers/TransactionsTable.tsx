@@ -6,10 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Transaction, Customer } from '@/integrations/supabase/client';
 import BillPreviewDialog from '@/components/indent/BillPreviewDialog';
-
-interface TransactionWithDetails extends Transaction {
-  vehicle_number?: string;
-}
+import { TransactionWithDetails } from '@/integrations/transactions';
 
 interface TransactionsTableProps {
   transactions: TransactionWithDetails[];

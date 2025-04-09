@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Customer } from '@/hooks/useCustomerData';
+import { Customer } from '@/integrations/supabase/client';
 import RecordPaymentDialog from './RecordPaymentDialog';
 import { useCustomerData } from '../customers/hooks/useCustomerData';
 import { DateRange } from 'react-day-picker';
@@ -10,10 +10,10 @@ import { format } from 'date-fns';
 import TransactionActions from './TransactionActions';
 import TransactionsTable from './TransactionsTable';
 import { generateGSTInvoice } from '@/utils/invoiceGenerator';
-import { Transaction } from '@/hooks/useCustomerData';
+import { TransactionWithDetails } from '@/integrations/transactions';
 
 interface TransactionsTabProps {
-  transactions: Transaction[];
+  transactions: TransactionWithDetails[];
   customerName: string;
   customer: Customer;
   customerId: string;
@@ -34,7 +34,7 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
   };
 
   // Use the latest transactions from the hook, falling back to initial transactions if needed
-  const displayTransactions = transactions.length > 0 ? transactions : initialTransactions;
+  const displayTransactions: TransactionWithDetails[] = transactions.length > 0 ? transactions : initialTransactions;
 
   // Filter transactions by date range if selected
   const filteredTransactions = displayTransactions.filter(transaction => {
@@ -104,7 +104,7 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
       // Process transactions to ensure correct typing
       const formattedTransactions = invoiceTransactions.map(transaction => ({
         ...transaction,
-        source: 'web' as 'mobile' | 'web', // Default to web if not specified
+        source: transaction.source || 'web',
       }));
       
       const result = await generateGSTInvoice(customer, formattedTransactions, invoiceDateRange);

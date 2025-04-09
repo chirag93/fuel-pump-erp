@@ -5,6 +5,7 @@ import { getFuelPumpId } from './utils';
 
 export interface TransactionWithDetails extends Transaction {
   vehicle_number?: string;
+  // Make sure the TransactionWithDetails inherits the optionality of indent_id from Transaction
 }
 
 /**
