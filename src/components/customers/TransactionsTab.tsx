@@ -1,22 +1,19 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Customer, Transaction } from '@/integrations/supabase/client';
+import { Customer } from '@/hooks/useCustomerData';
 import RecordPaymentDialog from './RecordPaymentDialog';
-import { useCustomerData } from './hooks/useCustomerData';
+import { useCustomerData } from '../customers/hooks/useCustomerData';
 import { DateRange } from 'react-day-picker';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import TransactionActions from './TransactionActions';
 import TransactionsTable from './TransactionsTable';
 import { generateGSTInvoice } from '@/utils/invoiceGenerator';
-
-interface TransactionWithDetails extends Transaction {
-  vehicle_number?: string;
-}
+import { Transaction } from '@/hooks/useCustomerData';
 
 interface TransactionsTabProps {
-  transactions: TransactionWithDetails[];
+  transactions: Transaction[];
   customerName: string;
   customer: Customer;
   customerId: string;
@@ -104,11 +101,10 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
         return;
       }
       
-      // Process transactions to ensure correct typing of source field
+      // Process transactions to ensure correct typing
       const formattedTransactions = invoiceTransactions.map(transaction => ({
         ...transaction,
-        // Ensure source is properly typed as 'mobile' | 'web'
-        source: (transaction.source === 'mobile' ? 'mobile' : 'web') as 'mobile' | 'web',
+        source: 'web' as 'mobile' | 'web', // Default to web if not specified
       }));
       
       const result = await generateGSTInvoice(customer, formattedTransactions, invoiceDateRange);
@@ -118,11 +114,6 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
         description: result.message,
         variant: result.success ? "default" : "destructive"
       });
-      
-      if (result.success) {
-        // Close the invoice dialog only on success
-        // Let the user see the error if there's a problem
-      }
     } catch (error) {
       console.error('Error generating invoice:', error);
       toast({
