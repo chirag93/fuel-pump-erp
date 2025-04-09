@@ -151,10 +151,13 @@ export function NewEndShiftDialog({
 
   // Fixed handler for sales and other numeric inputs
   const handleInputChange = (field: keyof Omit<FormData, 'readings'>, value: number) => {
-    // Create a new object to avoid deep nesting issues
-    const newFormData = { ...formData };
-    newFormData[field] = value;
-    setFormData(newFormData);
+    setFormData(prev => {
+      // Create a completely new object to avoid type instantiation issues
+      return {
+        ...prev,
+        [field]: value
+      };
+    });
   };
 
   const handleSubmit = async () => {
@@ -263,7 +266,10 @@ export function NewEndShiftDialog({
               cash_sales: formData.cash_sales,
               testing_fuel: formData.testing_fuel
             }}
-            onSalesChange={(field, value) => handleInputChange(field as keyof Omit<FormData, 'readings'>, value)}
+            onSalesChange={(field, value) => {
+              // Use type assertion to fix the deep instantiation error
+              handleInputChange(field as keyof Omit<FormData, 'readings'>, value);
+            }}
             totalSales={totalSales}
             totalLiters={totalLiters}
           />

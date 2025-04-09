@@ -41,7 +41,11 @@ export function MobileActiveShifts({ activeShifts, isLoading, onEndShift }: Mobi
           </div>
         ) : (
           <div className="space-y-4">
-            {activeShifts.map((shift) => (
+            {activeShifts.map((shift) => {
+              // Format the pump ID for display - display N/A if empty
+              const pumpDisplay = shift.pump_id ? shift.pump_id : 'N/A';
+              
+              return (
               <Card key={shift.id} className="bg-muted/40">
                 <CardContent className="p-4">
                   <div className="grid gap-2">
@@ -52,14 +56,28 @@ export function MobileActiveShifts({ activeShifts, isLoading, onEndShift }: Mobi
                     
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <span className="text-muted-foreground">Pump:</span> {shift.pump_id}
+                        <span className="text-muted-foreground">Pump:</span> {pumpDisplay}
                       </div>
                       <div>
                         <span className="text-muted-foreground">Start:</span> {formatTime(shift.start_time)}
                       </div>
-                      <div>
-                        <span className="text-muted-foreground">Reading:</span> {shift.opening_reading.toLocaleString()}
-                      </div>
+                      
+                      {/* Display readings for each fuel type if available */}
+                      {shift.all_readings && shift.all_readings.length > 0 ? (
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">Readings:</span>
+                          {shift.all_readings.map(reading => (
+                            <div key={reading.fuel_type} className="ml-2 mt-1">
+                              {reading.fuel_type}: {reading.opening_reading.toLocaleString()}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div>
+                          <span className="text-muted-foreground">Reading:</span> {shift.opening_reading.toLocaleString()}
+                        </div>
+                      )}
+                      
                       <div>
                         <span className="text-muted-foreground">Cash:</span> ₹{shift.starting_cash_balance.toLocaleString()}
                       </div>
@@ -77,7 +95,7 @@ export function MobileActiveShifts({ activeShifts, isLoading, onEndShift }: Mobi
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )})}
           </div>
         )}
       </CardContent>

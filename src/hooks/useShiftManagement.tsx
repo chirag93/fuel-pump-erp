@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -112,7 +113,7 @@ export function useShiftManagement() {
           staff_name: staffData.name,
           staff_numeric_id: staffData.staff_numeric_id ? String(staffData.staff_numeric_id) : 'N/A',
           date: firstReading?.date || new Date().toISOString().split('T')[0],
-          pump_id: firstReading?.pump_id || 'Unknown',
+          pump_id: firstReading?.pump_id || '', // Changed from 'Unknown' to empty string
           opening_reading: firstReading?.opening_reading || 0,
           closing_reading: firstReading?.closing_reading || null,
           starting_cash_balance: firstReading?.cash_given || 0,

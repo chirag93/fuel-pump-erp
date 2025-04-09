@@ -41,19 +41,32 @@ export function ActiveShiftsTable({ activeShifts, onEndShift }: ActiveShiftsTabl
                 <TableHead>Pump</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Start Time</TableHead>
-                <TableHead>Opening Reading</TableHead>
+                <TableHead>Reading</TableHead>
                 <TableHead>Starting Cash</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activeShifts.map((shift) => (
+              {activeShifts.map((shift) => {
+                // Format the pump ID for display - display N/A if empty
+                const pumpDisplay = shift.pump_id ? shift.pump_id : 'N/A';
+                
+                return (
                 <TableRow key={shift.id}>
                   <TableCell className="font-medium">{shift.staff_name}</TableCell>
-                  <TableCell>{shift.pump_id}</TableCell>
+                  <TableCell>{pumpDisplay}</TableCell>
                   <TableCell>{shift.date}</TableCell>
                   <TableCell>{formatTime(shift.start_time)}</TableCell>
-                  <TableCell>{shift.opening_reading.toLocaleString()}</TableCell>
+                  <TableCell>
+                    {shift.all_readings?.length > 0 
+                      ? shift.all_readings.map(r => (
+                          <div key={r.fuel_type} className="text-xs mb-1">
+                            {r.fuel_type}: {r.opening_reading.toLocaleString()}
+                          </div>
+                        ))
+                      : shift.opening_reading.toLocaleString()
+                    }
+                  </TableCell>
                   <TableCell>₹{shift.starting_cash_balance.toLocaleString()}</TableCell>
                   <TableCell>
                     <Button 
@@ -67,7 +80,7 @@ export function ActiveShiftsTable({ activeShifts, onEndShift }: ActiveShiftsTabl
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
             </TableBody>
           </Table>
         )}
