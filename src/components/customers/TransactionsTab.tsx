@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Customer } from '@/integrations/supabase/client';
@@ -101,14 +100,13 @@ const TransactionsTab = ({ transactions: initialTransactions, customerName, cust
         return;
       }
       
-      // Safely type the transactions for the invoice generator
       const formattedTransactions = invoiceTransactions.map(transaction => ({
         ...transaction,
         indent_id: transaction.indent_id || null,
         source: transaction.source || 'web' as 'web' | 'mobile',
-      }));
+      })) as TransactionWithDetails[];
       
-      const result = await generateGSTInvoice(customer, formattedTransactions as TransactionWithDetails[], invoiceDateRange);
+      const result = await generateGSTInvoice(customer, formattedTransactions, invoiceDateRange);
       
       toast({
         title: result.success ? "Invoice Generated" : "Error",

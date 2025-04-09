@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -96,7 +95,7 @@ export function useShiftManagement() {
         const readingsArray = readingsData || [];
         
         // Convert readings to the proper format
-        const shiftReadings: ShiftReading[] = readingsArray.map(reading => ({
+        const shiftReadings: ShiftReading[] = readingsArray.map((reading: any) => ({
           fuel_type: reading.fuel_type || 'Unknown',
           opening_reading: reading.opening_reading || 0,
           closing_reading: reading.closing_reading || null
