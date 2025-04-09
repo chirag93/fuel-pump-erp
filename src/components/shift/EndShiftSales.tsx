@@ -17,13 +17,15 @@ interface EndShiftSalesProps {
   onSalesChange: (field: keyof SalesFormData, value: number) => void;
   totalSales: number;
   totalLiters: number;
+  fuelSalesByType?: Record<string, number>;
 }
 
 export function EndShiftSales({ 
   salesData, 
   onSalesChange,
   totalSales,
-  totalLiters
+  totalLiters,
+  fuelSalesByType = {}
 }: EndShiftSalesProps) {
   const handleInputChange = (field: keyof SalesFormData, value: string) => {
     onSalesChange(field, parseFloat(value) || 0);
@@ -83,6 +85,19 @@ export function EndShiftSales({
               <span className="font-medium">Total Sales:</span>
               <span className="text-lg font-bold">₹{totalSales.toLocaleString()}</span>
             </div>
+            
+            {/* Fuel type breakdown */}
+            {Object.keys(fuelSalesByType).length > 0 && (
+              <div className="text-sm border-t pt-2 mt-1">
+                {Object.entries(fuelSalesByType).map(([fuelType, amount]) => (
+                  <div key={fuelType} className="flex justify-between">
+                    <span>{fuelType} Sales:</span>
+                    <span>₹{amount.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            
             <div className="flex justify-between text-sm">
               <span>Total Liters:</span>
               <span>{totalLiters.toFixed(2)} L</span>

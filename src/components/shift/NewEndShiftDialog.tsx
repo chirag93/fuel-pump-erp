@@ -10,6 +10,7 @@ import { SelectedShiftData, ShiftReading } from '@/types/shift';
 import { EndShiftReadings, FuelReading } from './EndShiftReadings';
 import { EndShiftSales, SalesFormData } from './EndShiftSales';
 import { EndShiftCashExpenses } from './EndShiftCashExpenses';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Define a specific interface for the form data to avoid deep instantiation
 interface EndShiftFormData {
@@ -55,6 +56,26 @@ export function NewEndShiftDialog({
   const totalLiters = formData.readings.reduce((sum, reading) => {
     return sum + Math.max(0, reading.closing_reading - reading.opening_reading);
   }, 0);
+  
+  // Fuel-type specific sales calculations
+  const [fuelSalesByType, setFuelSalesByType] = useState<Record<string, number>>({});
+  
+  useEffect(() => {
+    // Calculate sales by fuel type
+    const salesByType: Record<string, number> = {};
+    
+    formData.readings.forEach(reading => {
+      const liters = Math.max(0, reading.closing_reading - reading.opening_reading);
+      // Fetch or estimate price per liter
+      // For simplicity, we're estimating based on total sales proportional to liters
+      if (totalLiters > 0 && liters > 0) {
+        const estimatedSales = (liters / totalLiters) * totalSales;
+        salesByType[reading.fuel_type] = (salesByType[reading.fuel_type] || 0) + estimatedSales;
+      }
+    });
+    
+    setFuelSalesByType(salesByType);
+  }, [formData.readings, totalSales, totalLiters]);
   
   // Cash reconciliation
   const [cashReconciliation, setCashReconciliation] = useState({
@@ -268,86 +289,89 @@ export function NewEndShiftDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !isProcessing && !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>End Shift</DialogTitle>
         </DialogHeader>
         
-        <div className="grid gap-6 py-4">
-          <div className="grid gap-2">
-            <h3 className="font-semibold text-lg">Shift Details</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Staff:</p>
-                <p className="font-medium">{shiftData.staff_name}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Pump:</p>
-                <p className="font-medium">{shiftData.pump_id || 'N/A'}</p>
+        <ScrollArea className="max-h-[calc(80vh-120px)]">
+          <div className="grid gap-6 py-4 pr-4">
+            <div className="grid gap-2">
+              <h3 className="font-semibold text-lg">Shift Details</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Staff:</p>
+                  <p className="font-medium">{shiftData.staff_name}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Pump:</p>
+                  <p className="font-medium">{shiftData.pump_id || 'N/A'}</p>
+                </div>
               </div>
             </div>
-          </div>
-          
-          {/* Readings Section */}
-          {formData.readings.length > 0 ? (
-            <EndShiftReadings 
-              readings={formData.readings}
-              onReadingChange={handleReadingChange}
+            
+            {/* Readings Section */}
+            {formData.readings.length > 0 ? (
+              <EndShiftReadings 
+                readings={formData.readings}
+                onReadingChange={handleReadingChange}
+              />
+            ) : (
+              <div className="py-4 text-center">
+                <p className="text-muted-foreground">No meter readings available for this shift</p>
+              </div>
+            )}
+            
+            {/* Sales Section */}
+            <EndShiftSales
+              salesData={{
+                card_sales: formData.card_sales,
+                upi_sales: formData.upi_sales,
+                cash_sales: formData.cash_sales,
+                testing_fuel: formData.testing_fuel
+              }}
+              onSalesChange={handleSalesChange}
+              totalSales={totalSales}
+              totalLiters={totalLiters}
+              fuelSalesByType={fuelSalesByType}
             />
-          ) : (
-            <div className="py-4 text-center">
-              <p className="text-muted-foreground">No meter readings available for this shift</p>
-            </div>
-          )}
-          
-          {/* Sales Section */}
-          <EndShiftSales
-            salesData={{
-              card_sales: formData.card_sales,
-              upi_sales: formData.upi_sales,
-              cash_sales: formData.cash_sales,
-              testing_fuel: formData.testing_fuel
-            }}
-            onSalesChange={handleSalesChange}
-            totalSales={totalSales}
-            totalLiters={totalLiters}
-          />
-          
-          {/* Expenses Section */}
-          <div className="grid gap-4">
-            <h3 className="font-semibold">Expenses</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="expenses">Expenses (INR)</Label>
-                <Input
-                  id="expenses"
-                  type="number"
-                  value={formData.expenses || ''}
-                  onChange={(e) => handleInputChange('expenses', parseFloat(e.target.value) || 0)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="consumable_expenses">Consumable Expenses (INR)</Label>
-                <Input
-                  id="consumable_expenses"
-                  type="number"
-                  value={formData.consumable_expenses || ''}
-                  onChange={(e) => handleInputChange('consumable_expenses', parseFloat(e.target.value) || 0)}
-                />
+            
+            {/* Expenses Section */}
+            <div className="grid gap-4">
+              <h3 className="font-semibold">Expenses</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="expenses">Expenses (INR)</Label>
+                  <Input
+                    id="expenses"
+                    type="number"
+                    value={formData.expenses || ''}
+                    onChange={(e) => handleInputChange('expenses', parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="consumable_expenses">Consumable Expenses (INR)</Label>
+                  <Input
+                    id="consumable_expenses"
+                    type="number"
+                    value={formData.consumable_expenses || ''}
+                    onChange={(e) => handleInputChange('consumable_expenses', parseFloat(e.target.value) || 0)}
+                  />
+                </div>
               </div>
             </div>
+            
+            {/* Cash Section */}
+            <EndShiftCashExpenses
+              expenses={formData.expenses.toString()}
+              setExpenses={(value) => handleInputChange('expenses', parseFloat(value) || 0)}
+              cashRemaining={formData.cash_remaining.toString()}
+              setCashRemaining={(value) => handleInputChange('cash_remaining', parseFloat(value) || 0)}
+              cashSales={formData.cash_sales.toString()}
+              cashReconciliation={cashReconciliation}
+            />
           </div>
-          
-          {/* Cash Section */}
-          <EndShiftCashExpenses
-            expenses={formData.expenses.toString()}
-            setExpenses={(value) => handleInputChange('expenses', parseFloat(value) || 0)}
-            cashRemaining={formData.cash_remaining.toString()}
-            setCashRemaining={(value) => handleInputChange('cash_remaining', parseFloat(value) || 0)}
-            cashSales={formData.cash_sales.toString()}
-            cashReconciliation={cashReconciliation}
-          />
-        </div>
+        </ScrollArea>
         
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
