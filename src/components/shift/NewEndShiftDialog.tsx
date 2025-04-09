@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
@@ -59,6 +58,34 @@ export function NewEndShiftDialog({
   
   // Fuel-type specific sales calculations
   const [fuelSalesByType, setFuelSalesByType] = useState<Record<string, number>>({});
+  const [fuelRates, setFuelRates] = useState<Record<string, number>>({});
+  
+  // Fetch fuel rates from database
+  useEffect(() => {
+    if (isOpen) {
+      const fetchFuelRates = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('fuel_settings')
+            .select('fuel_type, current_price');
+            
+          if (error) throw error;
+          
+          if (data) {
+            const rates: Record<string, number> = {};
+            data.forEach(item => {
+              rates[item.fuel_type] = item.current_price;
+            });
+            setFuelRates(rates);
+          }
+        } catch (error) {
+          console.error('Error fetching fuel rates:', error);
+        }
+      };
+      
+      fetchFuelRates();
+    }
+  }, [isOpen]);
   
   useEffect(() => {
     // Calculate sales by fuel type
@@ -69,8 +96,7 @@ export function NewEndShiftDialog({
       // Fetch or estimate price per liter
       // For simplicity, we're estimating based on total sales proportional to liters
       if (totalLiters > 0 && liters > 0) {
-        const estimatedSales = (liters / totalLiters) * totalSales;
-        salesByType[reading.fuel_type] = (salesByType[reading.fuel_type] || 0) + estimatedSales;
+        salesByType[reading.fuel_type] = (salesByType[reading.fuel_type] || 0) + liters;
       }
     });
     
@@ -322,7 +348,7 @@ export function NewEndShiftDialog({
               </div>
             )}
             
-            {/* Sales Section */}
+            {/* Sales Section with fuel rates */}
             <EndShiftSales
               salesData={{
                 card_sales: formData.card_sales,
@@ -334,6 +360,7 @@ export function NewEndShiftDialog({
               totalSales={totalSales}
               totalLiters={totalLiters}
               fuelSalesByType={fuelSalesByType}
+              fuelRates={fuelRates}
             />
             
             {/* Expenses Section */}

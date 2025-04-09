@@ -18,6 +18,7 @@ interface EndShiftSalesProps {
   totalSales: number;
   totalLiters: number;
   fuelSalesByType?: Record<string, number>;
+  fuelRates?: Record<string, number>;
 }
 
 export function EndShiftSales({ 
@@ -25,11 +26,18 @@ export function EndShiftSales({
   onSalesChange,
   totalSales,
   totalLiters,
-  fuelSalesByType = {}
+  fuelSalesByType = {},
+  fuelRates = {}
 }: EndShiftSalesProps) {
   const handleInputChange = (field: keyof SalesFormData, value: string) => {
     onSalesChange(field, parseFloat(value) || 0);
   };
+
+  // Calculate estimated total value based on fuel rates
+  const calculatedTotalValue = Object.entries(fuelSalesByType).reduce((total, [fuelType, liters]) => {
+    const rate = fuelRates[fuelType] || 0;
+    return total + (liters * rate);
+  }, 0);
 
   return (
     <div className="grid gap-4">
@@ -77,7 +85,7 @@ export function EndShiftSales({
         </p>
       </div>
       
-      {/* Sales Summary Card */}
+      {/* Enhanced Sales Summary Card */}
       <Card className="bg-muted/50 mt-2">
         <CardContent className="pt-4">
           <div className="grid gap-2">
@@ -89,12 +97,34 @@ export function EndShiftSales({
             {/* Fuel type breakdown */}
             {Object.keys(fuelSalesByType).length > 0 && (
               <div className="text-sm border-t pt-2 mt-1">
-                {Object.entries(fuelSalesByType).map(([fuelType, amount]) => (
-                  <div key={fuelType} className="flex justify-between">
-                    <span>{fuelType} Sales:</span>
-                    <span>₹{amount.toLocaleString()}</span>
+                <div className="grid gap-1">
+                  {Object.entries(fuelSalesByType).map(([fuelType, liters]) => {
+                    const rate = fuelRates[fuelType] || 0;
+                    const calculatedAmount = liters * rate;
+                    
+                    return (
+                      <div key={fuelType} className="grid grid-cols-3">
+                        <span className="font-medium">{fuelType}:</span>
+                        <span>{liters.toFixed(2)} L</span>
+                        <span className="text-right">₹{calculatedAmount.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {calculatedTotalValue > 0 && (
+                  <div className="flex justify-between border-t mt-2 pt-1 font-medium">
+                    <span>Calculated Value:</span>
+                    <span>₹{calculatedTotalValue.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
                   </div>
-                ))}
+                )}
+                
+                {Math.abs(calculatedTotalValue - totalSales) > 1 && calculatedTotalValue > 0 && (
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <span>Difference:</span>
+                    <span>₹{(calculatedTotalValue - totalSales).toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                  </div>
+                )}
               </div>
             )}
             
