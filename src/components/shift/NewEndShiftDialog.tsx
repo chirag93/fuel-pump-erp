@@ -6,13 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SelectedShiftData, ShiftReading } from '@/types/shift';
+import { SelectedShiftData } from '@/types/shift';
 import { EndShiftReadings, FuelReading } from './EndShiftReadings';
 import { EndShiftSales } from './EndShiftSales';
 import { EndShiftCashExpenses } from './EndShiftCashExpenses';
 
-// Explicitly typed interfaces to avoid deep type instantiation issues
-interface ReadingData {
+// Simple explicit types to avoid deep instantiation
+interface SimpleReadingData {
   id?: string;
   fuel_type: string;
   opening_reading: number;
@@ -21,16 +21,6 @@ interface ReadingData {
   staff_id?: string;
   pump_id?: string;
   date?: string;
-  cash_given?: number;
-  cash_remaining?: number;
-  card_sales?: number;
-  upi_sales?: number;
-  cash_sales?: number;
-  testing_fuel?: number;
-  expenses?: number;
-  consumable_expenses?: number;
-  created_at?: string;
-  fuel_pump_id?: string;
 }
 
 interface FormData {
@@ -60,7 +50,7 @@ export function NewEndShiftDialog({
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   
-  // Use a single form data object with proper typing
+  // Simplify state using explicit types
   const [formData, setFormData] = useState<FormData>({
     readings: [],
     cash_remaining: 0,
@@ -116,7 +106,7 @@ export function NewEndShiftDialog({
       
       if (data) {
         // Type assertion to avoid excessive type instantiation
-        const readingsData = data as ReadingData[];
+        const readingsData = data as SimpleReadingData[];
         
         // Convert to our simplified reading format
         const fuelReadings: FuelReading[] = readingsData.map((reading) => ({

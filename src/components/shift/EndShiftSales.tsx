@@ -7,6 +7,7 @@ interface SalesFormData {
   card_sales: number;
   upi_sales: number;
   cash_sales: number;
+  testing_fuel: number;
 }
 
 interface EndShiftSalesProps {
