@@ -12,7 +12,7 @@ import { EndShiftSales } from './EndShiftSales';
 import { EndShiftCashExpenses } from './EndShiftCashExpenses';
 
 // Simple explicit types to avoid deep instantiation
-interface SimpleReadingData {
+interface ReadingData {
   id?: string;
   fuel_type: string;
   opening_reading: number;
@@ -105,12 +105,9 @@ export function NewEndShiftDialog({
       }
       
       if (data) {
-        // Type assertion to avoid excessive type instantiation
-        const readingsData = data as SimpleReadingData[];
-        
-        // Convert to our simplified reading format
-        const fuelReadings: FuelReading[] = readingsData.map((reading) => ({
-          fuel_type: reading.fuel_type || 'Unknown',
+        // Handle the type conversion safely by accessing properties directly
+        const fuelReadings: FuelReading[] = data.map((reading: any) => ({
+          fuel_type: reading.fuel_type,
           opening_reading: reading.opening_reading,
           closing_reading: reading.closing_reading || reading.opening_reading
         }));
