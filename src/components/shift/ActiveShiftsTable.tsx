@@ -48,7 +48,7 @@ export function ActiveShiftsTable({ activeShifts, onEndShift }: ActiveShiftsTabl
             </TableHeader>
             <TableBody>
               {activeShifts.map((shift) => {
-                // Format the pump ID for display - display N/A if empty
+                // Format the pump ID for display - display N/A if empty or undefined
                 const pumpDisplay = shift.pump_id ? shift.pump_id : 'N/A';
                 
                 return (
@@ -58,13 +58,15 @@ export function ActiveShiftsTable({ activeShifts, onEndShift }: ActiveShiftsTabl
                   <TableCell>{shift.date}</TableCell>
                   <TableCell>{formatTime(shift.start_time)}</TableCell>
                   <TableCell>
-                    {shift.all_readings?.length > 0 
+                    {shift.all_readings && shift.all_readings.length > 0 
                       ? shift.all_readings.map(r => (
                           <div key={r.fuel_type} className="text-xs mb-1">
                             {r.fuel_type}: {r.opening_reading.toLocaleString()}
                           </div>
                         ))
-                      : shift.opening_reading.toLocaleString()
+                      : shift.opening_reading 
+                        ? shift.opening_reading.toLocaleString()
+                        : 'N/A'
                     }
                   </TableCell>
                   <TableCell>₹{shift.starting_cash_balance.toLocaleString()}</TableCell>

@@ -42,7 +42,7 @@ export function MobileActiveShifts({ activeShifts, isLoading, onEndShift }: Mobi
         ) : (
           <div className="space-y-4">
             {activeShifts.map((shift) => {
-              // Format the pump ID for display - display N/A if empty
+              // Format the pump ID for display - display N/A if empty or undefined
               const pumpDisplay = shift.pump_id ? shift.pump_id : 'N/A';
               
               return (
@@ -74,7 +74,11 @@ export function MobileActiveShifts({ activeShifts, isLoading, onEndShift }: Mobi
                         </div>
                       ) : (
                         <div>
-                          <span className="text-muted-foreground">Reading:</span> {shift.opening_reading.toLocaleString()}
+                          <span className="text-muted-foreground">Reading:</span> {
+                            shift.opening_reading
+                              ? shift.opening_reading.toLocaleString()
+                              : 'N/A'
+                          }
                         </div>
                       )}
                       

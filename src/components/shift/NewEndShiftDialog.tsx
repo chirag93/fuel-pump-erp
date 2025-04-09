@@ -6,25 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SelectedShiftData } from '@/types/shift';
+import { SelectedShiftData, ShiftReading } from '@/types/shift';
 import { EndShiftReadings, FuelReading } from './EndShiftReadings';
 import { EndShiftSales } from './EndShiftSales';
 import { EndShiftCashExpenses } from './EndShiftCashExpenses';
 
-// Simple explicit type for readings
-interface ReadingData {
-  id?: string;
-  fuel_type: string;
-  opening_reading: number;
-  closing_reading: number | null;
-  shift_id?: string;
-  staff_id?: string;
-  pump_id?: string;
-  date?: string;
-}
-
-// Fixed form data type with explicit fields
-interface FormData {
+// Explicitly define FormData type to avoid deep instantiation error
+interface EndShiftFormData {
   readings: FuelReading[];
   cash_remaining: number;
   card_sales: number;
@@ -33,14 +21,6 @@ interface FormData {
   testing_fuel: number;
   expenses: number;
   consumable_expenses: number;
-}
-
-// Sales form data type for the EndShiftSales component
-export interface SalesFormData {
-  card_sales: number;
-  upi_sales: number;
-  cash_sales: number;
-  testing_fuel: number;
 }
 
 interface NewEndShiftDialogProps {
@@ -59,8 +39,8 @@ export function NewEndShiftDialog({
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   
-  // Explicitly typed state
-  const [formData, setFormData] = useState<FormData>({
+  // Use the explicitly defined type for state
+  const [formData, setFormData] = useState<EndShiftFormData>({
     readings: [],
     cash_remaining: 0,
     card_sales: 0,
@@ -113,11 +93,11 @@ export function NewEndShiftDialog({
         throw error;
       }
       
-      if (data) {
+      if (data && data.length > 0) {
         // Safely map the data to our FuelReading[] type
         const fuelReadings: FuelReading[] = data.map((reading: any) => ({
-          fuel_type: reading.fuel_type,
-          opening_reading: reading.opening_reading,
+          fuel_type: reading.fuel_type || 'Unknown',
+          opening_reading: reading.opening_reading || 0,
           closing_reading: reading.closing_reading || reading.opening_reading
         }));
         
@@ -126,6 +106,27 @@ export function NewEndShiftDialog({
           ...prev,
           readings: fuelReadings
         }));
+      } else {
+        // Handle case when no readings are found - create a default one
+        console.warn('No readings found for shift:', shiftData.id);
+        
+        // Create a default reading if no readings are found
+        const defaultReading: FuelReading = {
+          fuel_type: 'Diesel', // Default fuel type
+          opening_reading: shiftData.opening_reading || 0,
+          closing_reading: shiftData.opening_reading || 0
+        };
+        
+        setFormData(prev => ({
+          ...prev,
+          readings: [defaultReading]
+        }));
+        
+        toast({
+          title: "Warning",
+          description: "No meter readings found for this shift. Using opening readings as default.",
+          variant: "default"
+        });
       }
     } catch (error) {
       console.error('Error fetching shift readings:', error);
@@ -149,15 +150,12 @@ export function NewEndShiftDialog({
     }));
   };
 
-  // Fixed handler for sales and other numeric inputs
-  const handleInputChange = (field: keyof Omit<FormData, 'readings'>, value: number) => {
-    setFormData(prev => {
-      // Create a completely new object to avoid type instantiation issues
-      return {
-        ...prev,
-        [field]: value
-      };
-    });
+  // Handler for sales and other numeric inputs
+  const handleInputChange = (field: keyof Omit<EndShiftFormData, 'readings'>, value: number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const handleSubmit = async () => {
@@ -193,22 +191,56 @@ export function NewEndShiftDialog({
       
       // 2. Update readings for each fuel type
       for (const reading of formData.readings) {
-        const { error: readingError } = await supabase
+        // Check if reading exists for this fuel type
+        const { data: existingReadings, error: checkError } = await supabase
           .from('readings')
-          .update({
-            closing_reading: reading.closing_reading,
-            cash_remaining: formData.cash_remaining,
-            card_sales: formData.card_sales,
-            upi_sales: formData.upi_sales,
-            cash_sales: formData.cash_sales,
-            testing_fuel: formData.testing_fuel,
-            expenses: formData.expenses,
-            consumable_expenses: formData.consumable_expenses
-          })
+          .select('id')
           .eq('shift_id', shiftData.id)
           .eq('fuel_type', reading.fuel_type);
           
-        if (readingError) throw readingError;
+        if (checkError) throw checkError;
+        
+        if (existingReadings && existingReadings.length > 0) {
+          // Update existing reading
+          const { error: readingError } = await supabase
+            .from('readings')
+            .update({
+              closing_reading: reading.closing_reading,
+              cash_remaining: formData.cash_remaining,
+              card_sales: formData.card_sales,
+              upi_sales: formData.upi_sales,
+              cash_sales: formData.cash_sales,
+              testing_fuel: formData.testing_fuel,
+              expenses: formData.expenses,
+              consumable_expenses: formData.consumable_expenses
+            })
+            .eq('shift_id', shiftData.id)
+            .eq('fuel_type', reading.fuel_type);
+            
+          if (readingError) throw readingError;
+        } else {
+          // Create new reading if it doesn't exist
+          const { error: createError } = await supabase
+            .from('readings')
+            .insert({
+              shift_id: shiftData.id,
+              staff_id: shiftData.staff_id,
+              pump_id: shiftData.pump_id || 'Unknown',
+              date: new Date().toISOString().split('T')[0],
+              fuel_type: reading.fuel_type,
+              opening_reading: reading.opening_reading,
+              closing_reading: reading.closing_reading,
+              cash_remaining: formData.cash_remaining,
+              card_sales: formData.card_sales,
+              upi_sales: formData.upi_sales,
+              cash_sales: formData.cash_sales,
+              testing_fuel: formData.testing_fuel,
+              expenses: formData.expenses,
+              consumable_expenses: formData.consumable_expenses
+            });
+            
+          if (createError) throw createError;
+        }
       }
       
       toast({
@@ -247,16 +279,22 @@ export function NewEndShiftDialog({
               </div>
               <div>
                 <p className="text-muted-foreground">Pump:</p>
-                <p className="font-medium">{shiftData.pump_id}</p>
+                <p className="font-medium">{shiftData.pump_id || 'N/A'}</p>
               </div>
             </div>
           </div>
           
           {/* Readings Section */}
-          <EndShiftReadings 
-            readings={formData.readings}
-            onReadingChange={handleReadingChange}
-          />
+          {formData.readings.length > 0 ? (
+            <EndShiftReadings 
+              readings={formData.readings}
+              onReadingChange={handleReadingChange}
+            />
+          ) : (
+            <div className="py-4 text-center">
+              <p className="text-muted-foreground">No meter readings available for this shift</p>
+            </div>
+          )}
           
           {/* Sales Section */}
           <EndShiftSales
@@ -268,7 +306,7 @@ export function NewEndShiftDialog({
             }}
             onSalesChange={(field, value) => {
               // Use type assertion to fix the deep instantiation error
-              handleInputChange(field as keyof Omit<FormData, 'readings'>, value);
+              handleInputChange(field as keyof Omit<EndShiftFormData, 'readings'>, value);
             }}
             totalSales={totalSales}
             totalLiters={totalLiters}
