@@ -8,13 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SelectedShiftData, ShiftReading } from '@/types/shift';
 
+// Define a clear interface for the closing readings structure
+interface ClosingReading {
+  opening_reading: number;
+  closing_reading: number;
+}
+
 type EndShiftFormData = {
-  closingReadings: {
-    [fuelType: string]: {
-      opening_reading: number;
-      closing_reading: number;
-    }
-  };
+  closingReadings: Record<string, ClosingReading>;
   cash_remaining: number;
   card_sales: number;
   upi_sales: number;
@@ -105,7 +106,7 @@ export function NewEndShiftDialog({
         setReadings(shiftReadings);
         
         // Initialize closing readings form with proper typing
-        const initialClosingReadings: {[key: string]: {opening_reading: number, closing_reading: number}} = {};
+        const initialClosingReadings: Record<string, ClosingReading> = {};
         shiftReadings.forEach(reading => {
           initialClosingReadings[reading.fuel_type] = {
             opening_reading: reading.opening_reading,
