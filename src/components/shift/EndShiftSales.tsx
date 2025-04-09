@@ -1,74 +1,73 @@
 
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 
-interface EndShiftSalesProps {
-  cardSales: string;
-  setCardSales: (value: string) => void;
-  upiSales: string;
-  setUpiSales: (value: string) => void;
-  cashSales: string;
-  setCashSales: (value: string) => void;
-  totalSales: number;
-  fuelLiters: number;
-  expectedSalesAmount: number;
-  testingFuelAmount: number;
+interface SalesFormData {
+  card_sales: number;
+  upi_sales: number;
+  cash_sales: number;
 }
 
-export function EndShiftSales({
-  cardSales,
-  setCardSales,
-  upiSales,
-  setUpiSales,
-  cashSales,
-  setCashSales,
+interface EndShiftSalesProps {
+  salesData: SalesFormData;
+  onSalesChange: (field: keyof SalesFormData, value: number) => void;
+  totalSales: number;
+  totalLiters: number;
+}
+
+export function EndShiftSales({ 
+  salesData, 
+  onSalesChange, 
   totalSales,
-  fuelLiters,
-  expectedSalesAmount,
-  testingFuelAmount
+  totalLiters
 }: EndShiftSalesProps) {
   return (
-    <>
-      <div className="grid grid-cols-3 gap-3">
-        <div className="grid gap-1">
-          <Label htmlFor="cardSales">Card Sales (₹)</Label>
+    <div className="grid gap-4">
+      <h3 className="font-semibold">Sales</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="card_sales">Card Sales (INR)</Label>
           <Input
-            id="cardSales"
+            id="card_sales"
             type="number"
-            value={cardSales}
-            onChange={(e) => setCardSales(e.target.value)}
-            placeholder="0.00"
-            step="0.01"
+            value={salesData.card_sales || ''}
+            onChange={(e) => onSalesChange('card_sales', parseFloat(e.target.value) || 0)}
           />
         </div>
-        
-        <div className="grid gap-1">
-          <Label htmlFor="upiSales">UPI Sales (₹)</Label>
+        <div>
+          <Label htmlFor="upi_sales">UPI Sales (INR)</Label>
           <Input
-            id="upiSales"
+            id="upi_sales"
             type="number"
-            value={upiSales}
-            onChange={(e) => setUpiSales(e.target.value)}
-            placeholder="0.00"
-            step="0.01"
+            value={salesData.upi_sales || ''}
+            onChange={(e) => onSalesChange('upi_sales', parseFloat(e.target.value) || 0)}
           />
         </div>
-        
-        <div className="grid gap-1">
-          <Label htmlFor="cashSales">Cash Sales (₹)</Label>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="cash_sales">Cash Sales (INR)</Label>
           <Input
-            id="cashSales"
+            id="cash_sales"
             type="number"
-            value={cashSales}
-            onChange={(e) => setCashSales(e.target.value)}
-            placeholder="0.00"
-            step="0.01"
+            value={salesData.cash_sales || ''}
+            onChange={(e) => onSalesChange('cash_sales', parseFloat(e.target.value) || 0)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="testing_fuel">Testing Fuel (liters)</Label>
+          <Input
+            id="testing_fuel"
+            type="number"
+            value={salesData.testing_fuel || ''}
+            onChange={(e) => onSalesChange('testing_fuel', parseFloat(e.target.value) || 0)}
           />
         </div>
       </div>
       
-      <Card className="mt-2 bg-muted/50">
+      {/* Total Sales Summary Card */}
+      <Card className="mt-4 bg-muted/50">
         <CardContent className="pt-4">
           <div className="flex justify-between items-center">
             <span className="font-medium">Total Sales:</span>
@@ -77,35 +76,23 @@ export function EndShiftSales({
           <div className="mt-2 text-sm">
             <div className="flex justify-between">
               <span>Card:</span>
-              <span>₹{Number(cardSales).toLocaleString()}</span>
+              <span>₹{salesData.card_sales.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
               <span>UPI:</span>
-              <span>₹{Number(upiSales).toLocaleString()}</span>
+              <span>₹{salesData.upi_sales.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
               <span>Cash:</span>
-              <span>₹{Number(cashSales).toLocaleString()}</span>
+              <span>₹{salesData.cash_sales.toLocaleString()}</span>
             </div>
             <div className="flex justify-between mt-1 pt-1 border-t">
-              <span>Fuel Sold:</span>
-              <span>{fuelLiters.toFixed(2)} L</span>
+              <span>Total Liters:</span>
+              <span>{totalLiters.toFixed(2)} L</span>
             </div>
-            {testingFuelAmount > 0 && (
-              <div className="flex justify-between text-amber-600">
-                <span>Testing Fuel:</span>
-                <span>{testingFuelAmount.toFixed(2)} L</span>
-              </div>
-            )}
-            {expectedSalesAmount > 0 && (
-              <div className="flex justify-between">
-                <span>Expected Amount:</span>
-                <span>₹{expectedSalesAmount.toFixed(2)}</span>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 }

@@ -7,25 +7,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SelectedShiftData, ShiftReading } from '@/types/shift';
+import { EndShiftReadings, FuelReading } from './EndShiftReadings';
+import { EndShiftSales } from './EndShiftSales';
+import { EndShiftCashExpenses } from './EndShiftCashExpenses';
 
-// Define a clear interface for the closing readings structure
-interface ClosingReading {
-  opening_reading: number;
-  closing_reading: number;
-}
-
-type EndShiftFormData = {
-  closingReadings: Record<string, ClosingReading>;
-  cash_remaining: number;
-  card_sales: number;
-  upi_sales: number;
-  cash_sales: number;
-  testing_fuel: number;
-  expenses: number;
-  consumable_expenses: number;
-};
-
-// Explicitly defined interface for reading data from the database
+// Explicitly typed interfaces to avoid deep type instantiation issues
 interface ReadingData {
   id?: string;
   fuel_type: string;
@@ -47,6 +33,17 @@ interface ReadingData {
   fuel_pump_id?: string;
 }
 
+interface FormData {
+  readings: FuelReading[];
+  cash_remaining: number;
+  card_sales: number;
+  upi_sales: number;
+  cash_sales: number;
+  testing_fuel: number;
+  expenses: number;
+  consumable_expenses: number;
+}
+
 interface NewEndShiftDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -61,11 +58,11 @@ export function NewEndShiftDialog({
   onShiftEnded
 }: NewEndShiftDialogProps) {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [readings, setReadings] = useState<ShiftReading[]>([]);
   const { toast } = useToast();
   
-  const [formData, setFormData] = useState<EndShiftFormData>({
-    closingReadings: {},
+  // Use a single form data object with proper typing
+  const [formData, setFormData] = useState<FormData>({
+    readings: [],
     cash_remaining: 0,
     card_sales: 0,
     upi_sales: 0,
@@ -74,6 +71,31 @@ export function NewEndShiftDialog({
     expenses: 0,
     consumable_expenses: 0
   });
+
+  // Derived calculations
+  const totalSales = formData.card_sales + formData.upi_sales + formData.cash_sales;
+  const totalLiters = formData.readings.reduce((sum, reading) => {
+    return sum + Math.max(0, reading.closing_reading - reading.opening_reading);
+  }, 0);
+  
+  // Cash reconciliation
+  const [cashReconciliation, setCashReconciliation] = useState({
+    expected: 0,
+    difference: 0
+  });
+
+  useEffect(() => {
+    // Calculate cash reconciliation when relevant values change
+    const expectedCash = formData.cash_sales;
+    const actualCash = formData.cash_remaining;
+    const expenses = formData.expenses || 0;
+    const difference = actualCash - expectedCash + expenses;
+    
+    setCashReconciliation({
+      expected: expectedCash,
+      difference: difference
+    });
+  }, [formData.cash_sales, formData.cash_remaining, formData.expenses]);
 
   useEffect(() => {
     if (isOpen && shiftData) {
@@ -93,30 +115,19 @@ export function NewEndShiftDialog({
       }
       
       if (data) {
-        // Ensure all data is properly typed
+        // Type assertion to avoid excessive type instantiation
         const readingsData = data as ReadingData[];
         
-        // Create explicitly typed shift readings to avoid excessive type instantiation
-        const shiftReadings: ShiftReading[] = readingsData.map((reading) => ({
+        // Convert to our simplified reading format
+        const fuelReadings: FuelReading[] = readingsData.map((reading) => ({
           fuel_type: reading.fuel_type || 'Unknown',
           opening_reading: reading.opening_reading,
-          closing_reading: reading.closing_reading || 0
+          closing_reading: reading.closing_reading || reading.opening_reading
         }));
-        
-        setReadings(shiftReadings);
-        
-        // Initialize closing readings form with proper typing
-        const initialClosingReadings: Record<string, ClosingReading> = {};
-        shiftReadings.forEach(reading => {
-          initialClosingReadings[reading.fuel_type] = {
-            opening_reading: reading.opening_reading,
-            closing_reading: reading.closing_reading || reading.opening_reading
-          };
-        });
         
         setFormData(prev => ({
           ...prev,
-          closingReadings: initialClosingReadings
+          readings: fuelReadings
         }));
       }
     } catch (error) {
@@ -129,42 +140,24 @@ export function NewEndShiftDialog({
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData({
-      ...formData,
-      [field]: parseFloat(value) || 0
-    });
-  };
-  
-  const handleReadingChange = (fuelType: string, value: string) => {
+  // Handler for reading changes
+  const handleReadingChange = (fuelType: string, value: number) => {
     setFormData(prev => ({
       ...prev,
-      closingReadings: {
-        ...prev.closingReadings,
-        [fuelType]: {
-          ...prev.closingReadings[fuelType],
-          closing_reading: parseFloat(value) || 0
-        }
-      }
+      readings: prev.readings.map(reading => 
+        reading.fuel_type === fuelType 
+          ? { ...reading, closing_reading: value } 
+          : reading
+      )
     }));
   };
 
-  const calculateTotals = () => {
-    // Calculate total sales
-    const totalSales = formData.card_sales + formData.upi_sales + formData.cash_sales;
-    
-    // Calculate total liters dispensed for all fuel types
-    let totalLiters = 0;
-    
-    Object.keys(formData.closingReadings).forEach(fuelType => {
-      const reading = formData.closingReadings[fuelType];
-      totalLiters += Math.max(0, reading.closing_reading - reading.opening_reading);
-    });
-    
-    return {
-      totalSales,
-      totalLiters
-    };
+  // Handler for sales and other numeric inputs
+  const handleInputChange = (field: keyof Omit<FormData, 'readings'>, value: number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const handleSubmit = async () => {
@@ -172,13 +165,9 @@ export function NewEndShiftDialog({
       setIsProcessing(true);
       
       // Validate closing readings are greater than opening
-      let hasInvalidReading = false;
-      Object.keys(formData.closingReadings).forEach(fuelType => {
-        const reading = formData.closingReadings[fuelType];
-        if (reading.closing_reading < reading.opening_reading) {
-          hasInvalidReading = true;
-        }
-      });
+      const hasInvalidReading = formData.readings.some(
+        reading => reading.closing_reading < reading.opening_reading
+      );
       
       if (hasInvalidReading) {
         toast({
@@ -203,9 +192,7 @@ export function NewEndShiftDialog({
       if (shiftError) throw shiftError;
       
       // 2. Update readings for each fuel type
-      for (const fuelType of Object.keys(formData.closingReadings)) {
-        const reading = formData.closingReadings[fuelType];
-        
+      for (const reading of formData.readings) {
         const { error: readingError } = await supabase
           .from('readings')
           .update({
@@ -219,7 +206,7 @@ export function NewEndShiftDialog({
             consumable_expenses: formData.consumable_expenses
           })
           .eq('shift_id', shiftData.id)
-          .eq('fuel_type', fuelType);
+          .eq('fuel_type', reading.fuel_type);
           
         if (readingError) throw readingError;
       }
@@ -242,8 +229,6 @@ export function NewEndShiftDialog({
       setIsProcessing(false);
     }
   };
-
-  const { totalSales, totalLiters } = calculateTotals();
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !isProcessing && !open && onClose()}>
@@ -268,83 +253,23 @@ export function NewEndShiftDialog({
           </div>
           
           {/* Readings Section */}
-          <div className="grid gap-4">
-            <h3 className="font-semibold">Meter Readings</h3>
-            {Object.keys(formData.closingReadings).map(fuelType => {
-              const reading = formData.closingReadings[fuelType];
-              return (
-                <div key={fuelType} className="grid gap-2">
-                  <Label>{fuelType}</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Opening Reading</p>
-                      <Input 
-                        value={reading.opening_reading}
-                        disabled
-                      />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Closing Reading</p>
-                      <Input
-                        type="number"
-                        value={reading.closing_reading}
-                        onChange={(e) => handleReadingChange(fuelType, e.target.value)}
-                        min={reading.opening_reading}
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-right">
-                    Total: {Math.max(0, reading.closing_reading - reading.opening_reading)} liters
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+          <EndShiftReadings 
+            readings={formData.readings}
+            onReadingChange={handleReadingChange}
+          />
           
           {/* Sales Section */}
-          <div className="grid gap-4">
-            <h3 className="font-semibold">Sales</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="card_sales">Card Sales (INR)</Label>
-                <Input
-                  id="card_sales"
-                  type="number"
-                  value={formData.card_sales || ''}
-                  onChange={(e) => handleInputChange('card_sales', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="upi_sales">UPI Sales (INR)</Label>
-                <Input
-                  id="upi_sales"
-                  type="number"
-                  value={formData.upi_sales || ''}
-                  onChange={(e) => handleInputChange('upi_sales', e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="cash_sales">Cash Sales (INR)</Label>
-                <Input
-                  id="cash_sales"
-                  type="number"
-                  value={formData.cash_sales || ''}
-                  onChange={(e) => handleInputChange('cash_sales', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="testing_fuel">Testing Fuel (liters)</Label>
-                <Input
-                  id="testing_fuel"
-                  type="number"
-                  value={formData.testing_fuel || ''}
-                  onChange={(e) => handleInputChange('testing_fuel', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
+          <EndShiftSales
+            salesData={{
+              card_sales: formData.card_sales,
+              upi_sales: formData.upi_sales,
+              cash_sales: formData.cash_sales,
+              testing_fuel: formData.testing_fuel
+            }}
+            onSalesChange={(field, value) => handleInputChange(field, value)}
+            totalSales={totalSales}
+            totalLiters={totalLiters}
+          />
           
           {/* Expenses Section */}
           <div className="grid gap-4">
@@ -356,7 +281,7 @@ export function NewEndShiftDialog({
                   id="expenses"
                   type="number"
                   value={formData.expenses || ''}
-                  onChange={(e) => handleInputChange('expenses', e.target.value)}
+                  onChange={(e) => handleInputChange('expenses', parseFloat(e.target.value) || 0)}
                 />
               </div>
               <div>
@@ -365,34 +290,21 @@ export function NewEndShiftDialog({
                   id="consumable_expenses"
                   type="number"
                   value={formData.consumable_expenses || ''}
-                  onChange={(e) => handleInputChange('consumable_expenses', e.target.value)}
+                  onChange={(e) => handleInputChange('consumable_expenses', parseFloat(e.target.value) || 0)}
                 />
               </div>
             </div>
           </div>
           
           {/* Cash Section */}
-          <div>
-            <Label htmlFor="cash_remaining">Cash Remaining (INR)</Label>
-            <Input
-              id="cash_remaining"
-              type="number"
-              value={formData.cash_remaining || ''}
-              onChange={(e) => handleInputChange('cash_remaining', e.target.value)}
-            />
-          </div>
-          
-          {/* Summary */}
-          <div className="bg-muted p-4 rounded-md">
-            <h3 className="font-medium mb-2">Summary</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>Total Sales:</div>
-              <div className="text-right font-medium">INR {totalSales.toFixed(2)}</div>
-              
-              <div>Total Liters:</div>
-              <div className="text-right font-medium">{totalLiters.toFixed(2)} L</div>
-            </div>
-          </div>
+          <EndShiftCashExpenses
+            expenses={formData.expenses.toString()}
+            setExpenses={(value) => handleInputChange('expenses', parseFloat(value) || 0)}
+            cashRemaining={formData.cash_remaining.toString()}
+            setCashRemaining={(value) => handleInputChange('cash_remaining', parseFloat(value) || 0)}
+            cashSales={formData.cash_sales.toString()}
+            cashReconciliation={cashReconciliation}
+          />
         </div>
         
         <DialogFooter>
