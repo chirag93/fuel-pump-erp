@@ -24,6 +24,7 @@ type EndShiftFormData = {
   consumable_expenses: number;
 };
 
+// Explicitly defined interface for reading data from the database
 interface ReadingData {
   id?: string;
   fuel_type: string;
@@ -94,8 +95,8 @@ export function NewEndShiftDialog({
         // Ensure all data is properly typed
         const readingsData = data as ReadingData[];
         
-        // Process the readings data with explicit typing
-        const shiftReadings = readingsData.map((reading) => ({
+        // Create explicitly typed shift readings to avoid excessive type instantiation
+        const shiftReadings: ShiftReading[] = readingsData.map((reading) => ({
           fuel_type: reading.fuel_type || 'Unknown',
           opening_reading: reading.opening_reading,
           closing_reading: reading.closing_reading || 0
@@ -103,8 +104,8 @@ export function NewEndShiftDialog({
         
         setReadings(shiftReadings);
         
-        // Initialize closing readings form
-        const initialClosingReadings: {[key: string]: any} = {};
+        // Initialize closing readings form with proper typing
+        const initialClosingReadings: {[key: string]: {opening_reading: number, closing_reading: number}} = {};
         shiftReadings.forEach(reading => {
           initialClosingReadings[reading.fuel_type] = {
             opening_reading: reading.opening_reading,
