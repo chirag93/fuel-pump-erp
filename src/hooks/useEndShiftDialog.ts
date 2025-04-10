@@ -57,6 +57,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
 
   useEffect(() => {
     if (shiftData) {
+      console.log("Shift data loaded:", shiftData.id);
       fetchShiftReadings();
       fetchShiftConsumables();
     }
@@ -177,6 +178,8 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
   // Fetch consumables allocated to this shift
   const fetchShiftConsumables = async () => {
     try {
+      console.log("Fetching consumables for shift:", shiftData.id);
+      
       // Get consumables allocated to this shift
       const { data: allocations, error: allocationsError } = await supabase
         .from('shift_consumables')
@@ -194,7 +197,12 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
         `)
         .eq('shift_id', shiftData.id);
         
-      if (allocationsError) throw allocationsError;
+      if (allocationsError) {
+        console.error('Error fetching shift consumables:', allocationsError);
+        throw allocationsError;
+      }
+      
+      console.log("Allocated consumables data:", allocations);
       
       if (allocations && allocations.length > 0) {
         const allocated: SelectedConsumable[] = allocations.map((item: any) => ({
@@ -221,9 +229,19 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
         
         // Calculate initial consumable expenses
         calculateConsumableExpenses(allocated, returned);
+      } else {
+        console.log("No consumables found for this shift");
+        setAllocatedConsumables([]);
+        setReturnedConsumables([]);
+        setConsumablesExpense(0);
       }
     } catch (error) {
       console.error('Error fetching shift consumables:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load consumables data",
+        variant: "destructive"
+      });
     }
   };
 
@@ -237,6 +255,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
       totalExpense += soldQuantity * item.price_per_unit;
     });
     
+    console.log("Calculated consumables expense:", totalExpense);
     setConsumablesExpense(totalExpense);
     setFormData(prev => ({
       ...prev,
@@ -246,6 +265,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
 
   // Update returned consumable quantity
   const updateReturnedConsumable = (id: string, quantity: number) => {
+    console.log(`Updating returned consumable ${id} to quantity ${quantity}`);
     const updatedReturned = returnedConsumables.map(item => 
       item.id === id ? { ...item, quantity } : item
     );

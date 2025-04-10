@@ -41,13 +41,16 @@ export function NewEndShiftDialog({
     updateReturnedConsumable,
     handleSubmit
   } = useEndShiftDialog(shiftData, onShiftEnded);
-
+  
   const onSubmit = async () => {
     const success = await handleSubmit();
     if (success) {
       onClose();
     }
   };
+
+  // Check if there are consumables allocated to this shift
+  const hasAllocatedConsumables = allocatedConsumables && allocatedConsumables.length > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !isProcessing && !open && onClose()}>
@@ -87,14 +90,24 @@ export function NewEndShiftDialog({
               fuelRates={fuelRates}
             />
             
-            {/* Consumables Section */}
-            {allocatedConsumables.length > 0 && (
-              <EndShiftConsumables
-                allocatedConsumables={allocatedConsumables}
-                returnedConsumables={returnedConsumables}
-                updateReturnedConsumable={updateReturnedConsumable}
-                consumablesExpense={consumablesExpense}
-              />
+            {/* Consumables Section - Make it more visible */}
+            {hasAllocatedConsumables ? (
+              <div className="border p-4 rounded-md bg-blue-50/30">
+                <h3 className="font-semibold text-lg mb-2">Consumables Reconciliation</h3>
+                <EndShiftConsumables
+                  allocatedConsumables={allocatedConsumables}
+                  returnedConsumables={returnedConsumables}
+                  updateReturnedConsumable={updateReturnedConsumable}
+                  consumablesExpense={consumablesExpense}
+                />
+              </div>
+            ) : (
+              <div className="border p-4 rounded-md bg-muted/20">
+                <h3 className="font-semibold text-lg mb-2">Consumables Reconciliation</h3>
+                <p className="text-muted-foreground text-center py-3">
+                  No consumables were allocated for this shift
+                </p>
+              </div>
             )}
             
             {/* Expenses Section */}

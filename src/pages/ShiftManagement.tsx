@@ -60,9 +60,10 @@ const ShiftManagement = () => {
         id: shift.id,
         staff_id: shift.staff_id,
         staff_name: shift.staff_name,
-        pump_id: shift.pump_id,
+        pump_id: shift.pump_id || '',
         opening_reading: shift.opening_reading,
-        shift_type: shift.shift_type
+        shift_type: shift.shift_type,
+        all_readings: shift.all_readings
       });
       setNewEndShiftDialogOpen(true);
     }

@@ -8,6 +8,8 @@ import { useShiftManagement } from '@/hooks/useShiftManagement';
 import { useToast } from '@/hooks/use-toast';
 import { MobileActiveShifts } from '@/components/shift/MobileActiveShifts';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
+import { NewEndShiftDialog } from '@/components/shift/NewEndShiftDialog';
+import { SelectedShiftData } from '@/types/shift';
 
 const MobileShiftManagement = () => {
   const {
@@ -21,6 +23,8 @@ const MobileShiftManagement = () => {
   } = useShiftManagement();
   
   const [formOpen, setFormOpen] = useState(false);
+  const [endShiftDialogOpen, setEndShiftDialogOpen] = useState(false);
+  const [selectedShiftData, setSelectedShiftData] = useState<SelectedShiftData | null>(null);
   const { toast } = useToast();
   
   const handleOpenForm = () => {
@@ -33,6 +37,19 @@ const MobileShiftManagement = () => {
       return;
     }
     setFormOpen(true);
+  };
+  
+  const handleEndShift = (shift: any) => {
+    setSelectedShiftData({
+      id: shift.id,
+      staff_id: shift.staff_id,
+      staff_name: shift.staff_name,
+      pump_id: shift.pump_id || '',
+      opening_reading: shift.opening_reading,
+      shift_type: shift.shift_type,
+      all_readings: shift.all_readings
+    });
+    setEndShiftDialogOpen(true);
   };
   
   return (
@@ -73,12 +90,7 @@ const MobileShiftManagement = () => {
       <MobileActiveShifts 
         activeShifts={activeShifts} 
         isLoading={isLoading} 
-        onEndShift={(shift) => {
-          toast({
-            title: "Feature in development",
-            description: "End shift functionality is available on desktop version."
-          });
-        }} 
+        onEndShift={handleEndShift}
       />
       
       {/* StartShiftForm Modal */}
@@ -91,6 +103,16 @@ const MobileShiftManagement = () => {
         staffList={staffList}
         isMobile={true}
       />
+      
+      {/* End Shift Dialog */}
+      {selectedShiftData && (
+        <NewEndShiftDialog
+          isOpen={endShiftDialogOpen}
+          onClose={() => setEndShiftDialogOpen(false)}
+          shiftData={selectedShiftData}
+          onShiftEnded={fetchShifts}
+        />
+      )}
     </div>
   );
 };
