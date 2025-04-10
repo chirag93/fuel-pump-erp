@@ -213,6 +213,8 @@ const EndShiftDialog = ({
             if (readingData) {
               // Handle the case where the expenses field might not exist in older records
               const expensesValue = readingData.expenses !== undefined ? readingData.expenses : 0;
+              
+              // Handle the case where indent_sales might not exist in older records
               const indentSalesValue = readingData.indent_sales !== undefined ? readingData.indent_sales : 0;
               
               setFormData({
@@ -556,6 +558,7 @@ const EndShiftDialog = ({
   const expectedSalesAmount = fuelLiters * fuelPrice;
   
   return (
+    
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
