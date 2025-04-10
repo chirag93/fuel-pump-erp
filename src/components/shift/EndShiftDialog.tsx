@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -249,22 +250,23 @@ const EndShiftDialog = ({
     }
   }, [open, shiftId]);
 
-  const fetchFuelPrice = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('fuel_settings')
-        .select('current_price')
-        .limit(1);
+  useEffect(() => {
+    const fetchFuelPrice = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('fuel_settings')
+          .select('current_price')
+          .limit(1);
+          
+        if (error) throw error;
         
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        setFuelPrice(data[0].current_price);
+        if (data && data.length > 0) {
+          setFuelPrice(data[0].current_price);
+        }
+      } catch (err) {
+        console.error('Error fetching fuel price:', err);
       }
-    } catch (err) {
-      console.error('Error fetching fuel price:', err);
-    }
-  };
+    };
     
     fetchFuelPrice();
   }, []);
