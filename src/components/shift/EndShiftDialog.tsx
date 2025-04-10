@@ -249,23 +249,22 @@ const EndShiftDialog = ({
     }
   }, [open, shiftId]);
 
-  useEffect(() => {
-    const fetchFuelPrice = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('fuel_settings')
-          .select('current_price')
-          .limit(1);
-          
-        if (error) throw error;
+  const fetchFuelPrice = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('fuel_settings')
+        .select('current_price')
+        .limit(1);
         
-        if (data && data.length > 0) {
-          setFuelPrice(data[0].current_price);
-        }
-      } catch (err) {
-        console.error('Error fetching fuel price:', err);
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setFuelPrice(data[0].current_price);
       }
-    };
+    } catch (err) {
+      console.error('Error fetching fuel price:', err);
+    }
+  };
     
     fetchFuelPrice();
   }, []);
@@ -374,10 +373,13 @@ const EndShiftDialog = ({
           throw readingsCheckError;
         }
         
+        // Properly typed existingReadings array to accommodate indent_sales
+        const typedExistingReadings = existingReadings as ReadingData[] | null;
+        
         // Check if indent_sales column exists in the readings table
-        const hasIndentSalesColumn = existingReadings && 
-          existingReadings.length > 0 && 
-          'indent_sales' in existingReadings[0];
+        const hasIndentSalesColumn = typedExistingReadings && 
+          typedExistingReadings.length > 0 && 
+          'indent_sales' in typedExistingReadings[0];
         
         // Prepare update data for readings
         const baseUpdateData: Record<string, any> = {
@@ -437,10 +439,13 @@ const EndShiftDialog = ({
           throw readingsCheckError;
         }
         
+        // Properly typed existingReadings array to accommodate indent_sales
+        const typedExistingReadings = existingReadings as ReadingData[] | null;
+        
         // Check if indent_sales column exists in the readings table
-        const hasIndentSalesColumn = existingReadings && 
-          existingReadings.length > 0 && 
-          'indent_sales' in existingReadings[0];
+        const hasIndentSalesColumn = typedExistingReadings && 
+          typedExistingReadings.length > 0 && 
+          'indent_sales' in typedExistingReadings[0];
         
         // Prepare update data for readings
         const baseUpdateData: Record<string, any> = {
