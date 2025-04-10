@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,8 @@ import { EndShiftReadings, FuelReading } from './EndShiftReadings';
 import { EndShiftSales, SalesFormData } from './EndShiftSales';
 import { EndShiftCashExpenses } from './EndShiftCashExpenses';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { EndShiftConsumables } from './EndShiftConsumables';
+import { SelectedConsumable } from '@/components/shift/ConsumableSelection';
 
 // Define a specific interface for the form data to avoid deep instantiation
 interface EndShiftFormData {
@@ -49,6 +52,11 @@ export function NewEndShiftDialog({
     expenses: 0,
     consumable_expenses: 0
   });
+
+  // Consumables state
+  const [allocatedConsumables, setAllocatedConsumables] = useState<SelectedConsumable[]>([]);
+  const [returnedConsumables, setReturnedConsumables] = useState<SelectedConsumable[]>([]);
+  const [consumablesExpense, setConsumablesExpense] = useState<number>(0);
 
   // Derived calculations
   const totalSales = formData.card_sales + formData.upi_sales + formData.cash_sales;
@@ -125,6 +133,7 @@ export function NewEndShiftDialog({
   useEffect(() => {
     if (isOpen && shiftData) {
       fetchShiftReadings();
+      fetchShiftConsumables();
     }
   }, [isOpen, shiftData]);
 
@@ -182,6 +191,84 @@ export function NewEndShiftDialog({
         variant: "destructive"
       });
     }
+  };
+
+  // Fetch consumables allocated to this shift
+  const fetchShiftConsumables = async () => {
+    try {
+      // Get consumables allocated to this shift
+      const { data: allocations, error: allocationsError } = await supabase
+        .from('shift_consumables')
+        .select(`
+          id,
+          quantity_allocated,
+          quantity_returned,
+          consumable_id,
+          consumables:consumable_id (
+            id,
+            name,
+            unit,
+            price_per_unit
+          )
+        `)
+        .eq('shift_id', shiftData.id);
+        
+      if (allocationsError) throw allocationsError;
+      
+      if (allocations && allocations.length > 0) {
+        const allocated: SelectedConsumable[] = allocations.map((item: any) => ({
+          id: item.consumable_id,
+          name: item.consumables?.name || 'Unknown',
+          unit: item.consumables?.unit || 'Units',
+          price_per_unit: item.consumables?.price_per_unit || 0,
+          quantity: item.quantity_allocated || 0
+        }));
+        
+        // Initialize returned consumables with the same items but use returned quantity if available
+        const returned: SelectedConsumable[] = allocations.map((item: any) => ({
+          id: item.consumable_id,
+          name: item.consumables?.name || 'Unknown',
+          unit: item.consumables?.unit || 'Units',
+          price_per_unit: item.consumables?.price_per_unit || 0,
+          quantity: item.quantity_returned || 0
+        }));
+        
+        setAllocatedConsumables(allocated);
+        setReturnedConsumables(returned);
+        
+        // Calculate initial consumable expenses
+        calculateConsumableExpenses(allocated, returned);
+      }
+    } catch (error) {
+      console.error('Error fetching shift consumables:', error);
+    }
+  };
+
+  // Calculate consumable expenses based on allocated and returned quantities
+  const calculateConsumableExpenses = (allocated: SelectedConsumable[], returned: SelectedConsumable[]) => {
+    let totalExpense = 0;
+    
+    allocated.forEach(item => {
+      const returnedItem = returned.find(r => r.id === item.id);
+      const soldQuantity = item.quantity - (returnedItem?.quantity || 0);
+      totalExpense += soldQuantity * item.price_per_unit;
+    });
+    
+    setConsumablesExpense(totalExpense);
+    setFormData(prev => ({
+      ...prev,
+      consumable_expenses: totalExpense
+    }));
+  };
+
+  // Update returned consumable quantity
+  const updateReturnedConsumable = (id: string, quantity: number) => {
+    const updatedReturned = returnedConsumables.map(item => 
+      item.id === id ? { ...item, quantity } : item
+    );
+    
+    setReturnedConsumables(updatedReturned);
+    calculateConsumableExpenses(allocatedConsumables, updatedReturned);
   };
 
   // Handler for reading changes
@@ -294,6 +381,26 @@ export function NewEndShiftDialog({
         }
       }
       
+      // 3. Update returned consumables if any were allocated
+      if (allocatedConsumables.length > 0) {
+        for (const item of returnedConsumables) {
+          const allocated = allocatedConsumables.find(a => a.id === item.id);
+          if (allocated) {
+            // Update the shift_consumables record with returned quantity
+            const { error: updateError } = await supabase
+              .from('shift_consumables')
+              .update({
+                quantity_returned: item.quantity,
+                status: 'completed'
+              })
+              .eq('shift_id', shiftData.id)
+              .eq('consumable_id', item.id);
+              
+            if (updateError) throw updateError;
+          }
+        }
+      }
+      
       toast({
         title: "Success",
         description: "Shift ended successfully"
@@ -363,6 +470,16 @@ export function NewEndShiftDialog({
               fuelRates={fuelRates}
             />
             
+            {/* Consumables Section */}
+            {allocatedConsumables.length > 0 && (
+              <EndShiftConsumables
+                allocatedConsumables={allocatedConsumables}
+                returnedConsumables={returnedConsumables}
+                updateReturnedConsumable={updateReturnedConsumable}
+                consumablesExpense={consumablesExpense}
+              />
+            )}
+            
             {/* Expenses Section */}
             <div className="grid gap-4">
               <h3 className="font-semibold">Expenses</h3>
@@ -377,13 +494,17 @@ export function NewEndShiftDialog({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="consumable_expenses">Consumable Expenses (INR)</Label>
+                  <Label htmlFor="consumable_expenses">Consumable Sales (INR)</Label>
                   <Input
                     id="consumable_expenses"
                     type="number"
-                    value={formData.consumable_expenses || ''}
-                    onChange={(e) => handleInputChange('consumable_expenses', parseFloat(e.target.value) || 0)}
+                    value={formData.consumable_expenses}
+                    readOnly
+                    className="bg-muted"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Calculated from consumable reconciliation
+                  </p>
                 </div>
               </div>
             </div>
