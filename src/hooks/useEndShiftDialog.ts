@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
@@ -16,7 +15,7 @@ export interface EndShiftFormData {
   card_sales: number;
   upi_sales: number;
   cash_sales: number;
-  indent_sales: number; // Added indent sales field
+  indent_sales: number; // Ensure indent_sales is included here
   testing_fuel: number;
 }
 
@@ -30,7 +29,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
     card_sales: 0,
     upi_sales: 0,
     cash_sales: 0,
-    indent_sales: 0, // Initialize indent sales
+    indent_sales: 0, // Initialize indent_sales
     testing_fuel: 0,
     expenses: 0,
     consumable_expenses: 0

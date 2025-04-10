@@ -10,7 +10,7 @@ export interface SalesFormData {
   upi_sales: number;
   cash_sales: number;
   testing_fuel: number;
-  indent_sales: number; // Added indent sales field
+  indent_sales: number; // Ensure indent_sales is included
 }
 
 interface EndShiftSalesProps {

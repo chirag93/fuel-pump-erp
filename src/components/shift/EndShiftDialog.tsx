@@ -35,7 +35,7 @@ interface ShiftFormData {
   card_sales: number;
   upi_sales: number;
   cash_sales: number;
-  indent_sales: number; // Add indent sales to form data interface
+  indent_sales: number; // Ensure indent_sales is included in form data
   expenses: number;
 }
 
@@ -56,7 +56,7 @@ interface ReadingData {
   expenses?: number;
   date?: string;
   created_at?: string;
-  indent_sales?: number | null; // Add indent_sales to reading data interface
+  indent_sales?: number | null; // Ensure indent_sales is included in reading data
 }
 
 const EndShiftDialog = ({ 
@@ -81,7 +81,7 @@ const EndShiftDialog = ({
     card_sales: 0,
     upi_sales: 0,
     cash_sales: 0,
-    indent_sales: 0, // Add indent sales field
+    indent_sales: 0, // Initialize indent sales
     expenses: 0
   });
   
