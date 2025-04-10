@@ -320,6 +320,14 @@ export function useShiftManagement() {
     }
   };
 
+  // Get staff that are on active shifts
+  const staffOnActiveShifts = shifts
+    .filter(shift => shift.status === 'active')
+    .map(shift => shift.staff_id);
+
+  // Get available staff (staff not on active shifts)
+  const availableStaff = staffList.filter(staff => !staffOnActiveShifts.includes(staff.id));
+
   // Computed properties
   const activeShifts = shifts.filter(shift => shift.status === 'active');
   const completedShifts = shifts.filter(shift => shift.status === 'completed');
@@ -335,6 +343,8 @@ export function useShiftManagement() {
     handleAddShift,
     activeShifts,
     completedShifts,
-    fuelPumpId
+    fuelPumpId,
+    staffOnActiveShifts,
+    availableStaff
   };
 }

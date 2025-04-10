@@ -1,4 +1,3 @@
-
 import { Dispatch, SetStateAction, useState, useEffect } from 'react';
 import { Shift, Staff } from '@/types/shift';
 import { 
@@ -8,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Plus, AlertCircle } from 'lucide-react';
 import { ConsumableSelection } from './ConsumableSelection';
 import { supabase } from '@/integrations/supabase/client';
 import { PumpSettingsType } from '@/integrations/fuelPumps';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export interface StartShiftFormProps {
   formOpen: boolean;
@@ -22,6 +22,7 @@ export interface StartShiftFormProps {
   handleAddShift: (selectedConsumables?: SelectedConsumable[], nozzleReadings?: NozzleReading[]) => Promise<boolean>;
   staffList: Staff[];
   isMobile?: boolean;
+  staffOnActiveShifts?: string[];
 }
 
 export interface SelectedConsumable {
@@ -45,7 +46,8 @@ export function StartShiftForm({
   setNewShift, 
   handleAddShift,
   staffList,
-  isMobile = false
+  isMobile = false,
+  staffOnActiveShifts = []
 }: StartShiftFormProps) {
   const [selectedConsumables, setSelectedConsumables] = useState<SelectedConsumable[]>([]);
   const [pumpSettings, setPumpSettings] = useState<PumpSettingsType[]>([]);
@@ -114,6 +116,26 @@ export function StartShiftForm({
     );
   };
 
+  // Filter out staff that are already on active shifts
+  const availableStaff = staffList.filter(staff => !staffOnActiveShifts.includes(staff.id));
+
+  // Check if the currently selected staff is on an active shift
+  const isSelectedStaffOnActiveShift = newShift.staff_id && staffOnActiveShifts.includes(newShift.staff_id);
+
+  // Clear staff selection if they're on an active shift
+  useEffect(() => {
+    if (isSelectedStaffOnActiveShift) {
+      setNewShift(prev => ({ ...prev, staff_id: '' }));
+      
+      // Show a toast notification
+      toast({
+        title: "Staff unavailable",
+        description: "The selected staff member is already on an active shift",
+        variant: "destructive"
+      });
+    }
+  }, [isSelectedStaffOnActiveShift, setNewShift, toast]);
+
   const onSubmit = async () => {
     // Check if we have at least one nozzle reading
     if (nozzleReadings.length === 0) {
@@ -169,22 +191,39 @@ export function StartShiftForm({
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="staffId">Staff</Label>
-            <Select 
-              value={newShift.staff_id}
-              onValueChange={(value) => setNewShift({...newShift, staff_id: value})}
-            >
-              <SelectTrigger id="staffId">
-                <SelectValue placeholder="Select staff" />
-              </SelectTrigger>
-              <SelectContent>
-                {staffList.map((staff) => (
-                  <SelectItem key={staff.id} value={staff.id}>
-                    {staff.name} (ID: {staff.staff_numeric_id || 'N/A'})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {availableStaff.length === 0 ? (
+              <Alert variant="destructive" className="mb-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  All staff members are currently on active shifts. End an active shift before starting a new one.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Select 
+                value={newShift.staff_id}
+                onValueChange={(value) => setNewShift({...newShift, staff_id: value})}
+              >
+                <SelectTrigger id="staffId">
+                  <SelectValue placeholder="Select staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableStaff.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id}>
+                      {staff.name} (ID: {staff.staff_numeric_id || 'N/A'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            
+            {staffList.length > 0 && availableStaff.length < staffList.length && (
+              <p className="text-xs text-amber-600 mt-1">
+                {staffList.length - availableStaff.length} staff member(s) are currently on active shifts and not available for selection.
+              </p>
+            )}
           </div>
+          
+          {/* Rest of the form */}
           <div className="grid gap-2">
             <Label htmlFor="pumpId">Pump</Label>
             <Select 
@@ -254,7 +293,12 @@ export function StartShiftForm({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>
-          <Button onClick={onSubmit}>Start Shift</Button>
+          <Button 
+            onClick={onSubmit} 
+            disabled={!newShift.staff_id || !newShift.pump_id || availableStaff.length === 0}
+          >
+            Start Shift
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

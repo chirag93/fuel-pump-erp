@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarClock, DollarSign, Loader2 } from 'lucide-react';
@@ -23,7 +22,8 @@ const ShiftManagement = () => {
     handleAddShift,
     activeShifts,
     completedShifts,
-    fuelPumpId
+    fuelPumpId,
+    staffOnActiveShifts
   } = useShiftManagement();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -91,6 +91,7 @@ const ShiftManagement = () => {
           setNewShift={setNewShift}
           handleAddShift={handleAddShift}
           staffList={staffList}
+          staffOnActiveShifts={staffOnActiveShifts}
         />
       </div>
 

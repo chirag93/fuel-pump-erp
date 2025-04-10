@@ -19,7 +19,8 @@ const MobileShiftManagement = () => {
     setNewShift,
     handleAddShift,
     isLoading,
-    fetchShifts
+    fetchShifts,
+    staffOnActiveShifts
   } = useShiftManagement();
   
   const [formOpen, setFormOpen] = useState(false);
@@ -36,6 +37,17 @@ const MobileShiftManagement = () => {
       });
       return;
     }
+    
+    // If all staff are on active shifts
+    if (staffList.length > 0 && staffList.every(staff => staffOnActiveShifts?.includes(staff.id))) {
+      toast({
+        title: "All Staff on Active Shifts",
+        description: "All staff members are currently on active shifts. End an active shift before starting a new one.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setFormOpen(true);
   };
   
@@ -102,6 +114,7 @@ const MobileShiftManagement = () => {
         handleAddShift={handleAddShift}
         staffList={staffList}
         isMobile={true}
+        staffOnActiveShifts={staffOnActiveShifts}
       />
       
       {/* End Shift Dialog */}
