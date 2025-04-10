@@ -221,7 +221,8 @@ export function NewEndShiftDialog({
           name: item.consumables?.name || 'Unknown',
           unit: item.consumables?.unit || 'Units',
           price_per_unit: item.consumables?.price_per_unit || 0,
-          quantity: item.quantity_allocated || 0
+          quantity: item.quantity_allocated || 0,
+          available: item.quantity_allocated || 0 // Add the available property
         }));
         
         // Initialize returned consumables with the same items but use returned quantity if available
@@ -230,7 +231,8 @@ export function NewEndShiftDialog({
           name: item.consumables?.name || 'Unknown',
           unit: item.consumables?.unit || 'Units',
           price_per_unit: item.consumables?.price_per_unit || 0,
-          quantity: item.quantity_returned || 0
+          quantity: item.quantity_returned || 0,
+          available: item.quantity_allocated || 0 // Add the available property
         }));
         
         setAllocatedConsumables(allocated);
@@ -391,7 +393,7 @@ export function NewEndShiftDialog({
               .from('shift_consumables')
               .update({
                 quantity_returned: item.quantity,
-                status: 'completed'
+                status: 'returned' // Change from 'completed' to 'returned'
               })
               .eq('shift_id', shiftData.id)
               .eq('consumable_id', item.id);
