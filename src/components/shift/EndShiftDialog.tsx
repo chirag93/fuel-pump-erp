@@ -53,10 +53,13 @@ interface ReadingData {
   upi_sales?: number | null;
   cash_sales?: number | null;
   testing_fuel?: number | null;
-  expenses?: number;
+  expenses?: number | null;
   date?: string;
   created_at?: string;
   indent_sales?: number | null; // Ensure indent_sales is included in reading data
+  fuel_type?: string;
+  consumable_expenses?: number;
+  fuel_pump_id?: string;
 }
 
 const EndShiftDialog = ({ 
