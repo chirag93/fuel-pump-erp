@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,14 +85,12 @@ const EndShiftDialog = ({
     expenses: 0
   });
   
-  // New state for calculated total
   const [totalSales, setTotalSales] = useState(0);
   const [cashReconciliation, setCashReconciliation] = useState({
     expected: 0,
     difference: 0
   });
   
-  // New shift data for when starting a new shift after ending current one
   const [newShiftData, setNewShiftData] = useState({
     staff_id: '',
     pump_id: pumpId,
@@ -102,10 +99,8 @@ const EndShiftDialog = ({
     date: new Date().toISOString().split('T')[0]
   });
   
-  // Staff list for the new shift
   const [staffList, setStaffList] = useState<Array<{id: string, name: string}>>([]);
 
-  // Reset form when dialog opens
   useEffect(() => {
     if (open) {
       // Reset form to default values when dialog opens
@@ -136,7 +131,6 @@ const EndShiftDialog = ({
     }
   }, [open, isEditingCompletedShift, pumpId, staffId]);
 
-  // Fetch indent sales for the staff
   const fetchStaffIndentSales = async (staffId: string) => {
     try {
       console.log("Fetching indent sales for staff:", staffId);
@@ -191,7 +185,6 @@ const EndShiftDialog = ({
     }
   };
 
-  // Check if we're editing a completed shift when the dialog opens
   useEffect(() => {
     if (open && shiftId) {
       const checkShiftStatus = async () => {
@@ -251,7 +244,6 @@ const EndShiftDialog = ({
     }
   }, [open, shiftId]);
 
-  // Fetch fuel price for calculations
   useEffect(() => {
     const fetchFuelPrice = async () => {
       try {
@@ -273,7 +265,6 @@ const EndShiftDialog = ({
     fetchFuelPrice();
   }, []);
   
-  // Fetch staff list for new shift assignment
   useEffect(() => {
     const fetchStaff = async () => {
       try {
@@ -297,7 +288,6 @@ const EndShiftDialog = ({
     }
   }, [open, mode, isEditingCompletedShift]);
 
-  // Calculate total sales whenever sales input changes
   useEffect(() => {
     const cardSales = Number(formData.card_sales) || 0;
     const upiSales = Number(formData.upi_sales) || 0;
@@ -306,7 +296,6 @@ const EndShiftDialog = ({
     setTotalSales(cardSales + upiSales + cashSales + indentSales);
   }, [formData.card_sales, formData.upi_sales, formData.cash_sales, formData.indent_sales]);
   
-  // Calculate cash reconciliation
   useEffect(() => {
     if (formData.closing_reading > 0 && openingReading > 0 && fuelPrice > 0) {
       const fuelSold = formData.closing_reading - openingReading;
@@ -369,43 +358,45 @@ const EndShiftDialog = ({
     
     try {
       if (isEditingCompletedShift) {
-        // Prepare update data, including indent_sales
-        const updateData: Partial<ShiftFormData> = {
+        // Get existing readings to check schema
+        const { data: existingReadings, error: readingsCheckError } = await supabase
+          .from('readings')
+          .select('*')
+          .eq('shift_id', shiftId)
+          .limit(1);
+          
+        if (readingsCheckError) {
+          throw readingsCheckError;
+        }
+        
+        // Check if indent_sales column exists in the readings table
+        const hasIndentSalesColumn = existingReadings && 
+          existingReadings.length > 0 && 
+          'indent_sales' in existingReadings[0];
+        
+        // Prepare update data for readings
+        const baseUpdateData: Record<string, any> = {
           closing_reading: formData.closing_reading,
           cash_remaining: formData.cash_remaining,
           card_sales: formData.card_sales,
           upi_sales: formData.upi_sales,
           cash_sales: formData.cash_sales,
-          indent_sales: formData.indent_sales
+          expenses: formData.expenses
         };
         
-        // Try to update with expenses field, but catch and retry without it if it fails
-        try {
-          const { error: readingsError } = await supabase
-            .from('readings')
-            .update({
-              ...updateData,
-              expenses: formData.expenses
-            })
-            .eq('shift_id', shiftId);
-            
-          if (readingsError) {
-            // If there's an error with the expenses field, try without it
-            if (readingsError.message && readingsError.message.includes('expenses')) {
-              console.warn('Expenses field not found in database schema, continuing without it');
-              const { error: fallbackError } = await supabase
-                .from('readings')
-                .update(updateData)
-                .eq('shift_id', shiftId);
-                
-              if (fallbackError) throw fallbackError;
-            } else {
-              throw readingsError;
-            }
-          }
-        } catch (err) {
-          console.error('Error updating readings:', err);
-          throw err;
+        // Only add indent_sales if the column exists
+        if (hasIndentSalesColumn) {
+          baseUpdateData.indent_sales = formData.indent_sales;
+        }
+        
+        // Update readings
+        const { error: updateError } = await supabase
+          .from('readings')
+          .update(baseUpdateData)
+          .eq('shift_id', shiftId);
+          
+        if (updateError) {
+          throw updateError;
         }
         
         toast({
@@ -558,12 +549,10 @@ const EndShiftDialog = ({
     }
   };
   
-  // Calculate fuel quantity sold
   const fuelLiters = formData.closing_reading - openingReading > 0 
     ? formData.closing_reading - openingReading 
     : 0;
   
-  // Calculate expected sales amount
   const expectedSalesAmount = fuelLiters * fuelPrice;
   
   return (
