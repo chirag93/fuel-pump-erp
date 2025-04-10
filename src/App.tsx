@@ -1,3 +1,4 @@
+
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
@@ -47,7 +48,7 @@ import Login from '@/pages/Login';
 import Index from '@/pages/Index';
 
 // Super Admin Pages
-import SuperAdminDashboard from '@/pages/SuperAdminDashboard';
+import SuperAdminDashboard from '@/superadmin/pages/SuperAdminDashboard';
 import SuperAdminLogin from '@/pages/SuperAdminLogin';
 import SuperAdminSettings from '@/pages/SuperAdminSettings';
 import SuperAdminAnalytics from '@/pages/SuperAdminAnalytics';

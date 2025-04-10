@@ -19,10 +19,10 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // If user is already authenticated, redirect to dashboard
+  // If user is already authenticated, redirect to home
   useEffect(() => {
     if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/dashboard';
+      const from = location.state?.from?.pathname || '/home';
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, location]);
@@ -65,7 +65,7 @@ const Login = () => {
           role: userRole
         }, rememberMe);
         
-        const from = location.state?.from?.pathname || '/dashboard';
+        const from = location.state?.from?.pathname || '/home';
         navigate(from, { replace: true });
         
         toast({
@@ -76,7 +76,7 @@ const Login = () => {
     } catch (error) {
       console.error('Error completing password change flow:', error);
       setPasswordChangeRequired(false);
-      setError('An error occurred after password change. Please try logging in again.');
+      setError('An error occurred after password change. Please try again.');
     }
   };
 

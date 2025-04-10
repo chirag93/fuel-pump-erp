@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Card, 
@@ -18,7 +17,7 @@ import {
   LineChart,
   ResponsiveContainer
 } from 'recharts';
-import { ArrowUpCircle, DollarSign, Users, Droplets, TrendingUp, Fuel, Calendar, Loader2 } from 'lucide-react';
+import { ArrowUpCircle, DollarSign, Users, Droplets, TrendingUp, Fuel, Calendar, Loader2, CreditCard } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -38,7 +37,8 @@ const QUERY_KEYS = {
   fuelVolume: (startDate: Date, endDate: Date) => ['fuelVolume', startDate.toISOString(), endDate.toISOString()],
   recentTransactions: 'recentTransactions',
   fuelLevels: 'fuelLevels',
-  metrics: (startDate: Date, endDate: Date) => ['metrics', startDate.toISOString(), endDate.toISOString()]
+  metrics: (startDate: Date, endDate: Date) => ['metrics', startDate.toISOString(), endDate.toISOString()],
+  totalCredits: 'totalCredits'
 };
 
 const Dashboard = () => {
@@ -70,6 +70,36 @@ const Dashboard = () => {
     dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
     [dateRange.to]
   );
+
+  // Query for total credits
+  const { data: totalCredits = '₹0', isLoading: isLoadingCredits } = useQuery({
+    queryKey: [QUERY_KEYS.totalCredits, fuelPumpId],
+    queryFn: async () => {
+      if (!fuelPumpId) return '₹0';
+      
+      const { data, error } = await supabase
+        .from('customers')
+        .select('balance')
+        .eq('fuel_pump_id', fuelPumpId);
+        
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        return '₹0';
+      }
+      
+      // Sum all customer balances (debts are negative balances)
+      const totalCredit = data.reduce((sum, customer) => {
+        const balance = Number(customer.balance);
+        return sum + (balance < 0 ? Math.abs(balance) : 0);
+      }, 0);
+      
+      return `₹${totalCredit.toLocaleString()}`;
+    },
+    enabled: !!fuelPumpId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false
+  });
 
   // Query for sales data with proper caching
   const { data: salesData = [], isLoading: isLoadingSales } = useQuery({
@@ -316,7 +346,7 @@ const Dashboard = () => {
 
   // Calculate loading state
   const isLoading = isLoadingSales || isLoadingFuel || isLoadingTransactions || 
-                   isLoadingFuelLevels || isLoadingMetrics;
+                   isLoadingFuelLevels || isLoadingMetrics || isLoadingCredits;
 
   const handleDateRangeSelect = (range: DateRange) => {
     setDateRange(range);
@@ -400,7 +430,7 @@ const Dashboard = () => {
         ) : (
           <>
             <TabsContent value="overview" className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
@@ -431,6 +461,17 @@ const Dashboard = () => {
                   <CardContent>
                     <div className="text-2xl font-bold">{metrics.fuelVolume}</div>
                     <p className="text-xs text-muted-foreground">Total volume sold in period</p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Credits</CardTitle>
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{totalCredits}</div>
+                    <p className="text-xs text-muted-foreground">Outstanding customer balances</p>
                   </CardContent>
                 </Card>
                 

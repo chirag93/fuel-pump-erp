@@ -15,6 +15,7 @@ import MobileShiftManagement from './pages/mobile/MobileShiftManagement';
 import MobileCustomers from './pages/mobile/MobileCustomers';
 import MobileCustomerDetails from './pages/mobile/MobileCustomerDetails';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import Home from './pages/Home';
 
 // Define routes
 const routes = [
@@ -25,6 +26,16 @@ const routes = [
   {
     path: "/login",
     element: <Login />,
+  },
+  {
+    path: "/home",
+    element: (
+      <AuthRequired>
+        <Layout>
+          <Home />
+        </Layout>
+      </AuthRequired>
+    ),
   },
   {
     path: "/dashboard",
