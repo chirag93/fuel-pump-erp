@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
@@ -71,7 +72,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
       console.log("Fetching indent sales for staff:", shiftData.staff_id);
       
       // Get the shift start time to find indents during this shift
-      const { data: shiftData, error: shiftError } = await supabase
+      const { data: shiftDetails, error: shiftError } = await supabase
         .from('shifts')
         .select('start_time, end_time')
         .eq('id', shiftData.id)
@@ -79,20 +80,20 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
       
       if (shiftError) throw shiftError;
       
-      if (!shiftData?.start_time) {
+      if (!shiftDetails?.start_time) {
         console.log("No start time available for shift");
         return;
       }
       
       // Use end_time if available, otherwise use current time
-      const endTime = shiftData.end_time || new Date().toISOString();
+      const endTime = shiftDetails.end_time || new Date().toISOString();
       
       // Query transactions made by this staff during the shift
       const { data: indentData, error: indentError } = await supabase
         .from('transactions')
         .select('amount')
         .eq('staff_id', shiftData.staff_id)
-        .gte('created_at', shiftData.start_time)
+        .gte('created_at', shiftDetails.start_time)
         .lte('created_at', endTime);
       
       if (indentError) throw indentError;
@@ -100,7 +101,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
       if (indentData && indentData.length > 0) {
         // Sum up all the indent amounts
         const totalIndentSales = indentData.reduce((sum, transaction) => {
-          return sum + (parseFloat(transaction.amount) || 0);
+          return sum + (parseFloat(transaction.amount.toString()) || 0);
         }, 0);
         
         console.log(`Found ${indentData.length} indent transactions totaling ₹${totalIndentSales}`);

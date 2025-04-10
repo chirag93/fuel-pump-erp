@@ -111,7 +111,7 @@ const EndShiftDialog = ({
       console.log("Fetching indent sales for staff:", staffId);
       
       // Get the shift start time to find indents during this shift
-      const { data: shiftData, error: shiftError } = await supabase
+      const { data: shiftDetail, error: shiftError } = await supabase
         .from('shifts')
         .select('start_time, end_time')
         .eq('id', shiftId)
@@ -119,20 +119,20 @@ const EndShiftDialog = ({
       
       if (shiftError) throw shiftError;
       
-      if (!shiftData?.start_time) {
+      if (!shiftDetail?.start_time) {
         console.log("No start time available for shift");
         return;
       }
       
       // Use end_time if available, otherwise use current time
-      const endTime = shiftData.end_time || new Date().toISOString();
+      const endTime = shiftDetail.end_time || new Date().toISOString();
       
       // Query transactions made by this staff during the shift
       const { data: indentData, error: indentError } = await supabase
         .from('transactions')
         .select('amount')
         .eq('staff_id', staffId)
-        .gte('created_at', shiftData.start_time)
+        .gte('created_at', shiftDetail.start_time)
         .lte('created_at', endTime);
       
       if (indentError) throw indentError;
@@ -140,7 +140,7 @@ const EndShiftDialog = ({
       if (indentData && indentData.length > 0) {
         // Sum up all the indent amounts
         const totalIndentSales = indentData.reduce((sum, transaction) => {
-          return sum + (parseFloat(transaction.amount) || 0);
+          return sum + (parseFloat(transaction.amount.toString()) || 0);
         }, 0);
         
         console.log(`Found ${indentData.length} indent transactions totaling ₹${totalIndentSales}`);
