@@ -75,12 +75,13 @@ export function NewEndShiftDialog({
               </div>
             )}
             
-            {/* Sales Section with fuel rates */}
+            {/* Sales Section with fuel rates and indent sales */}
             <EndShiftSales
               salesData={{
                 card_sales: formData.card_sales,
                 upi_sales: formData.upi_sales,
                 cash_sales: formData.cash_sales,
+                indent_sales: formData.indent_sales,
                 testing_fuel: formData.testing_fuel
               }}
               onSalesChange={handleSalesChange}

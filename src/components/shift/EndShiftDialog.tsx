@@ -43,6 +43,7 @@ const EndShiftDialog = ({
   const [error, setError] = useState<string | null>(null);
   const [fuelPrice, setFuelPrice] = useState<number>(0);
   const [isEditingCompletedShift, setIsEditingCompletedShift] = useState(false);
+  const [indentSales, setIndentSales] = useState<number>(0);
   
   const [formData, setFormData] = useState({
     closing_reading: 0,
@@ -50,7 +51,8 @@ const EndShiftDialog = ({
     card_sales: 0,
     upi_sales: 0,
     cash_sales: 0,
-    expenses: 0 // Add expenses field
+    indent_sales: 0, // Add indent sales field
+    expenses: 0
   });
   
   // New state for calculated total
@@ -83,6 +85,7 @@ const EndShiftDialog = ({
           card_sales: 0,
           upi_sales: 0,
           cash_sales: 0,
+          indent_sales: 0,
           expenses: 0
         });
         
@@ -93,11 +96,69 @@ const EndShiftDialog = ({
           cash_given: 0,
           date: new Date().toISOString().split('T')[0]
         });
+        
+        // Fetch indent sales for staff if not editing a completed shift
+        fetchStaffIndentSales(staffId);
       }
       
       setError(null);
     }
-  }, [open, isEditingCompletedShift, pumpId]);
+  }, [open, isEditingCompletedShift, pumpId, staffId]);
+
+  // Fetch indent sales for the staff
+  const fetchStaffIndentSales = async (staffId: string) => {
+    try {
+      console.log("Fetching indent sales for staff:", staffId);
+      
+      // Get the shift start time to find indents during this shift
+      const { data: shiftData, error: shiftError } = await supabase
+        .from('shifts')
+        .select('start_time, end_time')
+        .eq('id', shiftId)
+        .single();
+      
+      if (shiftError) throw shiftError;
+      
+      if (!shiftData?.start_time) {
+        console.log("No start time available for shift");
+        return;
+      }
+      
+      // Use end_time if available, otherwise use current time
+      const endTime = shiftData.end_time || new Date().toISOString();
+      
+      // Query transactions made by this staff during the shift
+      const { data: indentData, error: indentError } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('staff_id', staffId)
+        .gte('created_at', shiftData.start_time)
+        .lte('created_at', endTime);
+      
+      if (indentError) throw indentError;
+      
+      if (indentData && indentData.length > 0) {
+        // Sum up all the indent amounts
+        const totalIndentSales = indentData.reduce((sum, transaction) => {
+          return sum + (parseFloat(transaction.amount) || 0);
+        }, 0);
+        
+        console.log(`Found ${indentData.length} indent transactions totaling ₹${totalIndentSales}`);
+        
+        // Update form data with the indent sales amount
+        setIndentSales(totalIndentSales);
+        setFormData(prev => ({
+          ...prev,
+          indent_sales: totalIndentSales
+        }));
+      } else {
+        console.log("No indent transactions found for this staff during the shift");
+        setIndentSales(0);
+      }
+    } catch (error) {
+      console.error('Error fetching staff indent sales:', error);
+    }
+  };
 
   // Check if we're editing a completed shift when the dialog opens
   useEffect(() => {
@@ -128,6 +189,7 @@ const EndShiftDialog = ({
             if (readingData) {
               // Handle the case where the expenses field might not exist in older records
               const expensesValue = readingData.expenses !== undefined ? readingData.expenses : 0;
+              const indentSalesValue = readingData.indent_sales !== undefined ? readingData.indent_sales : 0;
               
               setFormData({
                 closing_reading: readingData.closing_reading || 0,
@@ -135,7 +197,8 @@ const EndShiftDialog = ({
                 card_sales: readingData.card_sales || 0,
                 upi_sales: readingData.upi_sales || 0,
                 cash_sales: readingData.cash_sales || 0,
-                expenses: expensesValue // Use 0 as default if not present
+                indent_sales: indentSalesValue,
+                expenses: expensesValue
               });
             }
           } else {
@@ -208,8 +271,9 @@ const EndShiftDialog = ({
     const cardSales = Number(formData.card_sales) || 0;
     const upiSales = Number(formData.upi_sales) || 0;
     const cashSales = Number(formData.cash_sales) || 0;
-    setTotalSales(cardSales + upiSales + cashSales);
-  }, [formData.card_sales, formData.upi_sales, formData.cash_sales]);
+    const indentSales = Number(formData.indent_sales) || 0;
+    setTotalSales(cardSales + upiSales + cashSales + indentSales);
+  }, [formData.card_sales, formData.upi_sales, formData.cash_sales, formData.indent_sales]);
   
   // Calculate cash reconciliation
   useEffect(() => {
@@ -274,13 +338,14 @@ const EndShiftDialog = ({
     
     try {
       if (isEditingCompletedShift) {
-        // Prepare update data, excluding expenses if it's not supported by the database schema
+        // Prepare update data, including indent_sales
         const updateData = {
           closing_reading: formData.closing_reading,
           cash_remaining: formData.cash_remaining,
           card_sales: formData.card_sales,
           upi_sales: formData.upi_sales,
-          cash_sales: formData.cash_sales
+          cash_sales: formData.cash_sales,
+          indent_sales: formData.indent_sales
         };
         
         // Try to update with expenses field, but catch and retry without it if it fails
@@ -334,13 +399,14 @@ const EndShiftDialog = ({
           throw shiftError;
         }
         
-        // Prepare update data for readings
+        // Prepare update data for readings including indent_sales
         const updateData = {
           closing_reading: formData.closing_reading,
           cash_remaining: formData.cash_remaining,
           card_sales: formData.card_sales,
           upi_sales: formData.upi_sales,
-          cash_sales: formData.cash_sales
+          cash_sales: formData.cash_sales,
+          indent_sales: formData.indent_sales
         };
         
         // Try to update with expenses field, but catch and retry without it if it fails
@@ -548,6 +614,21 @@ const EndShiftDialog = ({
             </div>
           </div>
           
+          {/* Add Indent Sales field */}
+          <div className="grid gap-1">
+            <Label htmlFor="indent_sales">Indent Sales</Label>
+            <Input
+              id="indent_sales"
+              name="indent_sales"
+              type="number"
+              value={formData.indent_sales === 0 ? '' : formData.indent_sales}
+              onChange={handleInputChange}
+            />
+            <p className="text-xs text-muted-foreground">
+              Pre-filled with your recorded indent transactions during this shift
+            </p>
+          </div>
+          
           {/* Total Sales Summary Card */}
           <Card className="mt-4 bg-muted/50">
             <CardContent className="pt-4">
@@ -567,6 +648,10 @@ const EndShiftDialog = ({
                 <div className="flex justify-between">
                   <span>Cash:</span>
                   <span>₹{formData.cash_sales.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Indent:</span>
+                  <span>₹{formData.indent_sales.toLocaleString()}</span>
                 </div>
                 {!isEditingCompletedShift && (
                   <>

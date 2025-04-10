@@ -10,6 +10,7 @@ export interface SalesFormData {
   upi_sales: number;
   cash_sales: number;
   testing_fuel: number;
+  indent_sales: number; // Added indent sales field
 }
 
 interface EndShiftSalesProps {
@@ -70,6 +71,20 @@ export function EndShiftSales({
             onChange={(e) => handleInputChange('cash_sales', e.target.value)}
           />
         </div>
+      </div>
+      
+      {/* Add Indent Sales field */}
+      <div>
+        <Label htmlFor="indent_sales">Indent Sales (INR)</Label>
+        <Input
+          id="indent_sales"
+          type="number"
+          value={salesData.indent_sales || ''}
+          onChange={(e) => handleInputChange('indent_sales', e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Pre-filled with your recorded indent transactions during this shift
+        </p>
       </div>
       
       <div>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +15,7 @@ export interface EndShiftFormData {
   card_sales: number;
   upi_sales: number;
   cash_sales: number;
+  indent_sales: number; // Added indent sales field
   testing_fuel: number;
 }
 
@@ -29,6 +29,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
     card_sales: 0,
     upi_sales: 0,
     cash_sales: 0,
+    indent_sales: 0, // Initialize indent sales
     testing_fuel: 0,
     expenses: 0,
     consumable_expenses: 0
@@ -40,7 +41,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
   const [consumablesExpense, setConsumablesExpense] = useState<number>(0);
 
   // Derived calculations
-  const totalSales = formData.card_sales + formData.upi_sales + formData.cash_sales;
+  const totalSales = formData.card_sales + formData.upi_sales + formData.cash_sales + formData.indent_sales; // Include indent sales in total
   const totalLiters = formData.readings.reduce((sum, reading) => {
     return sum + Math.max(0, reading.closing_reading - reading.opening_reading);
   }, 0);
@@ -60,8 +61,62 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
       console.log("Shift data loaded:", shiftData.id);
       fetchShiftReadings();
       fetchShiftConsumables();
+      fetchStaffIndentSales(); // Fetch indent sales for the staff
     }
   }, [shiftData]);
+
+  // Fetch staff indent sales during the shift
+  const fetchStaffIndentSales = async () => {
+    try {
+      console.log("Fetching indent sales for staff:", shiftData.staff_id);
+      
+      // Get the shift start time to find indents during this shift
+      const { data: shiftData, error: shiftError } = await supabase
+        .from('shifts')
+        .select('start_time, end_time')
+        .eq('id', shiftData.id)
+        .single();
+      
+      if (shiftError) throw shiftError;
+      
+      if (!shiftData?.start_time) {
+        console.log("No start time available for shift");
+        return;
+      }
+      
+      // Use end_time if available, otherwise use current time
+      const endTime = shiftData.end_time || new Date().toISOString();
+      
+      // Query transactions made by this staff during the shift
+      const { data: indentData, error: indentError } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('staff_id', shiftData.staff_id)
+        .gte('created_at', shiftData.start_time)
+        .lte('created_at', endTime);
+      
+      if (indentError) throw indentError;
+      
+      if (indentData && indentData.length > 0) {
+        // Sum up all the indent amounts
+        const totalIndentSales = indentData.reduce((sum, transaction) => {
+          return sum + (parseFloat(transaction.amount) || 0);
+        }, 0);
+        
+        console.log(`Found ${indentData.length} indent transactions totaling ₹${totalIndentSales}`);
+        
+        // Update form data with the indent sales amount
+        setFormData(prev => ({
+          ...prev,
+          indent_sales: totalIndentSales
+        }));
+      } else {
+        console.log("No indent transactions found for this staff during the shift");
+      }
+    } catch (error) {
+      console.error('Error fetching staff indent sales:', error);
+    }
+  };
 
   // Fetch fuel rates from database
   useEffect(() => {
@@ -342,7 +397,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
         if (checkError) throw checkError;
         
         if (existingReadings && existingReadings.length > 0) {
-          // Update existing reading
+          // Update existing reading with all sales data including indent_sales
           const { error: readingError } = await supabase
             .from('readings')
             .update({
@@ -351,6 +406,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
               card_sales: formData.card_sales,
               upi_sales: formData.upi_sales,
               cash_sales: formData.cash_sales,
+              indent_sales: formData.indent_sales,
               testing_fuel: formData.testing_fuel,
               expenses: formData.expenses,
               consumable_expenses: formData.consumable_expenses
@@ -360,7 +416,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
             
           if (readingError) throw readingError;
         } else {
-          // Create new reading if it doesn't exist
+          // Create new reading if it doesn't exist - include indent_sales
           const { error: createError } = await supabase
             .from('readings')
             .insert({
@@ -375,6 +431,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
               card_sales: formData.card_sales,
               upi_sales: formData.upi_sales,
               cash_sales: formData.cash_sales,
+              indent_sales: formData.indent_sales,
               testing_fuel: formData.testing_fuel,
               expenses: formData.expenses,
               consumable_expenses: formData.consumable_expenses
