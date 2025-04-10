@@ -686,6 +686,7 @@ export type Database = {
           fuel_pump_id: string | null
           fuel_type: string | null
           id: string
+          indent_sales: number | null
           opening_reading: number
           pump_id: string
           shift_id: string
@@ -706,6 +707,7 @@ export type Database = {
           fuel_pump_id?: string | null
           fuel_type?: string | null
           id?: string
+          indent_sales?: number | null
           opening_reading: number
           pump_id: string
           shift_id: string
@@ -726,6 +728,7 @@ export type Database = {
           fuel_pump_id?: string | null
           fuel_type?: string | null
           id?: string
+          indent_sales?: number | null
           opening_reading?: number
           pump_id?: string
           shift_id?: string
