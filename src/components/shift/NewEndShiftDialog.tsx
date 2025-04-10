@@ -9,6 +9,7 @@ import { EndShiftCashExpenses } from './EndShiftCashExpenses';
 import { EndShiftConsumables } from './EndShiftConsumables';
 import { useEndShiftDialog } from '@/hooks/useEndShiftDialog';
 import { ShiftDetailsSection } from './ShiftDetailsSection';
+import { ExpensesSection } from './ExpensesSection';
 
 interface NewEndShiftDialogProps {
   isOpen: boolean;
