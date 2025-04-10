@@ -226,6 +226,14 @@ const Customers = () => {
   // Combined loading state
   const isLoading = isLoadingCustomers || isLoadingBooklets;
   
+  // Calculate total credit (positive balances)
+  const totalCredit = customers.reduce((sum, customer) => 
+    sum + (customer.balance > 0 ? customer.balance : 0), 0);
+  
+  // Calculate total owed to us (negative balances)
+  const totalOwed = Math.abs(customers.reduce((sum, customer) => 
+    sum + (customer.balance < 0 ? customer.balance : 0), 0));
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -353,7 +361,7 @@ const Customers = () => {
         </div>
       ) : (
         <>
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-2xl">Total Customers</CardTitle>
@@ -372,9 +380,22 @@ const Customers = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-4xl font-bold">
-                  ₹{customers.reduce((sum, customer) => sum + (customer.balance > 0 ? customer.balance : 0), 0).toLocaleString()}
+                  ₹{totalCredit.toLocaleString()}
                 </div>
                 <p className="text-sm text-muted-foreground">in active credit</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl">Total Owed</CardTitle>
+                <CardDescription>Total money owed to you</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold text-red-600">
+                  ₹{totalOwed.toLocaleString()}
+                </div>
+                <p className="text-sm text-muted-foreground">in outstanding debt</p>
               </CardContent>
             </Card>
             
@@ -385,7 +406,7 @@ const Customers = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-4xl font-bold">
-                  {customers.filter(c => c.balance > 0).length}
+                  {customers.filter(c => c.balance !== 0).length}
                 </div>
                 <p className="text-sm text-muted-foreground">with outstanding balance</p>
               </CardContent>
