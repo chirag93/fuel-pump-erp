@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Card, 
@@ -71,7 +72,7 @@ const Dashboard = () => {
     [dateRange.to]
   );
 
-  // Query for total credits
+  // Query for total credits - UPDATED to match customers page calculation
   const { data: totalCredits = '₹0', isLoading: isLoadingCredits } = useQuery({
     queryKey: [QUERY_KEYS.totalCredits, fuelPumpId],
     queryFn: async () => {
@@ -88,10 +89,11 @@ const Dashboard = () => {
         return '₹0';
       }
       
-      // Sum all customer balances (debts are negative balances)
+      // Sum all customer balances that are negative (credits issued to customers)
+      // Using the same logic as the customers page - positive balance means debt/credit issued
       const totalCredit = data.reduce((sum, customer) => {
         const balance = Number(customer.balance);
-        return sum + (balance < 0 ? Math.abs(balance) : 0);
+        return sum + (balance > 0 ? balance : 0);
       }, 0);
       
       return `₹${totalCredit.toLocaleString()}`;
@@ -471,7 +473,7 @@ const Dashboard = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{totalCredits}</div>
-                    <p className="text-xs text-muted-foreground">Outstanding customer balances</p>
+                    <p className="text-xs text-muted-foreground">Credits issued to customers</p>
                   </CardContent>
                 </Card>
                 
