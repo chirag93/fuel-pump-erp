@@ -40,6 +40,26 @@ interface ShiftFormData {
   expenses: number;
 }
 
+// Interface for the reading data returned from database
+interface ReadingData {
+  id?: string;
+  shift_id?: string;
+  staff_id?: string;
+  pump_id?: string;
+  opening_reading?: number;
+  closing_reading?: number | null;
+  cash_given?: number;
+  cash_remaining?: number | null;
+  card_sales?: number | null;
+  upi_sales?: number | null;
+  cash_sales?: number | null;
+  testing_fuel?: number | null;
+  expenses?: number;
+  date?: string;
+  created_at?: string;
+  indent_sales?: number | null; // Add indent_sales to reading data interface
+}
+
 const EndShiftDialog = ({ 
   open, 
   onOpenChange, 
@@ -410,43 +430,45 @@ const EndShiftDialog = ({
           throw shiftError;
         }
         
-        // Prepare update data for readings including indent_sales
-        const updateData: Partial<ShiftFormData> = {
+        // Get existing readings to check schema
+        const { data: existingReadings, error: readingsCheckError } = await supabase
+          .from('readings')
+          .select('*')
+          .eq('shift_id', shiftId)
+          .limit(1);
+          
+        if (readingsCheckError) {
+          throw readingsCheckError;
+        }
+        
+        // Check if indent_sales column exists in the readings table
+        const hasIndentSalesColumn = existingReadings && 
+          existingReadings.length > 0 && 
+          'indent_sales' in existingReadings[0];
+        
+        // Prepare update data for readings
+        const baseUpdateData: Record<string, any> = {
           closing_reading: formData.closing_reading,
           cash_remaining: formData.cash_remaining,
           card_sales: formData.card_sales,
           upi_sales: formData.upi_sales,
           cash_sales: formData.cash_sales,
-          indent_sales: formData.indent_sales
+          expenses: formData.expenses
         };
         
-        // Try to update with expenses field, but catch and retry without it if it fails
-        try {
-          const { error: readingsError } = await supabase
-            .from('readings')
-            .update({
-              ...updateData,
-              expenses: formData.expenses
-            })
-            .eq('shift_id', shiftId);
-            
-          if (readingsError) {
-            // If there's an error with the expenses field, try without it
-            if (readingsError.message && readingsError.message.includes('expenses')) {
-              console.warn('Expenses field not found in database schema, continuing without it');
-              const { error: fallbackError } = await supabase
-                .from('readings')
-                .update(updateData)
-                .eq('shift_id', shiftId);
-                
-              if (fallbackError) throw fallbackError;
-            } else {
-              throw readingsError;
-            }
-          }
-        } catch (err) {
-          console.error('Error updating readings:', err);
-          throw err;
+        // Only add indent_sales if the column exists
+        if (hasIndentSalesColumn) {
+          baseUpdateData.indent_sales = formData.indent_sales;
+        }
+        
+        // Update readings
+        const { error: updateError } = await supabase
+          .from('readings')
+          .update(baseUpdateData)
+          .eq('shift_id', shiftId);
+          
+        if (updateError) {
+          throw updateError;
         }
         
         // If we're also starting a new shift
