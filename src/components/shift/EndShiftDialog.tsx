@@ -29,6 +29,17 @@ interface EndShiftDialogProps {
   onComplete: () => void;
 }
 
+// Define an interface for the form data to ensure type safety
+interface ShiftFormData {
+  closing_reading: number;
+  cash_remaining: number;
+  card_sales: number;
+  upi_sales: number;
+  cash_sales: number;
+  indent_sales: number; // Add indent sales to form data interface
+  expenses: number;
+}
+
 const EndShiftDialog = ({ 
   open, 
   onOpenChange, 
@@ -45,7 +56,7 @@ const EndShiftDialog = ({
   const [isEditingCompletedShift, setIsEditingCompletedShift] = useState(false);
   const [indentSales, setIndentSales] = useState<number>(0);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ShiftFormData>({
     closing_reading: 0,
     cash_remaining: 0,
     card_sales: 0,
@@ -339,7 +350,7 @@ const EndShiftDialog = ({
     try {
       if (isEditingCompletedShift) {
         // Prepare update data, including indent_sales
-        const updateData = {
+        const updateData: Partial<ShiftFormData> = {
           closing_reading: formData.closing_reading,
           cash_remaining: formData.cash_remaining,
           card_sales: formData.card_sales,
@@ -400,7 +411,7 @@ const EndShiftDialog = ({
         }
         
         // Prepare update data for readings including indent_sales
-        const updateData = {
+        const updateData: Partial<ShiftFormData> = {
           closing_reading: formData.closing_reading,
           cash_remaining: formData.cash_remaining,
           card_sales: formData.card_sales,
