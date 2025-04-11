@@ -19,6 +19,7 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
   const [fuelType, setFuelType] = useState("Petrol");
   const [quantity, setQuantity] = useState("");
   const [amount, setAmount] = useState("");
+  const [tankerRent, setTankerRent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,6 +39,7 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
     try {
       const numericQuantity = parseFloat(quantity);
       const numericAmount = parseFloat(amount);
+      const numericTankerRent = tankerRent ? parseFloat(tankerRent) : 0;
       
       // Get current fuel pump ID
       const fuelPumpId = await getFuelPumpId();
@@ -56,6 +58,7 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
           fuel_type: fuelType,
           quantity: numericQuantity,
           amount: numericAmount,
+          tanker_rent: numericTankerRent,
           date: new Date().toISOString(),
           fuel_pump_id: fuelPumpId
         });
@@ -77,6 +80,7 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
       setFuelType("Petrol");
       setQuantity("");
       setAmount("");
+      setTankerRent("");
       
       // Notify parent component to refresh the list
       onSuccess();
@@ -234,7 +238,7 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
             </Select>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="quantity">Quantity (in Liters)</Label>
               <Input
@@ -255,6 +259,18 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
                 placeholder="e.g., 450000"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                className="bg-background"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="tankerRent">Tanker Rent (in ₹)</Label>
+              <Input
+                id="tankerRent"
+                type="number"
+                placeholder="e.g., 5000"
+                value={tankerRent}
+                onChange={(e) => setTankerRent(e.target.value)}
                 className="bg-background"
               />
             </div>

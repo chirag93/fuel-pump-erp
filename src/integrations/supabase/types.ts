@@ -977,6 +977,7 @@ export type Database = {
           fuel_type: string
           id: string
           quantity: number
+          tanker_rent: number | null
           vehicle_number: string
         }
         Insert: {
@@ -987,6 +988,7 @@ export type Database = {
           fuel_type: string
           id?: string
           quantity: number
+          tanker_rent?: number | null
           vehicle_number: string
         }
         Update: {
@@ -997,6 +999,7 @@ export type Database = {
           fuel_type?: string
           id?: string
           quantity?: number
+          tanker_rent?: number | null
           vehicle_number?: string
         }
         Relationships: [

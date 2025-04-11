@@ -12,6 +12,7 @@ export interface TankUnload {
   vehicle_number: string;
   created_at: string;
   fuel_pump_id: string;
+  tanker_rent: number;
 }
 
 export const useTankUnloads = (refreshTrigger = 0, limit = 5, showAll = false) => {

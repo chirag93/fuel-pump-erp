@@ -36,18 +36,19 @@ const RecentUnloadsTable = ({ refreshTrigger, showAll = false }: RecentUnloadsTa
                 <TableHead>Fuel</TableHead>
                 <TableHead>Quantity</TableHead>
                 <TableHead>Amount</TableHead>
+                <TableHead>Tanker Rent</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4">
+                  <TableCell colSpan={6} className="text-center py-4">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4">
+                  <TableCell colSpan={6} className="text-center py-4">
                     <div className="flex flex-col items-center justify-center">
                       <AlertTriangle className="h-5 w-5 text-amber-500 mb-2" />
                       <p className="text-muted-foreground">{error}</p>
@@ -56,13 +57,13 @@ const RecentUnloadsTable = ({ refreshTrigger, showAll = false }: RecentUnloadsTa
                 </TableRow>
               ) : !isAuthenticated ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
                     Please sign in to view unload data
                   </TableCell>
                 </TableRow>
               ) : displayedUnloads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
                     No recent unloads found
                   </TableCell>
                 </TableRow>
@@ -76,6 +77,7 @@ const RecentUnloadsTable = ({ refreshTrigger, showAll = false }: RecentUnloadsTa
                     <TableCell>{unload.fuel_type}</TableCell>
                     <TableCell>{unload.quantity.toLocaleString()} L</TableCell>
                     <TableCell>₹{unload.amount.toLocaleString()}</TableCell>
+                    <TableCell>₹{unload.tanker_rent?.toLocaleString() || '0'}</TableCell>
                   </TableRow>
                 ))
               )}
