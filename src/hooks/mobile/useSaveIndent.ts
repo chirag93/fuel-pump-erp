@@ -11,13 +11,13 @@ interface UseSaveIndentProps {
   selectedVehicle: string;
   selectedVehicleNumber: string;
   selectedBooklet: string;
-  amount: number;
-  quantity: number;
+  amount: number | '';
+  quantity: number | '';
   fuelType: string;
   discountAmount: number;
   date: Date;
   selectedStaff: string;
-  validateIndentNumber: () => Promise<boolean>;
+  validateIndentNumber: (indentNum: string, selectedBooklet: string) => Promise<boolean>;
   setSuccessDetails: React.Dispatch<React.SetStateAction<any>>;
   setSuccessDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   resetForm: () => void;
@@ -56,8 +56,12 @@ export const useSaveIndent = ({
     try {
       setIsSubmitting(true);
 
+      // Convert amount and quantity from potentially empty string to numbers
+      const numericAmount = typeof amount === 'string' ? 0 : amount;
+      const numericQuantity = typeof quantity === 'string' ? 0 : quantity;
+
       // Validate indent number format and availability
-      const isValid = await validateIndentNumber();
+      const isValid = await validateIndentNumber(indentNumber, selectedBooklet);
       if (!isValid) return;
 
       // Get fuel pump ID
@@ -79,8 +83,8 @@ export const useSaveIndent = ({
         customer_id: selectedCustomer,
         vehicle_id: selectedVehicle,
         fuel_type: fuelType,
-        amount: amount,
-        quantity: quantity,
+        amount: numericAmount,
+        quantity: numericQuantity,
         discount_amount: discountAmount,
         indent_number: indentNumber,
         booklet_id: selectedBooklet || null,
@@ -117,7 +121,7 @@ export const useSaveIndent = ({
       } else {
         // Update customer balance
         const currentBalance = customerData?.balance || 0;
-        const newBalance = currentBalance + amount;
+        const newBalance = currentBalance + numericAmount;
         
         const { error: balanceError } = await supabase
           .from('customers')
@@ -138,7 +142,7 @@ export const useSaveIndent = ({
         indentNumber,
         customerName: selectedCustomerName,
         vehicleNumber: selectedVehicleNumber,
-        amount,
+        amount: numericAmount,
         fuelType,
         date: date.toLocaleDateString()
       });

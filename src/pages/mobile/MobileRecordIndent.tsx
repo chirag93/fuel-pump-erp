@@ -69,6 +69,11 @@ const MobileRecordIndent = () => {
     searchIndentNumber
   });
 
+  // Create a wrapped validateIndentNumber function that passes the needed parameters
+  const wrappedValidateIndentNumber = async () => {
+    return await validateIndentNumber(indentNumber, selectedBooklet);
+  };
+
   const { isSubmitting, handleSaveIndent } = useSaveIndent({
     indentNumber,
     selectedCustomer,
@@ -82,7 +87,7 @@ const MobileRecordIndent = () => {
     discountAmount,
     date,
     selectedStaff,
-    validateIndentNumber,
+    validateIndentNumber: wrappedValidateIndentNumber,
     setSuccessDetails,
     setSuccessDialogOpen,
     resetForm
