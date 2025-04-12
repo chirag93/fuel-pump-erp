@@ -1,9 +1,8 @@
 
 import { useState } from 'react';
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import { getFuelPumpId } from '@/integrations/utils';
-import { SuccessDetails } from './useIndentForm';
 
 interface UseSaveIndentProps {
   indentNumber: string;
@@ -12,15 +11,15 @@ interface UseSaveIndentProps {
   selectedVehicle: string;
   selectedVehicleNumber: string;
   selectedBooklet: string;
-  amount: number | '';
-  quantity: number | '';
+  amount: number;
+  quantity: number;
   fuelType: string;
   discountAmount: number;
   date: Date;
   selectedStaff: string;
-  validateIndentNumber: (indentNum: string, selectedBooklet: string) => Promise<boolean>;
-  setSuccessDetails: (details: SuccessDetails) => void;
-  setSuccessDialogOpen: (open: boolean) => void;
+  validateIndentNumber: () => Promise<boolean>;
+  setSuccessDetails: React.Dispatch<React.SetStateAction<any>>;
+  setSuccessDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   resetForm: () => void;
 }
 
@@ -42,188 +41,121 @@ export const useSaveIndent = ({
   setSuccessDialogOpen,
   resetForm
 }: UseSaveIndentProps) => {
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const handleSaveIndent = async () => {
-    // Basic validation
-    if (!indentNumber) {
+    // Validation
+    if (!indentNumber || !selectedCustomer || !selectedVehicle || !amount || amount <= 0) {
       toast({
-        title: "Error",
-        description: "Indent number is required",
-        variant: "destructive"
+        title: "Missing information",
+        description: "Please complete all required fields"
       });
       return;
     }
-    
-    if (!selectedCustomer) {
-      toast({
-        title: "Error",
-        description: "Please select a customer",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!selectedVehicle) {
-      toast({
-        title: "Error",
-        description: "Please select a vehicle",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!amount || amount === 0) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid amount",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Additional validation for indent number
-    const isValid = await validateIndentNumber(indentNumber, selectedBooklet);
-    if (!isValid) {
-      return;
-    }
-    
-    // Proceed with saving
-    setIsSubmitting(true);
-    
+
     try {
+      setIsSubmitting(true);
+
+      // Validate indent number format and availability
+      const isValid = await validateIndentNumber();
+      if (!isValid) return;
+
+      // Get fuel pump ID
       const fuelPumpId = await getFuelPumpId();
-      
       if (!fuelPumpId) {
         toast({
-          title: "Authentication Required",
-          description: "Please log in with a fuel pump account to save indent",
-          variant: "destructive"
+          title: "Error",
+          description: "Could not determine fuel pump ID"
         });
-        setIsSubmitting(false);
         return;
       }
-      
-      // Generate a unique UUID for the indent ID
+
+      // Create indent ID
       const indentId = crypto.randomUUID();
-      
-      console.log("Creating indent with data:", {
+
+      // Create the indent record
+      const indentData = {
         id: indentId,
-        indent_number: indentNumber,
         customer_id: selectedCustomer,
         vehicle_id: selectedVehicle,
-        booklet_id: selectedBooklet,
         fuel_type: fuelType,
-        amount: Number(amount),
-        quantity: Number(quantity),
+        amount: amount,
+        quantity: quantity,
+        discount_amount: discountAmount,
+        indent_number: indentNumber,
+        booklet_id: selectedBooklet || null,
         date: date.toISOString().split('T')[0],
+        status: 'Pending',
+        approval_status: 'pending',
         source: 'mobile',
-        approval_status: 'pending'
-      });
-      
-      // Create indent record
-      const { data: indentData, error: indentError } = await supabase
+        fuel_pump_id: fuelPumpId
+      };
+
+      const { error: indentError } = await supabase
         .from('indents')
-        .insert([{
-          id: indentId,
-          customer_id: selectedCustomer,
-          vehicle_id: selectedVehicle,
-          booklet_id: selectedBooklet,
-          indent_number: indentNumber,
-          fuel_type: fuelType,
-          amount: Number(amount),
-          quantity: Number(quantity),
-          discount_amount: discountAmount,
-          date: date.toISOString().split('T')[0],
-          source: 'mobile',
-          approval_status: 'pending', // Mobile indents start as pending
-          status: 'Pending',
-          fuel_pump_id: fuelPumpId
-        }])
-        .select();
-        
+        .insert(indentData);
+
       if (indentError) {
         console.error('Error creating indent:', indentError);
-        
-        // Check if the error is a duplicate key error
-        if (indentError.message && indentError.message.includes('duplicate key')) {
-          toast({
-            title: "Error",
-            description: "This indent number has already been used",
-            variant: "destructive"
-          });
-          setIsSubmitting(false);
-          return;
-        }
-        
-        throw indentError;
+        throw new Error('Failed to create indent record');
       }
-      
-      console.log("Indent created successfully:", indentData);
-      
-      // For mobile, we do not automatically create a transaction
-      // Transactions will be created once the indent is approved on the web system
-      
-      // Update booklet used_indents count
-      try {
-        const { data: booklet } = await supabase
-          .from('indent_booklets')
-          .select('used_indents')
-          .eq('id', selectedBooklet)
-          .eq('fuel_pump_id', fuelPumpId)
-          .maybeSingle();
+
+      // Update customer balance immediately on indent creation
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('balance')
+        .eq('id', selectedCustomer)
+        .single();
+        
+      if (customerError) {
+        console.error('Error fetching customer data:', customerError);
+        // Don't throw here, we can still proceed with the rest
+        toast({
+          title: "Warning",
+          description: "Created indent but couldn't update customer balance"
+        });
+      } else {
+        // Update customer balance
+        const currentBalance = customerData?.balance || 0;
+        const newBalance = currentBalance + amount;
+        
+        const { error: balanceError } = await supabase
+          .from('customers')
+          .update({ balance: newBalance })
+          .eq('id', selectedCustomer);
           
-        if (booklet) {
-          await supabase
-            .from('indent_booklets')
-            .update({ used_indents: (booklet.used_indents || 0) + 1 })
-            .eq('id', selectedBooklet)
-            .eq('fuel_pump_id', fuelPumpId);
-            
-          console.log("Updated booklet used_indents count");
+        if (balanceError) {
+          console.error('Error updating customer balance:', balanceError);
+          toast({
+            title: "Warning",
+            description: "Indent created but customer balance could not be updated"
+          });
         }
-      } catch (bookletError) {
-        console.error('Error updating booklet usage count:', bookletError);
-        // Continue with success even if booklet update fails, but log it
       }
-      
-      // All operations succeeded, now show success dialog
+
+      // Show success message
       setSuccessDetails({
         indentNumber,
         customerName: selectedCustomerName,
         vehicleNumber: selectedVehicleNumber,
-        amount: Number(amount),
-        quantity: Number(quantity),
-        fuelType
+        amount,
+        fuelType,
+        date: date.toLocaleDateString()
       });
-      
-      console.log("Mobile indent submission completed successfully, showing success dialog");
+
       setSuccessDialogOpen(true);
-      
-      // Reset form
       resetForm();
-      
-      toast({
-        title: "Success",
-        description: "Indent has been submitted for approval",
-        variant: "default"
-      });
-      
+
     } catch (error) {
       console.error('Error saving indent:', error);
       toast({
         title: "Error",
-        description: "Failed to save indent. Please try again.",
-        variant: "destructive"
+        description: "Failed to record indent"
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return {
-    isSubmitting,
-    handleSaveIndent
-  };
+  return { isSubmitting, handleSaveIndent };
 };

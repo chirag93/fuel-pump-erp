@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from "@/hooks/use-toast";
@@ -148,7 +147,7 @@ const RecordIndent = () => {
           booklet_id: selectedBooklet,
           date: date.toISOString(),
           status: 'Fulfilled',
-          fuel_pump_id: fuelPumpId // Add fuel pump ID
+          fuel_pump_id: fuelPumpId
         });
 
         const { error: indentError } = await supabase
@@ -165,7 +164,7 @@ const RecordIndent = () => {
             booklet_id: selectedBooklet,
             date: date.toISOString(),
             status: 'Fulfilled',
-            fuel_pump_id: fuelPumpId // Add fuel pump ID
+            fuel_pump_id: fuelPumpId
           });
 
         if (indentError) {
@@ -216,11 +215,11 @@ const RecordIndent = () => {
         quantity: quantity,
         discount_amount: discountAmount,
         payment_method: 'Cash',
-        indent_id: createdIndentNumber, // Using the indent number we just created
-        fuel_pump_id: fuelPumpId // Add fuel pump ID
+        indent_id: createdIndentNumber,
+        fuel_pump_id: fuelPumpId
       });
 
-      // Now create the transaction referencing the indent if it was created
+      // Now create the transaction
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
@@ -233,9 +232,9 @@ const RecordIndent = () => {
           amount: amount,
           quantity: quantity,
           discount_amount: discountAmount,
-          payment_method: 'Cash', // Default payment method
-          indent_id: createdIndentNumber, // Using the indent number we just created
-          fuel_pump_id: fuelPumpId // Add fuel pump ID
+          payment_method: 'Cash',
+          indent_id: createdIndentNumber,
+          fuel_pump_id: fuelPumpId
         });
 
       if (transactionError) {
@@ -243,9 +242,36 @@ const RecordIndent = () => {
         throw transactionError;
       }
 
+      // Update customer balance - increment the balance by the amount of fuel issued
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('balance')
+        .eq('id', selectedCustomer)
+        .single();
+        
+      if (customerError) {
+        console.error('Error fetching customer data:', customerError);
+        throw customerError;
+      }
+      
+      const currentBalance = customerData?.balance || 0;
+      const newBalance = currentBalance + amount;
+      
+      console.log(`Updating customer balance from ${currentBalance} to ${newBalance}`);
+      
+      const { error: balanceError } = await supabase
+        .from('customers')
+        .update({ balance: newBalance })
+        .eq('id', selectedCustomer);
+        
+      if (balanceError) {
+        console.error('Error updating customer balance:', balanceError);
+        throw balanceError;
+      }
+
       toast({
         title: "Success",
-        description: "Transaction recorded successfully"
+        description: "Transaction recorded successfully and customer balance updated"
       });
       
       // Reset form fields

@@ -165,26 +165,51 @@ export const recordPayment = async (
 
 /**
  * Update customer balance after payment
+ * For payments, we DECREASE the balance as the customer owes less money
  */
 const updateCustomerBalance = async (
   customerId: string,
   paymentAmount: number,
   currentBalance: number | null = 0
 ): Promise<void> => {
-  // Calculate new balance (reduce debt when payment is made)
-  const newBalance = ((currentBalance || 0) - paymentAmount);
-  
-  const { data: balanceData, error: updateError } = await supabase
-    .from('customers')
-    .update({ balance: newBalance })
-    .eq('id', customerId)
-    .select()
-    .single();
+  try {
+    // Get the latest balance from the database to ensure consistency
+    const { data: customer, error: fetchError } = await supabase
+      .from('customers')
+      .select('balance')
+      .eq('id', customerId)
+      .single();
+      
+    if (fetchError) {
+      console.error('Error fetching current customer balance:', fetchError);
+      throw fetchError;
+    }
+    
+    // Calculate new balance (reduce debt when payment is made)
+    const latestBalance = customer?.balance || 0;
+    const newBalance = latestBalance - paymentAmount;
+    
+    console.log(`Updating customer balance: Current: ${latestBalance}, Payment: ${paymentAmount}, New: ${newBalance}`);
+    
+    const { data: balanceData, error: updateError } = await supabase
+      .from('customers')
+      .update({ balance: newBalance })
+      .eq('id', customerId)
+      .select()
+      .single();
 
-  if (updateError) {
-    console.error('Error updating customer balance:', updateError);
-    throw updateError;
+    if (updateError) {
+      console.error('Error updating customer balance:', updateError);
+      throw updateError;
+    }
+
+    console.log('Customer balance updated successfully:', balanceData);
+  } catch (error) {
+    console.error('Error in updateCustomerBalance:', error);
+    toast({
+      title: "Error",
+      description: "Failed to update customer balance. Please try again.",
+      variant: "destructive"
+    });
   }
-
-  console.log('Customer balance updated successfully:', balanceData);
 };

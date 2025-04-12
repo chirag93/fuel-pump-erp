@@ -1,3 +1,4 @@
+
 import { supabase, Transaction } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getFuelPumpId } from './utils';
@@ -115,19 +116,65 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
       fuel_pump_id: fuelPumpId
     });
     
-    const { data, error } = await supabase
-      .from('transactions')
-      .insert([{ id, ...formattedData, fuel_pump_id: fuelPumpId }])
-      .select()
+    // Start a transaction to update both transaction and customer balance
+    const { data: customer, error: customerError } = await supabase
+      .from('customers')
+      .select('balance')
+      .eq('id', transactionData.customer_id)
       .single();
       
-    if (error) {
-      console.error('Error creating transaction:', error);
-      throw error;
+    if (customerError) {
+      console.error('Error fetching customer balance:', customerError);
+      throw customerError;
     }
-    
-    console.log(`Created new transaction with ID ${id} for fuel pump ${fuelPumpId}`);
-    return data as Transaction;
+
+    // For non-PAYMENT transactions, we need to INCREASE the customer's balance (they owe more)
+    if (transactionData.fuel_type !== 'PAYMENT') {
+      const currentBalance = customer?.balance || 0;
+      const newBalance = currentBalance + transactionData.amount;
+      
+      // Insert the transaction record
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert([{ id, ...formattedData, fuel_pump_id: fuelPumpId }])
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Error creating transaction:', error);
+        throw error;
+      }
+      
+      // Update the customer balance
+      const { error: updateError } = await supabase
+        .from('customers')
+        .update({ balance: newBalance })
+        .eq('id', transactionData.customer_id);
+        
+      if (updateError) {
+        console.error('Error updating customer balance:', updateError);
+        throw updateError;
+      }
+      
+      console.log(`Created new transaction with ID ${id} for fuel pump ${fuelPumpId}`);
+      console.log(`Updated customer balance from ${currentBalance} to ${newBalance}`);
+      return data as Transaction;
+    } else {
+      // For PAYMENT transactions, the balance handling is done in the payments.ts module
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert([{ id, ...formattedData, fuel_pump_id: fuelPumpId }])
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Error creating PAYMENT transaction:', error);
+        throw error;
+      }
+      
+      console.log(`Created new PAYMENT transaction with ID ${id} for fuel pump ${fuelPumpId}`);
+      return data as Transaction;
+    }
   } catch (error) {
     console.error('Error creating transaction:', error);
     toast({
