@@ -145,23 +145,35 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             throw new Error(`Function error: ${functionError.message}`);
           }
           
-          if (!responseData.success) {
-            console.error("Staff creation failed:", responseData.error);
-            throw new Error(responseData.error || "Failed to create staff user account");
+          if (!responseData || !responseData.success) {
+            const errorMessage = responseData?.error || "Failed to create staff user account";
+            console.error("Staff creation failed:", errorMessage);
+            throw new Error(errorMessage);
           }
           
           authId = responseData.data.auth_id;
           console.log("New staff auth account created:", authId);
           
-        } catch (authCreateError) {
+        } catch (authCreateError: any) {
           console.error("Error creating auth user:", authCreateError);
-          toast({
-            title: "Error Creating Staff",
-            description: typeof authCreateError === 'string' 
-              ? authCreateError 
-              : authCreateError.message || "Could not create staff login account. Please try again.",
-            variant: "destructive"
-          });
+          
+          // Check for duplicate email error
+          if (authCreateError.message && authCreateError.message.includes("already been registered")) {
+            toast({
+              title: "Email Already Exists",
+              description: "A user with this email address is already registered. Please use a different email.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Error Creating Staff",
+              description: typeof authCreateError === 'string' 
+                ? authCreateError 
+                : authCreateError.message || "Could not create staff login account. Please try again.",
+              variant: "destructive"
+            });
+          }
+          
           setIsSubmitting(false);
           return;
         }

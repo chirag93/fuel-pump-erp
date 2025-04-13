@@ -43,6 +43,34 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check if user with this email already exists to provide a better error message
+    const { data: existingUser, error: checkError } = await supabase.auth.admin.listUsers();
+    
+    if (checkError) {
+      console.error("Error checking existing users:", checkError);
+    } else if (existingUser?.users) {
+      const emailExists = existingUser.users.some(user => 
+        user.email && user.email.toLowerCase() === requestData.email.toLowerCase()
+      );
+      
+      if (emailExists) {
+        console.log("User with this email already exists");
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "A user with this email address has already been registered" 
+          }),
+          { 
+            status: 409, 
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'application/json' 
+            } 
+          }
+        );
+      }
+    }
+
     // Create a user with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: requestData.email,
@@ -64,7 +92,7 @@ Deno.serve(async (req) => {
           error: authError.message 
         }),
         { 
-          status: 400, 
+          status: authError.status || 400, 
           headers: { 
             ...corsHeaders, 
             'Content-Type': 'application/json' 
