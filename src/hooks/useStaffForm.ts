@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -125,77 +124,42 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       let authId;
       
       if (!initialData) {
-        // Use the provided email directly since it's now required
-        const validEmail = staffData.email;
-          
-        console.log("Creating staff with email:", validEmail);
-        
+        // Creating a new staff member
         try {
-          // When creating a new staff member, use signUp with options that bypass email verification
-          const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: validEmail,
-            password: staffData.password,
-            options: {
-              data: {
-                name: staffData.name,
-                role: 'staff',
-                fuelPumpId: fuelPumpId,
-                mobile_only_access: mobileOnlyAccess
-              },
-              // Critical: Disable email verification entirely
-              emailRedirectTo: null
+          console.log("Creating new staff member with email:", staffData.email);
+          
+          // Call our edge function to create the user
+          const { data: responseData, error: functionError } = await supabase.functions.invoke("create-staff-user", {
+            body: {
+              email: staffData.email,
+              password: staffData.password,
+              name: staffData.name,
+              staffRole: staffData.role,
+              fuelPumpId: fuelPumpId,
+              mobile_only_access: mobileOnlyAccess
             }
           });
-
-          if (authError) {
-            console.error("Auth error during staff creation:", authError);
-            throw new Error(`Authentication error: ${authError.message}`);
+          
+          if (functionError) {
+            console.error("Edge function error:", functionError);
+            throw new Error(`Function error: ${functionError.message}`);
           }
           
-          authId = authData.user?.id;
+          if (!responseData.success) {
+            console.error("Staff creation failed:", responseData.error);
+            throw new Error(responseData.error || "Failed to create staff user account");
+          }
           
+          authId = responseData.data.auth_id;
           console.log("New staff auth account created:", authId);
           
-          // Immediately update the user metadata to include fuel pump ID
-          if (authId) {
-            // Get fuel pump name
-            const { data: pumpData } = await supabase
-              .from('fuel_pumps')
-              .select('name')
-              .eq('id', fuelPumpId)
-              .single();
-            
-            // CRITICAL CHANGE: Use an admin function that won't affect current user's session
-            // This was causing the current admin user to get logged out
-            try {
-              // Try to use admin.updateUserById instead of updateUser to avoid affecting current session
-              await supabase.auth.admin.updateUserById(authId, {
-                user_metadata: { 
-                  fuelPumpId: fuelPumpId,
-                  fuelPumpName: pumpData?.name,
-                  role: 'staff',
-                  mobile_only_access: mobileOnlyAccess
-                }
-              });
-              
-              console.log(`Updated auth user metadata with fuelPumpId: ${fuelPumpId} and mobile_only_access: ${mobileOnlyAccess}`);
-            } catch (updateError) {
-              console.error("Error using admin.updateUserById, falling back to alternative method:", updateError);
-              
-              // If admin function fails, we'll create a staff record anyway
-              // The metadata will be updated when the user logs in next time
-              console.log("Created user but couldn't update metadata - this is non-critical");
-              toast({
-                title: "Staff Created",
-                description: "Staff user was created but some profile settings may need to be configured on first login.",
-              });
-            }
-          }
         } catch (authCreateError) {
           console.error("Error creating auth user:", authCreateError);
           toast({
             title: "Error Creating Staff",
-            description: "Could not create staff login account. Please check the provided email and try again.",
+            description: typeof authCreateError === 'string' 
+              ? authCreateError 
+              : authCreateError.message || "Could not create staff login account. Please try again.",
             variant: "destructive"
           });
           setIsSubmitting(false);
@@ -278,7 +242,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         }
       }
 
-      // Update the user metadata to include mobile_only_access if this is an edit
+      // Update mobile_only_access for existing staff
       if (initialData?.auth_id) {
         try {
           // CRITICAL CHANGE: Use admin function to update existing staff user metadata

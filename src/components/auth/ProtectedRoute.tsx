@@ -34,9 +34,16 @@ const ProtectedRoute = ({
       if (isAuthenticated && !isMobile && !location.pathname.includes('/mobile')) {
         try {
           // Get current user data including metadata
-          const { data: userData } = await supabase.auth.getUser();
+          const { data: userData, error } = await supabase.auth.getUser();
+          
+          if (error) {
+            console.error("Error getting user data:", error);
+            return;
+          }
           
           if (userData?.user?.user_metadata?.mobile_only_access === true) {
+            console.log("Mobile-only user detected, redirecting");
+            
             // Show error toast
             toast({
               title: "Access Restricted",
@@ -44,11 +51,13 @@ const ProtectedRoute = ({
               variant: "destructive"
             });
             
-            // Logout the user
-            logout();
-            
-            // Redirect to login
-            navigate('/login');
+            // Logout the user - use setTimeout to avoid state update conflicts
+            setTimeout(() => {
+              logout();
+              
+              // Redirect to login
+              navigate('/login');
+            }, 100);
           }
         } catch (error) {
           console.error("Error checking mobile access:", error);
