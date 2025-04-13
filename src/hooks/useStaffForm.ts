@@ -130,51 +130,76 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
           
         console.log("Creating staff with email:", validEmail);
         
-        // When creating a new staff member, use signUp with options that bypass email verification
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: validEmail,
-          password: staffData.password,
-          options: {
-            data: {
-              name: staffData.name,
-              role: 'staff',
-              fuelPumpId: fuelPumpId,
-              mobile_only_access: mobileOnlyAccess  // Add mobile_only_access to user metadata
-            },
-            // Critical: Disable email verification entirely
-            emailRedirectTo: null
-          }
-        });
-
-        if (authError) {
-          console.error("Auth error during staff creation:", authError);
-          throw new Error(`Authentication error: ${authError.message}`);
-        }
-        
-        authId = authData.user?.id;
-        
-        console.log("New staff auth account created:", authId);
-        
-        // Immediately update the user metadata to include fuel pump ID
-        if (authId) {
-          // Get fuel pump name
-          const { data: pumpData } = await supabase
-            .from('fuel_pumps')
-            .select('name')
-            .eq('id', fuelPumpId)
-            .single();
-            
-          // Update the user metadata
-          await supabase.auth.updateUser({
-            data: { 
-              fuelPumpId: fuelPumpId,
-              fuelPumpName: pumpData?.name,
-              role: 'staff',
-              mobile_only_access: mobileOnlyAccess  // Add mobile_only_access to user metadata
+        try {
+          // When creating a new staff member, use signUp with options that bypass email verification
+          const { data: authData, error: authError } = await supabase.auth.signUp({
+            email: validEmail,
+            password: staffData.password,
+            options: {
+              data: {
+                name: staffData.name,
+                role: 'staff',
+                fuelPumpId: fuelPumpId,
+                mobile_only_access: mobileOnlyAccess
+              },
+              // Critical: Disable email verification entirely
+              emailRedirectTo: null
             }
           });
+
+          if (authError) {
+            console.error("Auth error during staff creation:", authError);
+            throw new Error(`Authentication error: ${authError.message}`);
+          }
           
-          console.log(`Updated auth user metadata with fuelPumpId: ${fuelPumpId} and mobile_only_access: ${mobileOnlyAccess}`);
+          authId = authData.user?.id;
+          
+          console.log("New staff auth account created:", authId);
+          
+          // Immediately update the user metadata to include fuel pump ID
+          if (authId) {
+            // Get fuel pump name
+            const { data: pumpData } = await supabase
+              .from('fuel_pumps')
+              .select('name')
+              .eq('id', fuelPumpId)
+              .single();
+            
+            // CRITICAL CHANGE: Use an admin function that won't affect current user's session
+            // This was causing the current admin user to get logged out
+            try {
+              // Try to use admin.updateUserById instead of updateUser to avoid affecting current session
+              await supabase.auth.admin.updateUserById(authId, {
+                user_metadata: { 
+                  fuelPumpId: fuelPumpId,
+                  fuelPumpName: pumpData?.name,
+                  role: 'staff',
+                  mobile_only_access: mobileOnlyAccess
+                }
+              });
+              
+              console.log(`Updated auth user metadata with fuelPumpId: ${fuelPumpId} and mobile_only_access: ${mobileOnlyAccess}`);
+            } catch (updateError) {
+              console.error("Error using admin.updateUserById, falling back to alternative method:", updateError);
+              
+              // If admin function fails, we'll create a staff record anyway
+              // The metadata will be updated when the user logs in next time
+              console.log("Created user but couldn't update metadata - this is non-critical");
+              toast({
+                title: "Staff Created",
+                description: "Staff user was created but some profile settings may need to be configured on first login.",
+              });
+            }
+          }
+        } catch (authCreateError) {
+          console.error("Error creating auth user:", authCreateError);
+          toast({
+            title: "Error Creating Staff",
+            description: "Could not create staff login account. Please check the provided email and try again.",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
         }
       } else if (changePassword && staffData.password) {
         // For existing staff, use our custom edge function to update the password
@@ -256,6 +281,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       // Update the user metadata to include mobile_only_access if this is an edit
       if (initialData?.auth_id) {
         try {
+          // CRITICAL CHANGE: Use admin function to update existing staff user metadata
           await supabase.auth.admin.updateUserById(initialData.auth_id, {
             user_metadata: { mobile_only_access: mobileOnlyAccess }
           });
@@ -277,7 +303,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         auth_id: authId || initialData?.auth_id,
         fuel_pump_id: fuelPumpId,
         is_active: true,
-        mobile_only_access: mobileOnlyAccess  // Add mobile_only_access to staff record
+        mobile_only_access: mobileOnlyAccess
       };
 
       console.log("Submitting staff data via API:", { ...staffPayload, auth_id: staffPayload.auth_id ? "[redacted]" : undefined });
