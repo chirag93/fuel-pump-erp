@@ -19,13 +19,15 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     isSubmitting,
     selectedPump,
     changePassword,
+    mobileOnlyAccess,
     handleChange,
     handleAddPump,
     handleRemovePump,
     handleSubmit,
     setSelectedFeatures,
     setSelectedPump,
-    setChangePassword
+    setChangePassword,
+    setMobileOnlyAccess
   } = useStaffForm(initialData, onSubmit, onCancel);
 
   console.log("StaffForm rendering with initialData:", initialData?.id);
@@ -39,6 +41,8 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
         onChange={handleChange}
         changePassword={changePassword}
         setChangePassword={setChangePassword}
+        mobileOnlyAccess={mobileOnlyAccess}
+        setMobileOnlyAccess={setMobileOnlyAccess}
       />
 
       <PumpSelection

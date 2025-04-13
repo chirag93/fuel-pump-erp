@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -35,6 +36,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPump, setSelectedPump] = useState<string>('');
   const [changePassword, setChangePassword] = useState<boolean>(false);
+  const [mobileOnlyAccess, setMobileOnlyAccess] = useState<boolean>(initialData?.mobile_only_access || false);
 
   const handleChange = (field: string, value: string) => {
     setStaffData({ ...staffData, [field]: value });
@@ -71,12 +73,11 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       newErrors.phone = "Phone number must be 10 digits";
     }
     
-    // Email validation - make it optional
-    if (staffData.email && staffData.email.trim()) {
-      // Simple format check, but not enforcing any specific domain restrictions
-      if (!/\S+@\S+\.\S+/.test(staffData.email.trim())) {
-        newErrors.email = "Please enter a valid email format";
-      }
+    // Email validation - now required
+    if (!staffData.email || !staffData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(staffData.email.trim())) {
+      newErrors.email = "Please enter a valid email format";
     }
     
     if (!staffData.role) newErrors.role = "Role is required";
@@ -124,11 +125,8 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       let authId;
       
       if (!initialData) {
-        // Generate a valid email with a real domain if none provided
-        const timestamp = Date.now();
-        const validEmail = staffData.email && staffData.email.trim() ? 
-          staffData.email : 
-          `staff_${timestamp}@fuelapp.net`;
+        // Use the provided email directly since it's now required
+        const validEmail = staffData.email;
           
         console.log("Creating staff with email:", validEmail);
         
@@ -140,7 +138,8 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             data: {
               name: staffData.name,
               role: 'staff',
-              fuelPumpId: fuelPumpId,  // Add fuel pump ID to user metadata during signup
+              fuelPumpId: fuelPumpId,
+              mobile_only_access: mobileOnlyAccess  // Add mobile_only_access to user metadata
             },
             // Critical: Disable email verification entirely
             emailRedirectTo: null
@@ -170,11 +169,12 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             data: { 
               fuelPumpId: fuelPumpId,
               fuelPumpName: pumpData?.name,
-              role: 'staff'
+              role: 'staff',
+              mobile_only_access: mobileOnlyAccess  // Add mobile_only_access to user metadata
             }
           });
           
-          console.log(`Updated auth user metadata with fuelPumpId: ${fuelPumpId}`);
+          console.log(`Updated auth user metadata with fuelPumpId: ${fuelPumpId} and mobile_only_access: ${mobileOnlyAccess}`);
         }
       } else if (changePassword && staffData.password) {
         // For existing staff, use our custom edge function to update the password
@@ -253,23 +253,31 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         }
       }
 
-      // Generate a valid email if none is provided
-      const timestamp = Date.now();
-      const staffEmail = staffData.email && staffData.email.trim() ? 
-        staffData.email : 
-        `staff_${timestamp}@fuelapp.net`;
+      // Update the user metadata to include mobile_only_access if this is an edit
+      if (initialData?.auth_id) {
+        try {
+          await supabase.auth.admin.updateUserById(initialData.auth_id, {
+            user_metadata: { mobile_only_access: mobileOnlyAccess }
+          });
+          console.log(`Updated auth user metadata for existing staff with mobile_only_access: ${mobileOnlyAccess}`);
+        } catch (metadataError) {
+          console.error("Failed to update mobile_only_access in user metadata:", metadataError);
+          // Continue with the rest of the staff update
+        }
+      }
 
       const staffPayload = {
         name: staffData.name,
         phone: staffData.phone,
-        email: staffEmail,
+        email: staffData.email,
         role: staffData.role,
         salary: parseFloat(staffData.salary.toString()),
         joining_date: staffData.joining_date,
         assigned_pumps: staffData.assigned_pumps,
         auth_id: authId || initialData?.auth_id,
-        fuel_pump_id: fuelPumpId,  // Always set the fuel_pump_id
-        is_active: true
+        fuel_pump_id: fuelPumpId,
+        is_active: true,
+        mobile_only_access: mobileOnlyAccess  // Add mobile_only_access to staff record
       };
 
       console.log("Submitting staff data via API:", { ...staffPayload, auth_id: staffPayload.auth_id ? "[redacted]" : undefined });
@@ -346,12 +354,14 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     isSubmitting,
     selectedPump,
     changePassword,
+    mobileOnlyAccess,
     handleChange,
     handleAddPump,
     handleRemovePump,
     handleSubmit,
     setSelectedFeatures,
     setSelectedPump,
-    setChangePassword
+    setChangePassword,
+    setMobileOnlyAccess
   };
 };

@@ -78,6 +78,20 @@ const LoginForm = ({
         user_metadata: data.user.user_metadata
       });
 
+      // Check if this is a mobile-only user trying to access the web app
+      const isMobileOnlyUser = data.user.user_metadata?.mobile_only_access === true;
+      const isMobile = window.innerWidth <= 768; // Simple mobile check
+      
+      if (isMobileOnlyUser && !isMobile && !window.location.pathname.includes('/mobile')) {
+        console.log('Mobile-only user attempting to access web app');
+        // Sign out the user immediately
+        await supabase.auth.signOut();
+        
+        setError('You do not have permission to login to the web app. Please contact your administrator or use the mobile app.');
+        setIsLoading(false);
+        return;
+      }
+
       // Determine if this user is a staff or admin by checking various sources
       let userRole = 'staff';
       let fuelPumpId = null;
@@ -252,7 +266,8 @@ const LoginForm = ({
         role: userRole,
         fuelPumpId: fuelPumpId,
         fuelPumpName: fuelPumpName,
-        staffId: staffData?.id
+        staffId: staffData?.id,
+        mobileOnlyAccess: data.user.user_metadata?.mobile_only_access || false
       }, rememberMe);
       
       if (loginSuccess) {
@@ -266,7 +281,8 @@ const LoginForm = ({
             role: userRole,
             fuelPumpId: fuelPumpId,
             fuelPumpName: fuelPumpName,
-            staffId: staffData?.id
+            staffId: staffData?.id,
+            mobileOnlyAccess: data.user.user_metadata?.mobile_only_access || false
           }
         };
         

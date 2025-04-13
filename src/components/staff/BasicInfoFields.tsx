@@ -3,11 +3,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Smartphone } from 'lucide-react';
 
 interface StaffFormData {
   name: string;
   phone: string;
-  email?: string;
+  email: string;
   role: string;
   salary: string | number;
   joining_date: string;
@@ -22,6 +24,8 @@ interface BasicInfoFieldsProps {
   onChange: (field: string, value: string) => void;
   changePassword: boolean;
   setChangePassword: (value: boolean) => void;
+  mobileOnlyAccess: boolean;
+  setMobileOnlyAccess: (value: boolean) => void;
 }
 
 export function BasicInfoFields({ 
@@ -30,7 +34,9 @@ export function BasicInfoFields({
   isEditing, 
   onChange, 
   changePassword, 
-  setChangePassword 
+  setChangePassword,
+  mobileOnlyAccess,
+  setMobileOnlyAccess
 }: BasicInfoFieldsProps) {
   return (
     <div className="space-y-4">
@@ -58,19 +64,16 @@ export function BasicInfoFields({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Email (Optional)</Label>
+          <Label htmlFor="email">Email*</Label>
           <Input
             id="email"
             type="text"
             value={staffData.email || ''}
             onChange={(e) => onChange('email', e.target.value)}
             className={errors.email ? 'border-red-500' : ''}
-            placeholder="Optional - System will generate if blank"
+            required
           />
           {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
-          <p className="text-xs text-muted-foreground">
-            If left blank, a system email will be generated. For testing, don't use example.com domains.
-          </p>
         </div>
       </div>
 
@@ -122,8 +125,20 @@ export function BasicInfoFields({
         />
       </div>
 
-      {isEditing ? (
-        <div className="space-y-2 pt-2">
+      <div className="space-y-2 pt-2 flex flex-col gap-4">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="mobile-only"
+            checked={mobileOnlyAccess}
+            onCheckedChange={(checked) => setMobileOnlyAccess(checked === true)}
+          />
+          <div className="flex items-center gap-2">
+            <Smartphone className="h-4 w-4 text-muted-foreground" />
+            <Label htmlFor="mobile-only">Mobile only access</Label>
+          </div>
+        </div>
+        
+        {isEditing ? (
           <div className="flex items-center space-x-2">
             <Switch
               checked={changePassword}
@@ -132,8 +147,8 @@ export function BasicInfoFields({
             />
             <Label htmlFor="change-password">Change Password</Label>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       {(!isEditing || changePassword) && (
         <>
