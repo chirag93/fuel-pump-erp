@@ -128,8 +128,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         try {
           console.log("Creating new staff member with email:", staffData.email);
           
-          // Call our edge function to create the user
-          const { data: responseData, error: functionError } = await supabase.functions.invoke("create-staff-user", {
+          const response = await supabase.functions.invoke("create-staff-user", {
             body: {
               email: staffData.email,
               password: staffData.password,
@@ -139,11 +138,13 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
               mobile_only_access: mobileOnlyAccess
             }
           });
-          
-          if (functionError) {
-            console.error("Edge function error:", functionError);
-            throw new Error(`Function error: ${functionError.message}`);
+
+          if (response.error) {
+            console.error("Edge function error:", response.error);
+            throw new Error(response.error.message || "Failed to create staff user");
           }
+
+          const responseData = response.data;
           
           if (!responseData || !responseData.success) {
             const errorMessage = responseData?.error || "Failed to create staff user account";
