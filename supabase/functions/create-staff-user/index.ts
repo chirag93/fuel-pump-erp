@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user with this email already exists to provide a better error message
+    // Check if user with this email already exists
     const { data: existingUser, error: checkError } = await supabase.auth.admin.listUsers();
     
     if (checkError) {
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: requestData.email,
       password: requestData.password,
-      email_confirm: true, // Skip email verification
+      email_confirm: true,
       user_metadata: {
         name: requestData.name,
         role: 'staff',
@@ -101,28 +101,62 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get fuel pump name if needed for metadata
-    let fuelPumpName = "";
-    try {
-      const { data: pumpData } = await supabase
-        .from('fuel_pumps')
-        .select('name')
-        .eq('id', requestData.fuelPumpId)
-        .single();
-      
-      fuelPumpName = pumpData?.name || "";
-    } catch (error) {
-      console.warn("Could not fetch fuel pump name:", error);
-    }
+    // Get fuel pump name
+    const { data: pumpData } = await supabase
+      .from('fuel_pumps')
+      .select('name')
+      .eq('id', requestData.fuelPumpId)
+      .single();
 
-    // Ensure user metadata is properly set
+    // Create staff record
     if (authData.user) {
+      const staffData = {
+        name: requestData.name,
+        email: requestData.email,
+        role: requestData.staffRole,
+        auth_id: authData.user.id,
+        fuel_pump_id: requestData.fuelPumpId,
+        phone: requestData.phone || '',
+        joining_date: requestData.joining_date || new Date().toISOString().split('T')[0],
+        salary: requestData.salary || 0,
+        is_active: true,
+        mobile_only_access: requestData.mobile_only_access || false
+      };
+
+      console.log("Creating staff record:", staffData);
+      
+      const { error: staffError } = await supabase
+        .from('staff')
+        .insert([staffData]);
+
+      if (staffError) {
+        console.error("Error creating staff record:", staffError);
+        
+        // Try to clean up the auth user since staff creation failed
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "Failed to create staff record: " + staffError.message 
+          }),
+          { 
+            status: 500, 
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'application/json' 
+            } 
+          }
+        );
+      }
+
+      // Update user metadata with fuel pump info
       await supabase.auth.admin.updateUserById(authData.user.id, {
         user_metadata: { 
           name: requestData.name,
           role: 'staff',
           fuelPumpId: requestData.fuelPumpId,
-          fuelPumpName: fuelPumpName,
+          fuelPumpName: pumpData?.name,
           mobile_only_access: requestData.mobile_only_access || false
         }
       });
@@ -161,4 +195,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-

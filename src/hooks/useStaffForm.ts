@@ -134,6 +134,9 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
               password: staffData.password,
               name: staffData.name,
               staffRole: staffData.role,
+              phone: staffData.phone,
+              salary: parseFloat(staffData.salary.toString()),
+              joining_date: staffData.joining_date,
               fuelPumpId: fuelPumpId,
               mobile_only_access: mobileOnlyAccess
             }
@@ -152,33 +155,27 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             throw new Error(errorMessage);
           }
           
-          authId = responseData.data.auth_id;
-          console.log("New staff auth account created:", authId);
+          console.log("Staff created successfully:", responseData);
           
-        } catch (authCreateError: any) {
-          console.error("Error creating auth user:", authCreateError);
-          
-          // Check for duplicate email error
-          if (authCreateError.message && authCreateError.message.includes("already been registered")) {
-            toast({
-              title: "Email Already Exists",
-              description: "A user with this email address is already registered. Please use a different email.",
-              variant: "destructive"
-            });
-          } else {
-            toast({
-              title: "Error Creating Staff",
-              description: typeof authCreateError === 'string' 
-                ? authCreateError 
-                : authCreateError.message || "Could not create staff login account. Please try again.",
-              variant: "destructive"
-            });
+          if (onSubmit) {
+            await onSubmit(staffData);
           }
-          
-          setIsSubmitting(false);
-          return;
+
+          toast({
+            title: "Staff Added",
+            description: `${staffData.name} has been added successfully`
+          });
+
+          if (onCancel) onCancel();
+        } catch (error: any) {
+          console.error('Error creating staff:', error);
+          toast({
+            title: "Error",
+            description: error.message || "Failed to create staff member",
+            variant: "destructive"
+          });
         }
-      } else if (changePassword && staffData.password) {
+      } else {
         // For existing staff, use our custom edge function to update the password
         if (!initialData.auth_id) {
           toast({
@@ -339,11 +336,10 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       if (onCancel) onCancel();
       
     } catch (error: any) {
-      console.error('Error saving staff:', error);
+      console.error("Unhandled error in create-staff-user function:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to save staff data",
-        variant: "destructive"
+        description: error.message || "An unknown error occurred"
       });
     } finally {
       setIsSubmitting(false);
