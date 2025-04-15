@@ -4,6 +4,7 @@ import { useStaffForm } from '@/hooks/useStaffForm';
 import { FeatureSelection } from './FeatureSelection';
 import { PumpSelection } from './PumpSelection';
 import { BasicInfoFields } from './BasicInfoFields';
+import { useEffect } from 'react';
 
 interface StaffFormProps {
   onSubmit: (staff: any) => void;
@@ -30,7 +31,14 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     setMobileOnlyAccess
   } = useStaffForm(initialData, onSubmit, onCancel);
 
-  console.log("StaffForm rendering with initialData:", initialData?.id);
+  // Use a debug log that only shows once on initial render, not on every re-render
+  useEffect(() => {
+    if (initialData?.id) {
+      console.log("StaffForm mounted with initialData ID:", initialData.id);
+    } else {
+      console.log("StaffForm mounted for new staff creation");
+    }
+  }, [initialData?.id]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">

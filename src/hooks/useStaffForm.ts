@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import type { Database } from '@/integrations/supabase/types';
@@ -36,6 +37,37 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
   const [selectedPump, setSelectedPump] = useState<string>('');
   const [changePassword, setChangePassword] = useState<boolean>(false);
   const [mobileOnlyAccess, setMobileOnlyAccess] = useState<boolean>(initialData?.mobile_only_access || false);
+
+  // Fix excessive rendering issue
+  useEffect(() => {
+    if (initialData) {
+      console.log("Setting form data from initialData:", initialData.id);
+      
+      let assignedPumps = initialData.assigned_pumps || [];
+      // Handle different formats of assigned_pumps
+      if (typeof assignedPumps === 'string') {
+        try {
+          assignedPumps = JSON.parse(assignedPumps);
+        } catch (e) {
+          assignedPumps = [];
+        }
+      }
+
+      setStaffData({
+        name: initialData.name || '',
+        phone: initialData.phone || '',
+        email: initialData.email || '',
+        role: initialData.role || '',
+        salary: initialData.salary || '',
+        joining_date: initialData.joining_date || new Date().toISOString().split('T')[0],
+        assigned_pumps: Array.isArray(assignedPumps) ? assignedPumps : [],
+        password: '',
+        confirmPassword: '',
+      });
+      
+      setMobileOnlyAccess(Boolean(initialData.mobile_only_access));
+    }
+  }, [initialData?.id]); // Only trigger when initialData.id changes
 
   const handleChange = (field: string, value: string) => {
     setStaffData({ ...staffData, [field]: value });
@@ -120,12 +152,6 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         return;
       }
 
-      console.log("Creating staff with data:", {
-        ...staffData,
-        mobile_only_access: mobileOnlyAccess,
-        fuelPumpId
-      });
-
       if (!initialData) {
         // Creating new staff member
         const response = await supabase.functions.invoke("create-staff-user", {
@@ -138,30 +164,84 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             salary: parseFloat(staffData.salary.toString()),
             joining_date: staffData.joining_date,
             fuelPumpId: fuelPumpId,
-            mobile_only_access: mobileOnlyAccess
+            mobile_only_access: mobileOnlyAccess,
+            assigned_pumps: staffData.assigned_pumps,
+            features: selectedFeatures
           }
         });
 
-        if (response.error || !response.data?.success) {
+        if (!response.data) {
+          throw new Error("No response from server");
+        }
+
+        if (response.error || !response.data.success) {
           throw new Error(response.error?.message || response.data?.error || "Failed to create staff user");
         }
 
         console.log("Staff created successfully:", response.data);
-      }
-
-      const staffPayload = {
-        name: staffData.name,
-        phone: staffData.phone,
-        email: staffData.email,
-        role: staffData.role,
-        salary: parseFloat(staffData.salary.toString()),
-        joining_date: staffData.joining_date,
-        assigned_pumps: staffData.assigned_pumps,
-        fuel_pump_id: fuelPumpId,
-        mobile_only_access: mobileOnlyAccess
-      };
-
-      if (onSubmit) {
+        
+        // If the response includes a staff_id, include it in the payload
+        if (response.data.data && response.data.data.staff_id) {
+          if (onSubmit) {
+            const staffPayload = {
+              id: response.data.data.staff_id,
+              auth_id: response.data.data.auth_id,
+              name: staffData.name,
+              phone: staffData.phone,
+              email: staffData.email,
+              role: staffData.role,
+              salary: parseFloat(staffData.salary.toString()),
+              joining_date: staffData.joining_date,
+              assigned_pumps: staffData.assigned_pumps,
+              fuel_pump_id: fuelPumpId,
+              mobile_only_access: mobileOnlyAccess,
+              features: selectedFeatures
+            };
+            
+            await onSubmit(staffPayload);
+          }
+        } else {
+          // Edge function succeeded but didn't return the IDs we need
+          console.warn("Staff user created but missing IDs in response:", response.data);
+          
+          // Manually fetch the new staff record
+          const { data: newStaff } = await supabase
+            .from('staff')
+            .select('*')
+            .eq('email', staffData.email)
+            .eq('fuel_pump_id', fuelPumpId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+            
+          if (newStaff && onSubmit) {
+            await onSubmit({
+              ...newStaff,
+              features: selectedFeatures
+            });
+          }
+        }
+      } else if (onSubmit) {
+        // For existing staff, use the regular onSubmit callback
+        const staffPayload = {
+          id: initialData.id,
+          name: staffData.name,
+          phone: staffData.phone,
+          email: staffData.email,
+          role: staffData.role,
+          salary: parseFloat(staffData.salary.toString()),
+          joining_date: staffData.joining_date,
+          assigned_pumps: staffData.assigned_pumps,
+          auth_id: initialData.auth_id,
+          fuel_pump_id: fuelPumpId,
+          mobile_only_access: mobileOnlyAccess,
+          features: selectedFeatures
+        };
+        
+        if (changePassword && staffData.password) {
+          staffPayload.password = staffData.password;
+        }
+        
         await onSubmit(staffPayload);
       }
 
