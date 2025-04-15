@@ -4,18 +4,14 @@ import { corsHeaders } from '../_shared/cors.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-
-// Create a Supabase client with the service role key
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get the request body
     const requestData = await req.json();
     
     console.log("Edge function called with data:", {
@@ -26,12 +22,11 @@ Deno.serve(async (req) => {
       mobile_only_access: requestData.mobile_only_access
     });
 
-    // Validate required fields
     if (!requestData.email || !requestData.password || !requestData.fuelPumpId) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Missing required fields (email, password, fuelPumpId)" 
+          error: "Missing required fields" 
         }),
         { 
           status: 400, 
@@ -43,35 +38,25 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user with this email already exists
-    const { data: existingUser, error: checkError } = await supabase.auth.admin.listUsers();
-    
-    if (checkError) {
-      console.error("Error checking existing users:", checkError);
-    } else if (existingUser?.users) {
-      const emailExists = existingUser.users.some(user => 
-        user.email && user.email.toLowerCase() === requestData.email.toLowerCase()
+    // Check if user exists
+    const { data: existingUsers } = await supabase.auth.admin.listUsers();
+    if (existingUsers?.users?.some(user => user.email?.toLowerCase() === requestData.email.toLowerCase())) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "A user with this email already exists" 
+        }),
+        { 
+          status: 409, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
       );
-      
-      if (emailExists) {
-        console.log("User with this email already exists");
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: "A user with this email address has already been registered" 
-          }),
-          { 
-            status: 409, 
-            headers: { 
-              ...corsHeaders, 
-              'Content-Type': 'application/json' 
-            } 
-          }
-        );
-      }
     }
 
-    // Create a user with Supabase Auth
+    // Create auth user
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: requestData.email,
       password: requestData.password,
@@ -92,7 +77,7 @@ Deno.serve(async (req) => {
           error: authError.message 
         }),
         { 
-          status: authError.status || 400, 
+          status: 400, 
           headers: { 
             ...corsHeaders, 
             'Content-Type': 'application/json' 
@@ -132,7 +117,7 @@ Deno.serve(async (req) => {
       if (staffError) {
         console.error("Error creating staff record:", staffError);
         
-        // Try to clean up the auth user since staff creation failed
+        // Clean up auth user since staff creation failed
         await supabase.auth.admin.deleteUser(authData.user.id);
         
         return new Response(
@@ -150,7 +135,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Update user metadata with fuel pump info
+      // Update user metadata
       await supabase.auth.admin.updateUserById(authData.user.id, {
         user_metadata: { 
           name: requestData.name,
