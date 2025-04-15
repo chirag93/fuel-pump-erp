@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -18,6 +17,7 @@ export interface Staff {
   features?: string[];
   fuel_pump_id?: string;
   auth_id?: string;
+  mobile_only_access: boolean;
 }
 
 export const useStaffManagement = () => {

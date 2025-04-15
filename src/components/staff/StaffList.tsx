@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Users, UserCog } from 'lucide-react';
+import { Users, UserCog, Smartphone } from 'lucide-react';
 import { Staff } from '@/hooks/useStaffManagement';
 
 interface StaffListProps {
@@ -41,7 +41,7 @@ export function StaffList({ staff, isLoading, onEdit, onDelete }: StaffListProps
                 <TableHead>Role</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Salary</TableHead>
-                <TableHead>Assigned Pumps</TableHead>
+                <TableHead>Access Type</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -56,16 +56,14 @@ export function StaffList({ staff, isLoading, onEdit, onDelete }: StaffListProps
                   </TableCell>
                   <TableCell>₹{staffMember.salary.toLocaleString()}</TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {staffMember.assigned_pumps && Array.isArray(staffMember.assigned_pumps) ? 
-                        staffMember.assigned_pumps.map((pump) => (
-                          <span key={pump} className="bg-muted text-xs px-2 py-1 rounded-full">
-                            {pump}
-                          </span>
-                        )) : 
-                        <span className="text-xs text-muted-foreground">None assigned</span>
-                      }
-                    </div>
+                    {staffMember.mobile_only_access ? (
+                      <div className="flex items-center text-sm">
+                        <Smartphone className="h-4 w-4 text-primary mr-1" />
+                        Mobile Only
+                      </div>
+                    ) : (
+                      <span className="text-sm">Full Access</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button
