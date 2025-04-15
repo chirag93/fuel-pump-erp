@@ -19,6 +19,22 @@ interface StaffFormData {
   confirmPassword: string;
 }
 
+interface StaffPayload {
+  id?: any;
+  name: string;
+  phone: string;
+  email: string;
+  role: string;
+  salary: number;
+  joining_date: string;
+  assigned_pumps: string[];
+  auth_id?: any;
+  fuel_pump_id?: string;
+  mobile_only_access: boolean;
+  features: StaffFeature[];
+  password?: string; // Make password optional in the payload
+}
+
 export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void, onCancel?: () => void) => {
   const [staffData, setStaffData] = useState<StaffFormData>({
     name: initialData?.name || '',
@@ -183,7 +199,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         // If the response includes a staff_id, include it in the payload
         if (response.data.data && response.data.data.staff_id) {
           if (onSubmit) {
-            const staffPayload = {
+            const staffPayload: StaffPayload = {
               id: response.data.data.staff_id,
               auth_id: response.data.data.auth_id,
               name: staffData.name,
@@ -223,7 +239,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         }
       } else if (onSubmit) {
         // For existing staff, use the regular onSubmit callback
-        const staffPayload = {
+        const staffPayload: StaffPayload = {
           id: initialData.id,
           name: staffData.name,
           phone: staffData.phone,
@@ -238,6 +254,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
           features: selectedFeatures
         };
         
+        // Only add password to payload if changing password
         if (changePassword && staffData.password) {
           staffPayload.password = staffData.password;
         }
