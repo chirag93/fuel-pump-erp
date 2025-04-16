@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -158,6 +157,17 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     return Object.keys(newErrors).length === 0;
   };
 
+  const [fuelPumpId, setFuelPumpId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const initFuelPumpId = async () => {
+      const id = await getFuelPumpId();
+      setFuelPumpId(id);
+    };
+    
+    initFuelPumpId();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -165,15 +175,12 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     setIsSubmitting(true);
     
     try {
-      // Get fuel pump ID
-      const fuelPumpId = await getFuelPumpId();
       if (!fuelPumpId) {
         toast({
-          title: "Error",
-          description: "Could not determine fuel pump ID",
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to manage staff",
           variant: "destructive"
         });
-        setIsSubmitting(false);
         return;
       }
 
@@ -196,32 +203,26 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
           
           console.log("Invoking create-staff-user with data:", {
             ...payload,
-            password: "***" // Don't log the actual password
+            password: "***"
           });
           
           const { data, error } = await supabase.functions.invoke("create-staff-user", {
             body: payload
           });
 
-          console.log("Edge function response:", { data, error });
-
           if (error) {
             console.error("Edge function error:", error);
             throw new Error(error.message || "Failed to create staff user");
           }
           
-          if (!data) {
-            throw new Error("No response data from server");
-          }
-          
-          if (!data.success) {
-            throw new Error(data.error || "Failed to create staff user");
+          if (!data?.success) {
+            throw new Error(data?.error || "Failed to create staff user");
           }
 
           console.log("Staff created successfully:", data);
           
           if (data.data && data.data.staff_id && onSubmit) {
-            const staffPayload: StaffPayload = {
+            const staffPayload = {
               id: data.data.staff_id,
               auth_id: data.data.auth_id,
               name: staffData.name,
@@ -244,35 +245,14 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             });
 
             if (onCancel) onCancel();
-          } else {
-            console.warn("Staff user created but missing IDs in response:", data);
-            toast({
-              title: "Warning",
-              description: "Staff created but some data was missing. Please refresh the page.",
-              variant: "default"
-            });
-            
-            if (onCancel) onCancel();
           }
         } catch (functionError: any) {
           console.error('Error invoking edge function:', functionError);
-          
-          // Check for specific error messages
-          const errorMessage = functionError.message || "Failed to create staff member";
-          
-          if (errorMessage.toLowerCase().includes('already exists')) {
-            toast({
-              title: "Duplicate Entry",
-              description: errorMessage,
-              variant: "destructive"
-            });
-          } else {
-            toast({
-              title: "Error",
-              description: errorMessage,
-              variant: "destructive"
-            });
-          }
+          toast({
+            title: "Error",
+            description: functionError.message || "Failed to create staff member",
+            variant: "destructive"
+          });
         }
       } else if (onSubmit) {
         // For existing staff, use the regular onSubmit callback
