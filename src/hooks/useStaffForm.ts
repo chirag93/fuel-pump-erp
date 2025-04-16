@@ -216,7 +216,23 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
           }
           
           if (!data?.success) {
-            throw new Error(data?.error || "Failed to create staff user");
+            console.error("Staff creation failed:", data?.error);
+            let errorMessage = data?.error || "Failed to create staff user";
+            
+            // Set field-specific errors based on error type
+            if (data?.errorType === 'DUPLICATE_PHONE') {
+              setErrors(prev => ({
+                ...prev,
+                phone: "This phone number is already registered with another staff member"
+              }));
+            } else if (data?.errorType === 'DUPLICATE_EMAIL') {
+              setErrors(prev => ({
+                ...prev,
+                email: "This email is already registered with another staff member"
+              }));
+            }
+            
+            throw new Error(errorMessage);
           }
 
           console.log("Staff created successfully:", data);
@@ -247,12 +263,16 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             if (onCancel) onCancel();
           }
         } catch (functionError: any) {
-          console.error('Error invoking edge function:', functionError);
+          console.error('Error in staff creation:', functionError);
+          
+          // Show a toast with the error message
           toast({
-            title: "Error",
+            title: "Staff Creation Failed",
             description: functionError.message || "Failed to create staff member",
             variant: "destructive"
           });
+          
+          return;
         }
       } else if (onSubmit) {
         // For existing staff, use the regular onSubmit callback

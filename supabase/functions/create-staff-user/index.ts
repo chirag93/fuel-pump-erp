@@ -14,27 +14,11 @@ Deno.serve(async (req) => {
   try {
     console.log("Starting create-staff-user function");
     
-    // Parse request data
     const requestData = await req.json();
     console.log("Request data:", {
       ...requestData,
       password: requestData.password ? '******' : undefined
     });
-
-    // Validate required fields
-    if (!requestData.email || !requestData.password || !requestData.fuelPumpId) {
-      console.error("Missing required fields");
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Missing required fields: email, password, and fuelPumpId are required"
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
 
     // Initialize Supabase client with service role key
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
@@ -68,24 +52,52 @@ Deno.serve(async (req) => {
 
     console.log("Fuel pump verified:", fuelPump.name);
 
-    // Check if email exists in staff table
-    const { data: existingStaff, error: staffCheckError } = await supabase
+    // Check if phone number exists
+    const { data: existingStaffWithPhone, error: phoneCheckError } = await supabase
+      .from('staff')
+      .select('id, phone')
+      .eq('phone', requestData.phone)
+      .maybeSingle();
+
+    if (phoneCheckError) {
+      console.error("Error checking existing phone:", phoneCheckError);
+      throw new Error("Database error when checking staff phone");
+    }
+
+    if (existingStaffWithPhone) {
+      console.error("Phone number already exists:", requestData.phone);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "This phone number is already registered with another staff member",
+          errorType: "DUPLICATE_PHONE"
+        }),
+        {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Check if email exists
+    const { data: existingStaffWithEmail, error: emailCheckError } = await supabase
       .from('staff')
       .select('id, email')
       .eq('email', requestData.email.toLowerCase())
       .maybeSingle();
 
-    if (staffCheckError) {
-      console.error("Error checking existing staff:", staffCheckError);
+    if (emailCheckError) {
+      console.error("Error checking existing email:", emailCheckError);
       throw new Error("Database error when checking staff email");
     }
 
-    if (existingStaff) {
-      console.error("Email already exists in staff table:", requestData.email);
+    if (existingStaffWithEmail) {
+      console.error("Email already exists:", requestData.email);
       return new Response(
         JSON.stringify({
           success: false,
-          error: "A staff member with this email already exists"
+          error: "This email is already registered with another staff member",
+          errorType: "DUPLICATE_EMAIL"
         }),
         {
           status: 409,
@@ -146,7 +158,7 @@ Deno.serve(async (req) => {
       role: requestData.staffRole || 'Staff',
       auth_id: authData.user.id,
       fuel_pump_id: requestData.fuelPumpId,
-      phone: requestData.phone || '',
+      phone: requestData.phone,
       joining_date: requestData.joining_date || new Date().toISOString().split('T')[0],
       salary: requestData.salary ? parseFloat(requestData.salary.toString()) : 0,
       is_active: true,
@@ -169,7 +181,32 @@ Deno.serve(async (req) => {
       console.error("Error creating staff record:", staffError);
       // Clean up auth user since staff creation failed
       await supabase.auth.admin.deleteUser(authData.user.id);
-      throw new Error(`Failed to create staff record: ${staffError.message}`);
+      
+      let errorMessage = "Failed to create staff record";
+      let errorType = "DATABASE_ERROR";
+      
+      if (staffError.code === '23505') {
+        if (staffError.message.includes('staff_phone_key')) {
+          errorMessage = "This phone number is already registered";
+          errorType = "DUPLICATE_PHONE";
+        } else if (staffError.message.includes('staff_email_key')) {
+          errorMessage = "This email is already registered";
+          errorType = "DUPLICATE_EMAIL";
+        }
+      }
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: errorMessage,
+          errorType: errorType,
+          details: staffError.message
+        }),
+        {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     console.log("Staff record created successfully with ID:", insertedStaff.id);
@@ -215,7 +252,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || "An unexpected error occurred"
+        error: error.message || "An unexpected error occurred",
+        errorType: "UNKNOWN_ERROR"
       }),
       {
         status: 500,
