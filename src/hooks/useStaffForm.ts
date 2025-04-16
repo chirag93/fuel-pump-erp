@@ -47,14 +47,14 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     password: '',
     confirmPassword: '',
   });
-  const [selectedFeatures, setSelectedFeatures] = useState<StaffFeature[]>([]);
+  const [selectedFeatures, setSelectedFeatures] = useState<StaffFeature[]>(initialData?.features || []);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPump, setSelectedPump] = useState<string>('');
   const [changePassword, setChangePassword] = useState<boolean>(false);
   const [mobileOnlyAccess, setMobileOnlyAccess] = useState<boolean>(initialData?.mobile_only_access || false);
 
-  // Fix excessive rendering issue
+  // Fix excessive rendering issue by using initialData.id as dependency
   useEffect(() => {
     if (initialData) {
       console.log("Setting form data from initialData:", initialData.id);
@@ -82,6 +82,11 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       });
       
       setMobileOnlyAccess(Boolean(initialData.mobile_only_access));
+      
+      // Set selected features if available
+      if (initialData.features && Array.isArray(initialData.features)) {
+        setSelectedFeatures(initialData.features);
+      }
     }
   }, [initialData?.id]); // Only trigger when initialData.id changes
 
@@ -169,73 +174,115 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       }
 
       if (!initialData) {
-        // Creating new staff member
-        const response = await supabase.functions.invoke("create-staff-user", {
-          body: {
+        // Creating new staff member - improved error handling
+        try {
+          console.log("Invoking create-staff-user with data:", {
             email: staffData.email,
-            password: staffData.password,
+            password: "***",
             name: staffData.name,
             staffRole: staffData.role,
-            phone: staffData.phone,
-            salary: parseFloat(staffData.salary.toString()),
-            joining_date: staffData.joining_date,
-            fuelPumpId: fuelPumpId,
+            fuelPumpId,
             mobile_only_access: mobileOnlyAccess,
             assigned_pumps: staffData.assigned_pumps,
             features: selectedFeatures
-          }
-        });
-
-        if (!response.data) {
-          throw new Error("No response from server");
-        }
-
-        if (response.error || !response.data.success) {
-          throw new Error(response.error?.message || response.data?.error || "Failed to create staff user");
-        }
-
-        console.log("Staff created successfully:", response.data);
-        
-        // If the response includes a staff_id, include it in the payload
-        if (response.data.data && response.data.data.staff_id) {
-          if (onSubmit) {
-            const staffPayload: StaffPayload = {
-              id: response.data.data.staff_id,
-              auth_id: response.data.data.auth_id,
-              name: staffData.name,
-              phone: staffData.phone,
+          });
+          
+          const response = await supabase.functions.invoke("create-staff-user", {
+            body: {
               email: staffData.email,
-              role: staffData.role,
+              password: staffData.password,
+              name: staffData.name,
+              staffRole: staffData.role,
+              phone: staffData.phone,
               salary: parseFloat(staffData.salary.toString()),
               joining_date: staffData.joining_date,
-              assigned_pumps: staffData.assigned_pumps,
-              fuel_pump_id: fuelPumpId,
+              fuelPumpId: fuelPumpId,
               mobile_only_access: mobileOnlyAccess,
+              assigned_pumps: staffData.assigned_pumps,
               features: selectedFeatures
-            };
-            
-            await onSubmit(staffPayload);
+            }
+          });
+
+          console.log("Edge function response:", response);
+
+          // Check if we got an error response
+          if (response.error) {
+            throw new Error(response.error.message || "Failed to create staff user");
           }
-        } else {
-          // Edge function succeeded but didn't return the IDs we need
-          console.warn("Staff user created but missing IDs in response:", response.data);
           
-          // Manually fetch the new staff record
-          const { data: newStaff } = await supabase
-            .from('staff')
-            .select('*')
-            .eq('email', staffData.email)
-            .eq('fuel_pump_id', fuelPumpId)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+          // Check if we got data back
+          if (!response.data) {
+            throw new Error("No response data from server");
+          }
+          
+          // Check if the response indicates a failure
+          if (!response.data.success) {
+            throw new Error(response.data.error || "Failed to create staff user");
+          }
+
+          console.log("Staff created successfully:", response.data);
+          
+          // If the response includes a staff_id, include it in the payload
+          if (response.data.data && response.data.data.staff_id) {
+            if (onSubmit) {
+              const staffPayload: StaffPayload = {
+                id: response.data.data.staff_id,
+                auth_id: response.data.data.auth_id,
+                name: staffData.name,
+                phone: staffData.phone,
+                email: staffData.email,
+                role: staffData.role,
+                salary: parseFloat(staffData.salary.toString()),
+                joining_date: staffData.joining_date,
+                assigned_pumps: staffData.assigned_pumps,
+                fuel_pump_id: fuelPumpId,
+                mobile_only_access: mobileOnlyAccess,
+                features: selectedFeatures
+              };
+              
+              await onSubmit(staffPayload);
+            }
+          } else {
+            // Edge function succeeded but didn't return the IDs we need
+            console.warn("Staff user created but missing IDs in response:", response.data);
             
-          if (newStaff && onSubmit) {
-            await onSubmit({
-              ...newStaff,
-              features: selectedFeatures
+            // Manually fetch the new staff record
+            const { data: newStaff } = await supabase
+              .from('staff')
+              .select('*')
+              .eq('email', staffData.email)
+              .eq('fuel_pump_id', fuelPumpId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+              
+            if (newStaff && onSubmit) {
+              await onSubmit({
+                ...newStaff,
+                features: selectedFeatures
+              });
+            }
+          }
+        } catch (functionError: any) {
+          console.error('Error invoking edge function:', functionError);
+          
+          // Check if it's a 409 Conflict (duplicate email)
+          if (functionError.message?.includes('already exists')) {
+            toast({
+              title: "Email already exists",
+              description: "A user with this email address already exists in the system",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Error",
+              description: functionError.message || "Failed to create staff member",
+              variant: "destructive"
             });
           }
+          
+          setIsSubmitting(false);
+          return;
         }
       } else if (onSubmit) {
         // For existing staff, use the regular onSubmit callback

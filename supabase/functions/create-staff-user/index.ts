@@ -70,15 +70,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user exists
-    const { data: existingUsers, error: userListError } = await supabase.auth.admin.listUsers();
+    // Check if user exists - manually check for email duplicates
+    const { data: existingAuth, error: existingAuthError } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
     
-    if (userListError) {
-      console.error("Error checking existing users:", userListError);
+    if (existingAuthError) {
+      console.error("Error checking existing users:", existingAuthError);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Failed to verify email uniqueness: " + userListError.message 
+          error: "Failed to verify email uniqueness: " + existingAuthError.message 
         }),
         { 
           status: 500, 
@@ -90,12 +93,42 @@ Deno.serve(async (req) => {
       );
     }
     
-    if (existingUsers?.users?.some(user => user.email?.toLowerCase() === requestData.email.toLowerCase())) {
+    // Check if email is already in use
+    const emailExists = existingAuth?.users?.some(user => 
+      user.email?.toLowerCase() === requestData.email.toLowerCase());
+      
+    if (emailExists) {
       console.error("Email already in use:", requestData.email);
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: "A user with this email already exists" 
+        }),
+        { 
+          status: 409, // Use conflict status code
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      );
+    }
+
+    // Also check staff table for duplicate email
+    const { data: existingStaff, error: staffCheckError } = await supabase
+      .from('staff')
+      .select('id, email')
+      .eq('email', requestData.email.toLowerCase())
+      .maybeSingle();
+      
+    if (staffCheckError) {
+      console.error("Error checking existing staff:", staffCheckError);
+    } else if (existingStaff) {
+      console.error("Email already exists in staff table:", requestData.email);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "A staff member with this email already exists" 
         }),
         { 
           status: 409, 
@@ -105,6 +138,34 @@ Deno.serve(async (req) => {
           } 
         }
       );
+    }
+    
+    // Also check for duplicate phone numbers
+    if (requestData.phone) {
+      const { data: existingPhone, error: phoneCheckError } = await supabase
+        .from('staff')
+        .select('id, phone')
+        .eq('phone', requestData.phone)
+        .maybeSingle();
+        
+      if (phoneCheckError) {
+        console.error("Error checking existing phone numbers:", phoneCheckError);
+      } else if (existingPhone) {
+        console.error("Phone number already in use:", requestData.phone);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "A staff member with this phone number already exists" 
+          }),
+          { 
+            status: 409, 
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'application/json' 
+            } 
+          }
+        );
+      }
     }
 
     // Create auth user
@@ -143,9 +204,21 @@ Deno.serve(async (req) => {
 
     // Create staff record
     if (authData.user) {
+      // Format assigned_pumps correctly
+      let formattedAssignedPumps = '[]';
+      if (requestData.assigned_pumps) {
+        if (typeof requestData.assigned_pumps === 'string') {
+          // If it's already a JSON string, use it directly
+          formattedAssignedPumps = requestData.assigned_pumps;
+        } else if (Array.isArray(requestData.assigned_pumps)) {
+          // If it's an array, stringify it
+          formattedAssignedPumps = JSON.stringify(requestData.assigned_pumps);
+        }
+      }
+      
       const staffData = {
         name: requestData.name,
-        email: requestData.email,
+        email: requestData.email.toLowerCase(),
         role: requestData.staffRole,
         auth_id: authData.user.id,
         fuel_pump_id: requestData.fuelPumpId,
@@ -154,8 +227,7 @@ Deno.serve(async (req) => {
         salary: requestData.salary || 0,
         is_active: true,
         mobile_only_access: requestData.mobile_only_access || false,
-        // Convert assigned_pumps to a JSON array if provided
-        assigned_pumps: requestData.assigned_pumps ? JSON.stringify(requestData.assigned_pumps) : '[]'
+        assigned_pumps: formattedAssignedPumps
       };
 
       console.log("Creating staff record:", staffData);
@@ -193,7 +265,7 @@ Deno.serve(async (req) => {
 
       // Handle staff permissions if provided
       if (requestData.features && requestData.features.length > 0 && insertedStaff && insertedStaff.length > 0) {
-        const staffPermissions = requestData.features.map((feature: string) => ({
+        const staffPermissions = requestData.features.map((feature) => ({
           staff_id: insertedStaff[0].id,
           feature: feature
         }));
