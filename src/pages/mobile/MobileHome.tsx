@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CreditCard, UserRound, CalendarClock, AlertCircle, Droplets } from 'lucide-react';
@@ -31,7 +32,7 @@ const MobileHome = () => {
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
       <div className="text-center mb-4 animate-fade-in">
         <div className="flex justify-center mb-2">
-          <Logo size="lg" />
+          <Logo size="lg" className="h-12 w-auto" />
         </div>
         <p className="text-muted-foreground text-sm mt-1">Mobile Dashboard</p>
         <MobileHeader title="" showBackButton={false} />

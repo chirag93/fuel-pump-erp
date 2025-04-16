@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -39,7 +40,7 @@ export function Navbar({ className }: NavbarProps) {
       <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           <a href="/" className="flex items-center gap-2">
-            <Logo size="md" />
+            <Logo size="md" className="h-8 w-auto" />
           </a>
         </div>
 

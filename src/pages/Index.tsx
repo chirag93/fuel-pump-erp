@@ -12,8 +12,11 @@ const Index = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-2">
-              <Droplets className="h-8 w-8 text-blue-400" />
-              <span className="text-2xl font-bold">Fuel Pro 360</span>
+              <img 
+                src="/lovable-uploads/b39fe49b-bfda-4eab-a04c-96a833d64021.png" 
+                alt="Fuel Pro 360" 
+                className="h-8 w-auto"
+              />
             </div>
             
             <nav className="hidden md:flex items-center space-x-8">
@@ -408,8 +411,11 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
-                <Droplets className="h-6 w-6 text-blue-400" />
-                <span className="text-xl font-bold text-white">Fuel Pro 360</span>
+                <img 
+                  src="/lovable-uploads/b39fe49b-bfda-4eab-a04c-96a833d64021.png" 
+                  alt="Fuel Pro 360" 
+                  className="h-8 w-auto"
+                />
               </div>
               <p className="max-w-xs">
                 Comprehensive fuel station management solution for modern businesses.
