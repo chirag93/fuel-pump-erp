@@ -37,34 +37,39 @@ interface StaffPayload {
 
 export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void, onCancel?: () => void) => {
   const [staffData, setStaffData] = useState<StaffFormData>({
-    name: initialData?.name || '',
-    phone: initialData?.phone || '',
-    email: initialData?.email || '',
-    role: initialData?.role || '',
-    salary: initialData?.salary || '',
-    joining_date: initialData?.joining_date || new Date().toISOString().split('T')[0],
-    assigned_pumps: initialData?.assigned_pumps || [],
+    name: '',
+    phone: '',
+    email: '',
+    role: '',
+    salary: '',
+    joining_date: new Date().toISOString().split('T')[0],
+    assigned_pumps: [],
     password: '',
     confirmPassword: '',
   });
-  const [selectedFeatures, setSelectedFeatures] = useState<StaffFeature[]>(initialData?.features || []);
+  const [selectedFeatures, setSelectedFeatures] = useState<StaffFeature[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPump, setSelectedPump] = useState<string>('');
   const [changePassword, setChangePassword] = useState<boolean>(false);
-  const [mobileOnlyAccess, setMobileOnlyAccess] = useState<boolean>(initialData?.mobile_only_access || false);
+  const [mobileOnlyAccess, setMobileOnlyAccess] = useState<boolean>(false);
 
-  // Fix excessive rendering issue by using initialData.id as dependency
+  // Initialize form data from initialData when available
   useEffect(() => {
     if (initialData) {
-      console.log("Setting form data from initialData:", initialData.id);
+      console.log("Initializing form with data:", initialData.id);
       
-      let assignedPumps = initialData.assigned_pumps || [];
-      // Handle different formats of assigned_pumps
-      if (typeof assignedPumps === 'string') {
+      // Safely parse assigned_pumps
+      let assignedPumps: string[] = [];
+      if (initialData.assigned_pumps) {
         try {
-          assignedPumps = JSON.parse(assignedPumps);
+          if (typeof initialData.assigned_pumps === 'string') {
+            assignedPumps = JSON.parse(initialData.assigned_pumps);
+          } else if (Array.isArray(initialData.assigned_pumps)) {
+            assignedPumps = initialData.assigned_pumps;
+          }
         } catch (e) {
+          console.error("Error parsing assigned_pumps:", e);
           assignedPumps = [];
         }
       }
@@ -83,35 +88,34 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       
       setMobileOnlyAccess(Boolean(initialData.mobile_only_access));
       
-      // Set selected features if available
       if (initialData.features && Array.isArray(initialData.features)) {
         setSelectedFeatures(initialData.features);
       }
     }
-  }, [initialData?.id]); // Only trigger when initialData.id changes
+  }, [initialData]);
 
   const handleChange = (field: string, value: string) => {
-    setStaffData({ ...staffData, [field]: value });
+    setStaffData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors({ ...errors, [field]: '' });
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
   const handleAddPump = () => {
     if (selectedPump && !staffData.assigned_pumps.includes(selectedPump)) {
-      setStaffData({ 
-        ...staffData, 
-        assigned_pumps: [...staffData.assigned_pumps, selectedPump] 
-      });
+      setStaffData(prev => ({ 
+        ...prev, 
+        assigned_pumps: [...prev.assigned_pumps, selectedPump] 
+      }));
       setSelectedPump('');
     }
   };
 
   const handleRemovePump = (pump: string) => {
-    setStaffData({
-      ...staffData,
-      assigned_pumps: staffData.assigned_pumps.filter((p: string) => p !== pump)
-    });
+    setStaffData(prev => ({
+      ...prev,
+      assigned_pumps: prev.assigned_pumps.filter((p: string) => p !== pump)
+    }));
   };
 
   const validateForm = () => {
@@ -161,7 +165,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     setIsSubmitting(true);
     
     try {
-      // Get fuel pump ID first
+      // Get fuel pump ID
       const fuelPumpId = await getFuelPumpId();
       if (!fuelPumpId) {
         toast({
@@ -174,115 +178,101 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       }
 
       if (!initialData) {
-        // Creating new staff member - improved error handling
+        // Creating new staff member
         try {
-          console.log("Invoking create-staff-user with data:", {
-            email: staffData.email,
-            password: "***",
+          const payload = {
             name: staffData.name,
+            email: staffData.email,
+            password: staffData.password,
             staffRole: staffData.role,
-            fuelPumpId,
+            phone: staffData.phone,
+            salary: parseFloat(staffData.salary.toString()),
+            joining_date: staffData.joining_date,
+            fuelPumpId: fuelPumpId,
             mobile_only_access: mobileOnlyAccess,
             assigned_pumps: staffData.assigned_pumps,
             features: selectedFeatures
+          };
+          
+          console.log("Invoking create-staff-user with data:", {
+            ...payload,
+            password: "***" // Don't log the actual password
           });
           
-          const response = await supabase.functions.invoke("create-staff-user", {
-            body: {
-              email: staffData.email,
-              password: staffData.password,
-              name: staffData.name,
-              staffRole: staffData.role,
-              phone: staffData.phone,
-              salary: parseFloat(staffData.salary.toString()),
-              joining_date: staffData.joining_date,
-              fuelPumpId: fuelPumpId,
-              mobile_only_access: mobileOnlyAccess,
-              assigned_pumps: staffData.assigned_pumps,
-              features: selectedFeatures
-            }
+          const { data, error } = await supabase.functions.invoke("create-staff-user", {
+            body: payload
           });
 
-          console.log("Edge function response:", response);
+          console.log("Edge function response:", { data, error });
 
-          // Check if we got an error response
-          if (response.error) {
-            throw new Error(response.error.message || "Failed to create staff user");
+          if (error) {
+            console.error("Edge function error:", error);
+            throw new Error(error.message || "Failed to create staff user");
           }
           
-          // Check if we got data back
-          if (!response.data) {
+          if (!data) {
             throw new Error("No response data from server");
           }
           
-          // Check if the response indicates a failure
-          if (!response.data.success) {
-            throw new Error(response.data.error || "Failed to create staff user");
+          if (!data.success) {
+            throw new Error(data.error || "Failed to create staff user");
           }
 
-          console.log("Staff created successfully:", response.data);
+          console.log("Staff created successfully:", data);
           
-          // If the response includes a staff_id, include it in the payload
-          if (response.data.data && response.data.data.staff_id) {
-            if (onSubmit) {
-              const staffPayload: StaffPayload = {
-                id: response.data.data.staff_id,
-                auth_id: response.data.data.auth_id,
-                name: staffData.name,
-                phone: staffData.phone,
-                email: staffData.email,
-                role: staffData.role,
-                salary: parseFloat(staffData.salary.toString()),
-                joining_date: staffData.joining_date,
-                assigned_pumps: staffData.assigned_pumps,
-                fuel_pump_id: fuelPumpId,
-                mobile_only_access: mobileOnlyAccess,
-                features: selectedFeatures
-              };
-              
-              await onSubmit(staffPayload);
-            }
-          } else {
-            // Edge function succeeded but didn't return the IDs we need
-            console.warn("Staff user created but missing IDs in response:", response.data);
+          if (data.data && data.data.staff_id && onSubmit) {
+            const staffPayload: StaffPayload = {
+              id: data.data.staff_id,
+              auth_id: data.data.auth_id,
+              name: staffData.name,
+              phone: staffData.phone,
+              email: staffData.email,
+              role: staffData.role,
+              salary: parseFloat(staffData.salary.toString()),
+              joining_date: staffData.joining_date,
+              assigned_pumps: staffData.assigned_pumps,
+              fuel_pump_id: fuelPumpId,
+              mobile_only_access: mobileOnlyAccess,
+              features: selectedFeatures
+            };
             
-            // Manually fetch the new staff record
-            const { data: newStaff } = await supabase
-              .from('staff')
-              .select('*')
-              .eq('email', staffData.email)
-              .eq('fuel_pump_id', fuelPumpId)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-              
-            if (newStaff && onSubmit) {
-              await onSubmit({
-                ...newStaff,
-                features: selectedFeatures
-              });
-            }
+            await onSubmit(staffPayload);
+            
+            toast({
+              title: "Staff Created",
+              description: `${staffData.name} has been added successfully`
+            });
+
+            if (onCancel) onCancel();
+          } else {
+            console.warn("Staff user created but missing IDs in response:", data);
+            toast({
+              title: "Warning",
+              description: "Staff created but some data was missing. Please refresh the page.",
+              variant: "default"
+            });
+            
+            if (onCancel) onCancel();
           }
         } catch (functionError: any) {
           console.error('Error invoking edge function:', functionError);
           
-          // Check if it's a 409 Conflict (duplicate email)
-          if (functionError.message?.includes('already exists')) {
+          // Check for specific error messages
+          const errorMessage = functionError.message || "Failed to create staff member";
+          
+          if (errorMessage.toLowerCase().includes('already exists')) {
             toast({
-              title: "Email already exists",
-              description: "A user with this email address already exists in the system",
+              title: "Duplicate Entry",
+              description: errorMessage,
               variant: "destructive"
             });
           } else {
             toast({
               title: "Error",
-              description: functionError.message || "Failed to create staff member",
+              description: errorMessage,
               variant: "destructive"
             });
           }
-          
-          setIsSubmitting(false);
-          return;
         }
       } else if (onSubmit) {
         // For existing staff, use the regular onSubmit callback
@@ -307,14 +297,14 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
         }
         
         await onSubmit(staffPayload);
+        
+        toast({
+          title: "Staff Updated",
+          description: `${staffData.name} has been updated successfully`
+        });
+
+        if (onCancel) onCancel();
       }
-
-      toast({
-        title: initialData ? "Staff Updated" : "Staff Created",
-        description: `${staffData.name} has been ${initialData ? 'updated' : 'added'} successfully`
-      });
-
-      if (onCancel) onCancel();
     } catch (error: any) {
       console.error('Error in staff form submission:', error);
       toast({

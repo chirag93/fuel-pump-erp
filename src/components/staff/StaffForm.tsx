@@ -4,7 +4,7 @@ import { useStaffForm } from '@/hooks/useStaffForm';
 import { FeatureSelection } from './FeatureSelection';
 import { PumpSelection } from './PumpSelection';
 import { BasicInfoFields } from './BasicInfoFields';
-import { useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 
 interface StaffFormProps {
   onSubmit: (staff: any) => void;
@@ -13,6 +13,9 @@ interface StaffFormProps {
 }
 
 const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
+  // Use a ref to track initialization
+  const initialized = useRef(false);
+  
   const {
     staffData,
     selectedFeatures,
@@ -31,12 +34,15 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     setMobileOnlyAccess
   } = useStaffForm(initialData, onSubmit, onCancel);
 
-  // Use a debug log that only shows once on initial render, not on every re-render
+  // Log initialization only once
   useEffect(() => {
-    if (initialData?.id) {
-      console.log("StaffForm mounted with initialData ID:", initialData.id);
-    } else {
-      console.log("StaffForm mounted for new staff creation");
+    if (!initialized.current) {
+      initialized.current = true;
+      if (initialData?.id) {
+        console.log("StaffForm initialized with initialData ID:", initialData.id);
+      } else {
+        console.log("StaffForm initialized for new staff creation");
+      }
     }
   }, [initialData?.id]);
 
