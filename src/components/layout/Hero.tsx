@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/ui/custom/FadeIn";
@@ -59,20 +60,21 @@ export function Hero() {
             </div>
           </FadeIn>
         
-        <FadeIn delay="300ms" className="mt-16 sm:mt-24">
-          <div className="relative mx-auto overflow-hidden rounded-xl border border-border/40 bg-card shadow-medium">
-            <div className="absolute inset-0 bg-gradient-to-tr from-background/80 to-card opacity-50" />
-            
-            <img
-              src="https://images.unsplash.com/photo-1611288875785-9ef0f98d45c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
-              alt="Fuel Master Dashboard"
-              className="w-full h-auto object-cover opacity-90"
-            />
-            
-            {/* Overlay reflection effect */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/20 backdrop-blur-[1px]" />
-          </div>
-        </FadeIn>
+          <FadeIn delay="300ms" className="mt-16 sm:mt-24">
+            <div className="relative mx-auto overflow-hidden rounded-xl border border-border/40 bg-card shadow-medium">
+              <div className="absolute inset-0 bg-gradient-to-tr from-background/80 to-card opacity-50" />
+              
+              <img
+                src="https://images.unsplash.com/photo-1611288875785-9ef0f98d45c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+                alt="Fuel Master Dashboard"
+                className="w-full h-auto object-cover opacity-90"
+              />
+              
+              {/* Overlay reflection effect */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/20 backdrop-blur-[1px]" />
+            </div>
+          </FadeIn>
+        </div>
       </div>
     </div>
   );
