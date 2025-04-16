@@ -1,9 +1,8 @@
-
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/ui/custom/FadeIn";
-import { Droplets } from "lucide-react";
 import { getBusinessSettings } from "@/integrations/businessSettings";
+import { Logo } from "@/components/ui/logo";
 
 export function Hero() {
   const [businessName, setBusinessName] = useState<string>('Fuel Pro 360');
@@ -34,12 +33,7 @@ export function Hero() {
         <div className="mx-auto max-w-4xl text-center">
           <FadeIn>
             <div className="flex justify-center mb-6">
-              <div className="flex items-center gap-3">
-                <Droplets className="h-12 w-12 text-primary" />
-                <span className="text-4xl sm:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
-                  {businessName}
-                </span>
-              </div>
+              <Logo size="lg" className="h-16" />
             </div>
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
               <span className="block text-balance">
@@ -64,7 +58,6 @@ export function Hero() {
               </Button>
             </div>
           </FadeIn>
-        </div>
         
         <FadeIn delay="300ms" className="mt-16 sm:mt-24">
           <div className="relative mx-auto overflow-hidden rounded-xl border border-border/40 bg-card shadow-medium">

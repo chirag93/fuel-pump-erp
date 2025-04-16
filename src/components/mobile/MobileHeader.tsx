@@ -5,6 +5,7 @@ import { ChevronLeft, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Logo } from '@/components/ui/logo';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,7 +61,11 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               </Button>
             </Link>
           )}
-          <h1 className="text-xl font-semibold">{title}</h1>
+          {title ? (
+            <h1 className="text-xl font-semibold">{title}</h1>
+          ) : (
+            <Logo size="sm" className="h-8" />
+          )}
         </div>
         <Button 
           variant="outline" 

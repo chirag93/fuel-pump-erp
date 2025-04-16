@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useSuperAdminAuth } from "@/superadmin/contexts/SuperAdminAuthContext"
+import { Logo } from "@/components/ui/logo";
 
 interface MainNavProps extends React.HTMLAttributes<HTMLElement> {}
 
@@ -105,8 +106,8 @@ export function MainNav({ className, ...props }: MainNavProps) {
   return (
     <div className={cn("flex items-center justify-between", className)} {...props}>
       <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate("/")} className="p-0 text-xl font-bold">
-          Fuel Pro
+        <Button variant="ghost" onClick={() => navigate("/")} className="p-0">
+          <Logo size="sm" className="h-8" />
         </Button>
         <nav className="hidden md:flex items-center gap-4">{renderLinks()}</nav>
       </div>
