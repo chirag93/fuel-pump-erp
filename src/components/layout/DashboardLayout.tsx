@@ -48,6 +48,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Logo } from "@/components/ui/logo";
 
 interface SidebarItemProps {
   href: string;
@@ -127,11 +128,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         )}
       >
         <div className="flex h-16 items-center px-4">
-          <Link to="/dashboard" className="font-semibold text-2xl flex items-center gap-2">
-            <Home className="h-6 w-6" />
-            <span className={cn("transition-opacity", isCollapsed ? "opacity-0" : "opacity-100")}>
-              Fuel Pro 360
-            </span>
+          <Link to="/dashboard" className="flex items-center">
+            <Logo size={isCollapsed ? "sm" : "md"} className={cn(
+              "transition-all duration-200",
+              isCollapsed ? "h-6 w-auto" : "h-8 w-auto"
+            )} />
           </Link>
           <Button
             type="button"

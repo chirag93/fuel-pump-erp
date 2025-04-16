@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, LogOut } from 'lucide-react';
@@ -64,7 +63,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           {title ? (
             <h1 className="text-xl font-semibold">{title}</h1>
           ) : (
-            <Logo size="sm" className="h-8" />
+            <Logo size="sm" className="h-8 w-auto" />
           )}
         </div>
         <Button 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
+import { Logo } from '@/components/ui/logo';
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -118,8 +118,7 @@ const SuperAdminLayout = ({ children }: SuperAdminLayoutProps) => {
       >
         <div className="flex h-16 items-center border-b px-6">
           <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
-            <h2 className="text-xl font-bold">Fuel Pro 360</h2>
+            <Logo size="sm" className="h-8 w-auto" />
           </div>
         </div>
         

@@ -1,6 +1,4 @@
 
-import { cn } from "@/lib/utils";
-
 interface LogoProps {
   className?: string;
   size?: "sm" | "md" | "lg";
@@ -15,9 +13,9 @@ export function Logo({ className, size = "md" }: LogoProps) {
 
   return (
     <img
-      src="/lovable-uploads/aee43f29-debb-417a-8bb0-ccc9fc0ec77b.png"
+      src="/lovable-uploads/b39fe49b-bfda-4eab-a04c-96a833d64021.png"
       alt="Fuel Pro 360 Logo"
-      className={cn(sizes[size], "w-auto", className)}
+      className={className || sizes[size]}
     />
   );
 }
