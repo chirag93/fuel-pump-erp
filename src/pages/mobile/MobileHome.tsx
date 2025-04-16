@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { CreditCard, UserRound, CalendarClock, AlertCircle } from 'lucide-react';
+import { CreditCard, UserRound, CalendarClock, AlertCircle, Droplets } from 'lucide-react';
 import { CardFeature } from '@/components/ui/custom/CardFeature';
 import { useAuth } from '@/contexts/AuthContext';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
