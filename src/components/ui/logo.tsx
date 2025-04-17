@@ -6,9 +6,9 @@ interface LogoProps {
 
 export function Logo({ className, size = "md" }: LogoProps) {
   const sizes = {
-    sm: "h-6",
-    md: "h-8",
-    lg: "h-12"
+    sm: "h-6 w-auto",
+    md: "h-8 w-auto",
+    lg: "h-12 w-auto"
   };
 
   return (
