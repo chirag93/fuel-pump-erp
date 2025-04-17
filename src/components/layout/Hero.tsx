@@ -25,7 +25,7 @@ export function Hero() {
   }, []);
   
   return (
-    <div className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/30 pt-16 pb-24 sm:pt-24">
+    <div className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/30 pt-20 pb-24 sm:pt-28 md:pt-32 md:pb-40">
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
       
       <div className="absolute inset-0 h-screen bg-gradient-to-br from-primary/5 via-secondary/5 to-background" />
@@ -33,8 +33,9 @@ export function Hero() {
       <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 max-w-[1400px]">
         <div className="mx-auto max-w-4xl text-center">
           <FadeIn>
-            <div className="flex justify-center mb-6">
-              <Logo size="lg" className="h-20 w-auto" />
+            <div className="flex flex-col items-center mb-6">
+              <Logo size="lg" className="h-24 w-auto" />
+              <h2 className="text-xl font-semibold mt-2">{businessName}</h2>
             </div>
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
               <span className="block text-balance">

@@ -30,9 +30,9 @@ const MobileHome = () => {
   
   return (
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
-      <div className="text-center mb-4 animate-fade-in">
+      <div className="text-center mb-6 animate-fade-in">
         <div className="flex justify-center mb-3">
-          <Logo size="lg" className="h-14 w-auto" />
+          <Logo size="lg" className="h-16 w-auto" />
         </div>
         <p className="text-muted-foreground text-sm mt-1">Mobile Dashboard</p>
         <MobileHeader title="" showBackButton={false} />

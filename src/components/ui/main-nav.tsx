@@ -107,7 +107,7 @@ export function MainNav({ className, ...props }: MainNavProps) {
     <div className={cn("flex items-center justify-between", className)} {...props}>
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => navigate("/")} className="p-0">
-          <Logo size="sm" className="h-8" />
+          <Logo size="sm" className="h-9 w-auto" />
         </Button>
         <nav className="hidden md:flex items-center gap-4">{renderLinks()}</nav>
       </div>
@@ -148,5 +148,5 @@ export function MainNav({ className, ...props }: MainNavProps) {
         </DropdownMenu>
       </div>
     </div>
-  )
+  );
 }
