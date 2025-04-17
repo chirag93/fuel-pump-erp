@@ -2,13 +2,15 @@
 import { useState, useEffect } from "react";
 import { getLogoUrl, getFallbackLogoUrl, uploadDefaultLogo } from "@/integrations/storage";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 interface LogoProps {
   className?: string;
   size?: "sm" | "md" | "lg";
+  textClassName?: string;
 }
 
-export function Logo({ className, size = "md" }: LogoProps) {
+export function Logo({ className, size = "md", textClassName }: LogoProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -59,13 +61,22 @@ export function Logo({ className, size = "md" }: LogoProps) {
   }, []);
 
   if (isLoading) {
-    return <Skeleton className={className || sizes[size]} />;
+    return <Skeleton className={cn(className || sizes[size], "bg-white/20")} />;
   }
 
   if (error) {
     return (
-      <div className={`flex items-center justify-center bg-primary/10 ${className || sizes[size]}`}>
-        <span className="text-primary text-xs font-medium">Fuel Pro 360</span>
+      <div className={cn(
+        "flex items-center justify-center", 
+        className || sizes[size], 
+        "bg-white/10 rounded-lg"
+      )}>
+        <span className={cn(
+          "text-white text-xs font-medium", 
+          textClassName
+        )}>
+          Fuel Pro 360
+        </span>
       </div>
     );
   }
@@ -74,7 +85,11 @@ export function Logo({ className, size = "md" }: LogoProps) {
     <img
       src={logoUrl || getFallbackLogoUrl()}
       alt="Fuel Pro 360 Logo"
-      className={className || sizes[size]}
+      className={cn(
+        "object-contain", 
+        className || sizes[size],
+        "drop-shadow-lg"
+      )}
     />
   );
 }
