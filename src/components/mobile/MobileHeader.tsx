@@ -64,7 +64,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           {title ? (
             <h1 className="text-xl font-semibold">{title}</h1>
           ) : (
-            <Logo size="md" className="h-10 w-auto" />
+            <Logo size="md" className="h-14 w-auto" />
           )}
         </div>
         <Button 

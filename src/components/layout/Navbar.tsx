@@ -32,7 +32,7 @@ export function Navbar({ className }: NavbarProps) {
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-2",
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-3",
         isScrolled 
           ? "bg-blue-950/95 backdrop-blur-md shadow-md" 
           : "bg-blue-950/90",
@@ -41,10 +41,10 @@ export function Navbar({ className }: NavbarProps) {
     >
       <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
-          <a href="/" className="flex items-center gap-2">
+          <a href="/" className="flex items-center">
             <Logo 
               size="md" 
-              className="h-10 w-auto sm:h-12" 
+              className="h-14 w-auto sm:h-16" 
               variant="white"
             />
           </a>

@@ -6,15 +6,13 @@ import { cn } from "@/lib/utils";
 
 interface LogoProps {
   className?: string;
-  size?: "sm" | "md" | "lg";
-  textClassName?: string;
+  size?: "sm" | "md" | "lg" | "xl";
   variant?: "default" | "white";
 }
 
 export function Logo({ 
   className, 
   size = "md", 
-  textClassName,
   variant = "default" 
 }: LogoProps) {
   const [isLoading, setIsLoading] = useState(true);
@@ -22,9 +20,10 @@ export function Logo({
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   
   const sizes = {
-    sm: "h-9 w-auto",
-    md: "h-12 w-auto",
-    lg: "h-20 w-auto"
+    sm: "h-10 w-auto",
+    md: "h-16 w-auto",
+    lg: "h-24 w-auto",
+    xl: "h-32 w-auto"
   };
 
   // Attempt to load the logo on component mount
@@ -78,8 +77,7 @@ export function Logo({
         "bg-white/10 rounded-lg"
       )}>
         <span className={cn(
-          "text-white font-bold",
-          textClassName
+          "text-white font-bold text-2xl"
         )}>
           Fuel Pro 360
         </span>
@@ -90,7 +88,7 @@ export function Logo({
   const textColorClass = variant === "white" ? "text-white" : "text-primary";
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center">
       <img
         src={logoUrl || getFallbackLogoUrl()}
         alt="Fuel Pro 360 Logo"
@@ -101,9 +99,6 @@ export function Logo({
         )}
         style={{ maxHeight: "100%", maxWidth: "100%" }}
       />
-      <span className={cn("font-bold text-lg hidden sm:block", textColorClass)}>
-        Fuel Pro 360
-      </span>
     </div>
   );
 }
