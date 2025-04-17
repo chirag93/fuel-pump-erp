@@ -12,6 +12,7 @@ const PUBLIC_LOGO_URL = `https://svuritdhlgaonfefphkz.supabase.co/storage/v1/obj
  */
 export const uploadLogo = async (file: File): Promise<string | null> => {
   try {
+    // Create the directory structure if needed
     const { data, error } = await supabase.storage
       .from(ASSETS_BUCKET)
       .upload(LOGO_PATH, file, {
@@ -24,6 +25,7 @@ export const uploadLogo = async (file: File): Promise<string | null> => {
       return null;
     }
 
+    console.log('Logo uploaded successfully:', data.path);
     return data.path;
   } catch (error) {
     console.error('Error in uploadLogo:', error);
@@ -39,10 +41,39 @@ export const getLogoUrl = (): string => {
   return PUBLIC_LOGO_URL;
 };
 
+/**
+ * Checks if the logo exists in Supabase storage
+ * @returns Promise with boolean indicating if logo exists
+ */
+export const checkLogoExists = async (): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.storage
+      .from(ASSETS_BUCKET)
+      .list('logo');
+    
+    if (error) {
+      console.error('Error checking if logo exists:', error);
+      return false;
+    }
+    
+    return data.some(file => file.name === 'fuel-pro-360-logo.png');
+  } catch (error) {
+    console.error('Error in checkLogoExists:', error);
+    return false;
+  }
+};
+
 // Initial upload function for development purposes
 // This can be used to upload the logo from the existing path to Supabase storage
 export const migrateLogoToSupabase = async (): Promise<void> => {
   try {
+    // First check if logo already exists in Supabase
+    const logoExists = await checkLogoExists();
+    if (logoExists) {
+      console.log('Logo already exists in Supabase storage, skipping migration');
+      return;
+    }
+    
     // Fetch the existing logo from lovable uploads
     const response = await fetch('/lovable-uploads/b39fe49b-bfda-4eab-a04c-96a833d64021.png');
     
