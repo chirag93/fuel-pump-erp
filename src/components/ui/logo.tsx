@@ -21,7 +21,7 @@ export function Logo({
   
   const sizes = {
     sm: "h-10 w-auto",
-    md: "h-16 w-auto",
+    md: "h-14 w-auto", // Increased from h-16 to h-14
     lg: "h-24 w-auto",
     xl: "h-32 w-auto"
   };
