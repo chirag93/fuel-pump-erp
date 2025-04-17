@@ -16,9 +16,9 @@ export function Logo({ className, size = "md", textClassName }: LogoProps) {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   
   const sizes = {
-    sm: "h-6 w-auto",
-    md: "h-8 w-auto",
-    lg: "h-12 w-auto"
+    sm: "h-8 w-auto",
+    md: "h-10 w-auto",
+    lg: "h-16 w-auto"
   };
 
   // Attempt to load the logo on component mount
@@ -72,7 +72,7 @@ export function Logo({ className, size = "md", textClassName }: LogoProps) {
         "bg-white/10 rounded-lg"
       )}>
         <span className={cn(
-          "text-white text-xs font-medium", 
+          "text-white text-sm font-medium", 
           textClassName
         )}>
           Fuel Pro 360
@@ -88,7 +88,7 @@ export function Logo({ className, size = "md", textClassName }: LogoProps) {
       className={cn(
         "object-contain", 
         className || sizes[size],
-        "drop-shadow-lg"
+        "drop-shadow-md"
       )}
     />
   );
