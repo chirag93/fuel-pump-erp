@@ -4,15 +4,13 @@ import { Droplets, ChevronRight, ChevronDown, Laptop, ShieldCheck, Users, Trendi
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/logo";
-
 const Index = () => {
   const [activeTab, setActiveTab] = useState<string>("fuel-station");
-  
   return <div className="flex flex-col min-h-screen bg-white">
       {/* Hero Section with Navbar */}
       <header className="relative bg-gradient-to-b from-blue-900 to-blue-800 text-white overflow-hidden">
         {/* Navigation */}
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 bg-slate-50">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-2">
               <Logo size="md" className="h-8 w-auto" />
@@ -43,7 +41,7 @@ const Index = () => {
             
             <div className="hidden md:block">
               <Link to="/login">
-                <Button className="bg-white text-blue-900 hover:bg-blue-50">
+                <Button className="bg-blue-700 hover:bg-blue-600 text-slate-50">
                   Sign In
                 </Button>
               </Link>
