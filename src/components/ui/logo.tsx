@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { getLogoUrl } from "@/integrations/storage";
+import { getLogoUrl, getFallbackLogoUrl, uploadDefaultLogo } from "@/integrations/storage";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface LogoProps {
@@ -25,44 +25,37 @@ export function Logo({ className, size = "md" }: LogoProps) {
     setIsLoading(true);
     setError(false);
     
-    const supbaseLogoUrl = getLogoUrl();
-    const fallbackLogoUrl = "/lovable-uploads/b39fe49b-bfda-4eab-a04c-96a833d64021.png";
-    
-    // Pre-load the image to check if it exists
-    const img = new Image();
-    
-    // First try to load from Supabase
-    img.onload = () => {
-      setLogoUrl(supbaseLogoUrl);
-      setIsLoading(false);
-    };
-    
-    img.onerror = () => {
-      console.warn('Failed to load logo from Supabase, falling back to Lovable uploads');
-      
-      // Try the fallback
-      const fallbackImg = new Image();
-      fallbackImg.onload = () => {
-        setLogoUrl(fallbackLogoUrl);
-        setIsLoading(false);
-      };
-      
-      fallbackImg.onerror = () => {
-        console.error('Failed to load logo from fallback source');
+    const loadLogo = async () => {
+      try {
+        // Attempt to upload the default logo if it doesn't exist
+        await uploadDefaultLogo();
+        
+        // Get the Supabase logo URL
+        const supabaseLogoUrl = getLogoUrl();
+        
+        // Pre-load the image to check if it exists
+        const img = new Image();
+        
+        img.onload = () => {
+          setLogoUrl(supabaseLogoUrl);
+          setIsLoading(false);
+        };
+        
+        img.onerror = () => {
+          console.warn('Failed to load logo from Supabase');
+          setError(true);
+          setIsLoading(false);
+        };
+        
+        img.src = supabaseLogoUrl;
+      } catch (error) {
+        console.error('Error loading logo:', error);
         setError(true);
         setIsLoading(false);
-      };
-      
-      fallbackImg.src = fallbackLogoUrl;
+      }
     };
     
-    img.src = supbaseLogoUrl;
-    
-    // Cleanup
-    return () => {
-      img.onload = null;
-      img.onerror = null;
-    };
+    loadLogo();
   }, []);
 
   if (isLoading) {
@@ -79,7 +72,7 @@ export function Logo({ className, size = "md" }: LogoProps) {
 
   return (
     <img
-      src={logoUrl || "/lovable-uploads/b39fe49b-bfda-4eab-a04c-96a833d64021.png"}
+      src={logoUrl || getFallbackLogoUrl()}
       alt="Fuel Pro 360 Logo"
       className={className || sizes[size]}
     />

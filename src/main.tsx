@@ -8,7 +8,7 @@ import './index.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from './contexts/AuthContext';
 import { SuperAdminAuthProvider } from './superadmin/contexts/SuperAdminAuthContext';
-import { migrateLogoToSupabase } from './integrations/storage';
+import { migrateLogoToSupabase, uploadDefaultLogo } from './integrations/storage';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -20,11 +20,12 @@ const queryClient = new QueryClient({
   },
 });
 
-// Migrate logo to Supabase storage on development
-if (import.meta.env.DEV) {
-  migrateLogoToSupabase()
-    .then(() => console.log('Logo migration attempted'))
-    .catch(error => console.error('Error in logo migration:', error));
+// Migrate logo to Supabase storage on application load
+if (import.meta.env.DEV || import.meta.env.PROD) {
+  // For both development and production
+  uploadDefaultLogo()
+    .then(() => console.log('Logo upload check completed'))
+    .catch(error => console.error('Error checking logo upload:', error));
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
