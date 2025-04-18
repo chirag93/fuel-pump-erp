@@ -3,28 +3,22 @@ import { useState, useEffect } from "react";
 import { getLogoUrl, getFallbackLogoUrl, uploadDefaultLogo } from "@/integrations/storage";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { logoSizes, type LogoSize } from "@/config/logoConfig";
 
 interface LogoProps {
   className?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: LogoSize;
   variant?: "default" | "white";
 }
 
 export function Logo({ 
   className, 
-  size = "lg", // Changed default from "md" to "lg"
+  size = "lg",
   variant = "default" 
 }: LogoProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  
-  const sizes = {
-    sm: "h-10 w-auto",
-    md: "h-14 w-auto", // Increased from h-16 to h-14
-    lg: "h-24 w-auto",
-    xl: "h-32 w-auto"
-  };
 
   // Attempt to load the logo on component mount
   useEffect(() => {
@@ -66,14 +60,14 @@ export function Logo({
   }, []);
 
   if (isLoading) {
-    return <Skeleton className={cn(className || sizes[size], "bg-white/20")} />;
+    return <Skeleton className={cn(className || logoSizes[size], "bg-white/20")} />;
   }
 
   if (error) {
     return (
       <div className={cn(
         "flex items-center justify-center", 
-        className || sizes[size], 
+        className || logoSizes[size], 
         "bg-white/10 rounded-lg"
       )}>
         <span className={cn(
@@ -94,7 +88,7 @@ export function Logo({
         alt="Fuel Pro 360 Logo"
         className={cn(
           "object-contain", 
-          className || sizes[size],
+          className || logoSizes[size],
           "drop-shadow-md"
         )}
         style={{ maxHeight: "100%", maxWidth: "100%" }}
