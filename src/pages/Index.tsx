@@ -10,7 +10,7 @@ const Index = () => {
       {/* Hero Section with Navbar */}
       <header className="relative bg-gradient-to-b from-teal-900 to-teal-800 text-white overflow-hidden">
         {/* Navigation */}
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 bg-teal-600">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 bg-teal-500">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-2">
               <Logo size="md" className="h-8 w-auto" />
@@ -50,7 +50,7 @@ const Index = () => {
         </div>
         
         {/* Hero Content */}
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 md:pt-32 md:pb-40 bg-teal-600">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 md:pt-32 md:pb-40 bg-teal-500">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">Transform Your Fuel Station</h1>
@@ -290,7 +290,7 @@ const Index = () => {
       </section>
       
       {/* Key Benefits Section */}
-      <section className="py-20 text-white bg-teal-600">
+      <section className="py-20 text-white bg-teal-500">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4">Key Benefits of Fuel Pro 360</h2>
