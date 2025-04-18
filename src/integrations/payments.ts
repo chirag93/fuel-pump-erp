@@ -58,13 +58,13 @@ const getValidStaffId = async (fuelPumpId: string): Promise<string> => {
 
 /**
  * Record a payment for a customer
+ * When a customer makes a payment, their credit balance INCREASES
  */
 export const recordPayment = async (
   payment: Payment,
   currentBalance: number | null = 0
 ): Promise<boolean> => {
   try {
-    // Get the fuel pump ID for the current user
     const fuelPumpId = await getFuelPumpId();
     
     if (!fuelPumpId) {
@@ -113,6 +113,7 @@ export const recordPayment = async (
       });
       
       // Update the customer balance even if transaction creation fails
+      // For payments, we INCREASE the balance (adding to available credit)
       await updateCustomerBalance(payment.customer_id, payment.amount, currentBalance);
       return true;
     }
@@ -143,7 +144,7 @@ export const recordPayment = async (
 
     console.log('Transaction created successfully:', transactionData);
 
-    // Update the customer balance
+    // Update the customer balance - INCREASE balance when payment is made
     await updateCustomerBalance(payment.customer_id, payment.amount, currentBalance);
 
     toast({
@@ -165,7 +166,7 @@ export const recordPayment = async (
 
 /**
  * Update customer balance after payment
- * For payments, we DECREASE the balance as the customer owes less money
+ * For payments, we INCREASE the balance as the customer has more credit available
  */
 const updateCustomerBalance = async (
   customerId: string,
@@ -185,9 +186,9 @@ const updateCustomerBalance = async (
       throw fetchError;
     }
     
-    // Calculate new balance (reduce debt when payment is made)
+    // Calculate new balance (increase credit when payment is made)
     const latestBalance = customer?.balance || 0;
-    const newBalance = latestBalance - paymentAmount;
+    const newBalance = latestBalance + paymentAmount;
     
     console.log(`Updating customer balance: Current: ${latestBalance}, Payment: ${paymentAmount}, New: ${newBalance}`);
     

@@ -1,4 +1,3 @@
-
 import { supabase, Transaction } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getFuelPumpId } from './utils';
@@ -104,7 +103,6 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
     const id = crypto.randomUUID();
     
     // Make sure the indent_id is consistent with what's stored in the indents table
-    // Note: indent_id should now be a string value that matches exactly what's in the indents table
     const formattedData = {
       ...transactionData,
       indent_id: transactionData.indent_id || null
@@ -128,10 +126,10 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
       throw customerError;
     }
 
-    // For non-PAYMENT transactions, we need to INCREASE the customer's balance (they owe more)
+    // For non-PAYMENT transactions (fuel purchases), we need to DECREASE the balance (using up credit)
     if (transactionData.fuel_type !== 'PAYMENT') {
       const currentBalance = customer?.balance || 0;
-      const newBalance = currentBalance + transactionData.amount;
+      const newBalance = currentBalance - transactionData.amount;
       
       // Insert the transaction record
       const { data, error } = await supabase
@@ -145,7 +143,7 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
         throw error;
       }
       
-      // Update the customer balance
+      // Update the customer balance - DECREASE when fuel is purchased
       const { error: updateError } = await supabase
         .from('customers')
         .update({ balance: newBalance })
