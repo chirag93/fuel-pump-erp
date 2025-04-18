@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -16,35 +15,41 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 200 98% 39%;
+    /* Updated blue as primary color to match logo */
+    --primary: 201 89% 34%;
     --primary-foreground: 210 0% 100%;
 
-    --secondary: 200 30% 97%;
+    /* Soft green for secondary elements */
+    --secondary: 143 43% 95%;
     --secondary-foreground: 222 47% 11%;
 
+    /* Adjusted muted tones */
     --muted: 210 30% 97%;
-    --muted-foreground: 220 8% 46%;
+    --muted-foreground: 215 25% 27%;
 
-    --accent: 210 40% 96%;
+    /* Subtle green accent */
+    --accent: 143 43% 97%;
     --accent-foreground: 222 47% 11%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 220 13% 90%;
-    --input: 220 13% 90%;
-    --ring: 222 47% 11%;
+    /* Refined border and input colors */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 201 89% 34%;
 
     --radius: 0.5rem;
 
+    /* Updated sidebar colors to match new theme */
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5% 26%;
-    --sidebar-primary: 240 6% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 5% 96%;
-    --sidebar-accent-foreground: 240 6% 10%;
+    --sidebar-foreground: 215 25% 27%;
+    --sidebar-primary: 201 89% 34%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 215 25% 27%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 201 89% 34%;
   }
 
   .dark {
@@ -57,33 +62,39 @@
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 200 98% 39%;
-    --primary-foreground: 222 47% 11%;
+    /* Adjusted dark mode primary */
+    --primary: 201 89% 34%;
+    --primary-foreground: 210 0% 100%;
 
-    --secondary: 217 33% 18%;
+    /* Dark mode secondary with green tint */
+    --secondary: 143 30% 12%;
     --secondary-foreground: 210 40% 98%;
 
+    /* Dark mode muted colors */
     --muted: 217 33% 18%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 217 33% 18%;
+    /* Dark mode accent */
+    --accent: 143 30% 12%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
+    /* Dark mode borders and inputs */
     --border: 217 33% 18%;
     --input: 217 33% 18%;
-    --ring: 213 27% 84%;
+    --ring: 201 89% 34%;
     
-    --sidebar-background: 240 6% 10%;
-    --sidebar-foreground: 240 5% 96%;
-    --sidebar-primary: 224 76% 48%;
+    /* Dark mode sidebar */
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 201 89% 34%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 4% 16%;
-    --sidebar-accent-foreground: 240 5% 96%;
-    --sidebar-border: 240 4% 16%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-accent: 217 33% 18%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 18%;
+    --sidebar-ring: 201 89% 34%;
   }
 }
 
