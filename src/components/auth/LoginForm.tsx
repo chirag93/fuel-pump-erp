@@ -269,7 +269,7 @@ const LoginForm = ({
         .eq('email', email)
         .maybeSingle();
     
-      // Use explicit type guard for role
+      // Instead of type comparison, explicitly check if superAdmin exists
       if (superAdmin) {
         // Redirect to super admin login page with credentials
         navigate('/super-admin/login', { 
