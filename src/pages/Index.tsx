@@ -10,7 +10,7 @@ const Index = () => {
   
   return <div className="flex flex-col min-h-screen bg-white">
       {/* Hero Section with Navbar */}
-      <header className="relative bg-gradient-to-b from-blue-900 to-blue-800 text-white overflow-hidden">
+      <header className="relative bg-gradient-to-b from-green-900 to-green-800 text-white overflow-hidden">
         {/* Navigation */}
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
@@ -19,18 +19,18 @@ const Index = () => {
             </div>
             
             <nav className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-sm font-medium hover:text-blue-300 transition-colors">
+              <a href="#features" className="text-sm font-medium hover:text-green-300 transition-colors">
                 Features
               </a>
-              <a href="#modules" className="text-sm font-medium hover:text-blue-300 transition-colors">
+              <a href="#modules" className="text-sm font-medium hover:text-green-300 transition-colors">
                 Modules
               </a>
-              <a href="#faq" className="text-sm font-medium hover:text-blue-300 transition-colors">
+              <a href="#faq" className="text-sm font-medium hover:text-green-300 transition-colors">
                 FAQ
               </a>
-              <Link to="/login" className="text-sm font-medium hover:text-blue-300 transition-colors">
+              <Link to="/login" className="text-sm font-medium hover:text-green-300 transition-colors">
                 Login
-              </Link>
+              </a>
             </nav>
             
             <div className="flex md:hidden">
@@ -43,7 +43,7 @@ const Index = () => {
             
             <div className="hidden md:block">
               <Link to="/login">
-                <Button className="bg-white text-blue-900 hover:bg-blue-50">
+                <Button className="bg-white text-green-900 hover:bg-green-50">
                   Sign In
                 </Button>
               </Link>
@@ -61,7 +61,7 @@ const Index = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link to="/login">
-                  <Button size="lg" className="bg-white text-blue-900 hover:bg-blue-50 font-medium">
+                  <Button size="lg" className="bg-white text-green-900 hover:bg-green-50 font-medium">
                     Get Started
                   </Button>
                 </Link>
@@ -77,8 +77,8 @@ const Index = () => {
                 <img src="/lovable-uploads/d51426e3-7851-4864-be9c-ad91131f2236.png" alt="Fuel Pro 360 Dashboard" className="w-full h-auto rounded-lg" />
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/40 to-transparent rounded-lg"></div>
               </div>
-              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-blue-400 rounded-full opacity-20 blur-2xl"></div>
-              <div className="absolute -top-6 -left-6 w-32 h-32 bg-blue-300 rounded-full opacity-20 blur-2xl"></div>
+              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-green-400 rounded-full opacity-20 blur-2xl"></div>
+              <div className="absolute -top-6 -left-6 w-32 h-32 bg-green-300 rounded-full opacity-20 blur-2xl"></div>
             </div>
           </div>
         </div>
@@ -91,7 +91,7 @@ const Index = () => {
         </div>
       </header>
       
-      {/* Features Highlights Section - Replacing "Trusted by" section */}
+      {/* Features Highlights Section */}
       <section className="py-10 bg-gray-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">Why Fuel Pro 360 Stands Out</h2>
@@ -141,17 +141,28 @@ const Index = () => {
           {/* Tabs */}
           <div className="flex flex-wrap justify-center gap-4 mb-12">
             {[{
-            id: "fuel-station",
-            label: "Fuel Station Management"
-          }, {
-            id: "customer",
-            label: "Customer Relationship Management"
-          }, {
-            id: "mobile",
-            label: "Mobile Operations"
-          }].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-6 py-3 rounded-full text-sm font-medium transition-all", activeTab === tab.id ? "bg-blue-600 text-white shadow-lg" : "bg-gray-100 text-gray-700 hover:bg-gray-200")}>
+              id: "fuel-station",
+              label: "Fuel Station Management"
+            }, {
+              id: "customer",
+              label: "Customer Relationship Management"
+            }, {
+              id: "mobile",
+              label: "Mobile Operations"
+            }].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "px-6 py-3 rounded-full text-sm font-medium transition-all",
+                  activeTab === tab.id
+                    ? "bg-green-600 text-white shadow-lg"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                )}
+              >
                 {tab.label}
-              </button>)}
+              </button>
+            ))}
           </div>
           
           {/* Tab Content */}
@@ -292,7 +303,7 @@ const Index = () => {
       </section>
       
       {/* Key Benefits Section */}
-      <section className="py-20 bg-blue-900 text-white">
+      <section className="py-20 bg-green-900 text-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4">Key Benefits of Fuel Pro 360</h2>
@@ -326,9 +337,9 @@ const Index = () => {
             title: "Seamless Integrations",
             desc: "Connect with your existing tools and systems for a unified operational environment.",
             icon: Laptop
-          }].map((benefit, idx) => <div key={idx} className="bg-blue-800 rounded-xl p-8 shadow-lg border border-blue-700/40 hover:shadow-xl transition-shadow">
-                <div className="w-12 h-12 bg-blue-700 rounded-xl flex items-center justify-center mb-6">
-                  <benefit.icon className="h-6 w-6 text-blue-200" />
+          }].map((benefit, idx) => <div key={idx} className="bg-green-800 rounded-xl p-8 shadow-lg border border-green-700/40 hover:shadow-xl transition-shadow">
+                <div className="w-12 h-12 bg-green-700 rounded-xl flex items-center justify-center mb-6">
+                  <benefit.icon className="h-6 w-6 text-green-200" />
                 </div>
                 <h3 className="text-xl font-bold mb-3">{benefit.title}</h3>
                 <p className="text-blue-100">{benefit.desc}</p>
@@ -381,7 +392,7 @@ const Index = () => {
       </section>
       
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-900 to-blue-800 text-white">
+      <section className="py-20 bg-gradient-to-r from-green-900 to-green-800 text-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Fuel Station?</h2>
@@ -390,7 +401,7 @@ const Index = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/login">
-                <Button size="lg" className="bg-white text-blue-900 hover:bg-blue-50 px-8">
+                <Button size="lg" className="bg-white text-green-900 hover:bg-green-50 px-8">
                   Get Started Today
                 </Button>
               </Link>
@@ -461,4 +472,5 @@ const Index = () => {
       </footer>
     </div>;
 };
+
 export default Index;
