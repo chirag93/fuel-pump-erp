@@ -15,26 +15,25 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Updated blue as primary color to match logo */
+    /* Professional blue from logo */
     --primary: 201 89% 34%;
     --primary-foreground: 210 0% 100%;
 
-    /* Soft green for secondary elements */
+    /* Soft green as secondary */
     --secondary: 143 43% 95%;
     --secondary-foreground: 222 47% 11%;
 
-    /* Adjusted muted tones */
-    --muted: 210 30% 97%;
+    /* Cool professional grey */
+    --muted: 220 13% 91%;
     --muted-foreground: 215 25% 27%;
 
-    /* Subtle green accent */
-    --accent: 143 43% 97%;
+    /* Complementary accent */
+    --accent: 172 66% 50%;
     --accent-foreground: 222 47% 11%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    /* Refined border and input colors */
     --border: 220 13% 91%;
     --input: 220 13% 91%;
     --ring: 201 89% 34%;
@@ -62,26 +61,21 @@
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
-    /* Adjusted dark mode primary */
     --primary: 201 89% 34%;
     --primary-foreground: 210 0% 100%;
 
-    /* Dark mode secondary with green tint */
     --secondary: 143 30% 12%;
     --secondary-foreground: 210 40% 98%;
 
-    /* Dark mode muted colors */
     --muted: 217 33% 18%;
     --muted-foreground: 215 20% 65%;
 
-    /* Dark mode accent */
-    --accent: 143 30% 12%;
+    --accent: 172 66% 40%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
-    /* Dark mode borders and inputs */
     --border: 217 33% 18%;
     --input: 217 33% 18%;
     --ring: 201 89% 34%;
