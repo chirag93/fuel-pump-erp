@@ -12,7 +12,7 @@ interface LogoProps {
 
 export function Logo({ 
   className, 
-  size = "md", 
+  size = "lg", // Changed default from "md" to "lg"
   variant = "default" 
 }: LogoProps) {
   const [isLoading, setIsLoading] = useState(true);
