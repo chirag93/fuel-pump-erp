@@ -36,7 +36,6 @@ const LoginForm = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get login attempts from localStorage
   const getLoginAttempts = () => {
     try {
       const attempts = localStorage.getItem('login_attempts');
@@ -48,7 +47,6 @@ const LoginForm = ({
     }
   };
 
-  // Save login attempts to localStorage
   const saveLoginAttempts = (count: number) => {
     try {
       localStorage.setItem('login_attempts', JSON.stringify({
@@ -60,7 +58,6 @@ const LoginForm = ({
     }
   };
 
-  // Reset login attempts
   const resetLoginAttempts = () => {
     localStorage.removeItem('login_attempts');
   };
@@ -95,7 +92,6 @@ const LoginForm = ({
     try {
       console.log(`Attempting login with email: ${email}`);
       
-      // Use Supabase authentication
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password
@@ -139,7 +135,6 @@ const LoginForm = ({
         user_metadata: data.user.user_metadata
       });
 
-      // Check if this is a mobile-only user trying to access the web app
       const isMobileOnlyUser = data.user.user_metadata?.mobile_only_access === true;
       const isMobile = window.innerWidth <= 768; // Simple mobile check
       
@@ -153,7 +148,6 @@ const LoginForm = ({
         return;
       }
 
-      // Determine if this user is a staff or admin by checking various sources
       let userRole: 'staff' | 'admin' | 'super_admin' = 'staff';
       let fuelPumpId = null;
       let fuelPumpName = null;
@@ -187,7 +181,6 @@ const LoginForm = ({
         }
       }
       
-      // If not definitely an admin, check if staff
       if (userRole !== 'admin') {
         // Check for staff record by auth_id (most reliable method)
         const { data: staffByAuthData } = await supabase
@@ -286,7 +279,6 @@ const LoginForm = ({
         return;
       }
 
-      // Make sure we have a role and fuel pump ID
       if (!userRole || (!fuelPumpId && userRole !== 'super_admin')) {
         // Check if the fuel pump ID is in user metadata as last resort
         if (data.user.user_metadata?.fuelPumpId) {
@@ -302,7 +294,6 @@ const LoginForm = ({
         }
       }
 
-      // Update Supabase user metadata with fuel pump ID and role
       if (fuelPumpId || userRole) {
         try {
           await supabase.auth.updateUser({
@@ -320,7 +311,7 @@ const LoginForm = ({
         }
       }
 
-      // Prepare user data for context
+      // Prepare user data for context - ensure role is of the correct type
       const userData = {
         id: data.user.id,
         username: email.split('@')[0],
@@ -332,7 +323,6 @@ const LoginForm = ({
         mobileOnlyAccess: data.user.user_metadata?.mobile_only_access || false
       };
 
-      // Call the login method from auth context to set up session
       const loginSuccess = await regularLogin(data.user.id, userData, rememberMe);
       
       // Update the auth context user state directly for immediate effect
