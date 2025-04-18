@@ -34,8 +34,8 @@ export function Navbar({ className }: NavbarProps) {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-3",
         isScrolled 
-          ? "bg-background/95 backdrop-blur-md shadow-md" 
-          : "bg-background",
+          ? "bg-white/95 backdrop-blur-md shadow-md" 
+          : "bg-white",
         className
       )}
     >
@@ -56,7 +56,7 @@ export function Navbar({ className }: NavbarProps) {
             <a
               key={link.name}
               href={link.href}
-              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+              className="text-sm font-medium text-blue-900 hover:text-blue-600 transition-colors"
             >
               {link.name}
             </a>
@@ -64,17 +64,17 @@ export function Navbar({ className }: NavbarProps) {
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="text-blue-900 border-blue-900/70 hover:bg-blue-50">
             Sign In
           </Button>
-          <Button size="sm">
+          <Button size="sm" className="bg-blue-900 text-white hover:bg-blue-800">
             Get Started
           </Button>
         </div>
 
         {/* Mobile Menu Button */}
         <button
-          className="md:hidden rounded-md p-2 text-foreground"
+          className="md:hidden rounded-md p-2 text-blue-900"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -84,7 +84,7 @@ export function Navbar({ className }: NavbarProps) {
       {/* Mobile Menu */}
       <div
         className={cn(
-          "md:hidden fixed inset-0 z-40 bg-background/95 backdrop-blur-sm transition-all duration-300 flex flex-col pt-20",
+          "md:hidden fixed inset-0 z-40 bg-white/95 backdrop-blur-sm transition-all duration-300 flex flex-col pt-20",
           isMobileMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10 pointer-events-none"
         )}
       >
@@ -93,17 +93,17 @@ export function Navbar({ className }: NavbarProps) {
             <a
               key={link.name}
               href={link.href}
-              className="text-lg font-medium text-foreground hover:text-primary"
+              className="text-lg font-medium text-blue-900 hover:text-blue-600"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               {link.name}
             </a>
           ))}
           <div className="flex flex-col w-full gap-4 mt-4">
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full text-blue-900 border-blue-900/70 hover:bg-blue-50">
               Sign In
             </Button>
-            <Button variant="default" className="w-full">
+            <Button variant="default" className="w-full bg-blue-900 text-white hover:bg-blue-800">
               Get Started
             </Button>
           </div>
