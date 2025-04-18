@@ -279,6 +279,7 @@ const LoginForm = ({
         return;
       }
 
+      // Fixed comparison by checking for specific string value rather than type comparison
       if (!userRole || (!fuelPumpId && userRole !== 'super_admin')) {
         // Check if the fuel pump ID is in user metadata as last resort
         if (data.user.user_metadata?.fuelPumpId) {

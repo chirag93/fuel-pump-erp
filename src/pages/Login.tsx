@@ -76,7 +76,7 @@ const Login = () => {
             }
             
             // Link auth account to staff record if not already linked
-            if (staffData && staffData.auth_id === null) {
+            if (staffData && !staffData.auth_id) {
               await supabase
                 .from('staff')
                 .update({ auth_id: sessionData.session.user.id })
@@ -100,7 +100,7 @@ const Login = () => {
           id: sessionData.session.user.id,
           username: email.split('@')[0],
           email: sessionData.session.user.email || '',
-          role: userRole as 'admin' | 'staff' | 'super_admin',
+          role: userRole,
           fuelPumpId: fuelPumpId,
           fuelPumpName: fuelPumpName,
           staffId: staffId

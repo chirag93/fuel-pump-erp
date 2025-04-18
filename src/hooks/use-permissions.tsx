@@ -4,7 +4,28 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
+// Define the staff feature type from the database
 type StaffFeature = Database['public']['Enums']['staff_feature'];
+
+// Define the application feature type used in the UI
+type AppFeature = 'consumables' | 'customers' | 'daily_readings' | 'dashboard' | 
+                   'stock_levels' | 'tank_unload' | 'staff_management' | 
+                   'record_indent' | 'shift_management' | 'testing' | 'settings';
+
+// Map database features to application features
+const featureMapping: Record<StaffFeature, AppFeature> = {
+  'view_customers': 'customers',
+  'edit_customers': 'customers',
+  'view_staff': 'staff_management',
+  'edit_staff': 'staff_management',
+  'view_transactions': 'daily_readings',
+  'record_transactions': 'daily_readings',
+  'view_indents': 'record_indent',
+  'create_indents': 'record_indent',
+  'manage_shifts': 'shift_management',
+  'view_reports': 'dashboard',
+  'manage_settings': 'settings'
+};
 
 interface UsePermissionsResult {
   canAccess: (feature: StaffFeature) => boolean;
