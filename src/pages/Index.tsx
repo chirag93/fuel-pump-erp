@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Droplets, ChevronRight, ChevronDown, Laptop, ShieldCheck, Users, TrendingUp, BarChart3, Smartphone, Zap, FileText, Clock, Truck, GaugeCircle } from "lucide-react";
@@ -8,7 +9,8 @@ import { Logo } from "@/components/ui/logo";
 const Index = () => {
   const [activeTab, setActiveTab] = useState<string>("fuel-station");
   
-  return <div className="flex flex-col min-h-screen bg-white">
+  return (
+    <div className="flex flex-col min-h-screen bg-white">
       {/* Hero Section with Navbar */}
       <header className="relative bg-gradient-to-b from-green-900 to-green-800 text-white overflow-hidden">
         {/* Navigation */}
@@ -30,7 +32,7 @@ const Index = () => {
               </a>
               <Link to="/login" className="text-sm font-medium hover:text-green-300 transition-colors">
                 Login
-              </a>
+              </Link>
             </nav>
             
             <div className="flex md:hidden">
@@ -462,7 +464,6 @@ const Index = () => {
           <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p>© {new Date().getFullYear()} Fuel Pro 360. All rights reserved.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              {/* Fix: This is the problematic line - returning null for each social item rather than void */}
               {["Facebook", "Twitter", "LinkedIn", "Instagram"].map((social, idx) => <a key={idx} href="#" className="hover:text-blue-300 transition-colors">
                   {social}
                 </a>)}
@@ -470,7 +471,8 @@ const Index = () => {
           </div>
         </div>
       </footer>
-    </div>;
+    </div>
+  );
 };
 
 export default Index;
