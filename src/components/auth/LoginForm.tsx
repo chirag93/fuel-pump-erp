@@ -269,8 +269,9 @@ const LoginForm = ({
         .eq('email', email)
         .maybeSingle();
       
-      if (superAdmin) {
-        userRole = 'super_admin';
+      const isSuperAdmin = superAdmin !== null;
+      
+      if (isSuperAdmin) {
         // Redirect to super admin login page with credentials
         navigate('/super-admin/login', { 
           state: { email } 
