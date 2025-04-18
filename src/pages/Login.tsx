@@ -33,7 +33,7 @@ const Login = () => {
       
       if (sessionData?.session?.user) {
         // Determine user role
-        let userRole = 'staff';
+        let userRole: 'admin' | 'staff' | 'super_admin' = 'staff';
         let fuelPumpId = null;
         let fuelPumpName = null;
         let staffId = null;
@@ -53,12 +53,12 @@ const Login = () => {
           // Check if this user is in the staff table
           const { data: staffData } = await supabase
             .from('staff')
-            .select('id, role, fuel_pump_id')
+            .select('id, role, fuel_pump_id, auth_id')
             .eq('email', sessionData.session.user.email)
             .maybeSingle();
             
           if (staffData) {
-            userRole = staffData.role || 'staff';
+            userRole = staffData.role as 'admin' | 'staff';
             fuelPumpId = staffData.fuel_pump_id;
             staffId = staffData.id;
             
@@ -76,7 +76,7 @@ const Login = () => {
             }
             
             // Link auth account to staff record if not already linked
-            if (staffData && !staffData.auth_id) {
+            if (staffData && staffData.auth_id === null) {
               await supabase
                 .from('staff')
                 .update({ auth_id: sessionData.session.user.id })

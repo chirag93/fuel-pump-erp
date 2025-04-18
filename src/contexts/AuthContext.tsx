@@ -129,7 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // If not found as admin, check if this user is in the staff table
       const { data: staffByAuthData } = await supabase
         .from('staff')
-        .select('id, fuel_pump_id, role')
+        .select('id, fuel_pump_id, role, auth_id')
         .eq('auth_id', session.user.id)
         .maybeSingle();
     
@@ -147,18 +147,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setFuelPumpId(staffByAuthData.fuel_pump_id);
           setFuelPumpName(pumpData.name);
           
+          // Ensure role is one of the allowed types
+          const safeRole = staffByAuthData.role as 'admin' | 'staff';
+          
           // Update user metadata
           await supabase.auth.updateUser({
             data: { 
               fuelPumpId: staffByAuthData.fuel_pump_id,
               fuelPumpName: pumpData.name,
-              role: staffByAuthData.role || 'staff',
+              role: safeRole,
               staffId: staffByAuthData.id
             }
           });
           
           // Update local storage
-          updateLocalStorage(staffByAuthData.fuel_pump_id, pumpData.name, staffByAuthData.role || 'staff');
+          updateLocalStorage(staffByAuthData.fuel_pump_id, pumpData.name, safeRole);
           
           return staffByAuthData.fuel_pump_id;
         }
@@ -167,7 +170,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // If not found by auth_id, try by email
       const { data: staffData } = await supabase
         .from('staff')
-        .select('id, fuel_pump_id, role')
+        .select('id, fuel_pump_id, role, auth_id')
         .eq('email', session.user.email)
         .maybeSingle();
     
@@ -184,19 +187,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (pumpData) {
           setFuelPumpId(staffData.fuel_pump_id);
           setFuelPumpName(pumpData.name);
+
+          // Ensure role is one of the allowed types
+          const safeRole = staffData.role as 'admin' | 'staff';
           
           // Update user metadata
           await supabase.auth.updateUser({
             data: { 
               fuelPumpId: staffData.fuel_pump_id,
               fuelPumpName: pumpData.name,
-              role: staffData.role || 'staff',
+              role: safeRole,
               staffId: staffData.id
             }
           });
           
           // Link the staff record to this auth account if not already linked
-          if (!staffData.auth_id) {
+          if (staffData.auth_id === null) {
             await supabase
               .from('staff')
               .update({ auth_id: session.user.id })
@@ -204,7 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           
           // Update local storage
-          updateLocalStorage(staffData.fuel_pump_id, pumpData.name, staffData.role || 'staff');
+          updateLocalStorage(staffData.fuel_pump_id, pumpData.name, safeRole);
           
           return staffData.fuel_pump_id;
         }
@@ -231,16 +237,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log(`AuthContext: Retrieved fuel pump name: ${fuelPumpData.name}`);
         }
         
+        // Default role to 'staff' if not specified
+        const userRole = session.user.user_metadata?.role as 'admin' | 'staff' | undefined || 'staff';
+        
         // Update user metadata with this pump ID for future use
         await supabase.auth.updateUser({
           data: { 
             fuelPumpId: freshFuelPumpId,
-            fuelPumpName: fuelPumpData?.name
+            fuelPumpName: fuelPumpData?.name,
+            role: userRole
           }
         });
         
         // Update local storage
-        updateLocalStorage(freshFuelPumpId, fuelPumpData?.name, session.user.user_metadata?.role || 'staff');
+        updateLocalStorage(freshFuelPumpId, fuelPumpData?.name, userRole);
         
         return freshFuelPumpId;
       }
@@ -254,7 +264,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Helper function to update localStorage
-  const updateLocalStorage = (fuelPumpId: string, fuelPumpName: string | undefined, role: string) => {
+  const updateLocalStorage = (fuelPumpId: string, fuelPumpName: string | undefined, role: 'admin' | 'staff' | 'super_admin') => {
     try {
       const storedSession = localStorage.getItem('fuel_pro_session');
       if (storedSession) {

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -155,7 +154,7 @@ const LoginForm = ({
       }
 
       // Determine if this user is a staff or admin by checking various sources
-      let userRole = 'staff';
+      let userRole: 'staff' | 'admin' | 'super_admin' = 'staff';
       let fuelPumpId = null;
       let fuelPumpName = null;
       let staffData = null;
@@ -199,7 +198,7 @@ const LoginForm = ({
         
         if (staffByAuthData) {
           staffData = staffByAuthData;
-          userRole = staffByAuthData.role;
+          userRole = staffByAuthData.role as 'admin' | 'staff';
           fuelPumpId = staffByAuthData.fuel_pump_id;
           console.log(`User is staff with role ${userRole} for fuel pump: ${fuelPumpId} (found by auth_id)`);
           
@@ -233,7 +232,7 @@ const LoginForm = ({
           
           if (staffByEmailData) {
             staffData = staffByEmailData;
-            userRole = staffByEmailData.role;
+            userRole = staffByEmailData.role as 'admin' | 'staff';
             fuelPumpId = staffByEmailData.fuel_pump_id;
             
             // If the staff record doesn't have auth_id but email matches, update the auth_id
@@ -278,6 +277,7 @@ const LoginForm = ({
         .maybeSingle();
       
       if (superAdmin) {
+        userRole = 'super_admin';
         // Redirect to super admin login page with credentials
         navigate('/super-admin/login', { 
           state: { email } 

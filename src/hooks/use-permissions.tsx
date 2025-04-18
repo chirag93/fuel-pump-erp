@@ -30,13 +30,24 @@ export const usePermissions = (): UsePermissionsResult => {
     // Super admins and admins have access to all features
     if (isSuperAdmin || isAdmin) {
       // We'll populate all possible features for admins
-      // Use a query to get all possible feature values
       try {
-        const { data, error } = await supabase.rpc('get_all_staff_features');
+        // Since "get_all_staff_features" doesn't exist as a db function,
+        // Let's hardcode the features for admins instead
+        const adminFeatures: StaffFeature[] = [
+          'view_customers',
+          'edit_customers',
+          'view_staff',
+          'edit_staff',
+          'view_transactions',
+          'record_transactions',
+          'view_indents',
+          'create_indents',
+          'manage_shifts',
+          'view_reports',
+          'manage_settings'
+        ];
         
-        if (error) throw error;
-        
-        setAvailableFeatures(data || []);
+        setAvailableFeatures(adminFeatures);
       } catch (err) {
         console.error('Error getting all features:', err);
         // Fallback to hardcoded list of common features
@@ -52,7 +63,7 @@ export const usePermissions = (): UsePermissionsResult => {
           'manage_shifts',
           'view_reports',
           'manage_settings'
-        ] as StaffFeature[]);
+        ]);
       }
       
       setIsLoading(false);
