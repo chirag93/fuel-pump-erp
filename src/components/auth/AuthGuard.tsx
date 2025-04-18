@@ -40,4 +40,3 @@ export const AuthGuard = ({ feature, children }: AuthGuardProps) => {
 
   return <>{children}</>;
 };
-

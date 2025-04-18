@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from '@/integrations/supabase/types';
 
+// Define staff feature type from database enum
 type StaffFeature = Database['public']['Enums']['staff_feature'];
 
 // Define features that staff members can have
