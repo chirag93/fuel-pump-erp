@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -148,6 +149,7 @@ const LoginForm = ({
         return;
       }
 
+      // Define userRole with correct type that includes 'super_admin'
       let userRole: 'admin' | 'staff' | 'super_admin' = 'staff';
       let fuelPumpId = null;
       let fuelPumpName = null;
