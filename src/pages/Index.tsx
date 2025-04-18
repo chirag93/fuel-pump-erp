@@ -4,16 +4,13 @@ import { Droplets, ChevronRight, ChevronDown, Laptop, ShieldCheck, Users, Trendi
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/logo";
-
 const Index = () => {
   const [activeTab, setActiveTab] = useState<string>("fuel-station");
-  
-  return (
-    <div className="flex flex-col min-h-screen bg-white">
+  return <div className="flex flex-col min-h-screen bg-white">
       {/* Hero Section with Navbar */}
       <header className="relative bg-gradient-to-b from-teal-900 to-teal-800 text-white overflow-hidden">
         {/* Navigation */}
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 bg-teal-600">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-2">
               <Logo size="md" className="h-8 w-auto" />
@@ -53,7 +50,7 @@ const Index = () => {
         </div>
         
         {/* Hero Content */}
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 md:pt-32 md:pb-40">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 md:pt-32 md:pb-40 bg-teal-600">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">Transform Your Fuel Station</h1>
@@ -142,28 +139,17 @@ const Index = () => {
           {/* Tabs */}
           <div className="flex flex-wrap justify-center gap-4 mb-12">
             {[{
-              id: "fuel-station",
-              label: "Fuel Station Management"
-            }, {
-              id: "customer",
-              label: "Customer Relationship Management"
-            }, {
-              id: "mobile",
-              label: "Mobile Operations"
-            }].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "px-6 py-3 rounded-full text-sm font-medium transition-all",
-                  activeTab === tab.id
-                    ? "bg-teal-600 text-white shadow-lg"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                )}
-              >
+            id: "fuel-station",
+            label: "Fuel Station Management"
+          }, {
+            id: "customer",
+            label: "Customer Relationship Management"
+          }, {
+            id: "mobile",
+            label: "Mobile Operations"
+          }].map(tab => <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("px-6 py-3 rounded-full text-sm font-medium transition-all", activeTab === tab.id ? "bg-teal-600 text-white shadow-lg" : "bg-gray-100 text-gray-700 hover:bg-gray-200")}>
                 {tab.label}
-              </button>
-            ))}
+              </button>)}
           </div>
           
           {/* Tab Content */}
@@ -304,7 +290,7 @@ const Index = () => {
       </section>
       
       {/* Key Benefits Section */}
-      <section className="py-20 bg-teal-900 text-white">
+      <section className="py-20 text-white bg-teal-600">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4">Key Benefits of Fuel Pro 360</h2>
@@ -393,8 +379,8 @@ const Index = () => {
       </section>
       
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-teal-900 to-teal-800 text-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-20 bg-gradient-to-r from-teal-900 to-teal-800 text-white bg-teal-700">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 bg-teal-900">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Fuel Station?</h2>
             <p className="text-xl mb-10 text-blue-100">
@@ -470,8 +456,6 @@ const Index = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
