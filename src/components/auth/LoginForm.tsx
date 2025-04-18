@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { AlertCircle, Lock, Mail } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LoginFormProps {
   email: string;
@@ -16,6 +18,9 @@ interface LoginFormProps {
   rememberMe: boolean;
   regularLogin: (userId: string, userData: any, rememberMe?: boolean) => Promise<boolean>;
 }
+
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
 
 const LoginForm = ({ 
   email, 
@@ -28,8 +33,38 @@ const LoginForm = ({
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { updateUserState } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Get login attempts from localStorage
+  const getLoginAttempts = () => {
+    try {
+      const attempts = localStorage.getItem('login_attempts');
+      if (!attempts) return { count: 0, timestamp: 0 };
+      return JSON.parse(attempts);
+    } catch (error) {
+      console.error('Error parsing login attempts:', error);
+      return { count: 0, timestamp: 0 };
+    }
+  };
+
+  // Save login attempts to localStorage
+  const saveLoginAttempts = (count: number) => {
+    try {
+      localStorage.setItem('login_attempts', JSON.stringify({
+        count,
+        timestamp: Date.now()
+      }));
+    } catch (error) {
+      console.error('Error saving login attempts:', error);
+    }
+  };
+
+  // Reset login attempts
+  const resetLoginAttempts = () => {
+    localStorage.removeItem('login_attempts');
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,17 +77,37 @@ const LoginForm = ({
       return;
     }
 
+    // Check for account lockout
+    const attempts = getLoginAttempts();
+    const now = Date.now();
+    
+    if (attempts.count >= MAX_LOGIN_ATTEMPTS && now - attempts.timestamp < LOCKOUT_TIME) {
+      const minutesLeft = Math.ceil(((attempts.timestamp + LOCKOUT_TIME) - now) / 60000);
+      setError(`Too many failed login attempts. Please try again in ${minutesLeft} minutes.`);
+      setIsLoading(false);
+      return;
+    }
+    
+    // If lockout period has passed, reset the counter
+    if (attempts.count >= MAX_LOGIN_ATTEMPTS && now - attempts.timestamp >= LOCKOUT_TIME) {
+      resetLoginAttempts();
+    }
+
     try {
       console.log(`Attempting login with email: ${email}`);
       
       // Use Supabase authentication
       const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password
       });
 
       if (authError) {
         console.error('Auth error during login:', authError);
+        
+        // Increment failed login attempts
+        const currentAttempts = getLoginAttempts();
+        saveLoginAttempts(currentAttempts.count + 1);
         
         // More detailed error for invalid credentials
         if (authError.message.includes('Invalid login')) {
@@ -66,10 +121,17 @@ const LoginForm = ({
       }
 
       if (!data?.user) {
+        // Increment failed login attempts
+        const currentAttempts = getLoginAttempts();
+        saveLoginAttempts(currentAttempts.count + 1);
+        
         setError('Login failed. Please check your credentials.');
         setIsLoading(false);
         return;
       }
+      
+      // Reset login attempts on successful login
+      resetLoginAttempts();
       
       console.log('Authentication successful, user data:', {
         id: data.user.id,
@@ -258,8 +320,8 @@ const LoginForm = ({
         }
       }
 
-      // Call the login method from auth context to set up session
-      const loginSuccess = await regularLogin(data.user.id, {
+      // Prepare user data for context
+      const userData = {
         id: data.user.id,
         username: email.split('@')[0],
         email: data.user.email,
@@ -268,22 +330,20 @@ const LoginForm = ({
         fuelPumpName: fuelPumpName,
         staffId: staffData?.id,
         mobileOnlyAccess: data.user.user_metadata?.mobile_only_access || false
-      }, rememberMe);
+      };
+
+      // Call the login method from auth context to set up session
+      const loginSuccess = await regularLogin(data.user.id, userData, rememberMe);
+      
+      // Update the auth context user state directly for immediate effect
+      updateUserState(userData);
       
       if (loginSuccess) {
         console.log('Login successful, storing session data with fuel pump info');
         
         // Store in localStorage for persistence and backup
         const sessionData = {
-          user: {
-            id: data.user.id,
-            email: data.user.email,
-            role: userRole,
-            fuelPumpId: fuelPumpId,
-            fuelPumpName: fuelPumpName,
-            staffId: staffData?.id,
-            mobileOnlyAccess: data.user.user_metadata?.mobile_only_access || false
-          }
+          user: userData
         };
         
         localStorage.setItem('fuel_pro_session', JSON.stringify(sessionData));
@@ -301,6 +361,10 @@ const LoginForm = ({
     } catch (err: any) {
       console.error('Error during login:', err);
       setError(err.message || 'An error occurred during login.');
+      
+      // Increment failed login attempts
+      const currentAttempts = getLoginAttempts();
+      saveLoginAttempts(currentAttempts.count + 1);
     } finally {
       setIsLoading(false);
     }
@@ -366,6 +430,7 @@ const LoginForm = ({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoComplete="email"
           />
         </div>
       </div>
@@ -380,6 +445,7 @@ const LoginForm = ({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            autoComplete="current-password"
           />
         </div>
       </div>

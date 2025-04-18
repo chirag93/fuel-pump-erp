@@ -15,7 +15,7 @@ const Login = () => {
   const [error, setError] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
   const [passwordChangeRequired, setPasswordChangeRequired] = useState(false);
-  const { login: regularLogin, isAuthenticated } = useAuth();
+  const { login: regularLogin, isAuthenticated, updateUserState } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -34,36 +34,86 @@ const Login = () => {
       if (sessionData?.session?.user) {
         // Determine user role
         let userRole = 'staff';
+        let fuelPumpId = null;
+        let fuelPumpName = null;
+        let staffId = null;
         
         // Check if this is an admin account
         const { data: fuelPump } = await supabase
           .from('fuel_pumps')
-          .select('email')
+          .select('id, name, email')
           .eq('email', sessionData.session.user.email)
           .maybeSingle();
           
         if (fuelPump) {
           userRole = 'admin';
+          fuelPumpId = fuelPump.id;
+          fuelPumpName = fuelPump.name;
         } else {
           // Check if this user is in the staff table
           const { data: staffData } = await supabase
             .from('staff')
-            .select('role')
+            .select('id, role, fuel_pump_id')
             .eq('email', sessionData.session.user.email)
             .maybeSingle();
             
           if (staffData) {
-            userRole = staffData.role;
+            userRole = staffData.role || 'staff';
+            fuelPumpId = staffData.fuel_pump_id;
+            staffId = staffData.id;
+            
+            // Get fuel pump name if we have an ID
+            if (fuelPumpId) {
+              const { data: pumpData } = await supabase
+                .from('fuel_pumps')
+                .select('name')
+                .eq('id', fuelPumpId)
+                .maybeSingle();
+                
+              if (pumpData) {
+                fuelPumpName = pumpData.name;
+              }
+            }
+            
+            // Link auth account to staff record if not already linked
+            if (staffData && !staffData.auth_id) {
+              await supabase
+                .from('staff')
+                .update({ auth_id: sessionData.session.user.id })
+                .eq('id', staffData.id);
+            }
           }
         }
         
-        // Call the login method from auth context to set up session
-        await regularLogin(sessionData.session.user.id, {
+        // Update user metadata with role and fuel pump info
+        await supabase.auth.updateUser({
+          data: { 
+            role: userRole,
+            fuelPumpId: fuelPumpId,
+            fuelPumpName: fuelPumpName,
+            staffId: staffId
+          }
+        });
+        
+        // Create user profile object
+        const userProfile = {
           id: sessionData.session.user.id,
           username: email.split('@')[0],
-          email: sessionData.session.user.email,
-          role: userRole
-        }, rememberMe);
+          email: sessionData.session.user.email || '',
+          role: userRole,
+          fuelPumpId: fuelPumpId,
+          fuelPumpName: fuelPumpName,
+          staffId: staffId
+        };
+        
+        // Update auth context directly for immediate effect
+        updateUserState(userProfile);
+        
+        // Call login to set up session
+        await regularLogin(sessionData.session.user.id, userProfile, rememberMe);
+        
+        // Store session in localStorage
+        localStorage.setItem('fuel_pro_session', JSON.stringify({ user: userProfile }));
         
         const from = location.state?.from?.pathname || '/home';
         navigate(from, { replace: true });
