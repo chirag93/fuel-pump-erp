@@ -268,13 +268,15 @@ const LoginForm = ({
         .select('*')
         .eq('email', email)
         .maybeSingle();
-      
-      const isSuperAdmin = superAdmin !== null;
-      
-      if (isSuperAdmin) {
+    
+      // Use explicit type guard for role
+      if (superAdmin) {
         // Redirect to super admin login page with credentials
         navigate('/super-admin/login', { 
-          state: { email } 
+          state: { 
+            email,
+            attemptedLogin: true 
+          } 
         });
         setIsLoading(false);
         return;
