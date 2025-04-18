@@ -10,17 +10,17 @@ type StaffFeature = Database['public']['Enums']['staff_feature'];
 
 // Define features that staff members can have
 const FEATURES: Array<{ id: StaffFeature; label: string }> = [
-  { id: 'view_customers', label: 'View Customers' },
-  { id: 'edit_customers', label: 'Edit Customers' },
-  { id: 'view_staff', label: 'View Staff' },
-  { id: 'edit_staff', label: 'Manage Staff' },
-  { id: 'view_transactions', label: 'View Transactions' },
-  { id: 'record_transactions', label: 'Record Transactions' },
-  { id: 'view_indents', label: 'View Indents' },
-  { id: 'create_indents', label: 'Create Indents' },
-  { id: 'manage_shifts', label: 'Shift Management' },
-  { id: 'view_reports', label: 'View Reports' },
-  { id: 'manage_settings', label: 'Manage Settings' }
+  { id: 'dashboard', label: 'Dashboard Access' },
+  { id: 'daily_readings', label: 'View Daily Readings' },
+  { id: 'stock_levels', label: 'Manage Stock Levels' },
+  { id: 'tank_unload', label: 'Tank Unload Management' },
+  { id: 'customers', label: 'Customer Management' },
+  { id: 'staff_management', label: 'Staff Management' },
+  { id: 'record_indent', label: 'Record Indents' },
+  { id: 'shift_management', label: 'Shift Management' },
+  { id: 'consumables', label: 'Consumables Management' },
+  { id: 'testing', label: 'Fuel Testing' },
+  { id: 'settings', label: 'System Settings' }
 ];
 
 interface FeatureSelectionProps {

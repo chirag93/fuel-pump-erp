@@ -7,30 +7,8 @@ import type { Database } from '@/integrations/supabase/types';
 // Define the staff feature type from the database
 type StaffFeature = Database['public']['Enums']['staff_feature'];
 
-// Define a more specific type for the featureMapping
-type FeatureMappingType = {
-  [key in StaffFeature]: AppFeature;
-};
-
-// Define the application feature type used in the UI
-type AppFeature = 'consumables' | 'customers' | 'daily_readings' | 'dashboard' | 
-                   'stock_levels' | 'tank_unload' | 'staff_management' | 
-                   'record_indent' | 'shift_management' | 'testing' | 'settings';
-
-// Map database features to application features
-const featureMapping: FeatureMappingType = {
-  'view_customers': 'customers',
-  'edit_customers': 'customers',
-  'view_staff': 'staff_management',
-  'edit_staff': 'staff_management',
-  'view_transactions': 'daily_readings',
-  'record_transactions': 'daily_readings',
-  'view_indents': 'record_indent',
-  'create_indents': 'record_indent',
-  'manage_shifts': 'shift_management',
-  'view_reports': 'dashboard',
-  'manage_settings': 'settings'
-};
+// Define the application feature type used in the UI - this should match the database enum
+type AppFeature = StaffFeature;
 
 interface UsePermissionsResult {
   canAccess: (feature: StaffFeature) => boolean;
@@ -59,17 +37,17 @@ export const usePermissions = (): UsePermissionsResult => {
       try {
         // Define standard admin features directly as StaffFeature[]
         const adminFeatures: StaffFeature[] = [
-          'view_customers',
-          'edit_customers',
-          'view_staff',
-          'edit_staff',
-          'view_transactions',
-          'record_transactions',
-          'view_indents',
-          'create_indents',
-          'manage_shifts',
-          'view_reports',
-          'manage_settings'
+          'dashboard',
+          'daily_readings',
+          'stock_levels',
+          'tank_unload',
+          'customers',
+          'staff_management',
+          'record_indent',
+          'shift_management',
+          'consumables',
+          'testing',
+          'settings'
         ];
         
         setAvailableFeatures(adminFeatures);
@@ -77,17 +55,17 @@ export const usePermissions = (): UsePermissionsResult => {
         console.error('Error getting all features:', err);
         // Fallback to hardcoded list of common features
         setAvailableFeatures([
-          'view_customers',
-          'edit_customers',
-          'view_staff',
-          'edit_staff',
-          'view_transactions',
-          'record_transactions',
-          'view_indents',
-          'create_indents',
-          'manage_shifts',
-          'view_reports',
-          'manage_settings'
+          'dashboard',
+          'daily_readings',
+          'stock_levels',
+          'tank_unload',
+          'customers',
+          'staff_management',
+          'record_indent',
+          'shift_management',
+          'consumables',
+          'testing',
+          'settings'
         ]);
       }
       
