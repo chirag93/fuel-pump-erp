@@ -25,8 +25,8 @@ export function Hero() {
   }, []);
   
   return (
-    <div className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/30 pt-20 pb-24 sm:pt-28 md:pt-32 md:pb-40">
-      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
+    <div className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/10 pt-20 pb-24 sm:pt-28 md:pt-32 md:pb-40">
+      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-10" />
       
       <div className="absolute inset-0 h-screen bg-gradient-to-br from-primary/5 via-secondary/5 to-background" />
       
@@ -35,9 +35,9 @@ export function Hero() {
           <FadeIn>
             <div className="flex flex-col items-center mb-6">
               <Logo size="xl" className="h-32 w-auto mb-3" />
-              <h2 className="text-2xl font-semibold mt-2">{businessName}</h2>
+              <h2 className="text-2xl font-semibold mt-2 text-foreground">{businessName}</h2>
             </div>
-            <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+            <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl text-foreground">
               <span className="block text-balance">
                 Streamline Your Fuel Pump Management
               </span>
