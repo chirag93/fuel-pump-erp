@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,13 +7,18 @@ import type { Database } from '@/integrations/supabase/types';
 // Define the staff feature type from the database
 type StaffFeature = Database['public']['Enums']['staff_feature'];
 
+// Define a more specific type for the featureMapping
+type FeatureMappingType = {
+  [key in StaffFeature]: AppFeature;
+};
+
 // Define the application feature type used in the UI
 type AppFeature = 'consumables' | 'customers' | 'daily_readings' | 'dashboard' | 
                    'stock_levels' | 'tank_unload' | 'staff_management' | 
                    'record_indent' | 'shift_management' | 'testing' | 'settings';
 
 // Map database features to application features
-const featureMapping: Record<StaffFeature, AppFeature> = {
+const featureMapping: FeatureMappingType = {
   'view_customers': 'customers',
   'edit_customers': 'customers',
   'view_staff': 'staff_management',
