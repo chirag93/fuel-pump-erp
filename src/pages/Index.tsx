@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Droplets, ChevronRight, ChevronDown, Laptop, ShieldCheck, Users, TrendingUp, BarChart3, Smartphone, Zap, FileText, Clock, Truck, GaugeCircle } from "lucide-react";
@@ -12,7 +11,7 @@ const Index = () => {
   return (
     <div className="flex flex-col min-h-screen bg-white">
       {/* Hero Section with Navbar */}
-      <header className="relative bg-gradient-to-b from-green-900 to-green-800 text-white overflow-hidden">
+      <header className="relative bg-gradient-to-b from-teal-900 to-teal-800 text-white overflow-hidden">
         {/* Navigation */}
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
@@ -21,16 +20,16 @@ const Index = () => {
             </div>
             
             <nav className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-sm font-medium hover:text-green-300 transition-colors">
+              <a href="#features" className="text-sm font-medium hover:text-teal-300 transition-colors">
                 Features
               </a>
-              <a href="#modules" className="text-sm font-medium hover:text-green-300 transition-colors">
+              <a href="#modules" className="text-sm font-medium hover:text-teal-300 transition-colors">
                 Modules
               </a>
-              <a href="#faq" className="text-sm font-medium hover:text-green-300 transition-colors">
+              <a href="#faq" className="text-sm font-medium hover:text-teal-300 transition-colors">
                 FAQ
               </a>
-              <Link to="/login" className="text-sm font-medium hover:text-green-300 transition-colors">
+              <Link to="/login" className="text-sm font-medium hover:text-teal-300 transition-colors">
                 Login
               </Link>
             </nav>
@@ -45,7 +44,7 @@ const Index = () => {
             
             <div className="hidden md:block">
               <Link to="/login">
-                <Button className="bg-white text-green-900 hover:bg-green-50">
+                <Button className="bg-white text-teal-900 hover:bg-teal-50">
                   Sign In
                 </Button>
               </Link>
@@ -63,7 +62,7 @@ const Index = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link to="/login">
-                  <Button size="lg" className="bg-white text-green-900 hover:bg-green-50 font-medium">
+                  <Button size="lg" className="bg-white text-teal-900 hover:bg-teal-50 font-medium">
                     Get Started
                   </Button>
                 </Link>
@@ -75,12 +74,12 @@ const Index = () => {
               </div>
             </div>
             <div className="relative">
-              <div className="rounded-lg shadow-2xl overflow-hidden border border-blue-700/30">
+              <div className="rounded-lg shadow-2xl overflow-hidden border border-teal-700/30">
                 <img src="/lovable-uploads/d51426e3-7851-4864-be9c-ad91131f2236.png" alt="Fuel Pro 360 Dashboard" className="w-full h-auto rounded-lg" />
-                <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/40 to-transparent rounded-lg"></div>
+                <div className="absolute inset-0 bg-gradient-to-tr from-teal-900/40 to-transparent rounded-lg"></div>
               </div>
-              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-green-400 rounded-full opacity-20 blur-2xl"></div>
-              <div className="absolute -top-6 -left-6 w-32 h-32 bg-green-300 rounded-full opacity-20 blur-2xl"></div>
+              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-teal-400 rounded-full opacity-20 blur-2xl"></div>
+              <div className="absolute -top-6 -left-6 w-32 h-32 bg-teal-300 rounded-full opacity-20 blur-2xl"></div>
             </div>
           </div>
         </div>
@@ -99,29 +98,29 @@ const Index = () => {
           <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">Why Fuel Pro 360 Stands Out</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="flex flex-col items-center text-center p-4">
-              <div className="bg-blue-100 p-3 rounded-full mb-4">
-                <Clock className="h-6 w-6 text-blue-600" />
+              <div className="bg-teal-100 p-3 rounded-full mb-4">
+                <Clock className="h-6 w-6 text-teal-600" />
               </div>
               <h3 className="font-medium text-gray-900">Real-time Analytics</h3>
               <p className="text-gray-600 text-sm mt-2">Monitor your station performance in real-time</p>
             </div>
             <div className="flex flex-col items-center text-center p-4">
-              <div className="bg-blue-100 p-3 rounded-full mb-4">
-                <ShieldCheck className="h-6 w-6 text-blue-600" />
+              <div className="bg-teal-100 p-3 rounded-full mb-4">
+                <ShieldCheck className="h-6 w-6 text-teal-600" />
               </div>
               <h3 className="font-medium text-gray-900">Secure Platform</h3>
               <p className="text-gray-600 text-sm mt-2">Enterprise-grade security for your business data</p>
             </div>
             <div className="flex flex-col items-center text-center p-4">
-              <div className="bg-blue-100 p-3 rounded-full mb-4">
-                <Users className="h-6 w-6 text-blue-600" />
+              <div className="bg-teal-100 p-3 rounded-full mb-4">
+                <Users className="h-6 w-6 text-teal-600" />
               </div>
               <h3 className="font-medium text-gray-900">Customer Management</h3>
               <p className="text-gray-600 text-sm mt-2">Build stronger relationships with your customers</p>
             </div>
             <div className="flex flex-col items-center text-center p-4">
-              <div className="bg-blue-100 p-3 rounded-full mb-4">
-                <Smartphone className="h-6 w-6 text-blue-600" />
+              <div className="bg-teal-100 p-3 rounded-full mb-4">
+                <Smartphone className="h-6 w-6 text-teal-600" />
               </div>
               <h3 className="font-medium text-gray-900">Mobile Operations</h3>
               <p className="text-gray-600 text-sm mt-2">Manage your station from anywhere, anytime</p>
@@ -158,7 +157,7 @@ const Index = () => {
                 className={cn(
                   "px-6 py-3 rounded-full text-sm font-medium transition-all",
                   activeTab === tab.id
-                    ? "bg-green-600 text-white shadow-lg"
+                    ? "bg-teal-600 text-white shadow-lg"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 )}
               >
@@ -202,7 +201,7 @@ const Index = () => {
                   </ul>
                   
                   <Link to="/login">
-                    <Button className="mt-2 bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button className="mt-2 bg-teal-600 hover:bg-teal-700 text-white">
                       Explore Station Management <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </Link>
@@ -246,7 +245,7 @@ const Index = () => {
                   </ul>
                   
                   <Link to="/login">
-                    <Button className="mt-2 bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button className="mt-2 bg-teal-600 hover:bg-teal-700 text-white">
                       Explore Customer Management <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </Link>
@@ -290,7 +289,7 @@ const Index = () => {
                   </ul>
                   
                   <Link to="/login">
-                    <Button className="mt-2 bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button className="mt-2 bg-teal-600 hover:bg-teal-700 text-white">
                       Explore Mobile Operations <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </Link>
@@ -305,7 +304,7 @@ const Index = () => {
       </section>
       
       {/* Key Benefits Section */}
-      <section className="py-20 bg-green-900 text-white">
+      <section className="py-20 bg-teal-900 text-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4">Key Benefits of Fuel Pro 360</h2>
@@ -339,9 +338,9 @@ const Index = () => {
             title: "Seamless Integrations",
             desc: "Connect with your existing tools and systems for a unified operational environment.",
             icon: Laptop
-          }].map((benefit, idx) => <div key={idx} className="bg-green-800 rounded-xl p-8 shadow-lg border border-green-700/40 hover:shadow-xl transition-shadow">
-                <div className="w-12 h-12 bg-green-700 rounded-xl flex items-center justify-center mb-6">
-                  <benefit.icon className="h-6 w-6 text-green-200" />
+          }].map((benefit, idx) => <div key={idx} className="bg-teal-800 rounded-xl p-8 shadow-lg border border-teal-700/40 hover:shadow-xl transition-shadow">
+                <div className="w-12 h-12 bg-teal-700 rounded-xl flex items-center justify-center mb-6">
+                  <benefit.icon className="h-6 w-6 text-teal-200" />
                 </div>
                 <h3 className="text-xl font-bold mb-3">{benefit.title}</h3>
                 <p className="text-blue-100">{benefit.desc}</p>
@@ -394,7 +393,7 @@ const Index = () => {
       </section>
       
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-green-900 to-green-800 text-white">
+      <section className="py-20 bg-gradient-to-r from-teal-900 to-teal-800 text-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Fuel Station?</h2>
@@ -403,7 +402,7 @@ const Index = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/login">
-                <Button size="lg" className="bg-white text-green-900 hover:bg-green-50 px-8">
+                <Button size="lg" className="bg-white text-teal-900 hover:bg-teal-50 px-8">
                   Get Started Today
                 </Button>
               </Link>
