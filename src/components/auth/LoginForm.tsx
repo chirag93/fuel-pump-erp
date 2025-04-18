@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -148,7 +148,7 @@ const LoginForm = ({
         return;
       }
 
-      let userRole: 'staff' | 'admin' | 'super_admin' = 'staff';
+      let userRole: 'admin' | 'staff' | 'super_admin' = 'staff';
       let fuelPumpId = null;
       let fuelPumpName = null;
       let staffData = null;
@@ -269,7 +269,7 @@ const LoginForm = ({
         .eq('email', email)
         .maybeSingle();
     
-      // Instead of type comparison, explicitly check if superAdmin exists
+      // Use explicit type guard for super admin
       if (superAdmin) {
         // Redirect to super admin login page with credentials
         navigate('/super-admin/login', { 
