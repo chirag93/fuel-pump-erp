@@ -9,6 +9,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from './contexts/AuthContext';
 import { SuperAdminAuthProvider } from './superadmin/contexts/SuperAdminAuthContext';
 import { migrateLogoToSupabase, uploadDefaultLogo } from './integrations/storage';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -22,7 +23,6 @@ const queryClient = new QueryClient({
 
 // Migrate logo to Supabase storage on application load
 if (import.meta.env.DEV || import.meta.env.PROD) {
-  // For both development and production
   uploadDefaultLogo()
     .then(() => console.log('Logo upload check completed'))
     .catch(error => console.error('Error checking logo upload:', error));
@@ -34,8 +34,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <SuperAdminAuthProvider>
-            <App />
-            <Toaster />
+            <ThemeProvider>
+              <App />
+              <Toaster />
+            </ThemeProvider>
           </SuperAdminAuthProvider>
         </AuthProvider>
       </QueryClientProvider>

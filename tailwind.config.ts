@@ -29,27 +29,27 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))", // Blue from logo
+          DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))", // Soft green
+          DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))", // Cool grey
+          DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))", // Complementary color
+          DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
         fuelmaster: {
-          blue: "hsl(201, 89%, 34%)", // Primary logo blue
-          green: "hsl(143, 43%, 45%)", // Professional green
-          grey: "hsl(220, 13%, 91%)", // Soft professional grey
-          darkblue: "hsl(201, 89%, 24%)", // Darker blue for depth
-          teal: "hsl(172, 66%, 50%)" // Accent color
+          blue: "hsl(201, 89%, 34%)",
+          green: "hsl(143, 43%, 45%)",
+          grey: "hsl(220, 13%, 91%)",
+          darkblue: "hsl(201, 89%, 24%)",
+          teal: "hsl(172, 66%, 50%)"
         }
       },
       borderRadius: {
