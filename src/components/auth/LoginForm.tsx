@@ -151,7 +151,7 @@ const LoginForm = ({
         return;
       }
 
-      // Define userRole with correct type that includes 'super_admin'
+      // Initialize userRole with proper typing
       let userRole: UserRole = 'staff';
       let fuelPumpId = null;
       let fuelPumpName = null;
@@ -195,7 +195,7 @@ const LoginForm = ({
         
         if (staffByAuthData) {
           staffData = staffByAuthData;
-          userRole = staffByAuthData.role as 'admin' | 'staff';
+          userRole = staffByAuthData.role as UserRole;
           fuelPumpId = staffByAuthData.fuel_pump_id;
           console.log(`User is staff with role ${userRole} for fuel pump: ${fuelPumpId} (found by auth_id)`);
           
@@ -229,7 +229,7 @@ const LoginForm = ({
           
           if (staffByEmailData) {
             staffData = staffByEmailData;
-            userRole = staffByEmailData.role as 'admin' | 'staff';
+            userRole = staffByEmailData.role as UserRole;
             fuelPumpId = staffByEmailData.fuel_pump_id;
             
             // If the staff record doesn't have auth_id but email matches, update the auth_id
@@ -274,6 +274,7 @@ const LoginForm = ({
         .maybeSingle();
     
       if (superAdmin) {
+        userRole = 'super_admin';
         // Redirect to super admin login page with credentials
         navigate('/super-admin/login', { 
           state: { 
@@ -318,12 +319,12 @@ const LoginForm = ({
         }
       }
 
-      // Prepare user data for context - ensure role is of the correct type
+      // Prepare user data for context with proper role typing
       const userData = {
         id: data.user.id,
         username: email.split('@')[0],
         email: data.user.email,
-        role: userRole as UserRole,
+        role: userRole,
         fuelPumpId: fuelPumpId,
         fuelPumpName: fuelPumpName,
         staffId: staffData?.id,
@@ -355,6 +356,7 @@ const LoginForm = ({
       } else {
         setError('Failed to initialize session. Please try again.');
       }
+
     } catch (err: any) {
       console.error('Error during login:', err);
       setError(err.message || 'An error occurred during login.');
