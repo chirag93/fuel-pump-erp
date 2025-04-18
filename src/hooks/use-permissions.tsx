@@ -31,8 +31,7 @@ export const usePermissions = (): UsePermissionsResult => {
     if (isSuperAdmin || isAdmin) {
       // We'll populate all possible features for admins
       try {
-        // Since "get_all_staff_features" doesn't exist as a db function,
-        // Let's hardcode the features for admins instead
+        // Define standard admin features directly as StaffFeature[]
         const adminFeatures: StaffFeature[] = [
           'view_customers',
           'edit_customers',

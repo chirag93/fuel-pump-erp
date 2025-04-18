@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -100,7 +99,7 @@ const Login = () => {
           id: sessionData.session.user.id,
           username: email.split('@')[0],
           email: sessionData.session.user.email || '',
-          role: userRole,
+          role: userRole as 'admin' | 'staff' | 'super_admin',
           fuelPumpId: fuelPumpId,
           fuelPumpName: fuelPumpName,
           staffId: staffId

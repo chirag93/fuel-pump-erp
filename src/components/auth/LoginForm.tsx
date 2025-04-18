@@ -325,7 +325,7 @@ const LoginForm = ({
         id: data.user.id,
         username: email.split('@')[0],
         email: data.user.email,
-        role: userRole,
+        role: userRole as 'admin' | 'staff' | 'super_admin',
         fuelPumpId: fuelPumpId,
         fuelPumpName: fuelPumpName,
         staffId: staffData?.id,
