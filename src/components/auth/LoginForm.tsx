@@ -9,6 +9,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Define the UserRole type that includes all possible roles
+type UserRole = 'admin' | 'staff' | 'super_admin';
+
 interface LoginFormProps {
   email: string;
   setEmail: (email: string) => void;
@@ -149,7 +152,7 @@ const LoginForm = ({
       }
 
       // Define userRole with correct type that includes 'super_admin'
-      let userRole: 'admin' | 'staff' | 'super_admin' = 'staff';
+      let userRole: UserRole = 'staff';
       let fuelPumpId = null;
       let fuelPumpName = null;
       let staffData = null;
@@ -270,7 +273,6 @@ const LoginForm = ({
         .eq('email', email)
         .maybeSingle();
     
-      // Use explicit string comparison for role values
       if (superAdmin) {
         // Redirect to super admin login page with credentials
         navigate('/super-admin/login', { 
@@ -321,7 +323,7 @@ const LoginForm = ({
         id: data.user.id,
         username: email.split('@')[0],
         email: data.user.email,
-        role: userRole as 'admin' | 'staff' | 'super_admin',
+        role: userRole as UserRole,
         fuelPumpId: fuelPumpId,
         fuelPumpName: fuelPumpName,
         staffId: staffData?.id,
