@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import PasswordChangeForm from '@/components/auth/PasswordChangeForm';
 import LoginForm from '@/components/auth/LoginForm';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { Logo } from '@/components/ui/logo';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -145,12 +145,7 @@ const Login = () => {
         <Card className="w-full max-w-md shadow-lg relative z-10">
           <CardHeader className="space-y-1">
             <div className="flex justify-center mb-2">
-              <div className="flex items-center gap-2">
-                <Droplets className="h-8 w-8 text-primary" />
-                <span className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
-                  Fuel Pro 360
-                </span>
-              </div>
+              <Logo size="md" variant="default" />
             </div>
             <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
             <CardDescription className="text-center">
