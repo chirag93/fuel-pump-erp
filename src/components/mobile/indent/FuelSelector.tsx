@@ -9,9 +9,15 @@ interface FuelSelectorProps {
   fuelType: string;
   setFuelType: (type: string) => void;
   onFuelPriceChange?: (price: number) => void;
+  showPrices?: boolean;
 }
 
-export const FuelSelector = ({ fuelType, setFuelType, onFuelPriceChange }: FuelSelectorProps) => {
+export const FuelSelector = ({ 
+  fuelType, 
+  setFuelType, 
+  onFuelPriceChange, 
+  showPrices = true 
+}: FuelSelectorProps) => {
   const [fuelTypes, setFuelTypes] = useState<{type: string, price: number}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -103,7 +109,7 @@ export const FuelSelector = ({ fuelType, setFuelType, onFuelPriceChange }: FuelS
           {fuelTypes.length > 0 ? (
             fuelTypes.map(fuel => (
               <SelectItem key={fuel.type} value={fuel.type}>
-                {fuel.type} {fuel.price > 0 ? `(₹${fuel.price}/L)` : ''}
+                {fuel.type} {showPrices && fuel.price > 0 ? `(₹${fuel.price}/L)` : ''}
               </SelectItem>
             ))
           ) : (

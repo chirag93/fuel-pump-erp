@@ -224,6 +224,7 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
           <FuelSelector 
             fuelType={fuelType}
             setFuelType={setFuelType}
+            showPrices={false}
           />
           
           <div className="grid grid-cols-3 gap-4">
