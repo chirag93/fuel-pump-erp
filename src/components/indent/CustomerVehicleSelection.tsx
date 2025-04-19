@@ -88,10 +88,10 @@ export const CustomerVehicleSelection = ({
     <div>
       <Label htmlFor="vehicle">Vehicle</Label>
       <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-        <SelectTrigger id="vehicle">
+        <SelectTrigger id="vehicle" className="bg-background">
           <SelectValue placeholder="Select a vehicle" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-white">
           {isVehicleLoading ? (
             <SelectItem value="loading" disabled>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

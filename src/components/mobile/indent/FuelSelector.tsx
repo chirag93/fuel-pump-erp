@@ -102,10 +102,10 @@ export const FuelSelector = ({
         onValueChange={handleFuelTypeChange}
         disabled={isLoading || fuelTypes.length === 0}
       >
-        <SelectTrigger id="fuelType">
+        <SelectTrigger id="fuelType" className="bg-background">
           <SelectValue placeholder={isLoading ? "Loading..." : fuelTypes.length === 0 ? "No fuel types available" : "Select fuel type"} />
         </SelectTrigger>
-        <SelectContent className="bg-popover">
+        <SelectContent className="bg-white">
           {fuelTypes.length > 0 ? (
             fuelTypes.map(fuel => (
               <SelectItem key={fuel.type} value={fuel.type}>

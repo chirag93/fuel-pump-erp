@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -411,19 +412,19 @@ export const IndentBookletSelection = ({
                     <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="start">
-                  <Command>
+                <PopoverContent className="w-full p-0 bg-white shadow-lg border border-gray-200" align="start">
+                  <Command className="bg-white">
                     <CommandInput 
                       placeholder="Search customers..." 
                       value={searchCustomer}
                       onValueChange={setSearchCustomer}
                       className="h-9"
                     />
-                    <CommandList>
-                      <CommandEmpty>No customers found.</CommandEmpty>
+                    <CommandList className="bg-white max-h-[300px]">
+                      <CommandEmpty className="py-2 px-4 text-sm text-gray-500">No customers found.</CommandEmpty>
                       <CommandGroup className="max-h-[300px] overflow-auto">
                         {isCustomerLoading ? (
-                          <CommandItem disabled>
+                          <CommandItem disabled className="py-2 px-4 text-sm text-gray-700">
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Loading customers...
                           </CommandItem>
@@ -433,6 +434,7 @@ export const IndentBookletSelection = ({
                               key={customer.id}
                               value={customer.name}
                               onSelect={() => handleCustomerSelect(customer.id, customer.name)}
+                              className="py-2 px-4 text-sm text-gray-700 hover:bg-slate-100 cursor-pointer"
                             >
                               {customer.name}
                             </CommandItem>
