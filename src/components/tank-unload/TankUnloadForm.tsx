@@ -1,14 +1,13 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Truck, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { getFuelPumpId } from "@/integrations/utils";
+import { FuelSelector } from '@/components/mobile/indent/FuelSelector';
 
 interface TankUnloadFormProps {
   onSuccess: () => void;
@@ -16,7 +15,7 @@ interface TankUnloadFormProps {
 
 const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
   const [vehicleNumber, setVehicleNumber] = useState("");
-  const [fuelType, setFuelType] = useState("Petrol");
+  const [fuelType, setFuelType] = useState("");
   const [quantity, setQuantity] = useState("");
   const [amount, setAmount] = useState("");
   const [tankerRent, setTankerRent] = useState("");
@@ -77,7 +76,7 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
       
       // Reset form
       setVehicleNumber("");
-      setFuelType("Petrol");
+      setFuelType("");
       setQuantity("");
       setAmount("");
       setTankerRent("");
@@ -222,21 +221,10 @@ const TankUnloadForm = ({ onSuccess }: TankUnloadFormProps) => {
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="fuelType">Fuel Type</Label>
-            <Select value={fuelType} onValueChange={setFuelType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select fuel type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Petrol">Petrol</SelectItem>
-                <SelectItem value="Diesel">Diesel</SelectItem>
-                <SelectItem value="Premium Petrol">Premium Petrol</SelectItem>
-                <SelectItem value="Premium Diesel">Premium Diesel</SelectItem>
-                <SelectItem value="CNG">CNG</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <FuelSelector 
+            fuelType={fuelType}
+            setFuelType={setFuelType}
+          />
           
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">

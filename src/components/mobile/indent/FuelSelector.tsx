@@ -22,12 +22,7 @@ export const FuelSelector = ({ fuelType, setFuelType, onFuelPriceChange }: FuelS
         const fuelPumpId = await getFuelPumpId();
         
         if (!fuelPumpId) {
-          console.log('No fuel pump ID available, using default fuel types');
-          setFuelTypes([
-            { type: 'Petrol', price: 0 },
-            { type: 'Diesel', price: 0 },
-            { type: 'Premium', price: 0 }
-          ]);
+          console.log('No fuel pump ID available, unable to fetch fuel types');
           setIsLoading(false);
           return;
         }
@@ -65,38 +60,12 @@ export const FuelSelector = ({ fuelType, setFuelType, onFuelPriceChange }: FuelS
             }
           }
         } else {
-          // Fallback to defaults if no data
-          const defaults = [
-            { type: 'Petrol', price: 0 },
-            { type: 'Diesel', price: 0 },
-            { type: 'Premium', price: 0 }
-          ];
-          setFuelTypes(defaults);
-          
-          // Set a default fuel type if none is selected
-          if (!fuelType) {
-            setFuelType(defaults[0].type);
-            if (onFuelPriceChange) {
-              onFuelPriceChange(defaults[0].price);
-            }
-          }
+          console.warn('No fuel types found in settings');
+          setFuelTypes([]);
         }
       } catch (error) {
         console.error('Error fetching fuel types:', error);
-        // Fallback to defaults on error
-        setFuelTypes([
-          { type: 'Petrol', price: 0 },
-          { type: 'Diesel', price: 0 },
-          { type: 'Premium', price: 0 }
-        ]);
-        
-        // Set a default fuel type if none is selected
-        if (!fuelType) {
-          setFuelType('Petrol');
-          if (onFuelPriceChange) {
-            onFuelPriceChange(0);
-          }
-        }
+        setFuelTypes([]);
       } finally {
         setIsLoading(false);
       }
@@ -125,17 +94,23 @@ export const FuelSelector = ({ fuelType, setFuelType, onFuelPriceChange }: FuelS
       <Select
         value={fuelType}
         onValueChange={handleFuelTypeChange}
-        disabled={isLoading}
+        disabled={isLoading || fuelTypes.length === 0}
       >
         <SelectTrigger id="fuelType">
-          <SelectValue placeholder="Select fuel type" />
+          <SelectValue placeholder={isLoading ? "Loading..." : fuelTypes.length === 0 ? "No fuel types available" : "Select fuel type"} />
         </SelectTrigger>
-        <SelectContent>
-          {fuelTypes.map(fuel => (
-            <SelectItem key={fuel.type} value={fuel.type}>
-              {fuel.type} {fuel.price > 0 ? `(₹${fuel.price}/L)` : ''}
+        <SelectContent className="bg-popover">
+          {fuelTypes.length > 0 ? (
+            fuelTypes.map(fuel => (
+              <SelectItem key={fuel.type} value={fuel.type}>
+                {fuel.type} {fuel.price > 0 ? `(₹${fuel.price}/L)` : ''}
+              </SelectItem>
+            ))
+          ) : (
+            <SelectItem value="no-fuel" disabled>
+              No fuel types available
             </SelectItem>
-          ))}
+          )}
         </SelectContent>
       </Select>
     </div>
