@@ -25,12 +25,13 @@ export function Hero() {
   }, []);
   
   return (
-    <div className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/30 pt-20 pb-24 sm:pt-28 md:pt-32 md:pb-40">
-      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
-      
-      <div className="absolute inset-0 h-screen bg-gradient-to-br from-primary/5 via-secondary/5 to-background" />
-      
-      <div className="container relative mx-auto px-4 sm:px-6 lg:px-8 max-w-[1400px]">
+    <div className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/30 pt-20 pb-24 sm:pt-28 md:pt-32 md:pb-40 w-full min-w-0">
+      {/* Remove container max-width/paddings to ensure full-bleed */}
+      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5 pointer-events-none" />
+      <div className="absolute inset-0 h-full bg-gradient-to-br from-primary/5 via-secondary/5 to-background pointer-events-none" />
+
+      {/* Remove container class, use w-full and px-0 to prevent bands */}
+      <div className="relative w-full max-w-none px-0 mx-0">
         <div className="mx-auto max-w-4xl text-center">
           <FadeIn>
             <div className="flex flex-col items-center mb-6">
@@ -62,17 +63,18 @@ export function Hero() {
           </FadeIn>
         
           <FadeIn delay="300ms" className="mt-16 sm:mt-24">
-            <div className="relative mx-auto overflow-hidden rounded-xl border border-border/40 bg-card shadow-medium">
-              <div className="absolute inset-0 bg-gradient-to-tr from-background/80 to-card opacity-50" />
+            <div className="relative mx-auto overflow-hidden rounded-xl border border-border/40 bg-card shadow-medium w-full max-w-4xl">
+              <div className="absolute inset-0 bg-gradient-to-tr from-background/80 to-card opacity-50 pointer-events-none" />
               
               <img
                 src="https://images.unsplash.com/photo-1611288875785-9ef0f98d45c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
                 alt="Fuel Master Dashboard"
                 className="w-full h-auto object-cover opacity-90"
+                style={{ minHeight: "300px" }}
               />
               
               {/* Overlay reflection effect */}
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/20 backdrop-blur-[1px]" />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/20 backdrop-blur-[1px] pointer-events-none" />
             </div>
           </FadeIn>
         </div>
