@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/ui/custom/FadeIn";
@@ -35,7 +34,8 @@ export function Hero() {
         <div className="mx-auto max-w-4xl text-center">
           <FadeIn>
             <div className="flex flex-col items-center mb-6">
-              <Logo size="xl" className="h-32 w-auto mb-3" />
+              {/* Make logo 2x bigger here by using the xl size and overriding the height */}
+              <Logo size="xl" className="h-64 w-auto mb-3" />
               <h2 className="text-2xl font-semibold mt-2">{businessName}</h2>
             </div>
             <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
