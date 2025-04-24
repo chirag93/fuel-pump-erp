@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { getLogoUrl, getFallbackLogoUrl, uploadDefaultLogo } from "@/integrations/storage";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ export function Logo({
   size = "lg",
   variant = "default" 
 }: LogoProps) {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -59,17 +61,24 @@ export function Logo({
     loadLogo();
   }, []);
 
+  const handleLogoClick = () => {
+    navigate("/");
+  };
+
   if (isLoading) {
     return <Skeleton className={cn(className || logoSizes[size], "bg-white/20")} />;
   }
 
   if (error) {
     return (
-      <div className={cn(
-        "flex items-center justify-center", 
-        className || logoSizes[size], 
-        "bg-white/10 rounded-lg"
-      )}>
+      <div 
+        onClick={handleLogoClick}
+        className={cn(
+          "flex items-center justify-center cursor-pointer", 
+          className || logoSizes[size], 
+          "bg-white/10 rounded-lg"
+        )}
+      >
         <span className={cn(
           "text-white font-bold text-2xl"
         )}>
@@ -82,7 +91,7 @@ export function Logo({
   const textColorClass = variant === "white" ? "text-white" : "text-primary";
 
   return (
-    <div className="flex items-center">
+    <div onClick={handleLogoClick} className="flex items-center cursor-pointer">
       <img
         src={logoUrl || getFallbackLogoUrl()}
         alt="Fuel Pro 360 Logo"
@@ -96,3 +105,4 @@ export function Logo({
     </div>
   );
 }
+
