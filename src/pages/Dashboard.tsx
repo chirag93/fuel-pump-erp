@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Card, 
@@ -41,6 +40,8 @@ const QUERY_KEYS = {
   metrics: (startDate: Date, endDate: Date) => ['metrics', startDate.toISOString(), endDate.toISOString()],
   totalCredits: 'totalCredits'
 };
+
+import DailySalesReport from './DailySalesReport';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -658,11 +659,8 @@ const Dashboard = () => {
               </div>
             </TabsContent>
             
-            <TabsContent value="reports" className="h-[400px] flex justify-center items-center border rounded-md">
-              <div className="text-center">
-                <h3 className="text-lg font-medium">Reports</h3>
-                <p className="text-muted-foreground">Generate and view reports here</p>
-              </div>
+            <TabsContent value="reports">
+              <DailySalesReport />
             </TabsContent>
           </>
         )}
