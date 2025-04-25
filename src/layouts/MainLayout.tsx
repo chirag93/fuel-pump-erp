@@ -1,5 +1,6 @@
 
 import React, { ReactNode } from 'react';
+import { Outlet } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 
 interface MainLayoutProps {
@@ -9,7 +10,7 @@ interface MainLayoutProps {
 export const MainLayout = ({ children }: MainLayoutProps) => {
   return (
     <Layout>
-      {children}
+      {children || <Outlet />}
     </Layout>
   );
 };

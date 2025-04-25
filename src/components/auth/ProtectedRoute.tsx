@@ -2,9 +2,8 @@
 import { useEffect } from 'react';
 import { Navigate, Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Shield, Fuel, Smartphone } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -97,28 +96,21 @@ const ProtectedRoute = ({
     return <Navigate to="/mobile" replace />;
   }
   
-  return <DashboardLayout>
-      <div className="container py-6">
-        {isSuperAdmin && <div className="mb-6 p-3 bg-muted rounded-md flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              <span className="font-medium">Super Admin Access Available</span>
-            </div>
-            <Link to="/super-admin/dashboard">
-              <Button variant="outline" size="sm">Go to Super Admin</Button>
-            </Link>
-          </div>}
-        
-        {fuelPumpName && !isMobile && <div className="mb-4">
-            <div className="flex items-center gap-2">
-              
-              
-            </div>
-          </div>}
-        
-        {children || <Outlet />}
-      </div>
-    </DashboardLayout>;
+  return (
+    <>
+      {isSuperAdmin && <div className="mb-6 p-3 bg-muted rounded-md flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Shield className="h-5 w-5 text-primary" />
+          <span className="font-medium">Super Admin Access Available</span>
+        </div>
+        <Link to="/super-admin/dashboard">
+          <Button variant="outline" size="sm">Go to Super Admin</Button>
+        </Link>
+      </div>}
+      
+      {children || <Outlet />}
+    </>
+  );
 };
 
 export default ProtectedRoute;

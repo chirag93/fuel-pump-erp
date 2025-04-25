@@ -7,11 +7,10 @@ interface LayoutProps {
 }
 
 export const Layout = ({ children }: LayoutProps) => {
+  // Removing the container div that might be causing duplicate sidebars
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-6 px-4">
-        {children}
-      </div>
+      {children}
     </DashboardLayout>
   );
 };
