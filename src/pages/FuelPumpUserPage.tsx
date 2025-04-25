@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,8 +10,8 @@ import { toast } from '@/hooks/use-toast';
 import { getFuelPumpById } from '@/integrations/fuelPumps';
 import { AlertCircle, ChevronLeft, User, Mail, MapPin, Phone, Shield } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useAuth } from '@/contexts/AuthContext';
 import { usePasswordReset } from '@/hooks/usePasswordReset';
+import { useSuperAdminAuth } from '@/superadmin/contexts/SuperAdminAuthContext';
 
 // Extract FuelPumpDetails into a separate component
 const FuelPumpDetails = ({ fuelPump }: { fuelPump: any }) => (
@@ -206,13 +207,13 @@ const PasswordResetForm = ({
 const FuelPumpUserPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isSuperAdmin } = useAuth();
+  const { isAuthenticated } = useSuperAdminAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [fuelPump, setFuelPump] = useState<any>(null);
   const { adminForcePasswordReset, isResetting, error, setError } = usePasswordReset();
 
   useEffect(() => {
-    if (!isSuperAdmin) {
+    if (!isAuthenticated) {
       navigate('/super-admin/login');
       return;
     }
@@ -241,7 +242,7 @@ const FuelPumpUserPage = () => {
     };
 
     fetchFuelPump();
-  }, [id, navigate, isSuperAdmin]);
+  }, [id, navigate, isAuthenticated]);
 
   if (isLoading) {
     return (
