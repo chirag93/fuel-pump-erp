@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -33,6 +34,9 @@ interface StaffPayload {
   features: StaffFeature[];
   password?: string; // Make password optional in the payload
 }
+
+// Get the internal token from environment variable if available
+const INTERNAL_TOKEN_KEY = import.meta.env.VITE_INTERNAL_TOKEN_KEY || '';
 
 export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void, onCancel?: () => void) => {
   const [staffData, setStaffData] = useState<StaffFormData>({
@@ -206,8 +210,12 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             password: "***"
           });
           
+          // Add security headers for the edge function
           const { data, error } = await supabase.functions.invoke("create-staff-user", {
-            body: payload
+            body: payload,
+            headers: INTERNAL_TOKEN_KEY ? {
+              'x-internal-token': INTERNAL_TOKEN_KEY
+            } : undefined
           });
 
           if (error) {
