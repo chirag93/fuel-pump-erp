@@ -62,7 +62,7 @@ export function Logo({
   }, []);
 
   const handleLogoClick = () => {
-    navigate("/");
+    navigate("/home");  // Updated to navigate to /home route
   };
 
   if (isLoading) {
@@ -105,4 +105,3 @@ export function Logo({
     </div>
   );
 }
-
