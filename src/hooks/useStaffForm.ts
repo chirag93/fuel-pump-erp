@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -39,6 +38,7 @@ interface StaffPayload {
 const INTERNAL_TOKEN_KEY = import.meta.env.VITE_INTERNAL_TOKEN_KEY || '';
 
 export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void, onCancel?: () => void) => {
+  
   const [staffData, setStaffData] = useState<StaffFormData>({
     name: '',
     phone: '',
@@ -61,6 +61,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
   useEffect(() => {
     if (initialData) {
       console.log("Initializing form with data:", initialData.id);
+      
       
       // Safely parse assigned_pumps
       let assignedPumps: string[] = [];
@@ -96,6 +97,8 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
       }
     }
   }, [initialData]);
+
+  
 
   const handleChange = (field: string, value: string) => {
     setStaffData(prev => ({ ...prev, [field]: value }));
@@ -233,11 +236,13 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
                 ...prev,
                 phone: "This phone number is already registered with another staff member"
               }));
+              throw new Error("This phone number is already registered with another staff member");
             } else if (data?.errorType === 'DUPLICATE_EMAIL') {
               setErrors(prev => ({
                 ...prev,
                 email: "This email is already registered with another staff member"
               }));
+              throw new Error("This email is already registered with another staff member");  
             }
             
             throw new Error(errorMessage);
@@ -283,6 +288,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
           return;
         }
       } else if (onSubmit) {
+        
         // For existing staff, use the regular onSubmit callback
         const staffPayload: StaffPayload = {
           id: initialData.id,
