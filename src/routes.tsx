@@ -1,130 +1,153 @@
+import { lazy } from "react";
 
-import { createBrowserRouter } from "react-router-dom";
-import App from "./App";
-import AuthRequired from "@/components/auth-required";
-import Customers from "./pages/Customers";
-import Dashboard from "./pages/Dashboard";
-import Indents from "./pages/Indents";
-import Layout from "@/components/layout/Layout";
-import Login from "./pages/Login";
-import NotFound from "./pages/NotFound";
-import AllTransactions from './pages/AllTransactions';
-import Transactions from './pages/Transactions';
-import ShiftManagement from './pages/ShiftManagement';
-import MobileShiftManagement from './pages/mobile/MobileShiftManagement';
-import MobileCustomers from './pages/mobile/MobileCustomers';
-import MobileCustomerDetails from './pages/mobile/MobileCustomerDetails';
-import ProtectedRoute from './components/auth/ProtectedRoute';
-import Home from './pages/Home';
+import { Layout } from "@/components/layout";
+import { RequireAuth } from "@/components/auth/require-auth";
 
-// Define routes
-const routes = [
+const Home = lazy(() => import("./pages/Home"));
+const Indents = lazy(() => import("./pages/Indents"));
+const Customers = lazy(() => import("./pages/Customers"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Consumables = lazy(() => import("./pages/Consumables"));
+const FuelInventory = lazy(() => import("./pages/FuelInventory"));
+const TankUnloads = lazy(() => import("./pages/TankUnloads"));
+const FuelTests = lazy(() => import("./pages/FuelTests"));
+const StaffManagement = lazy(() => import("./pages/StaffManagement"));
+const AccountingDashboard = lazy(() => import("./pages/accounting/AccountingDashboard"));
+const CustomerPayments = lazy(() => import("./pages/CustomerPayments"));
+
+// Import the DailySalesReport component
+import DailySalesReport from './pages/DailySalesReport';
+import FinancialReports from './pages/accounting/FinancialReports';
+
+export const routes = [
   {
     path: "/",
-    element: <App />,
-  },
-  {
-    path: "/login",
-    element: <Login />,
-  },
-  {
-    path: "/home",
     element: (
-      <AuthRequired>
+      <RequireAuth>
         <Layout>
           <Home />
         </Layout>
-      </AuthRequired>
-    ),
-  },
-  {
-    path: "/dashboard",
-    element: (
-      <AuthRequired>
-        <Layout>
-          <Dashboard />
-        </Layout>
-      </AuthRequired>
-    ),
-  },
-  {
-    path: "/customers",
-    element: (
-      <AuthRequired>
-        <Layout>
-          <Customers />
-        </Layout>
-      </AuthRequired>
-    ),
-  },
-  {
-    path: "/transactions",
-    element: (
-      <AuthRequired>
-        <Layout>
-          <Transactions />
-        </Layout>
-      </AuthRequired>
+      </RequireAuth>
     ),
   },
   {
     path: "/indents",
     element: (
-      <AuthRequired>
+      <RequireAuth>
         <Layout>
           <Indents />
         </Layout>
-      </AuthRequired>
+      </RequireAuth>
     ),
   },
   {
-    path: "/all-transactions",
+    path: "/customers",
     element: (
-      <AuthRequired>
+      <RequireAuth>
         <Layout>
-          <AllTransactions />
+          <Customers />
         </Layout>
-      </AuthRequired>
+      </RequireAuth>
     ),
   },
   {
-    path: "/shift-management",
+    path: "/settings",
     element: (
-      <AuthRequired>
+      <RequireAuth>
         <Layout>
-          <ShiftManagement />
+          <Settings />
         </Layout>
-      </AuthRequired>
+      </RequireAuth>
     ),
   },
   {
-    path: "/mobile/shift-management",
+    path: "/consumables",
     element: (
-      <ProtectedRoute>
-        <MobileShiftManagement />
-      </ProtectedRoute>
+      <RequireAuth>
+        <Layout>
+          <Consumables />
+        </Layout>
+      </RequireAuth>
     ),
   },
   {
-    path: "/mobile/customers",
+    path: "/fuel-inventory",
     element: (
-      <ProtectedRoute>
-        <MobileCustomers />
-      </ProtectedRoute>
+      <RequireAuth>
+        <Layout>
+          <FuelInventory />
+        </Layout>
+      </RequireAuth>
     ),
   },
   {
-    path: "/mobile/customers/:id",
+    path: "/tank-unloads",
     element: (
-      <ProtectedRoute>
-        <MobileCustomerDetails />
-      </ProtectedRoute>
+      <RequireAuth>
+        <Layout>
+          <TankUnloads />
+        </Layout>
+      </RequireAuth>
     ),
   },
   {
-    path: "*",
-    element: <NotFound />,
+    path: "/fuel-tests",
+    element: (
+      <RequireAuth>
+        <Layout>
+          <FuelTests />
+        </Layout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/staff-management",
+    element: (
+      <RequireAuth>
+        <Layout>
+          <StaffManagement />
+        </Layout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/accounting",
+    element: (
+      <RequireAuth>
+        <Layout>
+          <AccountingDashboard />
+        </Layout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/customer-payments",
+    element: (
+      <RequireAuth>
+        <Layout>
+          <CustomerPayments />
+        </Layout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/daily-sales-report",
+    element: (
+      <RequireAuth>
+        <Layout>
+          <DailySalesReport />
+        </Layout>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "/accounting/financial-reports",
+    element: (
+      <RequireAuth>
+        <Layout>
+          <FinancialReports />
+        </Layout>
+      </RequireAuth>
+    ),
   },
 ];
-
-export const router = createBrowserRouter(routes);

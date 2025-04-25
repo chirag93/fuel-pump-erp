@@ -1,153 +1,267 @@
+import {
+  AlignJustify,
+  BarChart,
+  Calendar,
+  Car,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  CircleDollarSign,
+  FileText,
+  Gauge,
+  LayoutDashboard,
+  ListChecks,
+  LucideIcon,
+  Settings,
+  ShoppingCart,
+  User,
+  Users,
+} from "lucide-react"
 
-import { useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
-
-import { cn } from "@/lib/utils"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/contexts/AuthContext"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useSuperAdminAuth } from "@/superadmin/contexts/SuperAdminAuthContext"
-import { Logo } from "@/components/ui/logo";
+import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
 
-interface MainNavProps extends React.HTMLAttributes<HTMLElement> {}
+interface MainNavItem {
+  title: string
+  href: string
+  description?: string
+  disabled?: boolean
+  external?: boolean
+  icon?: LucideIcon
+  children?: MainNavItem[]
+}
 
-export function MainNav({ className, ...props }: MainNavProps) {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { user, logout, fuelPumpName } = useAuth()
-  const { user: superAdminUser, logout: superAdminLogout } = useSuperAdminAuth()
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
+export const mainNavItems: MainNavItem[] = [
+  {
+    title: "Dashboard",
+    href: "/dashboard",
+    description: "Overview of your account",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Indents",
+    href: "/indents",
+    description: "Manage customer indents",
+    icon: ListChecks,
+  },
+  {
+    title: "Transactions",
+    href: "/transactions",
+    description: "View and manage transactions",
+    icon: ShoppingCart,
+  },
+  {
+    title: "Customers",
+    href: "/customers",
+    description: "Manage customer accounts",
+    icon: Users,
+  },
+  {
+    title: "Vehicles",
+    href: "/vehicles",
+    description: "Manage customer vehicles",
+    icon: Car,
+  },
+  {
+    title: "Accounting",
+    href: "#",
+    description: "Manage accounting settings",
+    icon: CircleDollarSign,
+    children: [
+      {
+        title: "Financial Reports",
+        href: "/accounting/financial-reports",
+        description: "Generate financial reports",
+      },
+      {
+        title: "Consumables",
+        href: "/accounting/consumables",
+        description: "Manage consumables",
+      },
+      {
+        title: "Customer Payments",
+        href: "/accounting/customer-payments",
+        description: "Record customer payments",
+      },
+    ],
+  },
+  {
+    title: "Inventory",
+    href: "#",
+    description: "Manage inventory settings",
+    icon: Gauge,
+    children: [
+      {
+        title: "Fuel Stock",
+        href: "/inventory/fuel-stock",
+        description: "Manage fuel stock levels",
+      },
+      {
+        title: "Tank Unloads",
+        href: "/inventory/tank-unloads",
+        description: "Manage tank unloads",
+      },
+      {
+        title: "Daily Readings",
+        href: "/inventory/daily-readings",
+        description: "Manage daily readings",
+      },
+    ],
+  },
+  {
+    title: "Settings",
+    href: "#",
+    description: "Manage settings",
+    icon: Settings,
+    children: [
+      {
+        title: "Fuel Settings",
+        href: "/settings/fuel-settings",
+        description: "Manage fuel settings",
+      },
+      {
+        title: "Pump Settings",
+        href: "/settings/pump-settings",
+        description: "Manage pump settings",
+      },
+      {
+        title: "Business Settings",
+        href: "/settings/business-settings",
+        description: "Manage business settings",
+      },
+      {
+        title: "Staff Management",
+        href: "/settings/staff-management",
+        description: "Manage staff accounts",
+      },
+    ],
+  },
+  {
+    title: "Reports",
+    href: "#",
+    children: [
+      {
+        title: "Daily Sales Report",
+        href: "/daily-sales-report",
+        description: "View detailed daily sales reports",
+      },
+      {
+        title: "Financial Reports",
+        href: "/accounting/financial-reports",
+        description: "Generate comprehensive financial reports",
+      }
+    ]
+  },
+]
 
-  const mainLinks = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/dsr", label: "Daily Sales" },
-    { href: "/tank-monitor", label: "Tank Monitor" },
-    { href: "/tank-unload", label: "Tank Unload" },
-    { href: "/indents", label: "Indents" },
-    { href: "/transactions", label: "Transactions" },
-    { href: "/customers", label: "Customers" },
-  ];
+interface MainNavProps {
+  items?: MainNavItem[]
+  children?: React.ReactNode
+  className?: string
+}
 
-  const superAdminLinks = [
-    { href: "/superadmin/dashboard", label: "Dashboard" },
-    { href: "/superadmin/fuel-pumps", label: "Fuel Pumps" },
-    { href: "/superadmin/staff", label: "Staff" },
-    { href: "/superadmin/customers", label: "Customers" },
-    { href: "/superadmin/indents", label: "Indents" },
-    { href: "/superadmin/transactions", label: "Transactions" },
-  ];
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true)
-    try {
-      await logout()
-      navigate("/login")
-    } catch (error) {
-      console.error("Logout failed:", error)
-    } finally {
-      setIsLoggingOut(false)
-    }
-  }
-
-  const handleSuperAdminLogout = async () => {
-    setIsLoggingOut(true)
-    try {
-      await superAdminLogout()
-      navigate("/superadmin/login")
-    } catch (error) {
-      console.error("Logout failed:", error)
-    } finally {
-      setIsLoggingOut(false)
-    }
-  }
-
-  const renderLinks = () => {
-    if (superAdminUser) {
-      return superAdminLinks.map((link) => (
-        <Button
-          key={link.href}
-          variant="ghost"
-          onClick={() => navigate(link.href)}
-          className={cn(
-            "p-0 font-medium hover:bg-transparent hover:underline underline-offset-4",
-            location.pathname === link.href
-              ? "text-foreground underline"
-              : "text-muted-foreground"
-          )}
-        >
-          {link.label}
-        </Button>
-      ))
-    } else {
-      return mainLinks.map((link) => (
-        <Button
-          key={link.href}
-          variant="ghost"
-          onClick={() => navigate(link.href)}
-          className={cn(
-            "p-0 font-medium hover:bg-transparent hover:underline underline-offset-4",
-            location.pathname === link.href
-              ? "text-foreground underline"
-              : "text-muted-foreground"
-          )}
-        >
-          {link.label}
-        </Button>
-      ))
-    }
-  }
-
+export function MainNav({ items, children, className }: MainNavProps) {
   return (
-    <div className={cn("flex items-center justify-between", className)} {...props}>
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate("/")} className="p-0">
-          <Logo size="sm" className="h-12 w-auto" />
-        </Button>
-        <nav className="hidden md:flex items-center gap-4">{renderLinks()}</nav>
-      </div>
-      <div className="flex items-center gap-4">
-        {user && fuelPumpName && <span className="hidden md:block text-sm text-muted-foreground">Fuel Pump: {fuelPumpName}</span>}
-        {superAdminUser && <span className="hidden md:block text-sm text-muted-foreground">Super Admin</span>}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="/avatars/01.png" alt="Avatar" />
-                <AvatarFallback>
-                  {user ? user?.email?.charAt(0)?.toUpperCase() : superAdminUser?.email?.charAt(0)?.toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <div className="grid gap-2 px-2">
-              <div className="text-sm font-medium leading-none">
-                {user ? user.email : superAdminUser?.email}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {user ? "Fuel Pump User" : "Super Admin"}
-              </div>
-            </div>
-            <DropdownMenuSeparator />
-            {superAdminUser ? (
-              <DropdownMenuItem onClick={handleSuperAdminLogout} disabled={isLoggingOut}>
-                {isLoggingOut ? "Logging out..." : "Log Out"}
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
-                {isLoggingOut ? "Logging out..." : "Log Out"}
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+    <div className={cn("flex gap-6 md:gap-10", className)}>
+      {items?.length ? (
+        <nav className="flex items-center space-x-6">
+          {items?.map(
+            (item, index) =>
+              item.href ? (
+                <a
+                  className="flex items-center text-sm font-medium transition-colors hover:text-foreground"
+                  href={item.href}
+                  key={index}
+                >
+                  {item.title}
+                </a>
+              ) : (
+                <span
+                  className="flex items-center text-sm font-medium text-muted-foreground"
+                  key={index}
+                >
+                  {item.title}
+                </span>
+              )
+          )}
+        </nav>
+      ) : null}
+      {children}
     </div>
-  );
+  )
+}
+
+interface MobileNavProps {
+  items?: MainNavItem[]
+  children?: React.ReactNode
+  className?: string
+}
+
+export function MobileNav({ items, children, className }: MobileNavProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="px-0">
+          <AlignJustify className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-60" align="end" forceMount>
+        <div className="grid gap-2">
+          {items?.length ? (
+            <>
+              {items?.map((item, i) =>
+                item.children ? (
+                  <MobileNavItemWithChildren key={i} item={item} />
+                ) : (
+                  <DropdownMenuItem key={i} onClick={() => {}}>
+                    <a href={item.href} className="w-full">
+                      {item.title}
+                    </a>
+                  </DropdownMenuItem>
+                )
+              )}
+              {items?.length ? <DropdownMenuSeparator /> : null}
+            </>
+          ) : null}
+          {children}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+interface MobileNavItemWithChildrenProps {
+  item: MainNavItem
+}
+
+function MobileNavItemWithChildren({ item }: MobileNavItemWithChildrenProps) {
+  return (
+    <Accordion type="single" collapsible>
+      <AccordionItem value={item.title}>
+        <AccordionTrigger className="flex items-center justify-between py-1.5 text-sm font-medium">
+          {item.title}
+          <ChevronDown className="h-4 w-4" />
+        </AccordionTrigger>
+        <AccordionContent className="space-y-1">
+          {item.children?.map((child, j) => (
+            <DropdownMenuItem key={j} onClick={() => {}}>
+              <a href={child.href} className="w-full">
+                {child.title}
+              </a>
+            </DropdownMenuItem>
+          ))}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  )
 }
