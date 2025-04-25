@@ -1,5 +1,6 @@
 
 import { lazy } from "react";
+import { Outlet } from "react-router-dom";
 import { AuthRequired } from "@/components/auth-required";
 import MainLayout from "@/layouts/MainLayout";
 
@@ -24,7 +25,9 @@ export const routes = [
     path: "/",
     element: (
       <AuthRequired>
-        <MainLayout />
+        <MainLayout>
+          <Outlet />
+        </MainLayout>
       </AuthRequired>
     ),
     children: [
