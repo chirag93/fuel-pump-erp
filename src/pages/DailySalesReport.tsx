@@ -9,7 +9,7 @@ import { DateRange } from 'react-day-picker';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getFuelPumpId } from '@/integrations/utils';
-import { BarChart } from '@/components/ui/chart';
+import { Bar as BarChart, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import DateRangeFilter from '@/components/shared/DateRangeFilter';
 import { formatDate } from '@/utils/dateUtils';
@@ -212,16 +212,10 @@ const DailySalesReport = () => {
   };
   
   // Prepare chart data for sales by date
-  const chartData = {
-    labels: salesData.map(data => formatDate(data.date)),
-    datasets: [
-      {
-        label: 'Daily Sales (₹)',
-        data: salesData.map(data => data.totalSales),
-        backgroundColor: 'rgba(53, 162, 235, 0.5)',
-      },
-    ],
-  };
+  const chartData = salesData.map(data => ({
+    name: formatDate(data.date),
+    sales: data.totalSales
+  }));
   
   // Handler for exporting report to CSV
   const handleExportReport = () => {
@@ -355,13 +349,16 @@ const DailySalesReport = () => {
                   <p>Loading chart data...</p>
                 </div>
               ) : salesData.length > 0 ? (
-                <BarChart
-                  data={chartData}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                  }}
-                />
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <BarChart dataKey="sales" fill="#3B82F6" name="Sales (₹)" />
+                  </BarChart>
+                </ResponsiveContainer>
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <p>No sales data available for the selected date range</p>

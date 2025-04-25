@@ -1,19 +1,20 @@
+
 import { lazy } from "react";
 
-import { Layout } from "@/components/layout";
-import { RequireAuth } from "@/components/auth/require-auth";
+import { Layout } from "@/components/layout/Layout";
+import { AuthRequired } from "@/components/auth-required";
 
 const Home = lazy(() => import("./pages/Home"));
 const Indents = lazy(() => import("./pages/Indents"));
 const Customers = lazy(() => import("./pages/Customers"));
-const Settings = lazy(() => import("./pages/Settings"));
+const Settings = lazy(() => import("./pages/FuelPumpSettings"));
 const Consumables = lazy(() => import("./pages/Consumables"));
-const FuelInventory = lazy(() => import("./pages/FuelInventory"));
-const TankUnloads = lazy(() => import("./pages/TankUnloads"));
+const FuelInventory = lazy(() => import("./pages/StockLevels"));
+const TankUnloads = lazy(() => import("./pages/TankUnload"));
 const FuelTests = lazy(() => import("./pages/FuelTests"));
 const StaffManagement = lazy(() => import("./pages/StaffManagement"));
-const AccountingDashboard = lazy(() => import("./pages/accounting/AccountingDashboard"));
-const CustomerPayments = lazy(() => import("./pages/CustomerPayments"));
+const AccountingDashboard = lazy(() => import("./pages/accounting/FinancialReports"));
+const CustomerPayments = lazy(() => import("./pages/Customers"));
 
 // Import the DailySalesReport component
 import DailySalesReport from './pages/DailySalesReport';
@@ -23,131 +24,131 @@ export const routes = [
   {
     path: "/",
     element: (
-      <RequireAuth>
+      <AuthRequired>
         <Layout>
           <Home />
         </Layout>
-      </RequireAuth>
+      </AuthRequired>
     ),
   },
   {
     path: "/indents",
     element: (
-      <RequireAuth>
+      <AuthRequired>
         <Layout>
           <Indents />
         </Layout>
-      </RequireAuth>
+      </AuthRequired>
     ),
   },
   {
     path: "/customers",
     element: (
-      <RequireAuth>
+      <AuthRequired>
         <Layout>
           <Customers />
         </Layout>
-      </RequireAuth>
+      </AuthRequired>
     ),
   },
   {
     path: "/settings",
     element: (
-      <RequireAuth>
+      <AuthRequired>
         <Layout>
           <Settings />
         </Layout>
-      </RequireAuth>
+      </AuthRequired>
     ),
   },
   {
     path: "/consumables",
     element: (
-      <RequireAuth>
+      <AuthRequired>
         <Layout>
           <Consumables />
         </Layout>
-      </RequireAuth>
+      </AuthRequired>
     ),
   },
   {
     path: "/fuel-inventory",
     element: (
-      <RequireAuth>
+      <AuthRequired>
         <Layout>
           <FuelInventory />
         </Layout>
-      </RequireAuth>
+      </AuthRequired>
     ),
   },
   {
     path: "/tank-unloads",
     element: (
-      <RequireAuth>
+      <AuthRequired>
         <Layout>
           <TankUnloads />
         </Layout>
-      </RequireAuth>
+      </AuthRequired>
     ),
   },
   {
     path: "/fuel-tests",
     element: (
-      <RequireAuth>
+      <AuthRequired>
         <Layout>
           <FuelTests />
         </Layout>
-      </RequireAuth>
+      </AuthRequired>
     ),
   },
   {
     path: "/staff-management",
     element: (
-      <RequireAuth>
+      <AuthRequired>
         <Layout>
           <StaffManagement />
         </Layout>
-      </RequireAuth>
+      </AuthRequired>
     ),
   },
   {
     path: "/accounting",
     element: (
-      <RequireAuth>
+      <AuthRequired>
         <Layout>
           <AccountingDashboard />
         </Layout>
-      </RequireAuth>
+      </AuthRequired>
     ),
   },
   {
     path: "/customer-payments",
     element: (
-      <RequireAuth>
+      <AuthRequired>
         <Layout>
           <CustomerPayments />
         </Layout>
-      </RequireAuth>
+      </AuthRequired>
     ),
   },
   {
     path: "/daily-sales-report",
     element: (
-      <RequireAuth>
+      <AuthRequired>
         <Layout>
           <DailySalesReport />
         </Layout>
-      </RequireAuth>
+      </AuthRequired>
     ),
   },
   {
     path: "/accounting/financial-reports",
     element: (
-      <RequireAuth>
+      <AuthRequired>
         <Layout>
           <FinancialReports />
         </Layout>
-      </RequireAuth>
+      </AuthRequired>
     ),
   },
 ];
