@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/ui/custom/FadeIn";
@@ -24,13 +25,13 @@ export function Hero() {
   }, []);
   
   return (
-    <div className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/30 pt-20 pb-24 sm:pt-28 md:pt-32 md:pb-40 w-full min-w-0">
-      {/* Remove container max-width/paddings to ensure full-bleed */}
+    <div className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/30 pt-20 pb-24 sm:pt-28 md:pt-32 md:pb-40 w-full">
+      {/* Background elements for full-width effect */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5 pointer-events-none" />
       <div className="absolute inset-0 h-full bg-gradient-to-br from-primary/5 via-secondary/5 to-background pointer-events-none" />
 
-      {/* Remove container class, use w-full and px-0 to prevent bands */}
-      <div className="relative w-full max-w-none px-0 mx-0">
+      {/* Content container with proper centering */}
+      <div className="relative w-full max-w-none px-4 sm:px-6 lg:px-8 mx-auto">
         <div className="mx-auto max-w-4xl text-center">
           <FadeIn>
             <div className="flex flex-col items-center mb-6">
