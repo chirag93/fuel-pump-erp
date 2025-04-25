@@ -9,7 +9,16 @@ import { DateRange } from 'react-day-picker';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getFuelPumpId } from '@/integrations/utils';
-import { Bar as BarChart, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { 
+  ResponsiveContainer, 
+  BarChart, 
+  Bar,
+  CartesianGrid, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  Legend 
+} from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import DateRangeFilter from '@/components/shared/DateRangeFilter';
 import { formatDate } from '@/utils/dateUtils';
@@ -356,7 +365,7 @@ const DailySalesReport = () => {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <BarChart dataKey="sales" fill="#3B82F6" name="Sales (₹)" />
+                    <Bar dataKey="sales" fill="#3B82F6" name="Sales (₹)" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
