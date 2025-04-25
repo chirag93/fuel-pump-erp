@@ -1,10 +1,14 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { verifyAdminRequest, createUnauthorizedResponse, logAdminAction } from '../_shared/auth.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+// Add this type definition at the top
+type StaffFeature = 'dashboard' | 'daily_readings' | 'stock_levels' | 'tank_unload' | 
+                    'customers' | 'staff_management' | 'record_indent' | 'shift_management' | 
+                    'consumables' | 'testing' | 'settings';
 
 Deno.serve(async (req) => {
   // Handle CORS
@@ -266,33 +270,50 @@ Deno.serve(async (req) => {
       name: insertedStaff.name
     });
 
-    // Create staff permissions if provided
-    if (requestData.features && requestData.features.length > 0) {
-      const staffPermissions = requestData.features.map((feature) => ({
+    // Add better error handling and validation for features
+    if (requestData.features && Array.isArray(requestData.features)) {
+      const validFeatures = requestData.features.every((feature: string) => {
+        const isValid = [
+          'dashboard', 'daily_readings', 'stock_levels', 'tank_unload',
+          'customers', 'staff_management', 'record_indent', 'shift_management',
+          'consumables', 'testing', 'settings'
+        ].includes(feature);
+        
+        if (!isValid) {
+          console.warn(`Invalid feature detected: ${feature}`);
+        }
+        return isValid;
+      });
+
+      if (!validFeatures) {
+        throw new Error("Invalid features provided");
+      }
+
+      // Create staff permissions with better error handling
+      const staffPermissions = requestData.features.map((feature: StaffFeature) => ({
         staff_id: insertedStaff.id,
         feature: feature
       }));
 
-      logAdminAction('create-staff-user', 'creating_permissions', { 
-        staffId: insertedStaff.id,
-        features: requestData.features 
-      });
-      
       const { error: permissionsError } = await supabase
         .from('staff_permissions')
         .insert(staffPermissions);
 
       if (permissionsError) {
         logAdminAction('create-staff-user', 'permissions_creation_error', { 
-          error: permissionsError.message
+          error: permissionsError.message,
+          staffId: insertedStaff.id
         });
-        // Non-fatal error, continue
-      } else {
-        logAdminAction('create-staff-user', 'permissions_created', { 
-          staffId: insertedStaff.id,
-          featureCount: staffPermissions.length
-        });
+        
+        // Make permission errors fatal to ensure data consistency
+        throw new Error(`Failed to create staff permissions: ${permissionsError.message}`);
       }
+
+      logAdminAction('create-staff-user', 'permissions_created', { 
+        staffId: insertedStaff.id,
+        featureCount: staffPermissions.length,
+        features: requestData.features
+      });
     }
 
     logAdminAction('create-staff-user', 'success', {

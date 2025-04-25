@@ -208,12 +208,8 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             features: selectedFeatures
           };
           
-          console.log("Invoking create-staff-user with data:", {
-            ...payload,
-            password: "***"
-          });
+          console.log("Creating staff with features:", selectedFeatures);
           
-          // Add security headers for the edge function
           const { data, error } = await supabase.functions.invoke("create-staff-user", {
             body: payload,
             headers: INTERNAL_TOKEN_KEY ? {
