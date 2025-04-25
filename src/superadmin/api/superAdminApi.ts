@@ -5,11 +5,21 @@ import { FuelPump } from '@/integrations/fuelPumps';
 // Create a service role client that can bypass RLS
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || ''; 
+const INTERNAL_TOKEN_KEY = import.meta.env.VITE_INTERNAL_TOKEN_KEY || '';
 
 // Create service role client only if key is available
 const serviceRoleClient = SUPABASE_SERVICE_ROLE_KEY 
   ? supabase.auth.admin 
   : null;
+
+// Helper function to add the internal token to function invocation
+const addSecurityHeaders = () => {
+  return {
+    headers: {
+      'x-internal-token': INTERNAL_TOKEN_KEY
+    }
+  };
+};
 
 // Centralized API functions for super admin features
 export const superAdminApi = {
@@ -73,7 +83,8 @@ export const superAdminApi = {
           contact_number: fuelPumpData.contact_number,
           created_by: createdById,
           password: password
-        }
+        },
+        ...addSecurityHeaders() // Add security headers
       });
       
       if (error || !response.success) {
@@ -150,7 +161,8 @@ export const superAdminApi = {
         body: {
           email,
           newPassword
-        }
+        },
+        ...addSecurityHeaders() // Add security headers
       });
       
       if (error || !response.success) {

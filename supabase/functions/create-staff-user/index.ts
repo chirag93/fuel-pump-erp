@@ -1,6 +1,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { verifyAdminRequest, createUnauthorizedResponse, logAdminAction } from '../_shared/auth.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -11,14 +12,45 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Verify admin authentication
+  const authResult = verifyAdminRequest(req, 'create-staff-user');
+  if (!authResult.authorized) {
+    return createUnauthorizedResponse(authResult.reason || 'Unauthorized');
+  }
+
   try {
-    console.log("Starting create-staff-user function");
+    logAdminAction('create-staff-user', 'start', { timestamp: new Date().toISOString() });
     
     const requestData = await req.json();
-    console.log("Request data:", {
+    
+    // Log request (excluding sensitive data)
+    const safeRequestData = {
       ...requestData,
       password: requestData.password ? '******' : undefined
-    });
+    };
+    logAdminAction('create-staff-user', 'request_data', safeRequestData);
+
+    // Validate required fields
+    const requiredFields = ['name', 'email', 'phone', 'fuelPumpId', 'password', 'staffRole'];
+    const missingFields = requiredFields.filter(field => !requestData[field]);
+    
+    if (missingFields.length > 0) {
+      logAdminAction('create-staff-user', 'validation_error', { 
+        error: 'Missing required fields',
+        fields: missingFields 
+      });
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Missing required fields: ${missingFields.join(', ')}`
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
 
     // Initialize Supabase client with service role key
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
@@ -29,7 +61,8 @@ Deno.serve(async (req) => {
     });
 
     // Verify fuel pump exists
-    console.log("Verifying fuel pump ID:", requestData.fuelPumpId);
+    logAdminAction('create-staff-user', 'verifying_fuel_pump', { fuelPumpId: requestData.fuelPumpId });
+    
     const { data: fuelPump, error: fuelPumpError } = await supabase
       .from('fuel_pumps')
       .select('id, name')
@@ -37,7 +70,11 @@ Deno.serve(async (req) => {
       .single();
 
     if (fuelPumpError || !fuelPump) {
-      console.error("Fuel pump verification failed:", fuelPumpError);
+      logAdminAction('create-staff-user', 'fuel_pump_verification_failed', { 
+        fuelPumpId: requestData.fuelPumpId,
+        error: fuelPumpError?.message || 'Fuel pump not found'
+      });
+      
       return new Response(
         JSON.stringify({
           success: false,
@@ -50,7 +87,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("Fuel pump verified:", fuelPump.name);
+    logAdminAction('create-staff-user', 'fuel_pump_verified', { 
+      fuelPumpId: requestData.fuelPumpId,
+      fuelPumpName: fuelPump.name
+    });
 
     // Check if phone number exists
     const { data: existingStaffWithPhone, error: phoneCheckError } = await supabase
@@ -60,12 +100,13 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (phoneCheckError) {
-      console.error("Error checking existing phone:", phoneCheckError);
+      logAdminAction('create-staff-user', 'phone_check_error', { error: phoneCheckError.message });
       throw new Error("Database error when checking staff phone");
     }
 
     if (existingStaffWithPhone) {
-      console.error("Phone number already exists:", requestData.phone);
+      logAdminAction('create-staff-user', 'duplicate_phone', { phone: requestData.phone });
+      
       return new Response(
         JSON.stringify({
           success: false,
@@ -87,12 +128,13 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (emailCheckError) {
-      console.error("Error checking existing email:", emailCheckError);
+      logAdminAction('create-staff-user', 'email_check_error', { error: emailCheckError.message });
       throw new Error("Database error when checking staff email");
     }
 
     if (existingStaffWithEmail) {
-      console.error("Email already exists:", requestData.email);
+      logAdminAction('create-staff-user', 'duplicate_email', { email: requestData.email });
+      
       return new Response(
         JSON.stringify({
           success: false,
@@ -107,7 +149,8 @@ Deno.serve(async (req) => {
     }
 
     // Create auth user with admin API
-    console.log("Creating auth user");
+    logAdminAction('create-staff-user', 'creating_auth_user', { email: requestData.email });
+    
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: requestData.email,
       password: requestData.password,
@@ -122,7 +165,11 @@ Deno.serve(async (req) => {
     });
 
     if (authError || !authData.user) {
-      console.error("Error creating auth user:", authError);
+      logAdminAction('create-staff-user', 'auth_user_creation_failed', { 
+        email: requestData.email,
+        error: authError?.message || 'Unknown error'
+      });
+      
       return new Response(
         JSON.stringify({
           success: false,
@@ -135,7 +182,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("Auth user created successfully with ID:", authData.user.id);
+    logAdminAction('create-staff-user', 'auth_user_created', { 
+      userId: authData.user.id,
+      email: requestData.email
+    });
 
     // Format assigned pumps
     let assignedPumps = [];
@@ -144,7 +194,7 @@ Deno.serve(async (req) => {
         try {
           assignedPumps = JSON.parse(requestData.assigned_pumps);
         } catch (e) {
-          console.warn("Could not parse assigned_pumps string, using empty array", e);
+          logAdminAction('create-staff-user', 'assigned_pumps_parse_error', { error: e.message });
         }
       } else if (Array.isArray(requestData.assigned_pumps)) {
         assignedPumps = requestData.assigned_pumps;
@@ -166,9 +216,10 @@ Deno.serve(async (req) => {
       assigned_pumps: JSON.stringify(assignedPumps)
     };
 
-    console.log("Creating staff record with data:", {
-      ...staffData,
-      auth_id: '***'
+    logAdminAction('create-staff-user', 'creating_staff_record', {
+      name: staffData.name,
+      email: staffData.email,
+      role: staffData.role
     });
 
     const { data: insertedStaff, error: staffError } = await supabase
@@ -178,7 +229,8 @@ Deno.serve(async (req) => {
       .single();
 
     if (staffError) {
-      console.error("Error creating staff record:", staffError);
+      logAdminAction('create-staff-user', 'staff_creation_failed', { error: staffError.message });
+      
       // Clean up auth user since staff creation failed
       await supabase.auth.admin.deleteUser(authData.user.id);
       
@@ -209,7 +261,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("Staff record created successfully with ID:", insertedStaff.id);
+    logAdminAction('create-staff-user', 'staff_record_created', { 
+      staffId: insertedStaff.id,
+      name: insertedStaff.name
+    });
 
     // Create staff permissions if provided
     if (requestData.features && requestData.features.length > 0) {
@@ -218,19 +273,33 @@ Deno.serve(async (req) => {
         feature: feature
       }));
 
-      console.log("Creating staff permissions:", staffPermissions);
+      logAdminAction('create-staff-user', 'creating_permissions', { 
+        staffId: insertedStaff.id,
+        features: requestData.features 
+      });
       
       const { error: permissionsError } = await supabase
         .from('staff_permissions')
         .insert(staffPermissions);
 
       if (permissionsError) {
-        console.error("Error creating staff permissions:", permissionsError);
+        logAdminAction('create-staff-user', 'permissions_creation_error', { 
+          error: permissionsError.message
+        });
         // Non-fatal error, continue
       } else {
-        console.log("Staff permissions created successfully");
+        logAdminAction('create-staff-user', 'permissions_created', { 
+          staffId: insertedStaff.id,
+          featureCount: staffPermissions.length
+        });
       }
     }
+
+    logAdminAction('create-staff-user', 'success', {
+      staffId: insertedStaff.id,
+      userId: authData.user.id,
+      email: authData.user.email
+    });
 
     return new Response(
       JSON.stringify({
@@ -248,7 +317,8 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("Unhandled error in create-staff-user function:", error);
+    logAdminAction('create-staff-user', 'unhandled_error', { error: error.message });
+    
     return new Response(
       JSON.stringify({
         success: false,

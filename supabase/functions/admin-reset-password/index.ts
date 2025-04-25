@@ -1,11 +1,8 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders } from '../_shared/cors.ts'
+import { verifyAdminRequest, createUnauthorizedResponse, logAdminAction } from '../_shared/auth.ts'
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -13,9 +10,29 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // Verify admin authentication
+  const authResult = verifyAdminRequest(req, 'admin-reset-password');
+  if (!authResult.authorized) {
+    return createUnauthorizedResponse(authResult.reason || 'Unauthorized');
+  }
+
   try {
     // Get request body
     const { email, newPassword } = await req.json()
+    
+    // Validate input parameters
+    if (!email || !newPassword) {
+      const errorMessage = 'Missing required fields: email and newPassword are required';
+      logAdminAction('admin-reset-password', 'validation_error', { email: email ? '***' : undefined, error: errorMessage });
+      
+      return new Response(
+        JSON.stringify({ success: false, error: errorMessage }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
 
     // Create a Supabase client with the service role key (admin privileges)
     const supabaseAdmin = createClient(
@@ -29,12 +46,26 @@ serve(async (req) => {
       }
     )
 
+    // Log the password reset attempt (without exposing the actual password)
+    logAdminAction('admin-reset-password', 'attempt', { 
+      email, 
+      timestamp: new Date().toISOString() 
+    });
+
     // Get the user by email
     const { data: user, error: getUserError } = await supabaseAdmin.auth.admin.getUserByEmail(email)
 
     if (getUserError || !user) {
-      console.error('Error finding user:', getUserError)
-      throw new Error('User not found')
+      const errorMessage = 'User not found';
+      logAdminAction('admin-reset-password', 'user_not_found', { email, error: getUserError?.message });
+      
+      return new Response(
+        JSON.stringify({ success: false, error: errorMessage }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
     }
 
     // Get existing user metadata to preserve it
@@ -50,8 +81,19 @@ serve(async (req) => {
     )
 
     if (updateError) {
-      console.error('Error updating password:', updateError)
-      throw new Error(updateError.message)
+      logAdminAction('admin-reset-password', 'update_failed', { 
+        email, 
+        userId: user.id,
+        error: updateError.message
+      });
+      
+      return new Response(
+        JSON.stringify({ success: false, error: updateError.message }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
     }
 
     // Update the fuel pump status if this is a fuel pump admin
@@ -67,7 +109,12 @@ serve(async (req) => {
         .update({ status: 'password_change_required' })
         .eq('id', fuelPump.id);
       
-      console.log(`Updated fuel pump ${fuelPump.id} status to password_change_required`);
+      logAdminAction('admin-reset-password', 'status_updated', {
+        email,
+        userId: user.id,
+        fuelPumpId: fuelPump.id,
+        status: 'password_change_required'
+      });
     } else {
       // Check if this is a staff member
       const { data: staffData, error: staffError } = await supabaseAdmin
@@ -84,10 +131,21 @@ serve(async (req) => {
             .update({ auth_id: user.id })
             .eq('id', staffData.id);
             
-          console.log(`Updated staff record ${staffData.id} with auth_id ${user.id}`);
+          logAdminAction('admin-reset-password', 'staff_updated', {
+            email,
+            userId: user.id,
+            staffId: staffData.id
+          });
         }
       }
     }
+
+    // Log successful password reset
+    logAdminAction('admin-reset-password', 'success', { 
+      email, 
+      userId: user.id,
+      timestamp: new Date().toISOString() 
+    });
 
     return new Response(
       JSON.stringify({
@@ -100,7 +158,10 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Error in admin-reset-password function:', error)
+    logAdminAction('admin-reset-password', 'error', {
+      error: error.message || 'Unknown error'
+    });
+    
     return new Response(
       JSON.stringify({
         success: false,

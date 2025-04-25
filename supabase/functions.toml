@@ -1,9 +1,12 @@
 
 [functions.admin-reset-staff-password]
 verify_jwt = false
+# JWT verification is disabled, using custom token-based auth instead for better security
 
 [functions.admin-reset-password]
 verify_jwt = false
+# JWT verification is disabled, using custom token-based auth instead for better security
 
 [functions.create-staff-user]
 verify_jwt = false
+# JWT verification is disabled, using custom token-based auth instead for better security
