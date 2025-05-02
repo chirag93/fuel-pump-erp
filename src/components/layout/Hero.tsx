@@ -25,7 +25,7 @@ export function Hero() {
   }, []);
   
   return (
-    <div className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/30 pt-20 pb-24 sm:pt-28 md:pt-32 md:pb-40 w-full">
+    <div className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/30 pt-20 pb-24 sm:pt-28 md:pt-32 md:pb-40">
       {/* Background elements for full-width effect */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5 pointer-events-none" />
       <div className="absolute inset-0 h-full bg-gradient-to-br from-primary/5 via-secondary/5 to-background pointer-events-none" />
