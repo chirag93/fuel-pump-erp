@@ -4,15 +4,90 @@ import { Droplets, ChevronRight, ChevronDown, Laptop, ShieldCheck, Users, Trendi
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/logo";
-import { Hero } from "@/components/layout/Hero";
-
 const Index = () => {
   const [activeTab, setActiveTab] = useState<string>("fuel-station");
-  
-  return (
-    <div className="flex flex-col min-h-screen bg-white">
-      {/* Hero Section */}
-      <Hero />
+  return <div className="flex flex-col min-h-screen bg-white">
+      {/* Hero Section with Navbar */}
+      <header className="relative bg-gradient-to-b from-teal-900 to-teal-800 text-white overflow-hidden">
+        {/* Navigation */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 bg-teal-500">
+          <div className="flex items-center justify-between py-4">
+            <div className="flex items-center space-x-2">
+              <Logo size="md" className="h-8 w-auto" />
+            </div>
+            
+            <nav className="hidden md:flex items-center space-x-8">
+              <a href="#features" className="text-sm font-medium hover:text-teal-300 transition-colors">
+                Features
+              </a>
+              <a href="#modules" className="text-sm font-medium hover:text-teal-300 transition-colors">
+                Modules
+              </a>
+              <a href="#faq" className="text-sm font-medium hover:text-teal-300 transition-colors">
+                FAQ
+              </a>
+              <Link to="/login" className="text-sm font-medium hover:text-teal-300 transition-colors">
+                Login
+              </Link>
+            </nav>
+            
+            <div className="flex md:hidden">
+              <button className="text-white focus:outline-none">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="hidden md:block">
+              <Link to="/login">
+                <Button className="bg-white text-teal-900 hover:bg-teal-50">
+                  Sign In
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+        
+        {/* Hero Content */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 md:pt-32 md:pb-40 bg-teal-500">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">Transform Your Fuel Station</h1>
+              <p className="text-xl max-w-lg text-blue-100">
+                A comprehensive system designed to streamline operations, enhance customer experiences, and improve efficiency at your fuel pump stations.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link to="/login">
+                  <Button size="lg" className="bg-white text-teal-900 hover:bg-teal-50 font-medium">
+                    Get Started
+                  </Button>
+                </Link>
+                <a href="#features">
+                  <Button size="lg" variant="outline" className="text-white border-white font-medium bg-[#000a0e]/0">
+                    Learn More <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </a>
+              </div>
+            </div>
+            <div className="relative">
+              <div className="rounded-lg shadow-2xl overflow-hidden border border-teal-700/30">
+                <img src="/lovable-uploads/d51426e3-7851-4864-be9c-ad91131f2236.png" alt="Fuel Pro 360 Dashboard" className="w-full h-auto rounded-lg" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-teal-900/40 to-transparent rounded-lg"></div>
+              </div>
+              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-teal-400 rounded-full opacity-20 blur-2xl"></div>
+              <div className="absolute -top-6 -left-6 w-32 h-32 bg-teal-300 rounded-full opacity-20 blur-2xl"></div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Wave Divider */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" className="w-full h-auto fill-white">
+            <path d="M0,96L80,85.3C160,75,320,53,480,64C640,75,800,117,960,117.3C1120,117,1280,75,1360,53.3L1440,32L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z"></path>
+          </svg>
+        </div>
+      </header>
       
       {/* Features Highlights Section */}
       <section className="py-10 bg-gray-50">
@@ -215,11 +290,11 @@ const Index = () => {
       </section>
       
       {/* Key Benefits Section */}
-      <section className="py-20 text-white bg-gradient-to-b from-primary to-primary/90">
+      <section className="py-20 text-white bg-teal-500">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-bold mb-4">Key Benefits of Fuel Pro 360</h2>
-            <p className="text-xl text-primary-foreground/90">
+            <p className="text-xl text-blue-100">
               Beyond features, our platform delivers real business value to fuel station operations.
             </p>
           </div>
@@ -304,21 +379,21 @@ const Index = () => {
       </section>
       
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-b from-blue-100 to-white text-gray-900">
+      <section className="py-20 bg-teal-500 text-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Fuel Station?</h2>
-            <p className="text-xl mb-10 text-gray-600">
+            <p className="text-xl mb-10 text-blue-100">
               Join hundreds of fuel stations already using Fuel Pro 360 to streamline operations, enhance customer experiences, and drive growth.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/login">
-                <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 rounded-full text-base font-medium">
+                <Button size="lg" className="bg-white text-teal-900 hover:bg-teal-50 px-8">
                   Get Started Today
                 </Button>
               </Link>
               <Link to="/login">
-                <Button size="lg" variant="outline" className="border-primary/20 px-8 text-primary bg-transparent hover:bg-primary/10 rounded-full text-base font-medium">
+                <Button size="lg" variant="outline" className="border-white px-8 text-white bg-transparent hover:bg-white/10">
                   Request Demo
                 </Button>
               </Link>
@@ -381,8 +456,6 @@ const Index = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
