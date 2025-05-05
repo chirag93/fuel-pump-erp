@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -102,6 +101,37 @@ export const useSaveIndent = ({
       if (indentError) {
         console.error('Error creating indent:', indentError);
         throw new Error('Failed to create indent record');
+      }
+
+      // For indents, we should also create a transaction with payment_method "indent"
+      const transactionId = crypto.randomUUID();
+      const transactionData = {
+        id: transactionId,
+        customer_id: selectedCustomer,
+        vehicle_id: selectedVehicle,
+        staff_id: selectedStaff,
+        date: date.toISOString().split('T')[0],
+        fuel_type: fuelType,
+        amount: numericAmount,
+        quantity: numericQuantity,
+        discount_amount: discountAmount,
+        payment_method: 'indent', // Set payment method to 'indent'
+        indent_id: indentNumber,
+        source: 'mobile',
+        fuel_pump_id: fuelPumpId
+      };
+
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert(transactionData);
+
+      if (transactionError) {
+        console.error('Error creating transaction:', transactionError);
+        // Continue even if transaction creation fails
+        toast({
+          title: "Warning",
+          description: "Indent created but transaction record could not be created"
+        });
       }
 
       // Update customer balance immediately on indent creation

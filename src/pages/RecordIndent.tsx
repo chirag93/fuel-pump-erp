@@ -204,6 +204,9 @@ const RecordIndent = () => {
         }
       }
 
+      // Set the payment method to "indent" for indent transactions
+      const paymentMethod = createdIndentNumber ? 'indent' : 'Cash';
+
       console.log("Submitting transaction with data:", {
         id: transactionId,
         customer_id: selectedCustomer,
@@ -214,7 +217,7 @@ const RecordIndent = () => {
         amount: amount,
         quantity: quantity,
         discount_amount: discountAmount,
-        payment_method: 'Cash',
+        payment_method: paymentMethod,
         indent_id: createdIndentNumber,
         fuel_pump_id: fuelPumpId
       });
@@ -232,7 +235,7 @@ const RecordIndent = () => {
           amount: amount,
           quantity: quantity,
           discount_amount: discountAmount,
-          payment_method: 'Cash',
+          payment_method: paymentMethod,
           indent_id: createdIndentNumber,
           fuel_pump_id: fuelPumpId
         });
