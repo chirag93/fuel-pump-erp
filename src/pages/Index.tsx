@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Droplets, ChevronRight, ChevronDown, Laptop, ShieldCheck, Users, TrendingUp, BarChart3, Smartphone, Zap, FileText, Clock, Truck, GaugeCircle } from "lucide-react";
@@ -31,7 +32,7 @@ const Index = () => {
               </a>
               <Link to="/login" className="text-sm font-medium hover:text-teal-300 transition-colors">
                 Login
-              </a>
+              </Link>
             </nav>
             
             <div className="flex md:hidden">
