@@ -7,6 +7,7 @@ import { Shield } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import DashboardLayout from '@/components/layout/DashboardLayout';
 
 interface ProtectedRouteProps {
   children?: React.ReactNode;
@@ -96,8 +97,9 @@ const ProtectedRoute = ({
     return <Navigate to="/mobile" replace />;
   }
   
+  // Wrap children and Outlet with DashboardLayout to ensure the sidebar is always present
   return (
-    <>
+    <DashboardLayout>
       {isSuperAdmin && <div className="mb-6 p-3 bg-muted rounded-md flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-primary" />
@@ -109,7 +111,7 @@ const ProtectedRoute = ({
       </div>}
       
       {children || <Outlet />}
-    </>
+    </DashboardLayout>
   );
 };
 

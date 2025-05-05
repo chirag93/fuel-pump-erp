@@ -66,7 +66,7 @@ function App() {
       <Route path="/super-admin/login" element={<SuperAdminLogin />} />
       <Route path="/reset-password-confirm" element={<ResetPasswordConfirm />} />
       
-      {/* Protected Routes */}
+      {/* Protected Routes - now using the updated ProtectedRoute that applies DashboardLayout */}
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/customers" element={<Customers />} />
