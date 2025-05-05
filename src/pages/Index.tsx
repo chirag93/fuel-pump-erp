@@ -4,13 +4,16 @@ import { Droplets, ChevronRight, ChevronDown, Laptop, ShieldCheck, Users, Trendi
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/logo";
+
 const Index = () => {
   const [activeTab, setActiveTab] = useState<string>("fuel-station");
-  return <div className="flex flex-col min-h-screen bg-white">
+  
+  return (
+    <div className="flex flex-col min-h-screen bg-white">
       {/* Hero Section with Navbar */}
-      <header className="relative bg-gradient-to-b from-teal-900 to-teal-800 text-white overflow-hidden">
+      <header className="relative bg-gradient-to-b from-teal-900 to-teal-800 text-white overflow-hidden w-full">
         {/* Navigation */}
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 bg-teal-500">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-2">
               <Logo size="md" className="h-8 w-auto" />
@@ -28,7 +31,7 @@ const Index = () => {
               </a>
               <Link to="/login" className="text-sm font-medium hover:text-teal-300 transition-colors">
                 Login
-              </Link>
+              </a>
             </nav>
             
             <div className="flex md:hidden">
@@ -50,7 +53,7 @@ const Index = () => {
         </div>
         
         {/* Hero Content */}
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 md:pt-32 md:pb-40 bg-teal-500">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 md:pt-32 md:pb-40">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">Transform Your Fuel Station</h1>
@@ -456,6 +459,8 @@ const Index = () => {
           </div>
         </div>
       </footer>
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
