@@ -25,7 +25,7 @@ export function Hero() {
   }, []);
   
   return (
-    <div className="relative overflow-hidden bg-gradient-to-b from-background to-secondary/30 pt-20 pb-24 sm:pt-28 md:pt-32 md:pb-40 w-full">
+    <div className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white pt-20 pb-24 sm:pt-28 md:pt-32 md:pb-40 w-full">
       {/* Background elements for full-width effect */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5 pointer-events-none" />
       <div className="absolute inset-0 h-full bg-gradient-to-br from-primary/5 via-secondary/5 to-background pointer-events-none" />
@@ -39,7 +39,7 @@ export function Hero() {
               <Logo size="xl" className="h-64 w-auto mb-3" />
               <h2 className="text-2xl font-semibold mt-2">{businessName}</h2>
             </div>
-            <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+            <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl text-gray-900">
               <span className="block text-balance">
                 Streamline Your Fuel Pump Management
               </span>
@@ -47,7 +47,7 @@ export function Hero() {
           </FadeIn>
           
           <FadeIn delay="100ms">
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl text-balance">
+            <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600 sm:text-xl text-balance">
               A beautiful, intuitive system designed with simplicity and elegance in mind. Transform how you manage your fuel station operations.
             </p>
           </FadeIn>
