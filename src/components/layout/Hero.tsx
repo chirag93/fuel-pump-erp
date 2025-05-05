@@ -25,10 +25,10 @@ export function Hero() {
   }, []);
   
   return (
-    <div className="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white pt-20 pb-24 sm:pt-28 md:pt-32 md:pb-40 w-full">
+    <div className="relative overflow-hidden bg-gradient-to-b from-blue-100 to-blue-50 pt-20 pb-24 sm:pt-28 md:pt-32 md:pb-40 w-full">
       {/* Background elements for full-width effect */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5 pointer-events-none" />
-      <div className="absolute inset-0 h-full bg-gradient-to-br from-primary/5 via-secondary/5 to-background pointer-events-none" />
+      <div className="absolute inset-0 h-full bg-gradient-to-br from-primary/10 via-secondary/10 to-background pointer-events-none" />
 
       {/* Content container with proper centering */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -65,7 +65,7 @@ export function Hero() {
         
           <FadeIn delay="300ms" className="mt-16 sm:mt-24">
             <div className="relative mx-auto overflow-hidden rounded-xl border border-border/40 bg-card shadow-medium w-full max-w-4xl">
-              <div className="absolute inset-0 bg-gradient-to-tr from-background/80 to-card opacity-50 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/10 to-transparent opacity-50 pointer-events-none" />
               
               <img
                 src="https://images.unsplash.com/photo-1611288875785-9ef0f98d45c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
