@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from "@/integrations/supabase/client";
@@ -15,12 +16,13 @@ export interface EndShiftFormData {
   card_sales: number;
   upi_sales: number;
   cash_sales: number;
-  indent_sales: number; // Ensure indent_sales is included here
+  indent_sales: number;
   testing_fuel: number;
 }
 
 export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: () => void) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
   const [formData, setFormData] = useState<EndShiftFormData>({
@@ -29,7 +31,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
     card_sales: 0,
     upi_sales: 0,
     cash_sales: 0,
-    indent_sales: 0, // Initialize indent_sales
+    indent_sales: 0,
     testing_fuel: 0,
     expenses: 0,
     consumable_expenses: 0
@@ -41,7 +43,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
   const [consumablesExpense, setConsumablesExpense] = useState<number>(0);
 
   // Derived calculations
-  const totalSales = formData.card_sales + formData.upi_sales + formData.cash_sales + formData.indent_sales; // Include indent sales in total
+  const totalSales = formData.card_sales + formData.upi_sales + formData.cash_sales + formData.indent_sales;
   const totalLiters = formData.readings.reduce((sum, reading) => {
     return sum + Math.max(0, reading.closing_reading - reading.opening_reading);
   }, 0);
@@ -61,7 +63,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
       console.log("Shift data loaded:", shiftData.id);
       fetchShiftReadings();
       fetchShiftConsumables();
-      fetchStaffIndentSales(); // Fetch indent sales for the staff
+      fetchStaffIndentSales();
     }
   }, [shiftData]);
 
@@ -357,6 +359,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
   const handleSubmit = async () => {
     try {
       setIsProcessing(true);
+      setError(null);
       
       // Validate closing readings are greater than opening
       const hasInvalidReading = formData.readings.some(
@@ -364,13 +367,9 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
       );
       
       if (hasInvalidReading) {
-        toast({
-          title: "Invalid readings",
-          description: "Closing readings cannot be less than opening readings",
-          variant: "destructive"
-        });
+        setError("Closing readings cannot be less than opening readings");
         setIsProcessing(false);
-        return;
+        return false;
       }
       
       // 1. Update shift status
@@ -383,7 +382,11 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
         })
         .eq('id', shiftData.id);
         
-      if (shiftError) throw shiftError;
+      if (shiftError) {
+        console.error('Error updating shift status:', shiftError);
+        setError("Failed to update shift status: " + shiftError.message);
+        return false;
+      }
       
       // 2. Update readings for each fuel type
       for (const reading of formData.readings) {
@@ -394,7 +397,11 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
           .eq('shift_id', shiftData.id)
           .eq('fuel_type', reading.fuel_type);
           
-        if (checkError) throw checkError;
+        if (checkError) {
+          console.error('Error checking readings:', checkError);
+          setError("Failed to check existing readings: " + checkError.message);
+          return false;
+        }
         
         if (existingReadings && existingReadings.length > 0) {
           // Update existing reading with all sales data including indent_sales
@@ -414,7 +421,11 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
             .eq('shift_id', shiftData.id)
             .eq('fuel_type', reading.fuel_type);
             
-          if (readingError) throw readingError;
+          if (readingError) {
+            console.error('Error updating reading:', readingError);
+            setError("Failed to update readings: " + readingError.message);
+            return false;
+          }
         } else {
           // Create new reading if it doesn't exist - include indent_sales
           const { error: createError } = await supabase
@@ -437,7 +448,11 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
               consumable_expenses: formData.consumable_expenses
             });
             
-          if (createError) throw createError;
+          if (createError) {
+            console.error('Error creating reading:', createError);
+            setError("Failed to create readings: " + createError.message);
+            return false;
+          }
         }
       }
       
@@ -456,7 +471,11 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
               .eq('shift_id', shiftData.id)
               .eq('consumable_id', item.id);
               
-            if (updateError) throw updateError;
+            if (updateError) {
+              console.error('Error updating consumables:', updateError);
+              setError("Failed to update consumables: " + updateError.message);
+              return false;
+            }
           }
         }
       }
@@ -468,13 +487,9 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
       
       onShiftEnded();
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error ending shift:', error);
-      toast({
-        title: "Error",
-        description: "Failed to end shift. Please try again.",
-        variant: "destructive"
-      });
+      setError("Failed to end shift: " + (error.message || "Unknown error"));
       return false;
     } finally {
       setIsProcessing(false);
@@ -492,6 +507,7 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
     allocatedConsumables,
     returnedConsumables,
     consumablesExpense,
+    error,
     handleReadingChange,
     handleInputChange,
     handleSalesChange,

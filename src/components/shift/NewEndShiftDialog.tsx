@@ -10,6 +10,9 @@ import { EndShiftConsumables } from './EndShiftConsumables';
 import { useEndShiftDialog } from '@/hooks/useEndShiftDialog';
 import { ShiftDetailsSection } from './ShiftDetailsSection';
 import { ExpensesSection } from './ExpensesSection';
+import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface NewEndShiftDialogProps {
   isOpen: boolean;
@@ -35,6 +38,7 @@ export function NewEndShiftDialog({
     allocatedConsumables,
     returnedConsumables,
     consumablesExpense,
+    error,
     handleReadingChange,
     handleInputChange,
     handleSalesChange,
@@ -130,10 +134,22 @@ export function NewEndShiftDialog({
           </div>
         </ScrollArea>
         
+        {error && (
+          <Alert variant="destructive" className="mt-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
           <Button onClick={onSubmit} disabled={isProcessing}>
-            {isProcessing ? "Processing..." : "End Shift"}
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : "End Shift"}
           </Button>
         </DialogFooter>
       </DialogContent>
