@@ -146,7 +146,7 @@ const MobileRecordIndent = () => {
             <Button 
               className="w-full mt-4" 
               onClick={handleSaveIndent}
-              disabled={isSubmitting || !indentNumber || !selectedCustomer || !selectedVehicle || !amount}
+              disabled={isSubmitting || !indentNumber || !selectedCustomer || !selectedVehicle || !quantity}
             >
               {isSubmitting ? (
                 <>

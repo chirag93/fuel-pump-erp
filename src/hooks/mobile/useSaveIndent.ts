@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -44,7 +45,7 @@ export const useSaveIndent = ({
 
   const handleSaveIndent = async () => {
     // Validation
-    if (!indentNumber || !selectedCustomer || !selectedVehicle || !amount || amount <= 0) {
+    if (!indentNumber || !selectedCustomer || !selectedVehicle || !quantity || quantity <= 0) {
       toast({
         title: "Missing information",
         description: "Please complete all required fields"
@@ -173,6 +174,7 @@ export const useSaveIndent = ({
         customerName: selectedCustomerName,
         vehicleNumber: selectedVehicleNumber,
         amount: numericAmount,
+        quantity: numericQuantity,
         fuelType,
         date: date.toLocaleDateString()
       });
