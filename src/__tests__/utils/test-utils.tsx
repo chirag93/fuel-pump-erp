@@ -1,6 +1,6 @@
 
 import React, { ReactElement } from 'react';
-import { render, RenderOptions, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render as testingLibraryRender, RenderOptions } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@testing-library/jest-dom';
@@ -27,7 +27,7 @@ const AllProviders = ({ children }: { children: React.ReactNode }) => {
 const customRender = (
   ui: ReactElement,
   options?: Omit<RenderOptions, 'wrapper'>
-) => render(ui, { wrapper: AllProviders, ...options });
+) => testingLibraryRender(ui, { wrapper: AllProviders, ...options });
 
 // Re-export everything from testing-library
 export * from '@testing-library/react';

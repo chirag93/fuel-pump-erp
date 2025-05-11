@@ -1,8 +1,8 @@
-
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 import React from 'react';
-import { within, fireEvent } from '@testing-library/react';
+// Correctly import within and fireEvent from testing-library/dom instead of react
+import { within, fireEvent } from '@testing-library/dom';
 
 // Mock fetch API globally for all tests
 global.fetch = vi.fn(() => 
