@@ -1,10 +1,9 @@
 
-import { render, screen, waitFor } from '../utils/test-utils';
+import { render, screen, waitFor, within, fireEvent } from '../utils/test-utils';
 import { userEvent } from '@testing-library/user-event';
 import { vi } from 'vitest';
 import FuelTests from '@/pages/FuelTests';
 import { supabase } from '@/integrations/supabase/client';
-import { within, fireEvent } from '@testing-library/react';
 
 // Mock necessary functions and modules
 vi.mock('@/integrations/utils', () => ({
