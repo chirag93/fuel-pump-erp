@@ -33,6 +33,7 @@ const ProvisionPump = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [detailedError, setDetailedError] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -50,8 +51,11 @@ const ProvisionPump = () => {
     setIsLoading(true);
     setSuccessMessage(null);
     setErrorMessage(null);
+    setDetailedError(null);
     
     try {
+      console.log('Starting fuel pump provisioning process');
+      
       // Call our API to provision a new fuel pump
       const result = await superAdminApi.provisionFuelPump({
         name: values.name,
@@ -60,6 +64,8 @@ const ProvisionPump = () => {
         contact_number: values.contactNumber,
         created_by: user?.id
       }, values.password);
+      
+      console.log('Provision result:', result);
       
       if (!result.success) {
         setErrorMessage(result.error || "Failed to provision fuel pump");
@@ -85,6 +91,23 @@ const ProvisionPump = () => {
       });
     } catch (error: any) {
       console.error('Error provisioning pump:', error);
+      
+      // Capture detailed error information for troubleshooting
+      let detailedErrorInfo = '';
+      if (error.status) {
+        detailedErrorInfo += `Status: ${error.status}\n`;
+      }
+      if (error.code) {
+        detailedErrorInfo += `Code: ${error.code}\n`;
+      }
+      if (error.details) {
+        detailedErrorInfo += `Details: ${JSON.stringify(error.details)}\n`;
+      }
+      
+      if (detailedErrorInfo) {
+        setDetailedError(detailedErrorInfo);
+      }
+      
       toast({
         title: 'Error',
         description: 'An unexpected error occurred while provisioning the fuel pump.',
@@ -119,7 +142,15 @@ const ProvisionPump = () => {
             <Alert variant="destructive" className="mb-6">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{errorMessage}</AlertDescription>
+              <AlertDescription>
+                {errorMessage}
+                {detailedError && (
+                  <details className="mt-2 text-xs whitespace-pre-wrap">
+                    <summary>Technical Details</summary>
+                    {detailedError}
+                  </details>
+                )}
+              </AlertDescription>
             </Alert>
           )}
           

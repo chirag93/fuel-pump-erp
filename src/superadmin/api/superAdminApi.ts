@@ -14,10 +14,12 @@ const serviceRoleClient = SUPABASE_SERVICE_ROLE_KEY
 
 // Helper function to add the internal token to function invocation
 const addSecurityHeaders = () => {
+  const headers: Record<string, string> = {
+    'x-internal-token': INTERNAL_TOKEN_KEY
+  };
+  
   return {
-    headers: {
-      'x-internal-token': INTERNAL_TOKEN_KEY
-    }
+    headers
   };
 };
 
@@ -74,7 +76,7 @@ export const superAdminApi = {
         created_by: createdById,
       });
       
-      // Use the Supabase Edge Function directly instead of localhost API
+      // Use the Supabase Edge Function with security headers
       const { data: response, error } = await supabase.functions.invoke('create-fuel-pump', {
         body: {
           name: fuelPumpData.name,
@@ -87,8 +89,14 @@ export const superAdminApi = {
         ...addSecurityHeaders() // Add security headers
       });
       
-      if (error || !response.success) {
-        throw new Error(error?.message || response?.error || 'Failed to create fuel pump');
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(`Edge function error: ${error.message || 'Unknown error'}`);
+      }
+      
+      if (!response || !response.success) {
+        console.error('Function response error:', response?.error || 'No response data');
+        throw new Error(response?.error || 'Failed to create fuel pump: No response from server');
       }
       
       const newPump = response.fuelPump;
