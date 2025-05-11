@@ -1,6 +1,6 @@
 
 import React, { ReactElement } from 'react';
-import { render as testingLibraryRender, RenderOptions } from '@testing-library/react';
+import { render as testingLibraryRender, RenderOptions, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@testing-library/jest-dom';
@@ -31,6 +31,9 @@ const customRender = (
 
 // Re-export everything from testing-library
 export * from '@testing-library/react';
+
+// Explicitly export these functions to fix the TypeScript errors
+export { screen, waitFor, within, fireEvent };
 
 // Override render method
 export { customRender as render };
