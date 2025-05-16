@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/components/ui/use-toast';
 import { Plus, Minus, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { getFuelPumpId } from '@/integrations/utils';
 
 interface Consumable {
   id: string;
@@ -50,10 +51,27 @@ export function ConsumableSelection({
     const fetchConsumables = async () => {
       setIsLoading(true);
       try {
-        // For allocation mode, we fetch from inventory
+        // Get the current fuel pump ID
+        const fuelPumpId = await getFuelPumpId();
+        
+        if (!fuelPumpId) {
+          console.log('Failed to get fuel pump ID for consumables');
+          toast({
+            title: "Error",
+            description: "Failed to identify your fuel pump. Please refresh and try again.",
+            variant: "destructive"
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log(`Fetching consumables for fuel pump ID: ${fuelPumpId}`);
+        
+        // For allocation mode, we fetch from inventory and filter by fuel_pump_id
         const { data, error } = await supabase
           .from('consumables')
           .select('*')
+          .eq('fuel_pump_id', fuelPumpId) // Filter by fuel pump ID
           .order('name');
 
         if (error) {
