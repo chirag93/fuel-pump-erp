@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarClock, DollarSign, Loader2 } from 'lucide-react';
@@ -13,16 +14,14 @@ import { NewEndShiftDialog } from '@/components/shift/NewEndShiftDialog';
 
 const ShiftManagement = () => {
   const {
-    shifts,
     staffList,
+    activeShifts,
     isLoading,
     newShift,
     setNewShift,
     fetchShifts,
     handleAddShift,
-    activeShifts,
     completedShifts,
-    fuelPumpId,
     staffOnActiveShifts
   } = useShiftManagement();
 
@@ -42,7 +41,7 @@ const ShiftManagement = () => {
   // For the NewEndShiftDialog
   const [selectedShiftData, setSelectedShiftData] = useState<SelectedShiftData | null>(null);
 
-  const openEndShiftDialog = (shift: typeof shifts[0]) => {
+  const openEndShiftDialog = (shift: any) => {
     console.log('Opening end shift dialog for shift:', shift);
     
     // Use the original EndShiftDialog for editing completed shifts
@@ -70,7 +69,7 @@ const ShiftManagement = () => {
   };
 
   // Allow editing of completed shifts
-  const editCompletedShift = (shift: typeof shifts[0]) => {
+  const editCompletedShift = (shift: any) => {
     setCurrentShiftId(shift.id);
     setCurrentShiftData({
       staffId: shift.staff_id,
