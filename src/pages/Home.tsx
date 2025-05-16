@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -220,10 +219,22 @@ const Home = () => {
         // Array to hold all activities
         let allActivities: RecentActivity[] = [];
         
-        // Fetch recent shifts
+        // Get the current fuel pump ID - this is the critical change
+        const fuelPumpId = await getFuelPumpId();
+        
+        if (!fuelPumpId) {
+          console.log('Failed to get fuel pump ID for recent activities');
+          setIsLoadingActivities(false);
+          return;
+        }
+        
+        console.log(`Fetching recent activities for fuel pump ID: ${fuelPumpId}`);
+        
+        // Fetch recent shifts WITH fuel pump ID filter
         const { data: shiftsData, error: shiftsError } = await supabase
           .from('shifts')
           .select('id, start_time, staff_id, staff(name)')
+          .eq('fuel_pump_id', fuelPumpId) // Filter by fuel pump ID
           .order('start_time', { ascending: false })
           .limit(3);
           
@@ -239,10 +250,11 @@ const Home = () => {
           allActivities = [...allActivities, ...shiftActivities];
         }
         
-        // Fetch recent tank unloads
+        // Fetch recent tank unloads WITH fuel pump ID filter
         const { data: unloadsData, error: unloadsError } = await supabase
           .from('tank_unloads')
           .select('*')
+          .eq('fuel_pump_id', fuelPumpId) // Filter by fuel pump ID
           .order('date', { ascending: false })
           .limit(3);
           
@@ -258,10 +270,11 @@ const Home = () => {
           allActivities = [...allActivities, ...unloadActivities];
         }
         
-        // Fetch recent transactions
+        // Fetch recent transactions WITH fuel pump ID filter
         const { data: transactionsData, error: transactionsError } = await supabase
           .from('transactions')
           .select('id, date, fuel_type, amount, quantity, payment_method, created_at')
+          .eq('fuel_pump_id', fuelPumpId) // Filter by fuel pump ID
           .order('created_at', { ascending: false })
           .limit(3);
           
