@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { CalendarClock, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CalendarClock, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { StartShiftForm } from '@/components/shift/StartShiftForm';
@@ -10,6 +10,7 @@ import { MobileActiveShifts } from '@/components/shift/MobileActiveShifts';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { NewEndShiftDialog } from '@/components/shift/NewEndShiftDialog';
 import { SelectedShiftData } from '@/types/shift';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const MobileShiftManagement = () => {
   const {
@@ -20,13 +21,22 @@ const MobileShiftManagement = () => {
     handleAddShift,
     isLoading,
     fetchShifts,
-    staffOnActiveShifts
+    staffOnActiveShifts,
+    error: shiftError
   } = useShiftManagement();
   
   const [formOpen, setFormOpen] = useState(false);
   const [endShiftDialogOpen, setEndShiftDialogOpen] = useState(false);
   const [selectedShiftData, setSelectedShiftData] = useState<SelectedShiftData | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Clear any local errors when data changes
+  useEffect(() => {
+    if (staffList.length > 0) {
+      setLocalError(null);
+    }
+  }, [staffList]);
   
   const handleOpenForm = () => {
     if (staffList.length === 0) {
@@ -64,9 +74,46 @@ const MobileShiftManagement = () => {
     setEndShiftDialogOpen(true);
   };
   
+  // Custom function to handle shift adding with better error handling
+  const handleAddShiftWithErrorHandling = async (selectedConsumables?: any[], nozzleReadings?: any[]) => {
+    try {
+      setLocalError(null);
+      console.log('Starting a new shift with the following data:');
+      console.log('Staff member:', staffList.find(s => s.id === newShift.staff_id)?.name);
+      console.log('Pump ID:', newShift.pump_id);
+      console.log('Nozzle readings:', nozzleReadings);
+      
+      const result = await handleAddShift(selectedConsumables, nozzleReadings);
+      
+      if (result) {
+        toast({
+          title: "Success",
+          description: "New shift started successfully!",
+        });
+        return true;
+      } else {
+        setLocalError("Failed to start shift. Please try again.");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error in handleAddShiftWithErrorHandling:", error);
+      setLocalError(error instanceof Error ? error.message : "Unknown error occurred");
+      return false;
+    }
+  };
+  
   return (
     <div className="container mx-auto py-4 px-3 flex flex-col min-h-screen">
       <MobileHeader title="Shift Management" />
+      
+      {(shiftError || localError) && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {shiftError || localError}
+          </AlertDescription>
+        </Alert>
+      )}
       
       <Card className="mb-4">
         <CardHeader className="pb-2">
@@ -111,7 +158,7 @@ const MobileShiftManagement = () => {
         setFormOpen={setFormOpen}
         newShift={newShift}
         setNewShift={setNewShift}
-        handleAddShift={handleAddShift}
+        handleAddShift={handleAddShiftWithErrorHandling}
         staffList={staffList}
         isMobile={true}
         staffOnActiveShifts={staffOnActiveShifts}

@@ -1,350 +1,304 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
-import { Shift, Staff, ShiftReading } from '@/types/shift';
-import { SelectedConsumable, NozzleReading } from '@/components/shift/StartShiftForm';
+import { supabase } from '@/integrations/supabase/client';
+import { Staff, Shift } from '@/types/shift';
 import { getFuelPumpId } from '@/integrations/utils';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { SelectedConsumable } from '@/components/shift/StartShiftForm';
 
-export function useShiftManagement() {
+export const useShiftManagement = () => {
+  const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [activeShifts, setActiveShifts] = useState<any[]>([]);
+  const [completedShifts, setCompletedShifts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [staffOnActiveShifts, setStaffOnActiveShifts] = useState<string[]>([]);
   const [newShift, setNewShift] = useState<Partial<Shift>>({
-    date: new Date().toISOString().split('T')[0],
-    start_time: new Date().toISOString(),
     staff_id: '',
     pump_id: '',
-    status: 'active',
-    shift_type: 'day'
+    date: format(new Date(), 'yyyy-MM-dd'),
+    shift_type: 'Day',
+    starting_cash_balance: 0
   });
-
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
-  // Get fuel pump ID once and store it
-  const { data: fuelPumpId, isLoading: isLoadingPumpId } = useQuery({
-    queryKey: ['fuelPumpId'],
-    queryFn: getFuelPumpId,
-    staleTime: 1000 * 60 * 60, // 1 hour
-    retry: 1
-  });
-  
-  // Fetch staff list for the current fuel pump
-  const { data: staffList = [], isLoading: isLoadingStaff } = useQuery({
-    queryKey: ['staffList', fuelPumpId],
-    queryFn: async () => {
-      if (!fuelPumpId) return [];
+  const fetchStaff = useCallback(async (fuelPumpId: string | null) => {
+    try {
+      setError(null);
+      console.log('Fetching staff with fuel_pump_id:', fuelPumpId);
       
-      const { data, error } = await supabase
-        .from('staff')
-        .select('id, name, staff_numeric_id, role')
-        .eq('fuel_pump_id', fuelPumpId);
-        
+      let query = supabase.from('staff').select('*');
+      
+      if (fuelPumpId) {
+        query = query.eq('fuel_pump_id', fuelPumpId);
+      }
+      
+      const { data, error } = await query;
+      
       if (error) {
         throw error;
       }
       
-      return data || [];
-    },
-    enabled: !!fuelPumpId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-  
-  // Fetch all shifts with related data in a single query
-  const { data: shifts = [], isLoading: isLoadingShifts, refetch: fetchShifts } = useQuery({
-    queryKey: ['shifts', fuelPumpId],
-    queryFn: async () => {
-      if (!fuelPumpId) return [];
-      
-      // First, get shifts data with staff details
-      const { data: shiftsData, error: shiftsError } = await supabase
-        .from('shifts')
-        .select(`
-          id,
-          staff_id,
-          shift_type,
-          start_time,
-          end_time,
-          status,
-          created_at,
-          staff:staff_id (name, staff_numeric_id)
-        `)
-        .eq('fuel_pump_id', fuelPumpId)
-        .order('created_at', { ascending: false })
-        .limit(100); // Pagination - limit to most recent 100 shifts
-        
-      if (shiftsError) {
-        throw shiftsError;
+      if (data) {
+        console.log(`Fetched ${data.length} staff members`);
+        setStaffList(data);
+      } else {
+        console.log('No staff data returned');
+        setStaffList([]);
       }
-      
-      if (!shiftsData) {
-        return [];
-      }
-      
-      // Process the shifts data with separate fetch for readings
-      const processedShifts = await Promise.all(shiftsData.map(async (shift) => {
-        // Get readings for this shift
-        const { data: readingsData, error: readingsError } = await supabase
-          .from('readings')
-          .select('*')
-          .eq('shift_id', shift.id);
-          
-        if (readingsError) {
-          console.error('Error fetching readings:', readingsError);
-        }
-        
-        // Ensure we have readings as an array
-        const readingsArray = readingsData || [];
-        
-        // Convert readings to the proper format with explicit type checking
-        const shiftReadings: ShiftReading[] = readingsArray.map((reading: any) => ({
-          fuel_type: reading.fuel_type || 'Unknown',
-          opening_reading: reading.opening_reading || 0,
-          closing_reading: reading.closing_reading || null
-        }));
-        
-        // Get the first reading to use its values for backward compatibility
-        const firstReading = readingsArray.length > 0 ? readingsArray[0] : null;
-        
-        const staffData = shift.staff || { name: 'Unknown Staff', staff_numeric_id: null };
-        
-        // Build the shift object with all needed fields
-        return {
-          ...shift,
-          staff_name: staffData.name,
-          staff_numeric_id: staffData.staff_numeric_id ? String(staffData.staff_numeric_id) : 'N/A',
-          date: firstReading?.date || new Date().toISOString().split('T')[0],
-          pump_id: firstReading?.pump_id || '', // Changed from 'Unknown' to empty string
-          opening_reading: firstReading?.opening_reading || 0,
-          closing_reading: firstReading?.closing_reading || null,
-          starting_cash_balance: firstReading?.cash_given || 0,
-          ending_cash_balance: firstReading?.cash_remaining || null,
-          card_sales: firstReading?.card_sales || null,
-          upi_sales: firstReading?.upi_sales || null,
-          cash_sales: firstReading?.cash_sales || null,
-          testing_fuel: firstReading?.testing_fuel || null,
-          fuel_pump_id: fuelPumpId,
-          all_readings: shiftReadings
-        };
-      }));
-      
-      return processedShifts as Shift[];
-    },
-    enabled: !!fuelPumpId,
-    staleTime: 1000 * 60, // 1 minute cache
-    refetchInterval: 1000 * 60 * 5, // Background refresh every 5 minutes
-  });
-  
-  // Add a new shift with mutation
-  const addShiftMutation = useMutation({
-    mutationFn: async (data: { 
-      newShift: Partial<Shift>, 
-      selectedConsumables: SelectedConsumable[], 
-      nozzleReadings: NozzleReading[] 
-    }) => {
-      const { newShift, selectedConsumables = [], nozzleReadings = [] } = data;
-      
-      if (!fuelPumpId) {
-        throw new Error("Authentication Required");
-      }
-      
-      if (!newShift.staff_id || !newShift.pump_id) {
-        throw new Error("Missing information");
-      }
-      
-      if (nozzleReadings.length === 0) {
-        throw new Error("No nozzle readings provided");
-      }
-      
-      const staffName = staffList.find(s => s.id === newShift.staff_id)?.name || 'Unknown Staff';
-      
-      // 1. Create shift record
-      const { data: shiftData, error: shiftError } = await supabase
-        .from('shifts')
-        .insert([{
-          staff_id: newShift.staff_id,
-          shift_type: newShift.shift_type || 'day',
-          start_time: new Date().toISOString(),
-          status: 'active',
-          fuel_pump_id: fuelPumpId
-        }])
-        .select();
-        
-      if (shiftError) {
-        throw shiftError;
-      }
-      
-      if (!shiftData || shiftData.length === 0) {
-        throw new Error("Failed to create shift record");
-      }
-      
-      // 2. Create reading records for each nozzle
-      for (const nozzle of nozzleReadings) {
-        const { error: readingError } = await supabase
-          .from('readings')
-          .insert([{
-            shift_id: shiftData[0].id,
-            staff_id: newShift.staff_id,
-            pump_id: newShift.pump_id,
-            date: newShift.date,
-            opening_reading: nozzle.opening_reading,
-            closing_reading: null,
-            cash_given: newShift.starting_cash_balance || 0,
-            fuel_type: nozzle.fuel_type,
-            fuel_pump_id: fuelPumpId
-          }]);
-          
-        if (readingError) {
-          throw readingError;
-        }
-      }
-      
-      // 3. Handle consumables if any
-      if (selectedConsumables.length > 0) {
-        for (const consumable of selectedConsumables) {
-          // Check inventory level in a single query
-          const { data: inventoryData, error: inventoryError } = await supabase
-            .from('consumables')
-            .select('quantity')
-            .eq('id', consumable.id)
-            .eq('fuel_pump_id', fuelPumpId)
-            .single();
-            
-          if (inventoryError) throw inventoryError;
-          
-          if (!inventoryData || inventoryData.quantity < consumable.quantity) {
-            throw new Error(`Not enough ${consumable.name} in inventory`);
-          }
-          
-          // Create allocation record
-          const { error: allocationError } = await supabase
-            .from('shift_consumables')
-            .insert({
-              shift_id: shiftData[0].id,
-              consumable_id: consumable.id,
-              quantity_allocated: consumable.quantity,
-              status: 'allocated'
-            });
-            
-          if (allocationError) throw allocationError;
-          
-          // Update inventory in a single operation
-          const { error: updateError } = await supabase
-            .from('consumables')
-            .update({ quantity: inventoryData.quantity - consumable.quantity })
-            .eq('id', consumable.id)
-            .eq('fuel_pump_id', fuelPumpId);
-            
-          if (updateError) throw updateError;
-        }
-      }
-      
-      // Convert nozzle readings to shift readings for the return value
-      const allReadings: ShiftReading[] = nozzleReadings.map(n => ({
-        fuel_type: n.fuel_type,
-        opening_reading: n.opening_reading,
-        closing_reading: null
-      }));
-      
-      // Return new shift data for optimistic updates
-      const newShiftData: Shift = {
-        id: shiftData[0].id,
-        staff_id: newShift.staff_id || '',
-        staff_name: staffName,
-        shift_type: newShift.shift_type || 'day',
-        start_time: new Date().toISOString(),
-        end_time: null,
-        status: 'active',
-        date: newShift.date || new Date().toISOString().split('T')[0],
-        pump_id: newShift.pump_id || '',
-        starting_cash_balance: newShift.starting_cash_balance || 0,
-        ending_cash_balance: null,
-        card_sales: null,
-        upi_sales: null,
-        cash_sales: null,
-        testing_fuel: null,
-        fuel_pump_id: fuelPumpId,
-        all_readings: allReadings
-      };
-      
-      return newShiftData;
-    },
-    onSuccess: () => {
-      // Invalidate and refetch shifts data
-      queryClient.invalidateQueries({ queryKey: ['shifts', fuelPumpId] });
-      
-      toast({
-        title: "Success",
-        description: "New shift started successfully"
-      });
-      
-      // Reset form
-      setNewShift({
-        date: new Date().toISOString().split('T')[0],
-        start_time: new Date().toISOString(),
-        staff_id: '',
-        pump_id: '',
-        starting_cash_balance: 0,
-        status: 'active',
-        shift_type: 'day'
-      });
-    },
-    onError: (error: Error) => {
-      console.error('Error adding shift:', error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch staff data';
+      console.error('Error fetching staff:', err);
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: error.message || "Failed to start new shift. Please try again.",
+        description: "Failed to fetch staff data. Please try again.",
         variant: "destructive"
       });
     }
-  });
+  }, [toast]);
   
-  const handleAddShift = async (
-    selectedConsumables: SelectedConsumable[] = [], 
-    nozzleReadings: NozzleReading[] = []
-  ) => {
+  const fetchShifts = useCallback(async () => {
     try {
-      if (!fuelPumpId) {
+      setError(null);
+      console.log('Fetching shifts...');
+      setIsLoading(true);
+
+      const fuelPumpId = await getFuelPumpId();
+      console.log('Current fuel pump ID:', fuelPumpId);
+      
+      // If getFuelPumpId fails, try to fetch all shifts
+      let query = supabase
+        .from('shifts')
+        .select(`
+          *,
+          staff:staff_id (
+            id,
+            name,
+            staff_numeric_id
+          )
+        `);
+      
+      if (fuelPumpId) {
+        query = query.eq('fuel_pump_id', fuelPumpId);
+      }
+      
+      const { data: shiftsData, error: shiftsError } = await query;
+      
+      if (shiftsError) throw shiftsError;
+      
+      if (shiftsData) {
+        console.log(`Fetched ${shiftsData.length} shifts`);
+        
+        // Fetch all readings for these shifts
+        const shiftIds = shiftsData.map(shift => shift.id);
+        
+        const { data: readingsData, error: readingsError } = await supabase
+          .from('readings')
+          .select('*')
+          .in('shift_id', shiftIds);
+        
+        if (readingsError) throw readingsError;
+        
+        // Map the readings to their respective shifts
+        const shiftsWithReadings = shiftsData.map(shift => {
+          const shiftReadings = readingsData?.filter(reading => reading.shift_id === shift.id) || [];
+          return {
+            ...shift,
+            staff_name: shift.staff?.name || 'Unknown',
+            all_readings: shiftReadings
+          };
+        });
+        
+        // Split into active and completed shifts
+        const active = shiftsWithReadings.filter(shift => shift.status === 'active');
+        const completed = shiftsWithReadings.filter(shift => shift.status === 'completed');
+        
+        setActiveShifts(active);
+        setCompletedShifts(completed);
+        
+        // Create a list of staff IDs who are on active shifts
+        const staffOnShifts = active.map(shift => shift.staff_id);
+        setStaffOnActiveShifts(staffOnShifts);
+        
+        // Wait for staff data to be fetched
+        await fetchStaff(fuelPumpId);
+      } else {
+        setActiveShifts([]);
+        setCompletedShifts([]);
+        setStaffOnActiveShifts([]);
+        await fetchStaff(fuelPumpId);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch shifts';
+      console.error('Error fetching shifts:', err);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchStaff]);
+  
+  useEffect(() => {
+    fetchShifts();
+    
+    // Clean up function
+    return () => {
+      setStaffList([]);
+      setActiveShifts([]);
+      setCompletedShifts([]);
+    };
+  }, [fetchShifts]);
+  
+  const handleAddShift = async (selectedConsumables?: SelectedConsumable[], nozzleReadings?: any[]) => {
+    try {
+      setError(null);
+      console.log('Starting new shift...');
+      setIsLoading(true);
+      
+      if (!newShift.staff_id || !newShift.pump_id) {
+        setError('Staff and pump selection are required.');
         toast({
-          title: "Authentication Required",
-          description: "Please log in with a fuel pump account to manage shifts",
+          title: "Missing Information",
+          description: "Please select both staff and pump",
           variant: "destructive"
         });
         return false;
       }
+
+      // Get the fuel pump ID
+      const fuelPumpId = await getFuelPumpId();
+      if (!fuelPumpId) {
+        console.warn('Could not determine fuel pump ID. Attempting to continue without it.');
+      }
       
-      await addShiftMutation.mutateAsync({ newShift, selectedConsumables, nozzleReadings });
+      // Insert the shift record
+      const { data: shiftData, error: shiftError } = await supabase
+        .from('shifts')
+        .insert({
+          staff_id: newShift.staff_id,
+          start_time: new Date().toISOString(),
+          status: 'active',
+          shift_type: newShift.shift_type || 'Day',
+          fuel_pump_id: fuelPumpId
+        })
+        .select();
+      
+      if (shiftError) throw shiftError;
+      
+      if (!shiftData || shiftData.length === 0) {
+        throw new Error('Failed to create shift record');
+      }
+      
+      const shiftId = shiftData[0].id;
+      console.log('Created new shift with ID:', shiftId);
+      
+      // Insert reading records if nozzle readings are provided
+      if (nozzleReadings && nozzleReadings.length > 0) {
+        console.log('Inserting nozzle readings:', nozzleReadings);
+        
+        // Create reading records for each nozzle
+        const readingPromises = nozzleReadings.map(async (reading) => {
+          return supabase
+            .from('readings')
+            .insert({
+              shift_id: shiftId,
+              staff_id: newShift.staff_id,
+              pump_id: newShift.pump_id,
+              opening_reading: reading.opening_reading,
+              date: newShift.date,
+              fuel_type: reading.fuel_type,
+              cash_given: newShift.starting_cash_balance || 0,
+              fuel_pump_id: fuelPumpId
+            });
+        });
+        
+        const readingResults = await Promise.all(readingPromises);
+        
+        // Check for errors
+        const readingErrors = readingResults.filter(result => result.error);
+        if (readingErrors.length > 0) {
+          console.error('Errors inserting readings:', readingErrors);
+          toast({
+            title: "Warning",
+            description: "Shift created but there were issues with some readings",
+            variant: "destructive"
+          });
+        }
+      }
+      
+      // Insert consumables if selected
+      if (selectedConsumables && selectedConsumables.length > 0) {
+        console.log('Inserting consumables:', selectedConsumables);
+        
+        const consumablePromises = selectedConsumables.map(async (item) => {
+          return supabase
+            .from('shift_consumables')
+            .insert({
+              shift_id: shiftId,
+              consumable_id: item.id,
+              quantity_allocated: item.quantity,
+              status: 'allocated'
+            });
+        });
+        
+        const consumableResults = await Promise.all(consumablePromises);
+        
+        // Check for errors
+        const consumableErrors = consumableResults.filter(result => result.error);
+        if (consumableErrors.length > 0) {
+          console.error('Errors allocating consumables:', consumableErrors);
+          toast({
+            title: "Warning",
+            description: "Shift created but there were issues allocating some consumables",
+            variant: "destructive"
+          });
+        }
+      }
+      
+      // Clear the form data
+      setNewShift({
+        staff_id: '',
+        pump_id: '',
+        date: format(new Date(), 'yyyy-MM-dd'),
+        shift_type: 'Day',
+        starting_cash_balance: 0
+      });
+      
+      // Refresh the shifts data
+      await fetchShifts();
+      
+      toast({
+        title: "Success",
+        description: "New shift started successfully",
+      });
+      
       return true;
-    } catch (error) {
-      // Error already handled by mutation
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to start shift';
+      console.error('Error adding shift:', err);
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  // Get staff that are on active shifts
-  const staffOnActiveShifts = shifts
-    .filter(shift => shift.status === 'active')
-    .map(shift => shift.staff_id);
-
-  // Get available staff (staff not on active shifts)
-  const availableStaff = staffList.filter(staff => !staffOnActiveShifts.includes(staff.id));
-
-  // Computed properties
-  const activeShifts = shifts.filter(shift => shift.status === 'active');
-  const completedShifts = shifts.filter(shift => shift.status === 'completed');
-  const isLoading = isLoadingPumpId || isLoadingStaff || isLoadingShifts;
-
+  
   return {
-    shifts,
     staffList,
-    isLoading,
-    newShift,
-    setNewShift,
-    fetchShifts,
-    handleAddShift,
     activeShifts,
     completedShifts,
-    fuelPumpId,
-    staffOnActiveShifts,
-    availableStaff
+    isLoading,
+    error,
+    newShift,
+    setNewShift,
+    handleAddShift,
+    fetchShifts,
+    staffOnActiveShifts
   };
-}
+};
