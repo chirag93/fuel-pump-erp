@@ -8,36 +8,6 @@ import IndentsTable from '@/components/approval-requests/IndentsTable';
 import ApprovalDialog from '@/components/approval-requests/ApprovalDialog';
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
 import { getFuelPumpId } from '@/integrations/utils';
-import { supabase } from '@/integrations/supabase/client';
-
-// Define local interfaces that match the component prop types
-interface LocalTransaction {
-  id: string;
-  date: string;
-  amount: number;
-  customer_name?: string;
-  vehicle_number?: string;
-  fuel_type: string;
-  quantity: number;
-  payment_method: string;
-  source?: string;
-  staff_name?: string;
-  fuel_pump_id?: string;
-  fuel_pump_name?: string;
-}
-
-interface LocalIndent {
-  id: string;
-  date: string;
-  indent_number: string;
-  customer_name?: string;
-  vehicle_number?: string;
-  fuel_type: string;
-  quantity: number;
-  amount: number;
-  source?: string;
-  fuel_pump_id?: string;
-}
 
 // Main component for the approval requests page content
 const ApprovalRequestsPage = () => {
@@ -110,7 +80,7 @@ const ApprovalRequestsPage = () => {
             </CardHeader>
             <CardContent>
               <TransactionsTable 
-                transactions={pendingTransactions as LocalTransaction[]}
+                transactions={pendingTransactions}
                 isLoading={isLoading}
                 onApprove={(transaction) => handleApprove(transaction)}
                 onReject={(transaction) => handleReject(transaction)}
@@ -130,7 +100,7 @@ const ApprovalRequestsPage = () => {
             </CardHeader>
             <CardContent>
               <IndentsTable 
-                indents={pendingIndents as LocalIndent[]}
+                indents={pendingIndents}
                 isLoading={isLoading}
                 onApprove={(indent) => handleApprove(indent)}
                 onReject={(indent) => handleReject(indent)}
@@ -151,19 +121,19 @@ const ApprovalRequestsPage = () => {
             <CardContent>
               <h3 className="font-medium mb-2">Transactions</h3>
               <TransactionsTable 
-                transactions={pendingTransactions as LocalTransaction[]}
+                transactions={pendingTransactions}
                 isLoading={isLoading}
-                onApprove={(transaction) => handleApprove(transaction)}
-                onReject={(transaction) => handleReject(transaction)}
+                onApprove={handleApprove}
+                onReject={handleReject}
                 showFuelPumpInfo={isSuperAdmin}
               />
               
               <h3 className="font-medium mt-6 mb-2">Indents</h3>
               <IndentsTable 
-                indents={pendingIndents as LocalIndent[]}
+                indents={pendingIndents}
                 isLoading={isLoading}
-                onApprove={(indent) => handleApprove(indent)}
-                onReject={(indent) => handleReject(indent)}
+                onApprove={handleApprove}
+                onReject={handleReject}
                 showFuelPumpInfo={isSuperAdmin}
               />
             </CardContent>
