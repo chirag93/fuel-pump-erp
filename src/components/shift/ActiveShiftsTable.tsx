@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { CalendarClock, ClipboardList } from 'lucide-react';
+import { safeNumberFormat, formatMoney } from '@/utils/formatUtils';
 
 interface ActiveShiftsTableProps {
   activeShifts: Shift[];
@@ -18,11 +19,6 @@ export function ActiveShiftsTable({ activeShifts, onEndShift }: ActiveShiftsTabl
     } catch (e) {
       return timeString;
     }
-  };
-
-  // Helper function to safely format numbers
-  const safeNumberFormat = (value?: number | null) => {
-    return value !== undefined && value !== null ? value.toLocaleString() : 'N/A';
   };
 
   return (
@@ -58,7 +54,7 @@ export function ActiveShiftsTable({ activeShifts, onEndShift }: ActiveShiftsTabl
                 
                 return (
                 <TableRow key={shift.id}>
-                  <TableCell className="font-medium">{shift.staff_name}</TableCell>
+                  <TableCell className="font-medium">{shift.staff_name || 'Unknown'}</TableCell>
                   <TableCell>{pumpDisplay}</TableCell>
                   <TableCell>{shift.date}</TableCell>
                   <TableCell>{formatTime(shift.start_time)}</TableCell>
@@ -72,7 +68,7 @@ export function ActiveShiftsTable({ activeShifts, onEndShift }: ActiveShiftsTabl
                       : safeNumberFormat(shift.opening_reading)
                     }
                   </TableCell>
-                  <TableCell>₹{safeNumberFormat(shift.starting_cash_balance)}</TableCell>
+                  <TableCell>{formatMoney(shift.starting_cash_balance)}</TableCell>
                   <TableCell>
                     <Button 
                       variant="outline" 

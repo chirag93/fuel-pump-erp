@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Staff, Shift } from '@/types/shift';
@@ -112,13 +111,61 @@ export const useShiftManagement = () => {
         
         console.log('Readings data received:', readingsData);
         
-        // Map the readings to their respective shifts
+        // Map the readings to their respective shifts and enhance shift data with readings data
         const shiftsWithReadings = shiftsData.map(shift => {
           const shiftReadings = readingsData?.filter(reading => reading.shift_id === shift.id) || [];
+          
+          // Calculate sales totals from readings
+          let totalCardSales = 0;
+          let totalUpiSales = 0;
+          let totalCashSales = 0;
+          let totalIndentSales = 0;
+          let totalTestingFuel = 0;
+          let openingReading = 0;
+          let closingReading = 0;
+          let pumpId = '';
+          
+          // Get the primary pump ID from readings (first non-empty pump_id)
+          const firstReadingWithPumpId = shiftReadings.find(reading => reading.pump_id);
+          if (firstReadingWithPumpId) {
+            pumpId = firstReadingWithPumpId.pump_id;
+          }
+          
+          // Aggregate sales data across all readings for this shift
+          shiftReadings.forEach(reading => {
+            totalCardSales += reading.card_sales || 0;
+            totalUpiSales += reading.upi_sales || 0;
+            totalCashSales += reading.cash_sales || 0;
+            totalIndentSales += reading.indent_sales || 0;
+            totalTestingFuel += reading.testing_fuel || 0;
+            
+            // For the first reading, set as opening reading
+            if (openingReading === 0 && reading.opening_reading) {
+              openingReading = reading.opening_reading;
+            }
+            
+            // Set the maximum closing reading value
+            if (reading.closing_reading && reading.closing_reading > closingReading) {
+              closingReading = reading.closing_reading;
+            }
+          });
+          
+          // Combine shift data with readings data
           return {
             ...shift,
             staff_name: shift.staff?.name || 'Unknown',
-            all_readings: shiftReadings
+            staff_numeric_id: shift.staff?.staff_numeric_id || 'N/A',
+            all_readings: shiftReadings,
+            pump_id: pumpId || shift.pump_id || 'N/A', // Use reading pump_id if available
+            card_sales: totalCardSales > 0 ? totalCardSales : null,
+            upi_sales: totalUpiSales > 0 ? totalUpiSales : null,
+            cash_sales: totalCashSales > 0 ? totalCashSales : null,
+            indent_sales: totalIndentSales > 0 ? totalIndentSales : null,
+            testing_fuel: totalTestingFuel > 0 ? totalTestingFuel : null,
+            opening_reading: openingReading || null,
+            closing_reading: closingReading || null,
+            starting_cash_balance: shift.cash_remaining || 0, // Use cash_remaining as starting_cash_balance
+            ending_cash_balance: null // Will be populated from the first reading if available
           };
         });
         

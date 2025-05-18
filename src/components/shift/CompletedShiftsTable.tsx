@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { DollarSign, ClipboardList } from 'lucide-react';
 import { formatDate, formatTime } from '@/utils/dateUtils';
+import { safeNumberFormat, formatMoney } from '@/utils/formatUtils';
 
 interface CompletedShiftsTableProps {
   completedShifts: Shift[];
@@ -53,30 +54,47 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
             </TableHeader>
             <TableBody>
               {sortedShifts.map((shift) => {
-                const totalVolume = (shift.closing_reading || 0) - shift.opening_reading;
+                // Calculate totals
+                const openingReading = shift.opening_reading || 0;
+                const closingReading = shift.closing_reading || 0;
+                const totalVolume = closingReading - openingReading;
                 const testingFuel = shift.testing_fuel || 0;
                 const actualSalesVolume = totalVolume - testingFuel;
-                const totalSales = (shift.card_sales || 0) + (shift.upi_sales || 0) + (shift.cash_sales || 0);
+                
+                // Sum sales from all payment methods
+                const cardSales = shift.card_sales || 0;
+                const upiSales = shift.upi_sales || 0;
+                const cashSales = shift.cash_sales || 0;
+                const totalSales = cardSales + upiSales + cashSales;
                 
                 // Format the date using the end_time if available, otherwise use the date field
                 const shiftDate = shift.end_time 
                   ? formatDate(shift.end_time) 
                   : formatDate(shift.date);
                 
+                // Format the pump ID for display - display N/A if empty or null
+                const pumpDisplay = shift.pump_id ? shift.pump_id : 'N/A';
+                
                 return (
                   <TableRow key={shift.id}>
-                    <TableCell className="font-medium">{shift.staff_name}</TableCell>
+                    <TableCell className="font-medium">{shift.staff_name || 'Unknown'}</TableCell>
                     <TableCell>{shift.staff_numeric_id || 'N/A'}</TableCell>
                     <TableCell>{shiftDate}</TableCell>
                     <TableCell>{`${formatTime(shift.start_time)} - ${formatTime(shift.end_time)}`}</TableCell>
-                    <TableCell>{shift.pump_id}</TableCell>
-                    <TableCell>{shift.opening_reading} → {shift.closing_reading || 'N/A'}</TableCell>
-                    <TableCell>₹{shift.starting_cash_balance} → ₹{shift.ending_cash_balance || 'N/A'}</TableCell>
-                    <TableCell>₹{(shift.card_sales || 0).toLocaleString()}</TableCell>
-                    <TableCell>₹{(shift.upi_sales || 0).toLocaleString()}</TableCell>
-                    <TableCell>₹{(shift.cash_sales || 0).toLocaleString()}</TableCell>
-                    <TableCell>{testingFuel > 0 ? `${testingFuel.toFixed(2)} L` : '-'}</TableCell>
-                    <TableCell className="font-bold">₹{totalSales.toLocaleString()}</TableCell>
+                    <TableCell>{pumpDisplay}</TableCell>
+                    <TableCell>
+                      {safeNumberFormat(openingReading)} → {safeNumberFormat(closingReading)}
+                    </TableCell>
+                    <TableCell>
+                      {formatMoney(shift.starting_cash_balance)} → {formatMoney(shift.ending_cash_balance)}
+                    </TableCell>
+                    <TableCell>{formatMoney(cardSales)}</TableCell>
+                    <TableCell>{formatMoney(upiSales)}</TableCell>
+                    <TableCell>{formatMoney(cashSales)}</TableCell>
+                    <TableCell>
+                      {testingFuel > 0 ? `${testingFuel.toFixed(2)} L` : '-'}
+                    </TableCell>
+                    <TableCell className="font-bold">{formatMoney(totalSales)}</TableCell>
                     <TableCell>
                       <Button 
                         variant="outline" 
