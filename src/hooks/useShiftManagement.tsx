@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Staff, Shift } from '@/types/shift';
@@ -156,7 +157,7 @@ export const useShiftManagement = () => {
             staff_name: shift.staff?.name || 'Unknown',
             staff_numeric_id: shift.staff?.staff_numeric_id || 'N/A',
             all_readings: shiftReadings,
-            pump_id: pumpId || shift.pump_id || 'N/A', // Use reading pump_id if available
+            pump_id: pumpId || 'N/A', // Use reading pump_id if available, otherwise default to N/A
             card_sales: totalCardSales > 0 ? totalCardSales : null,
             upi_sales: totalUpiSales > 0 ? totalUpiSales : null,
             cash_sales: totalCashSales > 0 ? totalCashSales : null,
@@ -375,3 +376,4 @@ export const useShiftManagement = () => {
     staffOnActiveShifts
   };
 };
+

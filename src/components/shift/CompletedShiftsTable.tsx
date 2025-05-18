@@ -72,16 +72,13 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
                   ? formatDate(shift.end_time) 
                   : formatDate(shift.date);
                 
-                // Format the pump ID for display - display N/A if empty or null
-                const pumpDisplay = shift.pump_id ? shift.pump_id : 'N/A';
-                
                 return (
                   <TableRow key={shift.id}>
                     <TableCell className="font-medium">{shift.staff_name || 'Unknown'}</TableCell>
                     <TableCell>{shift.staff_numeric_id || 'N/A'}</TableCell>
                     <TableCell>{shiftDate}</TableCell>
                     <TableCell>{`${formatTime(shift.start_time)} - ${formatTime(shift.end_time)}`}</TableCell>
-                    <TableCell>{pumpDisplay}</TableCell>
+                    <TableCell>{shift.pump_id || 'N/A'}</TableCell>
                     <TableCell>
                       {safeNumberFormat(openingReading)} → {safeNumberFormat(closingReading)}
                     </TableCell>

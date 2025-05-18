@@ -27,6 +27,7 @@ export interface ShiftReading {
   fuel_type: string;
   opening_reading: number;
   closing_reading: number | null;
+  pump_id?: string;
 }
 
 export interface Staff {
