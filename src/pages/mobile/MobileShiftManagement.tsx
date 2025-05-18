@@ -29,6 +29,7 @@ const MobileShiftManagement = () => {
   const [endShiftDialogOpen, setEndShiftDialogOpen] = useState(false);
   const [selectedShiftData, setSelectedShiftData] = useState<SelectedShiftData | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   
   // Clear any local errors when data changes
@@ -37,6 +38,14 @@ const MobileShiftManagement = () => {
       setLocalError(null);
     }
   }, [staffList]);
+  
+  // Force a refresh of shifts data when component mounts or when form is closed
+  useEffect(() => {
+    if (!formOpen && !endShiftDialogOpen) {
+      console.log('Refresh shifts data - form closed or component mounted');
+      fetchShifts();
+    }
+  }, [formOpen, endShiftDialogOpen, fetchShifts]);
   
   const handleOpenForm = () => {
     if (staffList.length === 0) {
@@ -77,6 +86,7 @@ const MobileShiftManagement = () => {
   // Custom function to handle shift adding with better error handling
   const handleAddShiftWithErrorHandling = async (selectedConsumables?: any[], nozzleReadings?: any[]) => {
     try {
+      setIsProcessing(true);
       setLocalError(null);
       console.log('Starting a new shift with the following data:');
       console.log('Staff member:', staffList.find(s => s.id === newShift.staff_id)?.name);
@@ -90,6 +100,10 @@ const MobileShiftManagement = () => {
           title: "Success",
           description: "New shift started successfully!",
         });
+        // Close the form on success
+        setFormOpen(false);
+        // Ensure we refresh the shifts data after a successful add
+        await fetchShifts();
         return true;
       } else {
         setLocalError("Failed to start shift. Please try again.");
@@ -99,7 +113,19 @@ const MobileShiftManagement = () => {
       console.error("Error in handleAddShiftWithErrorHandling:", error);
       setLocalError(error instanceof Error ? error.message : "Unknown error occurred");
       return false;
+    } finally {
+      setIsProcessing(false);
     }
+  };
+
+  const handleShiftEnded = async () => {
+    console.log('Shift ended, refreshing data...');
+    setEndShiftDialogOpen(false);
+    setSelectedShiftData(null);
+    // Add a small delay before fetching to ensure database is updated
+    setTimeout(async () => {
+      await fetchShifts();
+    }, 500);
   };
   
   return (
@@ -137,9 +163,16 @@ const MobileShiftManagement = () => {
               className="w-full"
               variant="default"
               size="lg"
-              disabled={isLoading}
+              disabled={isLoading || isProcessing}
             >
-              Start New Shift
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Start New Shift'
+              )}
             </Button>
           )}
         </CardContent>
@@ -170,7 +203,7 @@ const MobileShiftManagement = () => {
           isOpen={endShiftDialogOpen}
           onClose={() => setEndShiftDialogOpen(false)}
           shiftData={selectedShiftData}
-          onShiftEnded={fetchShifts}
+          onShiftEnded={handleShiftEnded}
         />
       )}
     </div>

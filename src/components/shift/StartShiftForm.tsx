@@ -1,4 +1,3 @@
-
 import { Dispatch, SetStateAction, useState, useEffect } from 'react';
 import { Shift, Staff } from '@/types/shift';
 import { 
@@ -56,12 +55,17 @@ export function StartShiftForm({
   const [nozzleReadings, setNozzleReadings] = useState<NozzleReading[]>([]);
   const [selectedPumpFuelTypes, setSelectedPumpFuelTypes] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { toast } = useToast();
   
   // Fetch pump settings when form opens
   useEffect(() => {
     if (formOpen) {
       fetchPumpSettings();
+      // Reset form state when opening
+      setSelectedConsumables([]);
+      setNozzleReadings([]);
+      setIsSubmitting(false);
     }
   }, [formOpen]);
   
@@ -202,6 +206,7 @@ export function StartShiftForm({
     }
     
     try {
+      setIsSubmitting(true);
       console.log('Starting shift with the following data:');
       console.log('Staff ID:', newShift.staff_id);
       console.log('Pump ID:', newShift.pump_id);
@@ -212,9 +217,7 @@ export function StartShiftForm({
       const success = await handleAddShift(selectedConsumables, nozzleReadings);
       if (success) {
         console.log('Shift started successfully');
-        setFormOpen(false);
-        setSelectedConsumables([]);
-        setNozzleReadings([]);
+        // Form will be closed by the parent component
       } else {
         console.error('Failed to start shift');
       }
@@ -225,17 +228,25 @@ export function StartShiftForm({
         description: "Failed to start shift. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDialogChange = (open: boolean) => {
+    // Only allow closing if not submitting
+    if (!isSubmitting || !open) {
+      setFormOpen(open);
+      if (!open) {
+        // Reset form state when closing
+        setSelectedConsumables([]);
+        setNozzleReadings([]);
+      }
     }
   };
 
   return (
-    <Dialog open={formOpen} onOpenChange={(open) => {
-      setFormOpen(open);
-      if (!open) {
-        setSelectedConsumables([]);
-        setNozzleReadings([]);
-      }
-    }}>
+    <Dialog open={formOpen} onOpenChange={handleDialogChange}>
       <DialogTrigger asChild>
         <Button className="gap-2">
           <Plus size={16} />
@@ -352,8 +363,8 @@ export function StartShiftForm({
               <Input
                 id="cashGiven"
                 type="number"
-                value={newShift.starting_cash_balance?.toString()}
-                onChange={(e) => setNewShift({...newShift, starting_cash_balance: parseFloat(e.target.value)})}
+                value={newShift.starting_cash_balance?.toString() || '0'}
+                onChange={(e) => setNewShift({...newShift, starting_cash_balance: parseFloat(e.target.value) || 0})}
               />
             </div>
 
@@ -368,12 +379,19 @@ export function StartShiftForm({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => handleDialogChange(false)} disabled={isLoading || isSubmitting}>Cancel</Button>
           <Button 
             onClick={onSubmit} 
-            disabled={!newShift.staff_id || !newShift.pump_id || availableStaff.length === 0 || isLoading}
+            disabled={!newShift.staff_id || !newShift.pump_id || availableStaff.length === 0 || isLoading || isSubmitting}
           >
-            Start Shift
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              'Start Shift'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,7 +1,7 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarClock, DollarSign, Loader2 } from 'lucide-react';
+import { CalendarClock, DollarSign, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { CurrentShiftData, SelectedShiftData } from '@/types/shift';
 import { useShiftManagement } from '@/hooks/useShiftManagement';
@@ -11,6 +11,7 @@ import { ActiveShiftsTable } from '@/components/shift/ActiveShiftsTable';
 import { CompletedShiftsTable } from '@/components/shift/CompletedShiftsTable';
 import EndShiftDialog from '@/components/shift/EndShiftDialog';
 import { NewEndShiftDialog } from '@/components/shift/NewEndShiftDialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const ShiftManagement = () => {
   const {
@@ -22,10 +23,13 @@ const ShiftManagement = () => {
     fetchShifts,
     handleAddShift,
     completedShifts,
-    staffOnActiveShifts
+    staffOnActiveShifts,
+    error: shiftError
   } = useShiftManagement();
 
   const [formOpen, setFormOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Dialog states
@@ -40,6 +44,14 @@ const ShiftManagement = () => {
   
   // For the NewEndShiftDialog
   const [selectedShiftData, setSelectedShiftData] = useState<SelectedShiftData | null>(null);
+
+  // Force a refresh of shifts data when component mounts or when form is closed
+  useEffect(() => {
+    if (!formOpen && !endShiftDialogOpen && !newEndShiftDialogOpen) {
+      console.log('Refresh shifts data - form/dialog closed or component mounted');
+      fetchShifts();
+    }
+  }, [formOpen, endShiftDialogOpen, newEndShiftDialogOpen, fetchShifts]);
 
   const openEndShiftDialog = (shift: any) => {
     console.log('Opening end shift dialog for shift:', shift);
@@ -79,6 +91,51 @@ const ShiftManagement = () => {
     setEndShiftDialogOpen(true);
   };
 
+  // Custom function to handle shift adding with better error handling
+  const handleAddShiftWithErrorHandling = async (selectedConsumables?: any[], nozzleReadings?: any[]) => {
+    try {
+      setIsProcessing(true);
+      setLocalError(null);
+      console.log('Starting a new shift with the following data:');
+      console.log('Staff member:', staffList.find(s => s.id === newShift.staff_id)?.name);
+      console.log('Pump ID:', newShift.pump_id);
+      console.log('Nozzle readings:', nozzleReadings);
+      
+      const result = await handleAddShift(selectedConsumables, nozzleReadings);
+      
+      if (result) {
+        toast({
+          title: "Success",
+          description: "New shift started successfully!",
+        });
+        // Close the form on success
+        setFormOpen(false);
+        // Ensure we refresh the shifts data after a successful add
+        await fetchShifts();
+        return true;
+      } else {
+        setLocalError("Failed to start shift. Please try again.");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error in handleAddShiftWithErrorHandling:", error);
+      setLocalError(error instanceof Error ? error.message : "Unknown error occurred");
+      return false;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleShiftEnded = async () => {
+    console.log('Shift ended, refreshing data...');
+    setNewEndShiftDialogOpen(false);
+    setSelectedShiftData(null);
+    // Add a small delay before fetching to ensure database is updated
+    setTimeout(async () => {
+      await fetchShifts();
+    }, 500);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -88,11 +145,20 @@ const ShiftManagement = () => {
           setFormOpen={setFormOpen}
           newShift={newShift}
           setNewShift={setNewShift}
-          handleAddShift={handleAddShift}
+          handleAddShift={handleAddShiftWithErrorHandling}
           staffList={staffList}
           staffOnActiveShifts={staffOnActiveShifts}
         />
       </div>
+
+      {(shiftError || localError) && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {shiftError || localError}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
@@ -163,7 +229,7 @@ const ShiftManagement = () => {
           isOpen={newEndShiftDialogOpen}
           onClose={() => setNewEndShiftDialogOpen(false)}
           shiftData={selectedShiftData}
-          onShiftEnded={fetchShifts}
+          onShiftEnded={handleShiftEnded}
         />
       )}
     </div>

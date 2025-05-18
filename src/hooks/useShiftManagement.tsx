@@ -86,20 +86,31 @@ export const useShiftManagement = () => {
       
       const { data: shiftsData, error: shiftsError } = await query;
       
-      if (shiftsError) throw shiftsError;
+      if (shiftsError) {
+        console.error('Error fetching shifts:', shiftsError);
+        throw shiftsError;
+      }
       
-      if (shiftsData) {
+      console.log('Shifts data received:', shiftsData);
+      
+      if (shiftsData && shiftsData.length > 0) {
         console.log(`Fetched ${shiftsData.length} shifts`);
         
         // Fetch all readings for these shifts
         const shiftIds = shiftsData.map(shift => shift.id);
+        console.log('Fetching readings for shift IDs:', shiftIds);
         
         const { data: readingsData, error: readingsError } = await supabase
           .from('readings')
           .select('*')
           .in('shift_id', shiftIds);
         
-        if (readingsError) throw readingsError;
+        if (readingsError) {
+          console.error('Error fetching readings:', readingsError);
+          throw readingsError;
+        }
+        
+        console.log('Readings data received:', readingsData);
         
         // Map the readings to their respective shifts
         const shiftsWithReadings = shiftsData.map(shift => {
@@ -111,9 +122,14 @@ export const useShiftManagement = () => {
           };
         });
         
+        console.log('Processed shifts with readings:', shiftsWithReadings);
+        
         // Split into active and completed shifts
         const active = shiftsWithReadings.filter(shift => shift.status === 'active');
         const completed = shiftsWithReadings.filter(shift => shift.status === 'completed');
+        
+        console.log('Active shifts:', active.length);
+        console.log('Completed shifts:', completed.length);
         
         setActiveShifts(active);
         setCompletedShifts(completed);
@@ -125,6 +141,7 @@ export const useShiftManagement = () => {
         // Wait for staff data to be fetched
         await fetchStaff(fuelPumpId);
       } else {
+        console.log('No shifts data found');
         setActiveShifts([]);
         setCompletedShifts([]);
         setStaffOnActiveShifts([]);
@@ -132,12 +149,17 @@ export const useShiftManagement = () => {
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch shifts';
-      console.error('Error fetching shifts:', err);
+      console.error('Error in fetchShifts:', err);
       setError(errorMessage);
+      toast({
+        title: "Error loading shifts",
+        description: errorMessage,
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [fetchStaff]);
+  }, [fetchStaff, toast]);
   
   useEffect(() => {
     fetchShifts();
@@ -157,10 +179,11 @@ export const useShiftManagement = () => {
       setIsLoading(true);
       
       if (!newShift.staff_id || !newShift.pump_id) {
-        setError('Staff and pump selection are required.');
+        const errorMsg = 'Staff and pump selection are required.';
+        setError(errorMsg);
         toast({
           title: "Missing Information",
-          description: "Please select both staff and pump",
+          description: errorMsg,
           variant: "destructive"
         });
         return false;
@@ -184,7 +207,10 @@ export const useShiftManagement = () => {
         })
         .select();
       
-      if (shiftError) throw shiftError;
+      if (shiftError) {
+        console.error('Error creating shift:', shiftError);
+        throw shiftError;
+      }
       
       if (!shiftData || shiftData.length === 0) {
         throw new Error('Failed to create shift record');
