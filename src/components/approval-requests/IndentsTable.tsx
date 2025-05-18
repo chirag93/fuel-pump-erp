@@ -4,8 +4,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Check, X, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { formatDate, formatCurrency } from '@/utils/formatUtils';
+import { formatDate } from '@/utils/dateUtils';
 import { supabase } from '@/integrations/supabase/client';
+import { formatMoney } from '@/utils/formatUtils';
 
 interface Indent {
   id: string;
@@ -16,7 +17,7 @@ interface Indent {
   fuel_type: string;
   quantity: number;
   amount: number;
-  source: string;
+  source?: string;
   fuel_pump_id?: string;
 }
 
@@ -105,10 +106,10 @@ const IndentsTable = ({
             <TableCell>{indent.vehicle_number || 'N/A'}</TableCell>
             <TableCell>{indent.fuel_type}</TableCell>
             <TableCell>{indent.quantity} L</TableCell>
-            <TableCell>{formatCurrency(indent.amount)}</TableCell>
+            <TableCell>{formatMoney(indent.amount)}</TableCell>
             <TableCell>
               <Badge variant={indent.source === 'mobile' ? 'secondary' : 'outline'}>
-                {indent.source}
+                {indent.source || 'web'}
               </Badge>
             </TableCell>
             {showFuelPumpInfo && (

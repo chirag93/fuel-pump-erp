@@ -4,8 +4,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Check, X, Loader2, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { formatDate, formatCurrency } from '@/utils/formatUtils';
+import { formatDate } from '@/utils/dateUtils';
 import { supabase } from '@/integrations/supabase/client';
+import { formatMoney } from '@/utils/formatUtils';
 
 interface Transaction {
   id: string;
@@ -16,7 +17,7 @@ interface Transaction {
   fuel_type: string;
   quantity: number;
   payment_method: string;
-  source: string;
+  source?: string;
   staff_name?: string;
   fuel_pump_id?: string;
   fuel_pump_name?: string;
@@ -107,7 +108,7 @@ const TransactionsTable = ({
             <TableCell>{transaction.vehicle_number || 'N/A'}</TableCell>
             <TableCell>{transaction.fuel_type}</TableCell>
             <TableCell>{transaction.quantity} L</TableCell>
-            <TableCell>{formatCurrency(transaction.amount)}</TableCell>
+            <TableCell>{formatMoney(transaction.amount)}</TableCell>
             <TableCell>
               <Badge variant={transaction.payment_method === 'Cash' ? 'default' : 'outline'}>
                 {transaction.payment_method}
@@ -115,7 +116,7 @@ const TransactionsTable = ({
             </TableCell>
             <TableCell>
               <Badge variant={transaction.source === 'mobile' ? 'secondary' : 'outline'}>
-                {transaction.source}
+                {transaction.source || 'web'}
               </Badge>
             </TableCell>
             <TableCell>{transaction.staff_name || 'N/A'}</TableCell>
