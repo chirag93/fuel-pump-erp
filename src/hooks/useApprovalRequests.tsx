@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Transaction, Indent } from '@/integrations/supabase/client';
+import { getFuelPumpId } from '@/integrations/utils';
 
 export const useApprovalRequests = (userId: string | undefined) => {
   const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>([]);
@@ -20,10 +21,14 @@ export const useApprovalRequests = (userId: string | undefined) => {
     setIsLoading(true);
     
     try {
+      // Get current user's fuel pump ID
+      const fuelPumpId = await getFuelPumpId();
+      console.log('Fetching approval requests for fuel pump ID:', fuelPumpId);
+      
       if (activeTab === 'transactions' || activeTab === 'all') {
         console.log('Fetching pending transactions...');
-        // Fetch pending transactions with customer and vehicle details
-        const { data: transactionData, error: transactionError } = await supabase
+        // Build query for pending transactions
+        let transactionQuery = supabase
           .from('transactions')
           .select(`
             *,
@@ -32,6 +37,13 @@ export const useApprovalRequests = (userId: string | undefined) => {
             staff:staff_id (name)
           `)
           .eq('approval_status', 'pending');
+        
+        // Add fuel pump filter if not a super admin
+        if (fuelPumpId) {
+          transactionQuery = transactionQuery.eq('fuel_pump_id', fuelPumpId);
+        }
+        
+        const { data: transactionData, error: transactionError } = await transactionQuery;
         
         if (transactionError) throw transactionError;
         
@@ -50,8 +62,8 @@ export const useApprovalRequests = (userId: string | undefined) => {
       
       if (activeTab === 'indents' || activeTab === 'all') {
         console.log('Fetching pending indents...');
-        // Fetch pending indents with customer and vehicle details
-        const { data: indentData, error: indentError } = await supabase
+        // Build query for pending indents
+        let indentQuery = supabase
           .from('indents')
           .select(`
             *,
@@ -59,6 +71,13 @@ export const useApprovalRequests = (userId: string | undefined) => {
             vehicles:vehicle_id (number)
           `)
           .eq('approval_status', 'pending');
+        
+        // Add fuel pump filter if not a super admin
+        if (fuelPumpId) {
+          indentQuery = indentQuery.eq('fuel_pump_id', fuelPumpId);
+        }
+        
+        const { data: indentData, error: indentError } = await indentQuery;
         
         if (indentError) throw indentError;
         

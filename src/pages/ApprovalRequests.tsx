@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,10 +7,14 @@ import TransactionsTable from '@/components/approval-requests/TransactionsTable'
 import IndentsTable from '@/components/approval-requests/IndentsTable';
 import ApprovalDialog from '@/components/approval-requests/ApprovalDialog';
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
+import { getFuelPumpId } from '@/integrations/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 // Main component for the approval requests page content
 const ApprovalRequestsPage = () => {
   const { user } = useAuth();
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
+  
   const {
     pendingTransactions,
     pendingIndents,
@@ -31,6 +35,17 @@ const ApprovalRequestsPage = () => {
     processApproval
   } = useApprovalRequests(user?.id);
   
+  // Check if current user is a super admin
+  useEffect(() => {
+    const checkSuperAdmin = async () => {
+      const fuelPumpId = await getFuelPumpId();
+      // If fuelPumpId is null and the user is logged in, they're likely a super admin
+      setIsSuperAdmin(fuelPumpId === null && !!user?.id);
+    };
+    
+    checkSuperAdmin();
+  }, [user?.id]);
+  
   return (
     <div className="space-y-6">
       <div>
@@ -38,6 +53,11 @@ const ApprovalRequestsPage = () => {
         <p className="text-muted-foreground mt-2">
           Review and manage pending approval requests for transactions and indents.
         </p>
+        {isSuperAdmin && (
+          <p className="text-sm text-amber-600 mt-1">
+            You are viewing approval requests from all fuel pumps as a Super Admin.
+          </p>
+        )}
       </div>
       
       <Tabs 
@@ -65,6 +85,7 @@ const ApprovalRequestsPage = () => {
                 isLoading={isLoading}
                 onApprove={handleApprove}
                 onReject={handleReject}
+                showFuelPumpInfo={isSuperAdmin}
               />
             </CardContent>
           </Card>
@@ -84,6 +105,7 @@ const ApprovalRequestsPage = () => {
                 isLoading={isLoading}
                 onApprove={handleApprove}
                 onReject={handleReject}
+                showFuelPumpInfo={isSuperAdmin}
               />
             </CardContent>
           </Card>
@@ -104,6 +126,7 @@ const ApprovalRequestsPage = () => {
                 isLoading={isLoading}
                 onApprove={handleApprove}
                 onReject={handleReject}
+                showFuelPumpInfo={isSuperAdmin}
               />
               
               <h3 className="font-medium mt-6 mb-2">Indents</h3>
@@ -112,6 +135,7 @@ const ApprovalRequestsPage = () => {
                 isLoading={isLoading}
                 onApprove={handleApprove}
                 onReject={handleReject}
+                showFuelPumpInfo={isSuperAdmin}
               />
             </CardContent>
           </Card>
