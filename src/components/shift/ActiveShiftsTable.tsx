@@ -20,6 +20,11 @@ export function ActiveShiftsTable({ activeShifts, onEndShift }: ActiveShiftsTabl
     }
   };
 
+  // Helper function to safely format numbers
+  const safeNumberFormat = (value?: number | null) => {
+    return value !== undefined && value !== null ? value.toLocaleString() : 'N/A';
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -61,15 +66,13 @@ export function ActiveShiftsTable({ activeShifts, onEndShift }: ActiveShiftsTabl
                     {shift.all_readings && shift.all_readings.length > 0 
                       ? shift.all_readings.map(r => (
                           <div key={r.fuel_type} className="text-xs mb-1">
-                            {r.fuel_type}: {r.opening_reading.toLocaleString()}
+                            {r.fuel_type}: {safeNumberFormat(r.opening_reading)}
                           </div>
                         ))
-                      : shift.opening_reading 
-                        ? shift.opening_reading.toLocaleString()
-                        : 'N/A'
+                      : safeNumberFormat(shift.opening_reading)
                     }
                   </TableCell>
-                  <TableCell>₹{shift.starting_cash_balance.toLocaleString()}</TableCell>
+                  <TableCell>₹{safeNumberFormat(shift.starting_cash_balance)}</TableCell>
                   <TableCell>
                     <Button 
                       variant="outline" 

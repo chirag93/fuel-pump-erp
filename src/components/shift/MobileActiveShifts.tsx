@@ -21,6 +21,11 @@ export function MobileActiveShifts({ activeShifts, isLoading, onEndShift }: Mobi
     }
   };
 
+  // Helper function to safely format numbers
+  const safeNumberFormat = (value?: number | null) => {
+    return value !== undefined && value !== null ? value.toLocaleString() : 'N/A';
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -68,22 +73,20 @@ export function MobileActiveShifts({ activeShifts, isLoading, onEndShift }: Mobi
                           <span className="text-muted-foreground">Readings:</span>
                           {shift.all_readings.map(reading => (
                             <div key={reading.fuel_type} className="ml-2 mt-1">
-                              {reading.fuel_type}: {reading.opening_reading.toLocaleString()}
+                              {reading.fuel_type}: {safeNumberFormat(reading.opening_reading)}
                             </div>
                           ))}
                         </div>
                       ) : (
                         <div>
                           <span className="text-muted-foreground">Reading:</span> {
-                            shift.opening_reading
-                              ? shift.opening_reading.toLocaleString()
-                              : 'N/A'
+                            safeNumberFormat(shift.opening_reading)
                           }
                         </div>
                       )}
                       
                       <div>
-                        <span className="text-muted-foreground">Cash:</span> ₹{shift.starting_cash_balance.toLocaleString()}
+                        <span className="text-muted-foreground">Cash:</span> ₹{safeNumberFormat(shift.starting_cash_balance)}
                       </div>
                     </div>
                     

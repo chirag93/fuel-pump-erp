@@ -49,11 +49,24 @@ const ShiftManagement = () => {
   useEffect(() => {
     if (!formOpen && !endShiftDialogOpen && !newEndShiftDialogOpen) {
       console.log('Refresh shifts data - form/dialog closed or component mounted');
-      fetchShifts();
+      fetchShifts().catch(err => {
+        console.error('Error fetching shifts in ShiftManagement:', err);
+        setLocalError('Failed to load shifts data. Please try refreshing the page.');
+      });
     }
   }, [formOpen, endShiftDialogOpen, newEndShiftDialogOpen, fetchShifts]);
 
   const openEndShiftDialog = (shift: any) => {
+    if (!shift) {
+      console.error('Cannot open end shift dialog: Shift data is undefined');
+      toast({
+        title: "Error",
+        description: "Unable to end shift due to missing data.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     console.log('Opening end shift dialog for shift:', shift);
     
     // Use the original EndShiftDialog for editing completed shifts
@@ -61,8 +74,8 @@ const ShiftManagement = () => {
       setCurrentShiftId(shift.id);
       setCurrentShiftData({
         staffId: shift.staff_id,
-        pumpId: shift.pump_id,
-        openingReading: shift.opening_reading
+        pumpId: shift.pump_id || '',
+        openingReading: shift.opening_reading || 0
       });
       setEndShiftDialogOpen(true);
     } else {
@@ -70,11 +83,11 @@ const ShiftManagement = () => {
       setSelectedShiftData({
         id: shift.id,
         staff_id: shift.staff_id,
-        staff_name: shift.staff_name,
+        staff_name: shift.staff_name || 'Unknown Staff',
         pump_id: shift.pump_id || '',
-        opening_reading: shift.opening_reading,
-        shift_type: shift.shift_type,
-        all_readings: shift.all_readings
+        opening_reading: shift.opening_reading || 0,
+        shift_type: shift.shift_type || 'Day',
+        all_readings: shift.all_readings || []
       });
       setNewEndShiftDialogOpen(true);
     }
@@ -82,11 +95,21 @@ const ShiftManagement = () => {
 
   // Allow editing of completed shifts
   const editCompletedShift = (shift: any) => {
+    if (!shift) {
+      console.error('Cannot edit completed shift: Shift data is undefined');
+      toast({
+        title: "Error",
+        description: "Unable to edit shift due to missing data.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setCurrentShiftId(shift.id);
     setCurrentShiftData({
       staffId: shift.staff_id,
-      pumpId: shift.pump_id,
-      openingReading: shift.opening_reading
+      pumpId: shift.pump_id || '',
+      openingReading: shift.opening_reading || 0
     });
     setEndShiftDialogOpen(true);
   };
@@ -97,7 +120,7 @@ const ShiftManagement = () => {
       setIsProcessing(true);
       setLocalError(null);
       console.log('Starting a new shift with the following data:');
-      console.log('Staff member:', staffList.find(s => s.id === newShift.staff_id)?.name);
+      console.log('Staff member:', staffList?.find(s => s.id === newShift.staff_id)?.name);
       console.log('Pump ID:', newShift.pump_id);
       console.log('Nozzle readings:', nozzleReadings);
       
@@ -132,7 +155,12 @@ const ShiftManagement = () => {
     setSelectedShiftData(null);
     // Add a small delay before fetching to ensure database is updated
     setTimeout(async () => {
-      await fetchShifts();
+      try {
+        await fetchShifts();
+      } catch (error) {
+        console.error("Error refreshing shifts after ending:", error);
+        setLocalError("Failed to refresh shifts data after ending shift. Please try manually refreshing the page.");
+      }
     }, 500);
   };
 
@@ -146,7 +174,7 @@ const ShiftManagement = () => {
           newShift={newShift}
           setNewShift={setNewShift}
           handleAddShift={handleAddShiftWithErrorHandling}
-          staffList={staffList}
+          staffList={staffList || []}
           staffOnActiveShifts={staffOnActiveShifts}
         />
       </div>
@@ -167,7 +195,7 @@ const ShiftManagement = () => {
         </div>
       ) : (
         <>
-          <ShiftSummaryCards activeShifts={activeShifts} completedShifts={completedShifts} />
+          <ShiftSummaryCards activeShifts={activeShifts || []} completedShifts={completedShifts || []} />
 
           <Tabs defaultValue="active" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -182,7 +210,7 @@ const ShiftManagement = () => {
             </TabsList>
             
             <TabsContent value="active">
-              {activeShifts.length === 0 ? (
+              {!activeShifts || activeShifts.length === 0 ? (
                 <div className="text-center py-12 border rounded-md bg-muted/20">
                   <CalendarClock className="h-12 w-12 text-muted mx-auto mb-4" />
                   <h3 className="text-lg font-medium mb-1">No Active Shifts</h3>
@@ -196,7 +224,7 @@ const ShiftManagement = () => {
             </TabsContent>
             
             <TabsContent value="completed">
-              {completedShifts.length === 0 ? (
+              {!completedShifts || completedShifts.length === 0 ? (
                 <div className="text-center py-12 border rounded-md bg-muted/20">
                   <DollarSign className="h-12 w-12 text-muted mx-auto mb-4" />
                   <h3 className="text-lg font-medium mb-1">No Completed Shifts</h3>

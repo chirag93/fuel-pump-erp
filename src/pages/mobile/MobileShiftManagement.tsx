@@ -34,7 +34,7 @@ const MobileShiftManagement = () => {
   
   // Clear any local errors when data changes
   useEffect(() => {
-    if (staffList.length > 0) {
+    if (staffList && staffList.length > 0) {
       setLocalError(null);
     }
   }, [staffList]);
@@ -43,12 +43,15 @@ const MobileShiftManagement = () => {
   useEffect(() => {
     if (!formOpen && !endShiftDialogOpen) {
       console.log('Refresh shifts data - form closed or component mounted');
-      fetchShifts();
+      fetchShifts().catch(err => {
+        console.error('Error fetching shifts in MobileShiftManagement:', err);
+        setLocalError('Failed to load shifts data. Please try again.');
+      });
     }
   }, [formOpen, endShiftDialogOpen, fetchShifts]);
   
   const handleOpenForm = () => {
-    if (staffList.length === 0) {
+    if (!staffList || staffList.length === 0) {
       toast({
         title: "No Staff Available",
         description: "There are no active staff members available to assign shifts.",
@@ -58,7 +61,7 @@ const MobileShiftManagement = () => {
     }
     
     // If all staff are on active shifts
-    if (staffList.length > 0 && staffList.every(staff => staffOnActiveShifts?.includes(staff.id))) {
+    if (staffList.length > 0 && staffOnActiveShifts && staffList.every(staff => staffOnActiveShifts?.includes(staff.id))) {
       toast({
         title: "All Staff on Active Shifts",
         description: "All staff members are currently on active shifts. End an active shift before starting a new one.",
@@ -71,15 +74,26 @@ const MobileShiftManagement = () => {
   };
   
   const handleEndShift = (shift: any) => {
+    if (!shift) {
+      console.error('Cannot end shift: Shift data is undefined');
+      toast({
+        title: "Error",
+        description: "Unable to end shift due to missing data.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setSelectedShiftData({
       id: shift.id,
       staff_id: shift.staff_id,
-      staff_name: shift.staff_name,
+      staff_name: shift.staff_name || 'Unknown Staff',
       pump_id: shift.pump_id || '',
-      opening_reading: shift.opening_reading,
-      shift_type: shift.shift_type,
-      all_readings: shift.all_readings
+      opening_reading: shift.opening_reading || 0,
+      shift_type: shift.shift_type || 'Day',
+      all_readings: shift.all_readings || []
     });
+    
     setEndShiftDialogOpen(true);
   };
   
@@ -124,7 +138,12 @@ const MobileShiftManagement = () => {
     setSelectedShiftData(null);
     // Add a small delay before fetching to ensure database is updated
     setTimeout(async () => {
-      await fetchShifts();
+      try {
+        await fetchShifts();
+      } catch (error) {
+        console.error("Error refreshing shifts after ending:", error);
+        setLocalError("Failed to refresh shifts data. Please try manually refreshing the page.");
+      }
     }, 500);
   };
   
@@ -180,7 +199,7 @@ const MobileShiftManagement = () => {
 
       {/* Active Shifts Section */}
       <MobileActiveShifts 
-        activeShifts={activeShifts} 
+        activeShifts={activeShifts || []} 
         isLoading={isLoading} 
         onEndShift={handleEndShift}
       />
@@ -192,7 +211,7 @@ const MobileShiftManagement = () => {
         newShift={newShift}
         setNewShift={setNewShift}
         handleAddShift={handleAddShiftWithErrorHandling}
-        staffList={staffList}
+        staffList={staffList || []}
         isMobile={true}
         staffOnActiveShifts={staffOnActiveShifts}
       />

@@ -22,6 +22,13 @@ interface EndShiftSalesProps {
   fuelRates?: Record<string, number>;
 }
 
+// Helper function to safely format numbers
+const safeNumberFormat = (value?: number | null, options?: Intl.NumberFormatOptions) => {
+  return value !== undefined && value !== null ? 
+    value.toLocaleString(undefined, options) : 
+    'N/A';
+};
+
 export function EndShiftSales({ 
   salesData, 
   onSalesChange,
@@ -106,7 +113,7 @@ export function EndShiftSales({
           <div className="grid gap-2">
             <div className="flex justify-between items-center">
               <span className="font-medium">Total Sales:</span>
-              <span className="text-lg font-bold">₹{totalSales.toLocaleString()}</span>
+              <span className="text-lg font-bold">₹{safeNumberFormat(totalSales)}</span>
             </div>
             
             {/* Fuel type breakdown */}
@@ -120,8 +127,8 @@ export function EndShiftSales({
                     return (
                       <div key={fuelType} className="grid grid-cols-3">
                         <span className="font-medium">{fuelType}:</span>
-                        <span>{liters.toFixed(2)} L</span>
-                        <span className="text-right">₹{calculatedAmount.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                        <span>{safeNumberFormat(liters, {maximumFractionDigits: 2})} L</span>
+                        <span className="text-right">₹{safeNumberFormat(calculatedAmount, {maximumFractionDigits: 2})}</span>
                       </div>
                     );
                   })}
@@ -130,14 +137,14 @@ export function EndShiftSales({
                 {calculatedTotalValue > 0 && (
                   <div className="flex justify-between border-t mt-2 pt-1 font-medium">
                     <span>Calculated Value:</span>
-                    <span>₹{calculatedTotalValue.toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                    <span>₹{safeNumberFormat(calculatedTotalValue, {maximumFractionDigits: 2})}</span>
                   </div>
                 )}
                 
                 {Math.abs(calculatedTotalValue - totalSales) > 1 && calculatedTotalValue > 0 && (
                   <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>Difference:</span>
-                    <span>₹{(calculatedTotalValue - totalSales).toLocaleString(undefined, {maximumFractionDigits: 2})}</span>
+                    <span>₹{safeNumberFormat((calculatedTotalValue - totalSales), {maximumFractionDigits: 2})}</span>
                   </div>
                 )}
               </div>
@@ -145,7 +152,7 @@ export function EndShiftSales({
             
             <div className="flex justify-between text-sm">
               <span>Total Liters:</span>
-              <span>{totalLiters.toFixed(2)} L</span>
+              <span>{totalLiters?.toFixed(2) || '0.00'} L</span>
             </div>
           </div>
         </CardContent>
