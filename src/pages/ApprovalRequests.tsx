@@ -82,8 +82,8 @@ const ApprovalRequestsPage = () => {
               <TransactionsTable 
                 transactions={pendingTransactions}
                 isLoading={isLoading}
-                onApprove={(transaction) => handleApprove(transaction)}
-                onReject={(transaction) => handleReject(transaction)}
+                onApprove={(transaction) => handleApprove(transaction as any)}
+                onReject={(transaction) => handleReject(transaction as any)}
                 showFuelPumpInfo={isSuperAdmin}
               />
             </CardContent>
@@ -102,8 +102,8 @@ const ApprovalRequestsPage = () => {
               <IndentsTable 
                 indents={pendingIndents}
                 isLoading={isLoading}
-                onApprove={(indent) => handleApprove(indent)}
-                onReject={(indent) => handleReject(indent)}
+                onApprove={(indent) => handleApprove(indent as any)}
+                onReject={(indent) => handleReject(indent as any)}
                 showFuelPumpInfo={isSuperAdmin}
               />
             </CardContent>
@@ -123,8 +123,8 @@ const ApprovalRequestsPage = () => {
               <TransactionsTable 
                 transactions={pendingTransactions}
                 isLoading={isLoading}
-                onApprove={handleApprove}
-                onReject={handleReject}
+                onApprove={(transaction) => handleApprove(transaction as any)}
+                onReject={(transaction) => handleReject(transaction as any)}
                 showFuelPumpInfo={isSuperAdmin}
               />
               
@@ -132,8 +132,8 @@ const ApprovalRequestsPage = () => {
               <IndentsTable 
                 indents={pendingIndents}
                 isLoading={isLoading}
-                onApprove={handleApprove}
-                onReject={handleReject}
+                onApprove={(indent) => handleApprove(indent as any)}
+                onReject={(indent) => handleReject(indent as any)}
                 showFuelPumpInfo={isSuperAdmin}
               />
             </CardContent>
