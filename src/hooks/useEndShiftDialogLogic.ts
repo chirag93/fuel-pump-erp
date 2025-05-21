@@ -72,7 +72,8 @@ export function useEndShiftDialogLogic(
   const [isEditingCompletedShift, setIsEditingCompletedShift] = useState(false);
   const [indentSales, setIndentSales] = useState<number>(0);
   const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 3;
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const maxRetries = 5; // Increased from 3 to 5
   
   const [formData, setFormData] = useState<ShiftFormData>({
     closing_reading: 0,
@@ -99,6 +100,15 @@ export function useEndShiftDialogLogic(
   });
   
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  
+  // Reset retry count when shift ID changes
+  useEffect(() => {
+    if (shiftId) {
+      setRetryCount(0);
+      setIsDataLoaded(false);
+      setError(null);
+    }
+  }, [shiftId]);
 
   // Reset form on dialog open
   useEffect(() => {
@@ -138,7 +148,7 @@ export function useEndShiftDialogLogic(
         .from('shifts')
         .select('start_time, end_time')
         .eq('id', shiftId)
-        .single();
+        .maybeSingle();
       
       if (shiftError) {
         console.error("Error fetching shift details for indent sales:", shiftError);
@@ -189,6 +199,26 @@ export function useEndShiftDialogLogic(
     }
   };
 
+  // Enhanced exponential backoff retry function
+  const retryWithBackoff = async (fn: () => Promise<void>, attempt = 0) => {
+    try {
+      await fn();
+    } catch (error) {
+      const maxAttempts = maxRetries;
+      if (attempt < maxAttempts) {
+        // Exponential backoff with jitter
+        const delay = Math.min(1000 * Math.pow(2, attempt), 10000) + Math.random() * 1000;
+        console.log(`Retry attempt ${attempt + 1}/${maxAttempts} after ${delay.toFixed(0)}ms`);
+        
+        setTimeout(() => {
+          retryWithBackoff(fn, attempt + 1);
+        }, delay);
+      } else {
+        throw error;
+      }
+    }
+  };
+
   // Check if we're editing a completed shift with improved error handling
   useEffect(() => {
     const checkShiftStatus = async () => {
@@ -201,20 +231,27 @@ export function useEndShiftDialogLogic(
         console.log("Checking shift status for ID:", shiftId);
         setLoading(true);
         
+        // Use maybeSingle instead of single for better error handling
         const { data, error } = await supabase
           .from('shifts')
           .select('status, end_time')
           .eq('id', shiftId)
-          .single();
+          .maybeSingle();
         
         if (error) {
+          console.error('Supabase error checking shift status:', error);
           throw error;
         }
         
         console.log("Shift status data:", data);
         
+        if (!data) {
+          console.warn(`No shift found with ID ${shiftId}`);
+          throw new Error(`No shift found with ID ${shiftId}`);
+        }
+        
         // If shift has end_time and status is completed, we're editing a completed shift
-        if (data && data.end_time && data.status === 'completed') {
+        if (data.end_time && data.status === 'completed') {
           console.log("Editing a completed shift");
           setIsEditingCompletedShift(true);
           
@@ -226,43 +263,60 @@ export function useEndShiftDialogLogic(
           // Reset to end-only mode for active shifts by default
           setMode('end-only');
         }
+        
+        setIsDataLoaded(true);
       } catch (err) {
         console.error('Error checking shift status:', err);
         
-        // Implement retry logic
+        // Implement improved retry logic
         if (retryCount < maxRetries) {
           console.log(`Retrying shift status check (${retryCount + 1}/${maxRetries})`);
           setRetryCount(prevCount => prevCount + 1);
-          // Try again after a short delay
+          
+          // Use exponential backoff for retries
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
           setTimeout(() => {
             checkShiftStatus();
-          }, 1000);
+          }, delay);
         } else {
+          console.error(`Failed all ${maxRetries} retry attempts when checking shift status`);
           toast({
             title: "Error",
             description: "Failed to check shift status. Please try again.",
             variant: "destructive"
           });
           setError("Failed to check shift status. Please try refreshing the page.");
+          setIsDataLoaded(true); // Mark as loaded even though there was an error
         }
       } finally {
         setLoading(false);
       }
     };
     
-    // Reset retry count when shift ID changes
     if (shiftId) {
-      setRetryCount(0);
-      checkShiftStatus();
+      try {
+        // Use the retry with backoff mechanism
+        retryWithBackoff(async () => {
+          await checkShiftStatus();
+        }).catch(err => {
+          console.error("All retry attempts failed:", err);
+          setError("Failed to check shift status after multiple attempts. Please try again later.");
+          setIsDataLoaded(true);
+        });
+      } catch (error) {
+        console.error("Fatal error in shift status check:", error);
+        setError("A critical error occurred. Please try refreshing the page.");
+        setIsDataLoaded(true);
+      }
     }
-  }, [shiftId]);
+  }, [shiftId, retryCount, maxRetries]);
 
-  // Load data for completed shift
+  // Load data for completed shift with better error handling
   const loadCompletedShiftData = async (shiftId: string) => {
     try {
       console.log("Loading completed shift data for ID:", shiftId);
       
-      // Get existing readings to check schema
+      // Get existing readings to check schema, using maybeSingle for better error handling
       const { data: readingData, error: readingError } = await supabase
         .from('readings')
         .select('*')
@@ -270,6 +324,7 @@ export function useEndShiftDialogLogic(
         .maybeSingle();
         
       if (readingError) {
+        console.error('Supabase error fetching reading data:', readingError);
         throw readingError;
       }
       
@@ -293,6 +348,11 @@ export function useEndShiftDialogLogic(
         });
       } else {
         console.log("No reading data found for this shift");
+        toast({
+          title: "Warning",
+          description: "No reading data found for this shift.",
+          variant: "default"
+        });
       }
     } catch (err) {
       console.error('Error loading completed shift data:', err);
@@ -301,6 +361,7 @@ export function useEndShiftDialogLogic(
         description: "Failed to load shift data. Please try again.",
         variant: "destructive"
       });
+      throw err; // Propagate error to be handled by the retry mechanism
     }
   };
 
@@ -426,9 +487,9 @@ export function useEndShiftDialogLogic(
     return true;
   };
 
-  // Form submission handler
+  // Form submission handler with improved error handling
   const handleSubmit = async () => {
-    if (!validateForm()) return;
+    if (!validateForm()) return false;
     
     setLoading(true);
     setError(null);
@@ -443,6 +504,7 @@ export function useEndShiftDialogLogic(
           .limit(1);
           
         if (readingsCheckError) {
+          console.error('Supabase error fetching existing readings:', readingsCheckError);
           throw readingsCheckError;
         }
         
@@ -469,6 +531,8 @@ export function useEndShiftDialogLogic(
           baseUpdateData.indent_sales = formData.indent_sales;
         }
         
+        console.log("Updating readings with data:", baseUpdateData);
+        
         // Update readings
         const { error: updateError } = await supabase
           .from('readings')
@@ -476,6 +540,7 @@ export function useEndShiftDialogLogic(
           .eq('shift_id', shiftId);
           
         if (updateError) {
+          console.error('Supabase error updating readings:', updateError);
           throw updateError;
         }
         
@@ -498,6 +563,7 @@ export function useEndShiftDialogLogic(
           .eq('id', shiftId);
           
         if (shiftError) {
+          console.error('Supabase error updating shift:', shiftError);
           throw shiftError;
         }
         
@@ -509,6 +575,7 @@ export function useEndShiftDialogLogic(
           .limit(1);
           
         if (readingsCheckError) {
+          console.error('Supabase error fetching existing readings:', readingsCheckError);
           throw readingsCheckError;
         }
         
@@ -542,6 +609,7 @@ export function useEndShiftDialogLogic(
           .eq('shift_id', shiftId);
           
         if (updateError) {
+          console.error('Supabase error updating readings:', updateError);
           throw updateError;
         }
         
@@ -552,9 +620,10 @@ export function useEndShiftDialogLogic(
             .from('shifts')
             .select('shift_type')
             .eq('id', shiftId)
-            .single();
+            .maybeSingle();
             
           if (currentShiftError) {
+            console.error('Supabase error fetching current shift:', currentShiftError);
             throw currentShiftError;
           }
           
@@ -585,6 +654,7 @@ export function useEndShiftDialogLogic(
             .select();
             
           if (newShiftError) {
+            console.error('Supabase error creating new shift:', newShiftError);
             throw newShiftError;
           }
           
@@ -605,6 +675,7 @@ export function useEndShiftDialogLogic(
             }]);
             
           if (newReadingError) {
+            console.error('Supabase error creating new reading:', newReadingError);
             throw newReadingError;
           }
         }
@@ -621,7 +692,9 @@ export function useEndShiftDialogLogic(
       return true;
     } catch (error: any) {
       console.error('Error processing shift:', error);
-      setError(error.message || "Failed to process shift. Please try again.");
+      const errorMessage = error.message || "Failed to process shift. Please try again.";
+      
+      setError(errorMessage);
       toast({
         title: "Error",
         description: "Failed to process shift. Please try again.",
@@ -654,6 +727,7 @@ export function useEndShiftDialogLogic(
     fuelLiters,
     expectedSalesAmount,
     openingReading,
+    isDataLoaded,
     handleInputChange,
     handleNewShiftInputChange,
     handleStaffChange,

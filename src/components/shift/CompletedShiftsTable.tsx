@@ -15,10 +15,17 @@ interface CompletedShiftsTableProps {
 export function CompletedShiftsTable({ completedShifts, onEditShift }: CompletedShiftsTableProps) {
   // Sort shifts by date in descending order (newest first)
   const sortedShifts = [...completedShifts].sort((a, b) => {
-    const dateA = a.end_time ? new Date(a.end_time) : new Date(a.date);
-    const dateB = b.end_time ? new Date(b.end_time) : new Date(b.date);
+    const dateA = a.end_time ? new Date(a.end_time) : new Date(a.date || Date.now());
+    const dateB = b.end_time ? new Date(b.end_time) : new Date(b.date || Date.now());
     return dateB.getTime() - dateA.getTime();
   });
+
+  // Function to safely render times with fallbacks
+  const renderShiftTimes = (shift: Shift) => {
+    const startTime = shift.start_time ? formatTime(shift.start_time) : 'N/A';
+    const endTime = shift.end_time ? formatTime(shift.end_time) : 'N/A';
+    return `${startTime} - ${endTime}`;
+  };
 
   return (
     <Card>
@@ -54,14 +61,14 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
             </TableHeader>
             <TableBody>
               {sortedShifts.map((shift) => {
-                // Calculate totals
+                // Calculate totals with null/undefined checks
                 const openingReading = shift.opening_reading || 0;
                 const closingReading = shift.closing_reading || 0;
                 const totalVolume = closingReading - openingReading;
                 const testingFuel = shift.testing_fuel || 0;
                 const actualSalesVolume = totalVolume - testingFuel;
                 
-                // Sum sales from all payment methods
+                // Sum sales from all payment methods with null/undefined checks
                 const cardSales = shift.card_sales || 0;
                 const upiSales = shift.upi_sales || 0;
                 const cashSales = shift.cash_sales || 0;
@@ -70,20 +77,20 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
                 // Format the date using the end_time if available, otherwise use the date field
                 const shiftDate = shift.end_time 
                   ? formatDate(shift.end_time) 
-                  : formatDate(shift.date);
+                  : formatDate(shift.date || new Date().toISOString());
                 
                 return (
                   <TableRow key={shift.id}>
                     <TableCell className="font-medium">{shift.staff_name || 'Unknown'}</TableCell>
                     <TableCell>{shift.staff_numeric_id || 'N/A'}</TableCell>
                     <TableCell>{shiftDate}</TableCell>
-                    <TableCell>{`${formatTime(shift.start_time)} - ${formatTime(shift.end_time)}`}</TableCell>
+                    <TableCell>{renderShiftTimes(shift)}</TableCell>
                     <TableCell>{shift.pump_id || 'N/A'}</TableCell>
                     <TableCell>
                       {safeNumberFormat(openingReading)} → {safeNumberFormat(closingReading)}
                     </TableCell>
                     <TableCell>
-                      {formatMoney(shift.starting_cash_balance)} → {formatMoney(shift.ending_cash_balance)}
+                      {formatMoney(shift.starting_cash_balance || 0)} → {formatMoney(shift.ending_cash_balance || 0)}
                     </TableCell>
                     <TableCell>{formatMoney(cardSales)}</TableCell>
                     <TableCell>{formatMoney(upiSales)}</TableCell>
@@ -112,4 +119,4 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
       </CardContent>
     </Card>
   );
-}
+};
