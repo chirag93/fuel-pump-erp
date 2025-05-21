@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Staff, Shift } from '@/types/shift';
@@ -21,6 +20,8 @@ export const useShiftManagement = () => {
     shift_type: 'Day',
     starting_cash_balance: 0
   });
+
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   
   const fetchStaff = useCallback(async (fuelPumpId: string | null) => {
@@ -363,17 +364,84 @@ export const useShiftManagement = () => {
     }
   };
   
+  const handleDeleteShift = async (shiftId: string) => {
+    try {
+      setIsDeleting(true);
+      setError(null);
+      console.log('Deleting shift with ID:', shiftId);
+      
+      // Get the fuel pump ID
+      const fuelPumpId = await getFuelPumpId();
+      
+      // First, delete all readings associated with the shift
+      const { error: readingsError } = await supabase
+        .from('readings')
+        .delete()
+        .eq('shift_id', shiftId);
+        
+      if (readingsError) {
+        console.error('Error deleting readings:', readingsError);
+        throw readingsError;
+      }
+      
+      // Delete any shift_consumables records
+      const { error: consumablesError } = await supabase
+        .from('shift_consumables')
+        .delete()
+        .eq('shift_id', shiftId);
+        
+      if (consumablesError) {
+        console.error('Error deleting shift consumables:', consumablesError);
+        throw consumablesError;
+      }
+      
+      // Delete the shift record itself
+      const { error: shiftError } = await supabase
+        .from('shifts')
+        .delete()
+        .eq('id', shiftId);
+        
+      if (shiftError) {
+        console.error('Error deleting shift:', shiftError);
+        throw shiftError;
+      }
+      
+      toast({
+        title: "Success",
+        description: "Shift deleted successfully",
+      });
+      
+      // Refresh the shifts data
+      await fetchShifts();
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete shift';
+      console.error('Error deleting shift:', err);
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
   return {
     staffList,
     activeShifts,
     completedShifts,
     isLoading,
+    isDeleting,
     error,
     newShift,
     setNewShift,
     handleAddShift,
+    handleDeleteShift,
     fetchShifts,
     staffOnActiveShifts
   };
 };
-

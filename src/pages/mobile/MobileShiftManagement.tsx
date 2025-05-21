@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { CalendarClock, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MobileActiveShifts } from '@/components/shift/MobileActiveShifts';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { NewEndShiftDialog } from '@/components/shift/NewEndShiftDialog';
+import { DeleteShiftDialog } from '@/components/shift/DeleteShiftDialog';
 import { SelectedShiftData } from '@/types/shift';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -19,7 +19,9 @@ const MobileShiftManagement = () => {
     newShift,
     setNewShift,
     handleAddShift,
+    handleDeleteShift,
     isLoading,
+    isDeleting,
     fetchShifts,
     staffOnActiveShifts,
     error: shiftError
@@ -27,7 +29,10 @@ const MobileShiftManagement = () => {
   
   const [formOpen, setFormOpen] = useState(false);
   const [endShiftDialogOpen, setEndShiftDialogOpen] = useState(false);
+  const [deleteShiftDialogOpen, setDeleteShiftDialogOpen] = useState(false);
   const [selectedShiftData, setSelectedShiftData] = useState<SelectedShiftData | null>(null);
+  const [currentShiftId, setCurrentShiftId] = useState<string>('');
+  const [currentShiftName, setCurrentShiftName] = useState<string>('');
   const [localError, setLocalError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
@@ -41,14 +46,14 @@ const MobileShiftManagement = () => {
   
   // Force a refresh of shifts data when component mounts or when form is closed
   useEffect(() => {
-    if (!formOpen && !endShiftDialogOpen) {
+    if (!formOpen && !endShiftDialogOpen && !deleteShiftDialogOpen) {
       console.log('Refresh shifts data - form closed or component mounted');
       fetchShifts().catch(err => {
         console.error('Error fetching shifts in MobileShiftManagement:', err);
         setLocalError('Failed to load shifts data. Please try again.');
       });
     }
-  }, [formOpen, endShiftDialogOpen, fetchShifts]);
+  }, [formOpen, endShiftDialogOpen, deleteShiftDialogOpen, fetchShifts]);
   
   const handleOpenForm = () => {
     if (!staffList || staffList.length === 0) {
@@ -95,6 +100,22 @@ const MobileShiftManagement = () => {
     });
     
     setEndShiftDialogOpen(true);
+  };
+  
+  const handleDeleteShift = (shift: any) => {
+    if (!shift) {
+      console.error('Cannot delete shift: Shift data is undefined');
+      toast({
+        title: "Error",
+        description: "Unable to delete shift due to missing data.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setCurrentShiftId(shift.id);
+    setCurrentShiftName(shift.staff_name || 'Unknown Staff');
+    setDeleteShiftDialogOpen(true);
   };
   
   // Custom function to handle shift adding with better error handling
@@ -145,6 +166,21 @@ const MobileShiftManagement = () => {
         setLocalError("Failed to refresh shifts data. Please try manually refreshing the page.");
       }
     }, 500);
+  };
+  
+  const handleDeleteShiftConfirmed = async () => {
+    if (!currentShiftId) {
+      console.error('Cannot delete shift: Shift ID is undefined');
+      toast({
+        title: "Error",
+        description: "Unable to delete shift due to missing ID.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    await handleDeleteShift(currentShiftId);
+    setDeleteShiftDialogOpen(false);
   };
   
   return (
@@ -202,6 +238,7 @@ const MobileShiftManagement = () => {
         activeShifts={activeShifts || []} 
         isLoading={isLoading} 
         onEndShift={handleEndShift}
+        onDeleteShift={handleDeleteShift}
       />
       
       {/* StartShiftForm Modal */}
@@ -225,6 +262,16 @@ const MobileShiftManagement = () => {
           onShiftEnded={handleShiftEnded}
         />
       )}
+      
+      {/* Delete Shift Dialog */}
+      <DeleteShiftDialog
+        isOpen={deleteShiftDialogOpen}
+        onOpenChange={setDeleteShiftDialogOpen}
+        shiftId={currentShiftId}
+        staffName={currentShiftName}
+        onConfirm={handleDeleteShiftConfirmed}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { CalendarClock, ClipboardList, Loader2 } from 'lucide-react';
+import { CalendarClock, ClipboardList, Loader2, Trash2 } from 'lucide-react';
 import { Shift } from '@/types/shift';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,9 +9,10 @@ interface MobileActiveShiftsProps {
   activeShifts: Shift[];
   isLoading: boolean;
   onEndShift: (shift: Shift) => void;
+  onDeleteShift?: (shift: Shift) => void;
 }
 
-export function MobileActiveShifts({ activeShifts, isLoading, onEndShift }: MobileActiveShiftsProps) {
+export function MobileActiveShifts({ activeShifts, isLoading, onEndShift, onDeleteShift }: MobileActiveShiftsProps) {
   const formatTime = (timeString?: string | null) => {
     if (!timeString) return 'N/A';
     try {
@@ -90,15 +91,27 @@ export function MobileActiveShifts({ activeShifts, isLoading, onEndShift }: Mobi
                       </div>
                     </div>
                     
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="mt-2 w-full flex items-center justify-center"
-                      onClick={() => onEndShift(shift)}
-                    >
-                      <ClipboardList size={14} className="mr-2" />
-                      End Shift
-                    </Button>
+                    <div className="flex gap-2 mt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 flex items-center justify-center"
+                        onClick={() => onEndShift(shift)}
+                      >
+                        <ClipboardList size={14} className="mr-2" />
+                        End Shift
+                      </Button>
+                      {onDeleteShift && (
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          className="flex items-center justify-center"
+                          onClick={() => onDeleteShift(shift)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

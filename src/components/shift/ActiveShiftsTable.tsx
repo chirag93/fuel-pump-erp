@@ -3,15 +3,16 @@ import { Shift } from '@/types/shift';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { CalendarClock, ClipboardList } from 'lucide-react';
+import { CalendarClock, ClipboardList, Trash2 } from 'lucide-react';
 import { safeNumberFormat, formatMoney } from '@/utils/formatUtils';
 
 interface ActiveShiftsTableProps {
   activeShifts: Shift[];
   onEndShift: (shift: Shift) => void;
+  onDeleteShift?: (shift: Shift) => void;
 }
 
-export function ActiveShiftsTable({ activeShifts, onEndShift }: ActiveShiftsTableProps) {
+export function ActiveShiftsTable({ activeShifts, onEndShift, onDeleteShift }: ActiveShiftsTableProps) {
   const formatTime = (timeString?: string | null) => {
     if (!timeString) return 'N/A';
     try {
@@ -67,15 +68,27 @@ export function ActiveShiftsTable({ activeShifts, onEndShift }: ActiveShiftsTabl
                   </TableCell>
                   <TableCell>{formatMoney(shift.starting_cash_balance)}</TableCell>
                   <TableCell>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-1"
-                      onClick={() => onEndShift(shift)}
-                    >
-                      <ClipboardList size={14} />
-                      End Shift
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="gap-1"
+                        onClick={() => onEndShift(shift)}
+                      >
+                        <ClipboardList size={14} />
+                        End Shift
+                      </Button>
+                      {onDeleteShift && (
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          className="gap-1"
+                          onClick={() => onDeleteShift(shift)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               )})}
