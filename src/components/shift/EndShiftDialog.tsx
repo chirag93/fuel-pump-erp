@@ -56,6 +56,9 @@ const EndShiftDialog = ({
     handleSubmit
   } = useEndShiftDialogLogic(shiftId, staffId, pumpId, openingReading, onComplete);
 
+  // Add state to track if dialog is being dismissed
+  const [isDismissing, setIsDismissing] = useState(false);
+
   const onSubmitHandler = async () => {
     const success = await handleSubmit();
     if (success) {
@@ -63,8 +66,23 @@ const EndShiftDialog = ({
     }
   };
 
+  const handleDismiss = () => {
+    setIsDismissing(true);
+    setTimeout(() => {
+      onOpenChange(false);
+      setIsDismissing(false);
+    }, 100);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(open) => !loading && !open && onOpenChange(false)}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(open) => {
+        if (!loading && !open && !isDismissing) {
+          handleDismiss();
+        }
+      }}
+    >
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
@@ -135,7 +153,7 @@ const EndShiftDialog = ({
         )}
         
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
+          <Button variant="outline" onClick={handleDismiss} disabled={loading}>Cancel</Button>
           <Button onClick={onSubmitHandler} disabled={loading}>
             {loading ? (
               <>
