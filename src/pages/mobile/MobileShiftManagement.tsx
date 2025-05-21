@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { CalendarClock, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { MobileActiveShifts } from '@/components/shift/MobileActiveShifts';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { NewEndShiftDialog } from '@/components/shift/NewEndShiftDialog';
 import { DeleteShiftDialog } from '@/components/shift/DeleteShiftDialog';
-import { SelectedShiftData } from '@/types/shift';
+import { SelectedShiftData, Shift } from '@/types/shift';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const MobileShiftManagement = () => {
@@ -19,7 +20,7 @@ const MobileShiftManagement = () => {
     newShift,
     setNewShift,
     handleAddShift,
-    handleDeleteShift,
+    handleDeleteShift: deleteShiftFromHook,
     isLoading,
     isDeleting,
     fetchShifts,
@@ -78,7 +79,7 @@ const MobileShiftManagement = () => {
     setFormOpen(true);
   };
   
-  const handleEndShift = (shift: any) => {
+  const handleEndShift = (shift: Shift) => {
     if (!shift) {
       console.error('Cannot end shift: Shift data is undefined');
       toast({
@@ -102,7 +103,7 @@ const MobileShiftManagement = () => {
     setEndShiftDialogOpen(true);
   };
   
-  const handleDeleteShift = (shift: any) => {
+  const openDeleteShiftDialog = (shift: Shift) => {
     if (!shift) {
       console.error('Cannot delete shift: Shift data is undefined');
       toast({
@@ -179,7 +180,7 @@ const MobileShiftManagement = () => {
       return;
     }
     
-    await handleDeleteShift(currentShiftId);
+    await deleteShiftFromHook(currentShiftId);
     setDeleteShiftDialogOpen(false);
   };
   
@@ -238,7 +239,7 @@ const MobileShiftManagement = () => {
         activeShifts={activeShifts || []} 
         isLoading={isLoading} 
         onEndShift={handleEndShift}
-        onDeleteShift={handleDeleteShift}
+        onDeleteShift={openDeleteShiftDialog}
       />
       
       {/* StartShiftForm Modal */}
