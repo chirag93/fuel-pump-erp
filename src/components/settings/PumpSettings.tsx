@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,13 @@ interface PumpSettings {
   fuel_types: string[];
   created_at?: string;
   fuel_pump_id?: string;
+}
+
+// Interface for the assigned pump structure that might appear in staff records
+interface AssignedPump {
+  id?: string;
+  number?: string;
+  [key: string]: any; // For any other properties that might exist
 }
 
 export function PumpSettings() {
@@ -255,15 +263,19 @@ export function PumpSettings() {
         for (const staff of staffData) {
           if (staff.assigned_pumps) {
             const assignedPumps = staff.assigned_pumps;
-            if (Array.isArray(assignedPumps) && assignedPumps.some(p => p.id === pump.id || p.number === pump.pump_number)) {
-              pumpAssignedToStaff = true;
-              break;
+            if (Array.isArray(assignedPumps)) {
+              // Handle array of assigned pumps
+              pumpAssignedToStaff = assignedPumps.some((p: any) => 
+                (p.id === pump.id || p.number === pump.pump_number)
+              );
+              if (pumpAssignedToStaff) break;
             } else if (typeof assignedPumps === 'object') {
+              // Handle object format of assigned pumps
               const pumpArray = Object.values(assignedPumps);
-              if (pumpArray.some((p: any) => p.id === pump.id || p.number === pump.pump_number)) {
-                pumpAssignedToStaff = true;
-                break;
-              }
+              pumpAssignedToStaff = pumpArray.some((p: any) => 
+                (p.id === pump.id || p.number === pump.pump_number)
+              );
+              if (pumpAssignedToStaff) break;
             }
           }
         }
