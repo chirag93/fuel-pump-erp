@@ -132,7 +132,7 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
         const ratesMap: Record<string, number> = {};
         
         Object.entries(fuelPrices).forEach(([type, data]) => {
-          ratesMap[type] = data.price || 0;
+          ratesMap[String(type)] = data.price || 0;
         });
         
         setFuelRates(ratesMap);
