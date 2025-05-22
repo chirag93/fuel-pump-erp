@@ -115,8 +115,9 @@ export function useShiftSales(shiftId: string, staffId: string) {
       }
       
       if (indentData && indentData.length > 0) {
+        // Fix: Explicitly convert amount to string before parsing
         const totalIndent = indentData.reduce((total, item) => 
-          total + (parseFloat(item.amount) || 0), 0);
+          total + (parseFloat(String(item.amount)) || 0), 0);
         
         console.log(`Found ${indentData.length} indent transactions totaling ${totalIndent}`);
         
