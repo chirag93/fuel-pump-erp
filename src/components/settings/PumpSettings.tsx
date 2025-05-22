@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -237,26 +236,25 @@ export function PumpSettings() {
         throw readingsError;
       }
       
-      // Check if pump is used in shifts
-      const { data: shiftsData, error: shiftsError } = await supabase
-        .from('shifts')
-        .select('staff.assigned_pumps')
-        .eq('fuel_pump_id', fuelPumpId)
-        .not('staff', 'is', null)
-        .join('staff', 'shifts.staff_id', 'staff.id');
+      // Check if pump is used in shifts - Fixed the join operation
+      let pumpAssignedToStaff = false;
+      
+      // First get all staff records with assigned pumps
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff')
+        .select('assigned_pumps')
+        .eq('fuel_pump_id', fuelPumpId);
         
-      if (shiftsError) {
-        console.error("Error checking shifts:", shiftsError);
-        throw shiftsError;
+      if (staffError) {
+        console.error("Error checking staff:", staffError);
+        throw staffError;
       }
       
       // Check if this pump is assigned to any staff member
-      let pumpAssignedToStaff = false;
-      
-      if (shiftsData) {
-        for (const shift of shiftsData) {
-          if (shift.staff && shift.staff.assigned_pumps) {
-            const assignedPumps = shift.staff.assigned_pumps;
+      if (staffData) {
+        for (const staff of staffData) {
+          if (staff.assigned_pumps) {
+            const assignedPumps = staff.assigned_pumps;
             if (Array.isArray(assignedPumps) && assignedPumps.some(p => p.id === pump.id || p.number === pump.pump_number)) {
               pumpAssignedToStaff = true;
               break;
