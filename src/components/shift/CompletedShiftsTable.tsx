@@ -1,10 +1,9 @@
-
 import { useState } from 'react';
 import { Shift } from '@/types/shift';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { DollarSign, ClipboardList } from 'lucide-react';
+import { DollarSign, ClipboardList, Loader2 } from 'lucide-react';
 import { formatDate, formatTime } from '@/utils/dateUtils';
 import { safeNumberFormat, formatMoney } from '@/utils/formatUtils';
 import { useToast } from '@/hooks/use-toast';
