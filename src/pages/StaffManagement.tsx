@@ -1,5 +1,4 @@
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
@@ -30,6 +29,10 @@ const StaffManagement = () => {
   };
 
   const handleEditStaff = (staffMember: any) => {
+    // When editing, set empty features array if not present
+    if (staffMember && !staffMember.features) {
+      staffMember.features = [];
+    }
     setEditingStaff(staffMember);
     setFormOpen(true);
   };

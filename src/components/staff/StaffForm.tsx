@@ -1,7 +1,6 @@
 
 import { Button } from '@/components/ui/button';
 import { useStaffForm } from '@/hooks/useStaffForm';
-import { FeatureSelection } from './FeatureSelection';
 import { PumpSelection } from './PumpSelection';
 import { BasicInfoFields } from './BasicInfoFields';
 import { useRef, useEffect } from 'react';
@@ -46,6 +45,11 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
     }
   }, [initialData?.id]);
 
+  // Set a default empty array for features since we're hiding the selection
+  useEffect(() => {
+    setSelectedFeatures([]);
+  }, [setSelectedFeatures]);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <BasicInfoFields
@@ -67,11 +71,15 @@ const StaffForm = ({ onSubmit, onCancel, initialData }: StaffFormProps) => {
         assignedPumps={staffData.assigned_pumps}
       />
 
+      {/* Feature selection has been hidden for now */}
+      {/* To be implemented later */}
+      {/* 
       <FeatureSelection
         staffId={initialData?.id}
         onFeaturesChange={setSelectedFeatures}
         initialFeatures={initialData?.features || []}
       />
+      */}
 
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>

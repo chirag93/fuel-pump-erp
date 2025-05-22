@@ -50,6 +50,7 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
     password: '',
     confirmPassword: '',
   });
+  // Initialize with empty array since we're hiding the feature selection component
   const [selectedFeatures, setSelectedFeatures] = useState<StaffFeature[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -205,10 +206,11 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
             fuelPumpId: fuelPumpId,
             mobile_only_access: mobileOnlyAccess,
             assigned_pumps: staffData.assigned_pumps,
-            features: selectedFeatures
+            // Still include features in payload, but as an empty array
+            features: []
           };
           
-          console.log("Creating staff with features:", selectedFeatures);
+          console.log("Creating staff with features:", []);
           
           const { data, error } = await supabase.functions.invoke("create-staff-user", {
             body: payload,
@@ -298,7 +300,8 @@ export const useStaffForm = (initialData?: any, onSubmit?: (staff: any) => void,
           auth_id: initialData.auth_id,
           fuel_pump_id: fuelPumpId,
           mobile_only_access: mobileOnlyAccess,
-          features: selectedFeatures
+          // Include empty features array
+          features: []
         };
         
         // Only add password to payload if changing password

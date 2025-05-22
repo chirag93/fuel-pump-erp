@@ -48,6 +48,10 @@ const SuperAdminStaff = () => {
   };
 
   const handleEditStaff = (staffMember: any) => {
+    // Ensure staffMember has an empty features array when editing
+    if (staffMember && !staffMember.features) {
+      staffMember.features = [];
+    }
     setEditingStaff(staffMember);
     setFormOpen(true);
   };
