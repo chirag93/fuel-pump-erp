@@ -143,6 +143,7 @@ const TransactionForm = ({
           onChange={(e) => handleChange('vehicleNumber', e.target.value)}
           placeholder="Enter vehicle number"
           required
+          onClick={(e) => (e.target as HTMLInputElement).select()}
         />
       </div>
 
@@ -219,6 +220,7 @@ const TransactionForm = ({
             onChange={(e) => handleChange('amount', e.target.value)}
             placeholder="Enter amount"
             required
+            onClick={(e) => (e.target as HTMLInputElement).select()}
           />
         </div>
         
@@ -232,6 +234,7 @@ const TransactionForm = ({
             placeholder="Enter quantity"
             required
             step="0.01"
+            onClick={(e) => (e.target as HTMLInputElement).select()}
           />
         </div>
       </div>
@@ -246,6 +249,7 @@ const TransactionForm = ({
             placeholder="Enter meter reading"
             className="flex-1"
             required
+            onClick={(e) => (e.target as HTMLInputElement).select()}
           />
           <Button type="button" variant="outline" onClick={handleTakePicture}>
             <Camera className="h-4 w-4 mr-2" />
@@ -261,6 +265,7 @@ const TransactionForm = ({
           value={transaction.notes}
           onChange={(e) => handleChange('notes', e.target.value)}
           placeholder="Any additional notes"
+          onClick={(e) => (e.target as HTMLInputElement).select()}
         />
       </div>
 

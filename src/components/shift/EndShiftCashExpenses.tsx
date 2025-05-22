@@ -40,6 +40,7 @@ export function EndShiftCashExpenses({
             placeholder="0"
             type="number"
             min="0"
+            onClick={(e) => (e.target as HTMLInputElement).select()}
           />
           <p className="text-xs text-muted-foreground">
             Enter any cash expenses that occurred during this shift
@@ -58,6 +59,7 @@ export function EndShiftCashExpenses({
             type="number"
             min="0"
             className={error ? 'border-destructive' : ''}
+            onClick={(e) => (e.target as HTMLInputElement).select()}
           />
           {error && (
             <p className="text-xs text-destructive">
@@ -66,7 +68,7 @@ export function EndShiftCashExpenses({
           )}
         </div>
         
-        {Number(cashSales) > 0 && Number(cashRemaining) > 0 && (
+        {(Number(cashSales) > 0 || Number(cashRemaining) > 0) && (
           <div className={`p-3 rounded-md mt-1 ${Math.abs(cashReconciliation.difference) > 10 ? 'bg-red-50' : 'bg-green-50'}`}>
             <h4 className="font-medium text-sm mb-2">Cash Reconciliation</h4>
             <div className="space-y-1 text-sm">

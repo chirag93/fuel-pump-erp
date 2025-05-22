@@ -24,9 +24,10 @@ export function EndShiftCashFields({
           id="expenses"
           name="expenses"
           type="number"
-          value={formData.expenses === 0 ? '' : formData.expenses}
+          value={formData.expenses}
           onChange={handleInputChange}
           placeholder="Enter expenses amount"
+          onClick={(e) => (e.target as HTMLInputElement).select()}
         />
         <p className="text-xs text-muted-foreground">
           Enter any cash expenses that occurred during this shift
@@ -39,13 +40,14 @@ export function EndShiftCashFields({
           id="cash_remaining"
           name="cash_remaining"
           type="number"
-          value={formData.cash_remaining === 0 ? '' : formData.cash_remaining}
+          value={formData.cash_remaining}
           onChange={handleInputChange}
+          onClick={(e) => (e.target as HTMLInputElement).select()}
         />
       </div>
       
       {/* Cash Reconciliation */}
-      {formData.cash_sales > 0 && formData.cash_remaining > 0 && (
+      {(formData.cash_sales > 0 || formData.cash_remaining > 0) && (
         <Card className={`mt-1 ${Math.abs(cashReconciliation.difference) > 10 ? 'bg-red-50' : 'bg-green-50'}`}>
           <div className="p-4">
             <div className="flex justify-between items-center">
