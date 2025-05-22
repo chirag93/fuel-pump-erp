@@ -139,7 +139,7 @@ export function useShiftSales(shiftId: string, staffId: string) {
   };
 
   // Handle testing fuel by type changes
-  const handleTestingFuelByTypeChange = (fuelType: string, value: number) => {
+  const handleTestingFuelByTypeChange = (fuelType: string | number, value: number) => {
     // Ensure fuelType is always a string
     const fuelTypeStr = String(fuelType);
     
