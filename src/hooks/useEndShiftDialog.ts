@@ -552,4 +552,3 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
     handleSubmit
   };
 };
-
