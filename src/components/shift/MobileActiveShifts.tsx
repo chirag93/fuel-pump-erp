@@ -1,122 +1,95 @@
 
 import React from 'react';
-import { CalendarClock, ClipboardList, Loader2, Trash2 } from 'lucide-react';
 import { Shift } from '@/types/shift';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { CalendarClock, Loader2, UserCheck, X, ClipboardCheck } from 'lucide-react';
+import { formatDate, formatTime } from '@/utils/dateUtils';
 
 interface MobileActiveShiftsProps {
   activeShifts: Shift[];
   isLoading: boolean;
   onEndShift: (shift: Shift) => void;
-  onDeleteShift?: (shift: Shift) => void;
+  onDeleteShift: (shift: Shift) => void;
 }
 
 export function MobileActiveShifts({ activeShifts, isLoading, onEndShift, onDeleteShift }: MobileActiveShiftsProps) {
-  const formatTime = (timeString?: string | null) => {
-    if (!timeString) return 'N/A';
-    try {
-      return new Date(timeString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
-      return timeString;
-    }
-  };
-
-  // Helper function to safely format numbers
-  const safeNumberFormat = (value?: number | null) => {
-    return value !== undefined && value !== null ? value.toLocaleString() : 'N/A';
-  };
+  if (isLoading) {
+    return (
+      <Card className="mb-4">
+        <CardContent className="py-6">
+          <div className="flex justify-center items-center">
+            <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+            <span>Loading active shifts...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Active Shifts</CardTitle>
-          <CalendarClock className="h-5 w-5 text-muted-foreground" />
+    <Card className="mb-4">
+      <CardHeader className="pb-2">
+        <div className="flex items-center mb-2">
+          <UserCheck className="h-5 w-5 text-primary mr-2" />
+          <CardTitle>Active Shifts</CardTitle>
         </div>
       </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center items-center py-4">
-            <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-            <span>Loading shifts...</span>
-          </div>
-        ) : activeShifts.length === 0 ? (
-          <div className="py-6 text-center text-muted-foreground">
-            No active shifts at the moment
+      <CardContent className="space-y-4 pt-2">
+        {activeShifts.length === 0 ? (
+          <div className="text-center py-4 border rounded-md bg-muted/20">
+            <CalendarClock className="h-12 w-12 text-muted mx-auto mb-2" />
+            <p className="text-muted-foreground">No active shifts</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {activeShifts.map((shift) => {
-              // Format the pump ID for display - display N/A if empty or null
-              const pumpDisplay = shift.pump_id ? shift.pump_id : 'N/A';
+          activeShifts.map((shift) => (
+            <div 
+              key={shift.id}
+              className="border rounded-lg p-4 bg-card"
+            >
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-semibold text-lg">{shift.staff_name}</span>
+                <span className="text-sm text-muted-foreground">ID: {shift.staff_numeric_id || 'N/A'}</span>
+              </div>
               
-              return (
-              <Card key={shift.id} className="bg-muted/40">
-                <CardContent className="p-4">
-                  <div className="grid gap-2">
-                    <div className="flex justify-between">
-                      <span className="font-medium">{shift.staff_name}</span>
-                      <span className="text-sm text-muted-foreground">{shift.date}</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Pump:</span> {pumpDisplay}
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Start:</span> {formatTime(shift.start_time)}
-                      </div>
-                      
-                      {/* Display readings for each fuel type if available */}
-                      {shift.all_readings && shift.all_readings.length > 0 ? (
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground">Readings:</span>
-                          {shift.all_readings.map(reading => (
-                            <div key={reading.fuel_type} className="ml-2 mt-1">
-                              {reading.fuel_type}: {safeNumberFormat(reading.opening_reading)}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div>
-                          <span className="text-muted-foreground">Reading:</span> {
-                            safeNumberFormat(shift.opening_reading)
-                          }
-                        </div>
-                      )}
-                      
-                      <div>
-                        <span className="text-muted-foreground">Cash:</span> ₹{safeNumberFormat(shift.starting_cash_balance)}
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2 mt-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1 flex items-center justify-center"
-                        onClick={() => onEndShift(shift)}
-                      >
-                        <ClipboardList size={14} className="mr-2" />
-                        End Shift
-                      </Button>
-                      {onDeleteShift && (
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          className="flex items-center justify-center"
-                          onClick={() => onDeleteShift(shift)}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )})}
-          </div>
+              <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Date:</span>
+                  <p>{formatDate(shift.start_time || new Date().toISOString())}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Started:</span>
+                  <p>{formatTime(shift.start_time || new Date().toISOString())}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Pump ID:</span>
+                  <p>{shift.pump_id || 'N/A'}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Opening Reading:</span>
+                  <p>{shift.opening_reading || 0}</p>
+                </div>
+              </div>
+              
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={() => onEndShift(shift)} 
+                  className="flex-1"
+                  variant="default"
+                >
+                  <ClipboardCheck className="mr-2 h-4 w-4" />
+                  End Shift
+                </Button>
+                <Button 
+                  onClick={() => onDeleteShift(shift)}
+                  variant="outline"
+                  className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))
         )}
       </CardContent>
     </Card>

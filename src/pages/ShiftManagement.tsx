@@ -274,7 +274,11 @@ const ShiftManagement = () => {
                   </p>
                 </div>
               ) : (
-                <CompletedShiftsTable completedShifts={completedShifts} onEditShift={editCompletedShift} />
+                <CompletedShiftsTable 
+                  completedShifts={completedShifts} 
+                  onEditShift={editCompletedShift} 
+                  onDeleteShift={openDeleteShiftDialog} 
+                />
               )}
             </TabsContent>
           </Tabs>
@@ -302,7 +306,7 @@ const ShiftManagement = () => {
         />
       )}
       
-      {/* DeleteShiftDialog for deleting active shifts */}
+      {/* DeleteShiftDialog for deleting shifts */}
       <DeleteShiftDialog
         isOpen={deleteShiftDialogOpen}
         onOpenChange={setDeleteShiftDialogOpen}

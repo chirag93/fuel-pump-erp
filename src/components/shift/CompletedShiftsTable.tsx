@@ -1,9 +1,10 @@
+
 import { useState } from 'react';
 import { Shift } from '@/types/shift';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { DollarSign, ClipboardList, Loader2 } from 'lucide-react';
+import { DollarSign, ClipboardList, Loader2, Trash2 } from 'lucide-react';
 import { formatDate, formatTime } from '@/utils/dateUtils';
 import { safeNumberFormat, formatMoney } from '@/utils/formatUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -11,9 +12,10 @@ import { useToast } from '@/hooks/use-toast';
 interface CompletedShiftsTableProps {
   completedShifts: Shift[];
   onEditShift: (shift: Shift) => void;
+  onDeleteShift: (shift: Shift) => void;
 }
 
-export function CompletedShiftsTable({ completedShifts, onEditShift }: CompletedShiftsTableProps) {
+export function CompletedShiftsTable({ completedShifts, onEditShift, onDeleteShift }: CompletedShiftsTableProps) {
   const [processingShiftId, setProcessingShiftId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -55,6 +57,39 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
       }, 500);
     } catch (error) {
       console.error("Error handling edit shift click:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+      setProcessingShiftId(null);
+    }
+  };
+
+  const handleDeleteClick = (shift: Shift) => {
+    try {
+      // Validate that the shift has necessary data
+      if (!shift.id) {
+        toast({
+          title: "Error",
+          description: "Cannot delete shift: Missing shift ID",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log("Deleting shift with data:", shift);
+      setProcessingShiftId(shift.id);
+      
+      // Call the parent handler
+      onDeleteShift(shift);
+      
+      // Reset processing state after a short delay
+      setTimeout(() => {
+        setProcessingShiftId(null);
+      }, 500);
+    } catch (error) {
+      console.error("Error handling delete shift click:", error);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
@@ -139,20 +174,33 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
                     </TableCell>
                     <TableCell className="font-bold">{formatMoney(totalSales)}</TableCell>
                     <TableCell>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="gap-1"
-                        onClick={() => handleEditClick(shift)}
-                        disabled={isProcessing}
-                      >
-                        {isProcessing ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <ClipboardList size={14} />
-                        )}
-                        Edit
-                      </Button>
+                      <div className="flex space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="gap-1"
+                          onClick={() => handleEditClick(shift)}
+                          disabled={isProcessing}
+                        >
+                          {isProcessing ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <ClipboardList size={14} />
+                          )}
+                          Edit
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="gap-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={() => handleDeleteClick(shift)}
+                          disabled={isProcessing}
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
