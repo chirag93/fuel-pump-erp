@@ -114,10 +114,12 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
           totalLitersDispensed += dispensed;
           
           if (fuelType) {
-            if (!usageByType[fuelType]) {
-              usageByType[fuelType] = 0;
+            // Ensure fuelType is treated as a string when used as an object key
+            const fuelTypeStr = String(fuelType);
+            if (!usageByType[fuelTypeStr]) {
+              usageByType[fuelTypeStr] = 0;
             }
-            usageByType[fuelType] += dispensed;
+            usageByType[fuelTypeStr] += dispensed;
           }
         });
         
@@ -462,9 +464,9 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
         // Get the specific testing fuel for this type
         const fuelType = normalizeFuelType(reading.fuel_type);
         
-        // Fix: Convert the fuel type to string when using as an object key
-        const fuelTypeString = fuelType ? String(fuelType) : '';
-        const testingFuelForType = fuelType && formData.testing_fuel_by_type?.[fuelTypeString] || 0;
+        // Ensure fuelType is treated as a string when used as an object key
+        const fuelTypeStr = String(fuelType);
+        const testingFuelForType = fuelType && formData.testing_fuel_by_type?.[fuelTypeStr] || 0;
         
         const { error: readingError } = await supabase
           .from('readings')
