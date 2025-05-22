@@ -41,7 +41,7 @@ export interface FuelSettings {
 export function FuelTypeSettings() {
   const [fuelSettings, setFuelSettings] = useState<FuelSettings[]>([]);
   const [isAddFuelDialogOpen, setIsAddFuelDialogOpen] = useState(false);
-  const [isEditFuelDialogOpen, setIsEditFuelDialogOpen] = useState(false);
+  const [isEditFuelDialogOpen, setIsEditFuelDialogOpen = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [fuelToDelete, setFuelToDelete] = useState<FuelSettings | null>(null);
   const [newFuelType, setNewFuelType] = useState<Partial<FuelSettings>>({
@@ -362,7 +362,11 @@ export function FuelTypeSettings() {
       const indentCount = indentsData?.count || 0;
       const readingCount = readingsData?.count || 0;
       
-      const totalReferences = parseInt(transactionCount) + parseInt(indentCount) + parseInt(readingCount) + (fuelTypeUsedInPump ? 1 : 0);
+      const totalReferences = 
+        parseInt(String(transactionCount)) + 
+        parseInt(String(indentCount)) + 
+        parseInt(String(readingCount)) + 
+        (fuelTypeUsedInPump ? 1 : 0);
       
       if (totalReferences > 0) {
         // Fuel type is in use, show error toast instead of deletion dialog
