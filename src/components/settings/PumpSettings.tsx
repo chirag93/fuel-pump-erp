@@ -14,7 +14,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Edit, Plus, Settings } from 'lucide-react';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Edit, Plus, Settings, Trash2 } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from '@/hooks/use-toast';
 import { FuelSettings } from './FuelTypeSettings';
@@ -34,6 +44,8 @@ export function PumpSettings() {
   const [fuelSettings, setFuelSettings] = useState<FuelSettings[]>([]);
   const [isAddPumpDialogOpen, setIsAddPumpDialogOpen] = useState(false);
   const [isEditPumpDialogOpen, setIsEditPumpDialogOpen] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [pumpToDelete, setPumpToDelete] = useState<PumpSettings | null>(null);
   const [newPump, setNewPump] = useState<Partial<PumpSettings>>({
     pump_number: '',
     nozzle_count: 1,
@@ -201,6 +213,130 @@ export function PumpSettings() {
     }
   };
 
+  const handleDeletePump = async (pump: PumpSettings) => {
+    try {
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to delete pumps",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Check if pump is used in readings
+      const { data: readingsData, error: readingsError } = await supabase
+        .from('readings')
+        .select('count')
+        .eq('fuel_pump_id', fuelPumpId)
+        .eq('pump_id', pump.pump_number)
+        .single();
+        
+      if (readingsError && readingsError.code !== 'PGRST116') {
+        console.error("Error checking readings:", readingsError);
+        throw readingsError;
+      }
+      
+      // Check if pump is used in shifts
+      const { data: shiftsData, error: shiftsError } = await supabase
+        .from('shifts')
+        .select('staff.assigned_pumps')
+        .eq('fuel_pump_id', fuelPumpId)
+        .not('staff', 'is', null)
+        .join('staff', 'shifts.staff_id', 'staff.id');
+        
+      if (shiftsError) {
+        console.error("Error checking shifts:", shiftsError);
+        throw shiftsError;
+      }
+      
+      // Check if this pump is assigned to any staff member
+      let pumpAssignedToStaff = false;
+      
+      if (shiftsData) {
+        for (const shift of shiftsData) {
+          if (shift.staff && shift.staff.assigned_pumps) {
+            const assignedPumps = shift.staff.assigned_pumps;
+            if (Array.isArray(assignedPumps) && assignedPumps.some(p => p.id === pump.id || p.number === pump.pump_number)) {
+              pumpAssignedToStaff = true;
+              break;
+            } else if (typeof assignedPumps === 'object') {
+              const pumpArray = Object.values(assignedPumps);
+              if (pumpArray.some((p: any) => p.id === pump.id || p.number === pump.pump_number)) {
+                pumpAssignedToStaff = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+      
+      // Count references to this pump
+      const readingCount = readingsData?.count || 0;
+      
+      const totalReferences = parseInt(String(readingCount)) + (pumpAssignedToStaff ? 1 : 0);
+      
+      if (totalReferences > 0) {
+        // Pump is in use, show error toast instead of deletion dialog
+        toast({
+          title: "Cannot Delete Pump",
+          description: `"${pump.pump_number}" is currently in use in ${totalReferences} place${totalReferences > 1 ? 's' : ''} and cannot be deleted.`,
+          variant: "destructive"
+        });
+      } else {
+        // Safe to delete, show confirmation dialog
+        setPumpToDelete(pump);
+        setIsDeleteAlertOpen(true);
+      }
+    } catch (error) {
+      console.error('Error checking pump usage:', error);
+      toast({
+        title: "Error",
+        description: "Failed to check if pump is in use. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const confirmDeletePump = async () => {
+    try {
+      if (!fuelPumpId || !pumpToDelete) {
+        toast({
+          title: "Error",
+          description: "Missing information for deletion",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('pump_settings')
+        .delete()
+        .eq('id', pumpToDelete.id)
+        .eq('fuel_pump_id', fuelPumpId);
+        
+      if (error) throw error;
+      
+      // Update the state by removing the deleted pump
+      setPumpSettings(pumpSettings.filter(pump => pump.id !== pumpToDelete.id));
+      
+      toast({
+        title: "Success",
+        description: `Pump "${pumpToDelete.pump_number}" deleted successfully`
+      });
+      
+      setIsDeleteAlertOpen(false);
+      setPumpToDelete(null);
+    } catch (error) {
+      console.error('Error deleting pump:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete pump. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <>
       <div className="flex justify-between items-center">
@@ -330,13 +466,26 @@ export function PumpSettings() {
                         : 'N/A'}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleEditPump(pump)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleEditPump(pump)}
+                          className="h-8 w-8"
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleDeletePump(pump)}
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -412,6 +561,28 @@ export function PumpSettings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Alert */}
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Pump</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the pump "{pumpToDelete?.pump_number}"?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeletePump}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
