@@ -42,6 +42,7 @@ export function NewEndShiftDialog({
     handleReadingChange,
     handleInputChange,
     handleSalesChange,
+    handleTestingFuelByTypeChange,
     updateReturnedConsumable,
     handleSubmit
   } = useEndShiftDialog(shiftData, onShiftEnded);
@@ -86,9 +87,11 @@ export function NewEndShiftDialog({
                 upi_sales: formData.upi_sales,
                 cash_sales: formData.cash_sales,
                 indent_sales: formData.indent_sales,
-                testing_fuel: formData.testing_fuel
+                testing_fuel: formData.testing_fuel,
+                testing_fuel_by_type: formData.testing_fuel_by_type
               }}
               onSalesChange={handleSalesChange}
+              onTestingFuelByTypeChange={handleTestingFuelByTypeChange}
               totalSales={totalSales}
               totalLiters={totalLiters}
               fuelSalesByType={fuelSalesByType}

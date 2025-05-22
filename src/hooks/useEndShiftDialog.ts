@@ -1,501 +1,531 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { SelectedShiftData } from '@/types/shift';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from "@/integrations/supabase/client";
-import { SelectedShiftData, ShiftReading } from '@/types/shift';
-import { FuelReading } from '@/components/shift/EndShiftReadings';
-import { SelectedConsumable } from '@/components/shift/ConsumableSelection';
-import { SalesFormData } from '@/components/shift/EndShiftSales';
+import { calculateFuelUsage, getFuelLevels } from '@/utils/fuelCalculations';
+import { normalizeFuelType } from '@/utils/fuelCalculations';
 
-// Define a specific interface for the form data to avoid deep instantiation
-export interface EndShiftFormData {
+export interface FuelReading {
+  fuel_type: string;
+  opening_reading: number;
+  closing_reading: number;
+}
+
+interface FormData {
   readings: FuelReading[];
-  cash_remaining: number;
-  expenses: number;
-  consumable_expenses: number;
   card_sales: number;
   upi_sales: number;
   cash_sales: number;
   indent_sales: number;
   testing_fuel: number;
+  testing_fuel_by_type?: Record<string, number>;
+  expenses: number;
+  cash_remaining: number;
+  consumable_expenses: number;
 }
 
-export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: () => void) {
+interface CashReconciliation {
+  expected: number;
+  difference: number;
+}
+
+interface AllocatedConsumable {
+  id: string;
+  name: string;
+  quantity_allocated: number;
+  quantity_returned?: number | null;
+}
+
+export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () => void) => {
+  const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [totalSales, setTotalSales] = useState(0);
+  const [totalLiters, setTotalLiters] = useState(0);
+  const [fuelSalesByType, setFuelSalesByType] = useState<Record<string, number>>({});
+  const [fuelRates, setFuelRates] = useState<Record<string, number>>({});
+  const [allocatedConsumables, setAllocatedConsumables] = useState<AllocatedConsumable[]>([]);
+  const [returnedConsumables, setReturnedConsumables] = useState<Record<string, number>>({});
+  const [consumablesExpense, setConsumablesExpense] = useState(0);
   
-  const [formData, setFormData] = useState<EndShiftFormData>({
+  const [cashReconciliation, setCashReconciliation] = useState<CashReconciliation>({
+    expected: 0,
+    difference: 0
+  });
+  
+  const [formData, setFormData] = useState<FormData>({
     readings: [],
-    cash_remaining: 0,
     card_sales: 0,
     upi_sales: 0,
     cash_sales: 0,
     indent_sales: 0,
     testing_fuel: 0,
+    testing_fuel_by_type: {},
     expenses: 0,
+    cash_remaining: 0,
     consumable_expenses: 0
   });
-
-  // Consumables state
-  const [allocatedConsumables, setAllocatedConsumables] = useState<SelectedConsumable[]>([]);
-  const [returnedConsumables, setReturnedConsumables] = useState<SelectedConsumable[]>([]);
-  const [consumablesExpense, setConsumablesExpense] = useState<number>(0);
-
-  // Derived calculations
-  const totalSales = formData.card_sales + formData.upi_sales + formData.cash_sales + formData.indent_sales;
-  const totalLiters = formData.readings.reduce((sum, reading) => {
-    return sum + Math.max(0, reading.closing_reading - reading.opening_reading);
-  }, 0);
   
-  // Fuel-type specific sales calculations
-  const [fuelSalesByType, setFuelSalesByType] = useState<Record<string, number>>({});
-  const [fuelRates, setFuelRates] = useState<Record<string, number>>({});
-  
-  // Cash reconciliation
-  const [cashReconciliation, setCashReconciliation] = useState({
-    expected: 0,
-    difference: 0
-  });
-
+  // Load readings data for the shift
   useEffect(() => {
-    if (shiftData) {
-      console.log("Shift data loaded:", shiftData.id);
-      fetchShiftReadings();
-      fetchShiftConsumables();
-      fetchStaffIndentSales();
+    const loadShiftReadings = async () => {
+      try {
+        // Reset data
+        setFormData({
+          readings: [],
+          card_sales: 0,
+          upi_sales: 0,
+          cash_sales: 0,
+          indent_sales: 0,
+          testing_fuel: 0,
+          testing_fuel_by_type: {},
+          expenses: 0,
+          cash_remaining: 0,
+          consumable_expenses: 0
+        });
+        
+        console.log('Loading readings for shift:', shiftData.id);
+        
+        // Fetch readings for this shift
+        const { data: readingsData, error: readingsError } = await supabase
+          .from('readings')
+          .select('*')
+          .eq('shift_id', shiftData.id);
+          
+        if (readingsError) {
+          throw readingsError;
+        }
+        
+        if (!readingsData || readingsData.length === 0) {
+          console.log('No readings found for this shift');
+          return;
+        }
+        
+        console.log(`Found ${readingsData.length} readings for shift:`, readingsData);
+        
+        // Transform into fuel readings format
+        const transformedReadings = readingsData.map(reading => ({
+          fuel_type: reading.fuel_type || 'Unknown',
+          opening_reading: reading.opening_reading || 0,
+          closing_reading: reading.closing_reading || reading.opening_reading || 0
+        }));
+        
+        // Calculate totals for all readings and fuel usage by type
+        const usageByType: Record<string, number> = {};
+        let totalLitersDispensed = 0;
+        
+        transformedReadings.forEach(reading => {
+          const fuelType = normalizeFuelType(reading.fuel_type);
+          const dispensed = Math.max(0, reading.closing_reading - reading.opening_reading);
+          totalLitersDispensed += dispensed;
+          
+          if (fuelType) {
+            if (!usageByType[fuelType]) {
+              usageByType[fuelType] = 0;
+            }
+            usageByType[fuelType] += dispensed;
+          }
+        });
+        
+        setFuelSalesByType(usageByType);
+        setTotalLiters(totalLitersDispensed);
+        
+        // Fetch fuel rates
+        const fuelPrices = await getFuelLevels();
+        const ratesMap: Record<string, number> = {};
+        
+        Object.entries(fuelPrices).forEach(([type, data]) => {
+          ratesMap[type] = data.price || 0;
+        });
+        
+        setFuelRates(ratesMap);
+        
+        // Initialize testing_fuel_by_type based on available fuel types
+        const testingByType: Record<string, number> = {};
+        Object.keys(usageByType).forEach(fuelType => {
+          testingByType[fuelType] = 0;
+        });
+        
+        // Fetch existing data for the first reading
+        if (readingsData.length > 0) {
+          const firstReading = readingsData[0];
+          
+          // Initialize form with existing data
+          setFormData({
+            readings: transformedReadings,
+            card_sales: firstReading.card_sales || 0,
+            upi_sales: firstReading.upi_sales || 0,
+            cash_sales: firstReading.cash_sales || 0,
+            indent_sales: firstReading.indent_sales || 0,
+            testing_fuel: firstReading.testing_fuel || 0,
+            testing_fuel_by_type: testingByType,
+            expenses: firstReading.expenses || 0,
+            cash_remaining: firstReading.cash_remaining || 0,
+            consumable_expenses: firstReading.consumable_expenses || 0
+          });
+          
+          // Calculate total sales
+          const totalCalculatedSales = 
+            (firstReading.card_sales || 0) + 
+            (firstReading.upi_sales || 0) + 
+            (firstReading.cash_sales || 0) +
+            (firstReading.indent_sales || 0);
+          
+          setTotalSales(totalCalculatedSales);
+        }
+        
+        // Fetch consumables allocated to this shift
+        await loadShiftConsumables();
+        
+        // Fetch indent sales if available
+        await fetchIndentSales();
+        
+      } catch (error) {
+        console.error('Error loading shift readings:', error);
+        setError('Failed to load shift data. Please try again.');
+      }
+    };
+    
+    if (shiftData && shiftData.id) {
+      loadShiftReadings();
     }
   }, [shiftData]);
-
-  // Fetch staff indent sales during the shift
-  const fetchStaffIndentSales = async () => {
+  
+  // Fetch indent sales for the shift
+  const fetchIndentSales = async () => {
+    if (!shiftData || !shiftData.id) return;
+    
     try {
-      console.log("Fetching indent sales for staff:", shiftData.staff_id);
+      console.log('Fetching indent sales for shift:', shiftData.id);
       
-      // Get the shift start time to find indents during this shift
-      const { data: shiftDetails, error: shiftError } = await supabase
+      // Get shift start/end time
+      const { data: shiftInfo, error: shiftError } = await supabase
         .from('shifts')
         .select('start_time, end_time')
         .eq('id', shiftData.id)
         .single();
-      
-      if (shiftError) throw shiftError;
-      
-      if (!shiftDetails?.start_time) {
-        console.log("No start time available for shift");
+        
+      if (shiftError || !shiftInfo) {
+        console.error('Error fetching shift info for indent calculation:', shiftError);
         return;
       }
       
-      // Use end_time if available, otherwise use current time
-      const endTime = shiftDetails.end_time || new Date().toISOString();
+      const startTime = shiftInfo.start_time;
+      const endTime = shiftInfo.end_time || new Date().toISOString();
       
-      // Query transactions made by this staff during the shift
+      // Get transactions during shift
       const { data: indentData, error: indentError } = await supabase
         .from('transactions')
         .select('amount')
         .eq('staff_id', shiftData.staff_id)
-        .gte('created_at', shiftDetails.start_time)
+        .gte('created_at', startTime)
         .lte('created_at', endTime);
-      
-      if (indentError) throw indentError;
+        
+      if (indentError) {
+        console.error('Error fetching indent data:', indentError);
+        return;
+      }
       
       if (indentData && indentData.length > 0) {
-        // Sum up all the indent amounts
-        const totalIndentSales = indentData.reduce((sum, transaction) => {
-          return sum + (parseFloat(transaction.amount.toString()) || 0);
-        }, 0);
+        const totalIndent = indentData.reduce((total, item) => 
+          total + (parseFloat(item.amount) || 0), 0);
         
-        console.log(`Found ${indentData.length} indent transactions totaling ₹${totalIndentSales}`);
+        console.log(`Found ${indentData.length} indent transactions totaling ${totalIndent}`);
         
-        // Update form data with the indent sales amount
         setFormData(prev => ({
           ...prev,
-          indent_sales: totalIndentSales
+          indent_sales: totalIndent
         }));
-      } else {
-        console.log("No indent transactions found for this staff during the shift");
+        
+        // Update total sales
+        setTotalSales(prev => prev + totalIndent);
       }
     } catch (error) {
-      console.error('Error fetching staff indent sales:', error);
+      console.error('Error calculating indent sales:', error);
     }
   };
-
-  // Fetch fuel rates from database
-  useEffect(() => {
-    if (shiftData) {
-      const fetchFuelRates = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('fuel_settings')
-            .select('fuel_type, current_price');
-            
-          if (error) throw error;
-          
-          if (data) {
-            const rates: Record<string, number> = {};
-            data.forEach(item => {
-              rates[item.fuel_type] = item.current_price;
-            });
-            setFuelRates(rates);
-          }
-        } catch (error) {
-          console.error('Error fetching fuel rates:', error);
-        }
-      };
-      
-      fetchFuelRates();
-    }
-  }, [shiftData]);
   
-  useEffect(() => {
-    // Calculate sales by fuel type
-    const salesByType: Record<string, number> = {};
+  // Load consumables data for the shift
+  const loadShiftConsumables = async () => {
+    if (!shiftData || !shiftData.id) return;
     
-    formData.readings.forEach(reading => {
-      const liters = Math.max(0, reading.closing_reading - reading.opening_reading);
-      // Fetch or estimate price per liter
-      // For simplicity, we're estimating based on total sales proportional to liters
-      if (totalLiters > 0 && liters > 0) {
-        salesByType[reading.fuel_type] = (salesByType[reading.fuel_type] || 0) + liters;
-      }
-    });
-    
-    setFuelSalesByType(salesByType);
-  }, [formData.readings, totalSales, totalLiters]);
-
-  useEffect(() => {
-    // Calculate cash reconciliation when relevant values change
-    const expectedCash = formData.cash_sales;
-    const actualCash = formData.cash_remaining;
-    const expenses = formData.expenses || 0;
-    const difference = actualCash - expectedCash + expenses;
-    
-    setCashReconciliation({
-      expected: expectedCash,
-      difference: difference
-    });
-  }, [formData.cash_sales, formData.cash_remaining, formData.expenses]);
-
-  const fetchShiftReadings = async () => {
     try {
       const { data, error } = await supabase
-        .from('readings')
-        .select('*')
-        .eq('shift_id', shiftData.id);
-        
-      if (error) {
-        throw error;
-      }
-      
-      if (data && data.length > 0) {
-        // Safely map the data to our FuelReading[] type
-        const fuelReadings: FuelReading[] = data.map((reading: any) => ({
-          fuel_type: reading.fuel_type || 'Unknown',
-          opening_reading: reading.opening_reading || 0,
-          closing_reading: reading.closing_reading || reading.opening_reading
-        }));
-        
-        // Update state with the explicitly typed readings
-        setFormData(prev => ({
-          ...prev,
-          readings: fuelReadings
-        }));
-      } else {
-        // Handle case when no readings are found - create a default one
-        console.warn('No readings found for shift:', shiftData.id);
-        
-        // Create a default reading if no readings are found
-        const defaultReading: FuelReading = {
-          fuel_type: 'Diesel', // Default fuel type
-          opening_reading: shiftData.opening_reading || 0,
-          closing_reading: shiftData.opening_reading || 0
-        };
-        
-        setFormData(prev => ({
-          ...prev,
-          readings: [defaultReading]
-        }));
-        
-        toast({
-          title: "Warning",
-          description: "No meter readings found for this shift. Using opening readings as default.",
-          variant: "default"
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching shift readings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load shift readings",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Fetch consumables allocated to this shift
-  const fetchShiftConsumables = async () => {
-    try {
-      console.log("Fetching consumables for shift:", shiftData.id);
-      
-      // Get consumables allocated to this shift
-      const { data: allocations, error: allocationsError } = await supabase
         .from('shift_consumables')
         .select(`
           id,
           quantity_allocated,
           quantity_returned,
           consumable_id,
-          consumables:consumable_id (
-            id,
+          consumables (
             name,
-            unit,
             price_per_unit
           )
         `)
         .eq('shift_id', shiftData.id);
         
-      if (allocationsError) {
-        console.error('Error fetching shift consumables:', allocationsError);
-        throw allocationsError;
-      }
+      if (error) throw error;
       
-      console.log("Allocated consumables data:", allocations);
-      
-      if (allocations && allocations.length > 0) {
-        const allocated: SelectedConsumable[] = allocations.map((item: any) => ({
-          id: item.consumable_id,
-          name: item.consumables?.name || 'Unknown',
-          unit: item.consumables?.unit || 'Units',
-          price_per_unit: item.consumables?.price_per_unit || 0,
-          quantity: item.quantity_allocated || 0,
-          available: item.quantity_allocated || 0
+      if (data && data.length > 0) {
+        console.log('Found consumables for this shift:', data);
+        
+        const formattedConsumables = data.map(item => ({
+          id: item.id,
+          name: item.consumables?.name || 'Unknown Item',
+          quantity_allocated: item.quantity_allocated || 0,
+          quantity_returned: item.quantity_returned || 0,
+          price_per_unit: item.consumables?.price_per_unit || 0
         }));
         
-        // Initialize returned consumables with the same items but use returned quantity if available
-        const returned: SelectedConsumable[] = allocations.map((item: any) => ({
-          id: item.consumable_id,
-          name: item.consumables?.name || 'Unknown',
-          unit: item.consumables?.unit || 'Units',
-          price_per_unit: item.consumables?.price_per_unit || 0,
-          quantity: item.quantity_returned || 0,
-          available: item.quantity_allocated || 0
+        setAllocatedConsumables(formattedConsumables);
+        
+        // Initialize returned consumables state
+        const returnedMap: Record<string, number> = {};
+        formattedConsumables.forEach(item => {
+          returnedMap[item.id] = item.quantity_returned || 0;
+        });
+        
+        setReturnedConsumables(returnedMap);
+        
+        // Calculate consumable expenses
+        const expenses = formattedConsumables.reduce((total, item) => {
+          const consumed = item.quantity_allocated - (item.quantity_returned || 0);
+          return total + (consumed * (item.price_per_unit || 0));
+        }, 0);
+        
+        setConsumablesExpense(expenses);
+        setFormData(prev => ({
+          ...prev,
+          consumable_expenses: expenses
         }));
-        
-        setAllocatedConsumables(allocated);
-        setReturnedConsumables(returned);
-        
-        // Calculate initial consumable expenses
-        calculateConsumableExpenses(allocated, returned);
       } else {
-        console.log("No consumables found for this shift");
-        setAllocatedConsumables([]);
-        setReturnedConsumables([]);
-        setConsumablesExpense(0);
+        console.log('No consumables allocated to this shift');
       }
     } catch (error) {
-      console.error('Error fetching shift consumables:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load consumables data",
-        variant: "destructive"
-      });
+      console.error('Error loading shift consumables:', error);
     }
   };
-
-  // Calculate consumable expenses based on allocated and returned quantities
-  const calculateConsumableExpenses = (allocated: SelectedConsumable[], returned: SelectedConsumable[]) => {
-    let totalExpense = 0;
-    
-    allocated.forEach(item => {
-      const returnedItem = returned.find(r => r.id === item.id);
-      const soldQuantity = item.quantity - (returnedItem?.quantity || 0);
-      totalExpense += soldQuantity * item.price_per_unit;
-    });
-    
-    console.log("Calculated consumables expense:", totalExpense);
-    setConsumablesExpense(totalExpense);
-    setFormData(prev => ({
-      ...prev,
-      consumable_expenses: totalExpense
-    }));
-  };
-
+  
   // Update returned consumable quantity
   const updateReturnedConsumable = (id: string, quantity: number) => {
-    console.log(`Updating returned consumable ${id} to quantity ${quantity}`);
-    const updatedReturned = returnedConsumables.map(item => 
-      item.id === id ? { ...item, quantity } : item
-    );
+    setReturnedConsumables(prev => ({
+      ...prev,
+      [id]: quantity
+    }));
     
-    setReturnedConsumables(updatedReturned);
-    calculateConsumableExpenses(allocatedConsumables, updatedReturned);
+    // Recalculate consumable expenses
+    const newExpenses = allocatedConsumables.reduce((total, item) => {
+      const returnedQty = id === item.id ? quantity : (returnedConsumables[item.id] || 0);
+      const consumed = item.quantity_allocated - returnedQty;
+      const price = item.price_per_unit || 0;
+      return total + (consumed * price);
+    }, 0);
+    
+    setConsumablesExpense(newExpenses);
+    setFormData(prev => ({
+      ...prev,
+      consumable_expenses: newExpenses
+    }));
   };
-
-  // Handler for reading changes
+  
+  // Handle changes to reading fields
   const handleReadingChange = (fuelType: string, value: number) => {
     setFormData(prev => ({
       ...prev,
-      readings: prev.readings.map(reading => 
-        reading.fuel_type === fuelType 
-          ? { ...reading, closing_reading: value } 
+      readings: prev.readings.map(reading =>
+        reading.fuel_type === fuelType
+          ? { ...reading, closing_reading: value }
           : reading
       )
     }));
+    
+    // Recalculate fuel sales by type
+    const updatedSalesByType = { ...fuelSalesByType };
+    let newTotalLiters = 0;
+    
+    formData.readings.forEach(reading => {
+      const dispensed = reading.fuel_type === fuelType
+        ? Math.max(0, value - reading.opening_reading)
+        : Math.max(0, reading.closing_reading - reading.opening_reading);
+      
+      const normalizedType = normalizeFuelType(reading.fuel_type);
+      updatedSalesByType[normalizedType] = dispensed;
+      newTotalLiters += dispensed;
+    });
+    
+    setFuelSalesByType(updatedSalesByType);
+    setTotalLiters(newTotalLiters);
   };
-
-  // Handler for sales and other numeric inputs
-  const handleInputChange = (field: keyof Omit<EndShiftFormData, 'readings'>, value: number) => {
+  
+  // Handle changes to sales fields
+  const handleSalesChange = (field: keyof FormData, value: number) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+    
+    // Update total sales calculation
+    if (['card_sales', 'upi_sales', 'cash_sales', 'indent_sales'].includes(field)) {
+      const updatedSales = {
+        card_sales: field === 'card_sales' ? value : formData.card_sales,
+        upi_sales: field === 'upi_sales' ? value : formData.upi_sales,
+        cash_sales: field === 'cash_sales' ? value : formData.cash_sales,
+        indent_sales: field === 'indent_sales' ? value : formData.indent_sales
+      };
+      
+      const total = updatedSales.card_sales + updatedSales.upi_sales + 
+                    updatedSales.cash_sales + updatedSales.indent_sales;
+      
+      setTotalSales(total);
+    }
   };
-
-  // Handler for sales form data changes
-  const handleSalesChange = (field: keyof SalesFormData, value: number) => {
-    handleInputChange(field, value);
+  
+  // Handle changes to testing fuel by type
+  const handleTestingFuelByTypeChange = (fuelType: string, value: number) => {
+    setFormData(prev => ({
+      ...prev,
+      testing_fuel_by_type: {
+        ...(prev.testing_fuel_by_type || {}),
+        [fuelType]: value
+      },
+      // Also update the total testing fuel value
+      testing_fuel: Object.entries({
+        ...(prev.testing_fuel_by_type || {}),
+        [fuelType]: value
+      }).reduce((sum, [_, val]) => sum + val, 0)
+    }));
   };
-
+  
+  // Handle changes to other input fields
+  const handleInputChange = (field: keyof FormData, value: number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Calculate cash reconciliation
+    if (field === 'cash_remaining' || field === 'cash_sales' || field === 'expenses') {
+      calculateCashReconciliation(
+        field === 'cash_sales' ? value : formData.cash_sales,
+        field === 'cash_remaining' ? value : formData.cash_remaining,
+        field === 'expenses' ? value : formData.expenses
+      );
+    }
+  };
+  
+  // Calculate cash reconciliation
+  const calculateCashReconciliation = (sales: number, remaining: number, expenses: number) => {
+    const expected = sales;
+    const difference = remaining - expected + expenses;
+    
+    setCashReconciliation({
+      expected,
+      difference
+    });
+  };
+  
+  // Submit the form
   const handleSubmit = async () => {
     try {
       setIsProcessing(true);
       setError(null);
       
-      // Validate closing readings are greater than opening
-      const hasInvalidReading = formData.readings.some(
-        reading => reading.closing_reading < reading.opening_reading
-      );
-      
-      if (hasInvalidReading) {
-        setError("Closing readings cannot be less than opening readings");
-        setIsProcessing(false);
+      // Validate data
+      if (formData.readings.some(r => !r.closing_reading || r.closing_reading <= r.opening_reading)) {
+        setError('All closing readings must be greater than opening readings');
         return false;
       }
       
-      // 1. Update shift status
+      // End the shift
+      const now = new Date().toISOString();
+      
+      // Update the shift record
       const { error: shiftError } = await supabase
         .from('shifts')
         .update({
+          end_time: now,
           status: 'completed',
-          end_time: new Date().toISOString(),
           cash_remaining: formData.cash_remaining
         })
         .eq('id', shiftData.id);
         
       if (shiftError) {
-        console.error('Error updating shift status:', shiftError);
-        setError("Failed to update shift status: " + shiftError.message);
-        return false;
+        throw shiftError;
       }
       
-      // 2. Update readings for each fuel type
+      // Calculate the total testing fuel amount
+      let totalTestingFuel = formData.testing_fuel;
+      if (formData.testing_fuel_by_type && Object.keys(formData.testing_fuel_by_type).length > 0) {
+        totalTestingFuel = Object.values(formData.testing_fuel_by_type).reduce((sum, val) => sum + val, 0);
+      }
+      
+      // Update readings for each fuel type
       for (const reading of formData.readings) {
-        // Check if reading exists for this fuel type
-        const { data: existingReadings, error: checkError } = await supabase
+        // Get the specific testing fuel for this type
+        const fuelType = normalizeFuelType(reading.fuel_type);
+        const testingFuelForType = formData.testing_fuel_by_type?.[fuelType] || 0;
+        
+        const { error: readingError } = await supabase
           .from('readings')
-          .select('id')
+          .update({
+            closing_reading: reading.closing_reading,
+            cash_remaining: formData.cash_remaining,
+            card_sales: formData.card_sales,
+            upi_sales: formData.upi_sales,
+            cash_sales: formData.cash_sales,
+            indent_sales: formData.indent_sales,
+            expenses: formData.expenses,
+            consumable_expenses: formData.consumable_expenses,
+            // Use specific testing fuel for this fuel type if available
+            testing_fuel: testingFuelForType
+          })
           .eq('shift_id', shiftData.id)
           .eq('fuel_type', reading.fuel_type);
           
-        if (checkError) {
-          console.error('Error checking readings:', checkError);
-          setError("Failed to check existing readings: " + checkError.message);
-          return false;
-        }
-        
-        if (existingReadings && existingReadings.length > 0) {
-          // Update existing reading with all sales data including indent_sales
-          const { error: readingError } = await supabase
-            .from('readings')
-            .update({
-              closing_reading: reading.closing_reading,
-              cash_remaining: formData.cash_remaining,
-              card_sales: formData.card_sales,
-              upi_sales: formData.upi_sales,
-              cash_sales: formData.cash_sales,
-              indent_sales: formData.indent_sales,
-              testing_fuel: formData.testing_fuel,
-              expenses: formData.expenses,
-              consumable_expenses: formData.consumable_expenses
-            })
-            .eq('shift_id', shiftData.id)
-            .eq('fuel_type', reading.fuel_type);
-            
-          if (readingError) {
-            console.error('Error updating reading:', readingError);
-            setError("Failed to update readings: " + readingError.message);
-            return false;
-          }
-        } else {
-          // Create new reading if it doesn't exist - include indent_sales
-          const { error: createError } = await supabase
-            .from('readings')
-            .insert({
-              shift_id: shiftData.id,
-              staff_id: shiftData.staff_id,
-              pump_id: shiftData.pump_id || 'Unknown',
-              date: new Date().toISOString().split('T')[0],
-              fuel_type: reading.fuel_type,
-              opening_reading: reading.opening_reading,
-              closing_reading: reading.closing_reading,
-              cash_remaining: formData.cash_remaining,
-              card_sales: formData.card_sales,
-              upi_sales: formData.upi_sales,
-              cash_sales: formData.cash_sales,
-              indent_sales: formData.indent_sales,
-              testing_fuel: formData.testing_fuel,
-              expenses: formData.expenses,
-              consumable_expenses: formData.consumable_expenses
-            });
-            
-          if (createError) {
-            console.error('Error creating reading:', createError);
-            setError("Failed to create readings: " + createError.message);
-            return false;
-          }
+        if (readingError) {
+          throw readingError;
         }
       }
       
-      // 3. Update returned consumables if any were allocated
-      if (allocatedConsumables.length > 0) {
-        for (const item of returnedConsumables) {
-          const allocated = allocatedConsumables.find(a => a.id === item.id);
-          if (allocated) {
-            // Update the shift_consumables record with returned quantity
-            const { error: updateError } = await supabase
-              .from('shift_consumables')
-              .update({
-                quantity_returned: item.quantity,
-                status: 'returned'
-              })
-              .eq('shift_id', shiftData.id)
-              .eq('consumable_id', item.id);
-              
-            if (updateError) {
-              console.error('Error updating consumables:', updateError);
-              setError("Failed to update consumables: " + updateError.message);
-              return false;
-            }
-          }
+      // Update consumables
+      for (const [id, quantity] of Object.entries(returnedConsumables)) {
+        const { error: consumableError } = await supabase
+          .from('shift_consumables')
+          .update({
+            quantity_returned: quantity,
+            status: 'returned'
+          })
+          .eq('id', id);
+          
+        if (consumableError) {
+          console.error('Error updating consumable:', consumableError);
         }
       }
       
       toast({
-        title: "Success",
-        description: "Shift ended successfully"
+        title: 'Success',
+        description: 'Shift ended successfully!'
       });
       
-      onShiftEnded();
+      // Call the completion callback
+      onComplete();
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error ending shift:', error);
-      setError("Failed to end shift: " + (error.message || "Unknown error"));
+      setError('Failed to end shift. Please try again.');
+      
+      toast({
+        title: 'Error',
+        description: 'Failed to end shift. Please try again.',
+        variant: 'destructive'
+      });
       return false;
     } finally {
       setIsProcessing(false);
     }
   };
-
+  
   return {
     formData,
     isProcessing,
@@ -511,7 +541,8 @@ export function useEndShiftDialog(shiftData: SelectedShiftData, onShiftEnded: ()
     handleReadingChange,
     handleInputChange,
     handleSalesChange,
+    handleTestingFuelByTypeChange,
     updateReturnedConsumable,
     handleSubmit
   };
-}
+};

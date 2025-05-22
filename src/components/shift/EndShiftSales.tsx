@@ -10,12 +10,16 @@ export interface SalesFormData {
   upi_sales: number;
   cash_sales: number;
   testing_fuel: number;
-  indent_sales: number; // Ensure indent_sales is included
+  indent_sales: number;
+  // New field to track testing fuel by type
+  testing_fuel_by_type?: Record<string, number>;
 }
 
 interface EndShiftSalesProps {
   salesData: SalesFormData;
   onSalesChange: (field: keyof SalesFormData, value: number) => void;
+  // New handler for testing fuel by type
+  onTestingFuelByTypeChange?: (fuelType: string, value: number) => void;
   totalSales: number;
   totalLiters: number;
   fuelSalesByType?: Record<string, number>;
@@ -32,6 +36,7 @@ const safeNumberFormat = (value?: number | null, options?: Intl.NumberFormatOpti
 export function EndShiftSales({ 
   salesData, 
   onSalesChange,
+  onTestingFuelByTypeChange,
   totalSales,
   totalLiters,
   fuelSalesByType = {},
@@ -94,15 +99,35 @@ export function EndShiftSales({
         </p>
       </div>
       
-      <div>
-        <Label htmlFor="testing_fuel">Testing Fuel (Liters)</Label>
-        <Input
-          id="testing_fuel"
-          type="number"
-          value={salesData.testing_fuel || ''}
-          onChange={(e) => handleInputChange('testing_fuel', e.target.value)}
-        />
-        <p className="text-xs text-muted-foreground mt-1">
+      {/* Testing fuel inputs by fuel type */}
+      <div className="border p-4 rounded-md bg-muted/20">
+        <Label className="mb-2 block">Testing Fuel By Type (Liters)</Label>
+        
+        {Object.keys(fuelSalesByType).length > 0 ? (
+          <div className="grid gap-3">
+            {Object.keys(fuelSalesByType).map(fuelType => (
+              <div key={fuelType} className="grid grid-cols-2 gap-2 items-center">
+                <span className="text-sm font-medium">{fuelType}:</span>
+                <Input
+                  type="number"
+                  value={(salesData.testing_fuel_by_type?.[fuelType] || 0) === 0 ? '' : salesData.testing_fuel_by_type?.[fuelType]}
+                  onChange={(e) => onTestingFuelByTypeChange?.(fuelType, parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                  className="h-8"
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Input
+            id="testing_fuel"
+            type="number"
+            value={salesData.testing_fuel || ''}
+            onChange={(e) => handleInputChange('testing_fuel', e.target.value)}
+            placeholder="Total testing fuel (all types)"
+          />
+        )}
+        <p className="text-xs text-muted-foreground mt-2">
           Enter any fuel used for testing purposes that wasn't sold to customers
         </p>
       </div>
@@ -123,12 +148,23 @@ export function EndShiftSales({
                   {Object.entries(fuelSalesByType).map(([fuelType, liters]) => {
                     const rate = fuelRates[fuelType] || 0;
                     const calculatedAmount = liters * rate;
+                    // Subtract testing fuel from liters if available
+                    const testingAmount = salesData.testing_fuel_by_type?.[fuelType] || 0;
+                    const actualSoldLiters = Math.max(0, liters - testingAmount);
+                    const actualSoldAmount = actualSoldLiters * rate;
                     
                     return (
                       <div key={fuelType} className="grid grid-cols-3">
                         <span className="font-medium">{fuelType}:</span>
-                        <span>{safeNumberFormat(liters, {maximumFractionDigits: 2})} L</span>
-                        <span className="text-right">₹{safeNumberFormat(calculatedAmount, {maximumFractionDigits: 2})}</span>
+                        <span>
+                          {safeNumberFormat(actualSoldLiters, {maximumFractionDigits: 2})} L
+                          {testingAmount > 0 && (
+                            <span className="text-xs text-muted-foreground ml-1">
+                              (+{testingAmount.toFixed(2)} testing)
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-right">₹{safeNumberFormat(actualSoldAmount, {maximumFractionDigits: 2})}</span>
                       </div>
                     );
                   })}
