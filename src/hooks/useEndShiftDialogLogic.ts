@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -290,20 +289,40 @@ export function useEndShiftDialogLogic(
       console.log("Loading completed shift data for ID:", shiftId);
       setLoadingMessage('Loading shift readings...');
       
-      // Get existing readings to check schema, using maybeSingle for better error handling
-      const { data: readingData, error: readingError } = await supabase
+      // Get existing readings, using .select() instead of .maybeSingle() to handle multiple readings
+      const { data: readingsData, error: readingError } = await supabase
         .from('readings')
         .select('*')
-        .eq('shift_id', shiftId)
-        .maybeSingle();
+        .eq('shift_id', shiftId);
         
       if (readingError) {
         console.error('Supabase error fetching reading data:', readingError);
         throw readingError;
       }
       
-      if (readingData) {
-        console.log("Found reading data:", readingData);
+      if (readingsData && readingsData.length > 0) {
+        console.log(`Found ${readingsData.length} reading records for this shift:`, readingsData);
+        
+        // Take the most recent reading or the one with the most complete data
+        // We'll select the reading with the highest closing_reading value if available
+        const sortedReadings = readingsData.sort((a, b) => {
+          // Sort by closing_reading (highest first)
+          const closingA = a.closing_reading || 0;
+          const closingB = b.closing_reading || 0;
+          
+          if (closingB !== closingA) {
+            return closingB - closingA;
+          }
+          
+          // If closing readings are the same, sort by created_at (newest first)
+          const dateA = new Date(a.created_at || 0).getTime();
+          const dateB = new Date(b.created_at || 0).getTime();
+          return dateB - dateA;
+        });
+        
+        // Use the first (likely most relevant) reading after sorting
+        const readingData = sortedReadings[0];
+        console.log("Using reading data:", readingData);
         
         // Handle the case where the expenses field might not exist in older records
         const expensesValue = readingData.expenses !== undefined ? readingData.expenses : 0;
