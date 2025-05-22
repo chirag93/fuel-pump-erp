@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,9 +14,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Droplet, Edit, Plus } from 'lucide-react';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Droplet, Edit, Plus, Trash2 } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { getFuelPumpId } from '@/integrations/utils';
 
 export interface FuelSettings {
@@ -32,6 +43,8 @@ export function FuelTypeSettings() {
   const [fuelSettings, setFuelSettings] = useState<FuelSettings[]>([]);
   const [isAddFuelDialogOpen, setIsAddFuelDialogOpen] = useState(false);
   const [isEditFuelDialogOpen, setIsEditFuelDialogOpen] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [fuelToDelete, setFuelToDelete] = useState<FuelSettings | null>(null);
   const [newFuelType, setNewFuelType] = useState<Partial<FuelSettings>>({
     fuel_type: '',
     current_price: 0,
@@ -275,6 +288,50 @@ export function FuelTypeSettings() {
     setEditFuelType({...fuel});
     setIsEditFuelDialogOpen(true);
   };
+  
+  const handleDeleteFuelType = (fuel: FuelSettings) => {
+    setFuelToDelete(fuel);
+    setIsDeleteAlertOpen(true);
+  };
+  
+  const confirmDeleteFuelType = async () => {
+    try {
+      if (!fuelPumpId || !fuelToDelete) {
+        toast({
+          title: "Error",
+          description: "Missing information for deletion",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('fuel_settings')
+        .delete()
+        .eq('id', fuelToDelete.id)
+        .eq('fuel_pump_id', fuelPumpId);
+        
+      if (error) throw error;
+      
+      // Update the state by removing the deleted fuel type
+      setFuelSettings(fuelSettings.filter(fuel => fuel.id !== fuelToDelete.id));
+      
+      toast({
+        title: "Success",
+        description: `Fuel type "${fuelToDelete.fuel_type}" deleted successfully`
+      });
+      
+      setIsDeleteAlertOpen(false);
+      setFuelToDelete(null);
+    } catch (error) {
+      console.error('Error deleting fuel type:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete fuel type. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <>
@@ -363,7 +420,7 @@ export function FuelTypeSettings() {
                   <TableHead className="text-right">Tank Capacity</TableHead>
                   <TableHead className="text-right">Current Level</TableHead>
                   <TableHead className="text-right">Last Updated</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -379,13 +436,26 @@ export function FuelTypeSettings() {
                         : 'N/A'}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleEditFuelType(fuel)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleEditFuelType(fuel)}
+                          className="h-8 w-8"
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleDeleteFuelType(fuel)}
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -449,6 +519,28 @@ export function FuelTypeSettings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Alert */}
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Fuel Type</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the fuel type "{fuelToDelete?.fuel_type}"? 
+              This action cannot be undone and may affect reporting and historical data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteFuelType} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
