@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,7 +42,7 @@ export interface FuelSettings {
 export function FuelTypeSettings() {
   const [fuelSettings, setFuelSettings] = useState<FuelSettings[]>([]);
   const [isAddFuelDialogOpen, setIsAddFuelDialogOpen] = useState(false);
-  const [isEditFuelDialogOpen, setIsEditFuelDialogOpen = useState(false);
+  const [isEditFuelDialogOpen, setIsEditFuelDialogOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [fuelToDelete, setFuelToDelete] = useState<FuelSettings | null>(null);
   const [newFuelType, setNewFuelType] = useState<Partial<FuelSettings>>({
