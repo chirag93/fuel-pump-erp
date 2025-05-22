@@ -18,8 +18,8 @@ export interface SalesFormData {
 interface EndShiftSalesProps {
   salesData: SalesFormData;
   onSalesChange: (field: keyof SalesFormData, value: number) => void;
-  // New handler for testing fuel by type
-  onTestingFuelByTypeChange?: (fuelType: string, value: number) => void;
+  // Updated type to accept string or number to match useShiftSales implementation
+  onTestingFuelByTypeChange?: (fuelType: string | number, value: number) => void;
   totalSales: number;
   totalLiters: number;
   fuelSalesByType?: Record<string, number>;
