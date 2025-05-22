@@ -59,13 +59,13 @@ export function NewEndShiftDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !isProcessing && !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0">
+        <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle>End Shift</DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="max-h-[calc(80vh-120px)]">
-          <div className="grid gap-6 py-4 pr-4">
+        <ScrollArea className="max-h-[calc(80vh-120px)] px-6">
+          <div className="grid gap-6 py-4">
             <ShiftDetailsSection shiftData={shiftData} />
             
             {/* Readings Section */}
@@ -138,13 +138,13 @@ export function NewEndShiftDialog({
         </ScrollArea>
         
         {error && (
-          <Alert variant="destructive" className="mt-4">
+          <Alert variant="destructive" className="mx-6 mt-2">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
         
-        <DialogFooter>
+        <DialogFooter className="px-6 py-4 border-t">
           <Button variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
           <Button onClick={onSubmit} disabled={isProcessing}>
             {isProcessing ? (
