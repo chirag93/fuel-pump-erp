@@ -1,5 +1,6 @@
 
-import { Route, Routes, Navigate } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import Home from './Home';
 import MainLayout from './layouts/MainLayout';
 import AuthLayout from './layouts/AuthLayout';
@@ -18,7 +19,8 @@ import SuperAdminSettings from './pages/SuperAdminSettings';
 import SuperAdminAnalytics from './pages/SuperAdminAnalytics';
 import SuperAdminFuelPumps from './superadmin/pages/SuperAdminFuelPumps';
 import { AuthGuard } from './components/auth/AuthGuard';
-import { SuperAdminProtectedRoute } from './components/auth/SuperAdminProtectedRoute';
+// Fix import - import as default instead of named export
+import SuperAdminProtectedRoute from './components/auth/SuperAdminProtectedRoute';
 
 const AppRoutes = () => {
   return (
@@ -27,15 +29,19 @@ const AppRoutes = () => {
       <Route path="/" element={<Home />} />
       
       {/* Auth routes */}
-      <Route element={<AuthLayout />}>
+      <Route element={<AuthLayout><Outlet /></AuthLayout>}>
         <Route path="/login" element={<Login />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
       </Route>
       
       {/* Main app routes - protected by auth */}
-      <Route element={<AuthGuard />}>
-        <Route element={<Layout />}>
+      <Route element={
+        <AuthGuard feature="dashboard">
+          <Outlet />
+        </AuthGuard>
+      }>
+        <Route element={<Layout><Outlet /></Layout>}>
           <Route path="/dashboard" element={<Dashboard />} />
           {/* Add other protected routes here */}
         </Route>
@@ -44,7 +50,7 @@ const AppRoutes = () => {
       {/* Super Admin routes */}
       <Route path="/super-admin/login" element={<SuperAdminLogin />} />
       <Route element={<SuperAdminProtectedRoute />}>
-        <Route element={<SuperAdminLayout />}>
+        <Route element={<SuperAdminLayout><Outlet /></SuperAdminLayout>}>
           <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
           <Route path="/super-admin/provision" element={<ProvisionPump />} />
           <Route path="/super-admin/fuel-pumps" element={<SuperAdminFuelPumps />} />
