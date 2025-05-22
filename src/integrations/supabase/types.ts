@@ -1177,10 +1177,6 @@ export type Database = {
         Args: { customer_id: string; amount_value: number }
         Returns: number
       }
-      delete_fuel_pump_data: {
-        Args: { pump_id: string }
-        Returns: undefined
-      }
       get_fuel_pump_by_email: {
         Args: { email_param: string }
         Returns: {

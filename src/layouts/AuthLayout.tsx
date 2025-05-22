@@ -1,11 +1,8 @@
 
 import React from 'react';
+import { Outlet } from 'react-router-dom';
 
-interface AuthLayoutProps {
-  children: React.ReactNode;
-}
-
-export const AuthLayout = ({ children }: AuthLayoutProps) => {
+export const AuthLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-md p-6 bg-card rounded-lg shadow-md">
