@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { SelectedShiftData } from '@/types/shift';
@@ -462,8 +461,10 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
       for (const reading of formData.readings) {
         // Get the specific testing fuel for this type
         const fuelType = normalizeFuelType(reading.fuel_type);
-        // Fix: Convert the object key to string when accessing testing_fuel_by_type
-        const testingFuelForType = fuelType && formData.testing_fuel_by_type?.[fuelType.toString()] || 0;
+        
+        // Fix: Convert the fuel type to string when using as an object key
+        const fuelTypeString = fuelType ? String(fuelType) : '';
+        const testingFuelForType = fuelType && formData.testing_fuel_by_type?.[fuelTypeString] || 0;
         
         const { error: readingError } = await supabase
           .from('readings')
