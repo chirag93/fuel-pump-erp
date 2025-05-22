@@ -2,12 +2,26 @@
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { SelectedConsumable } from '@/components/shift/ConsumableSelection';
 import { Badge } from '@/components/ui/badge';
 
+// Define AllocatedConsumable type to match what we're receiving
+export interface AllocatedConsumable {
+  id: string;
+  name: string;
+  quantity_allocated: number;
+  quantity_returned?: number | null;
+  price_per_unit?: number;
+  unit?: string;
+}
+
+// Interface for returned consumables
+export interface ReturnedConsumablesMap {
+  [key: string]: number;
+}
+
 interface EndShiftConsumablesProps {
-  allocatedConsumables: SelectedConsumable[];
-  returnedConsumables: SelectedConsumable[];
+  allocatedConsumables: AllocatedConsumable[];
+  returnedConsumables: ReturnedConsumablesMap;
   updateReturnedConsumable: (id: string, quantity: number) => void;
   consumablesExpense: number;
 }
@@ -28,9 +42,11 @@ export function EndShiftConsumables({
       <CardContent className="pt-6">
         <div className="space-y-5">
           {allocatedConsumables.map((item) => {
-            const returned = returnedConsumables.find(r => r.id === item.id);
-            const sold = item.quantity - (returned?.quantity || 0);
-            const revenue = sold * item.price_per_unit;
+            const returnedQuantity = returnedConsumables[item.id] || 0;
+            const sold = item.quantity_allocated - returnedQuantity;
+            const unitPrice = item.price_per_unit || 0;
+            const revenue = sold * unitPrice;
+            const itemUnit = item.unit || 'unit';
             
             return (
               <div key={item.id} className="grid gap-3 pb-4 border-b last:border-0">
@@ -38,11 +54,11 @@ export function EndShiftConsumables({
                   <div>
                     <p className="font-medium text-base">{item.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      Price: ₹{item.price_per_unit}/per {item.unit}
+                      Price: ₹{unitPrice}/per {itemUnit}
                     </p>
                   </div>
                   <Badge variant="outline" className="bg-blue-50">
-                    {item.quantity} {item.unit} allocated
+                    {item.quantity_allocated} {itemUnit} allocated
                   </Badge>
                 </div>
                 
@@ -50,7 +66,7 @@ export function EndShiftConsumables({
                   <div className="flex flex-col space-y-1">
                     <span className="text-sm text-muted-foreground">Allocated:</span>
                     <span className="font-medium text-blue-600">
-                      {item.quantity} {item.unit}
+                      {item.quantity_allocated} {itemUnit}
                     </span>
                   </div>
                   
@@ -60,16 +76,16 @@ export function EndShiftConsumables({
                       <Input
                         type="number"
                         className="w-24 h-9"
-                        value={returned?.quantity || 0}
+                        value={returnedQuantity}
                         onChange={(e) => {
                           const val = parseInt(e.target.value);
-                          const newQuantity = isNaN(val) ? 0 : Math.min(val, item.quantity);
+                          const newQuantity = isNaN(val) ? 0 : Math.min(val, item.quantity_allocated);
                           updateReturnedConsumable(item.id, newQuantity);
                         }}
                         min={0}
-                        max={item.quantity}
+                        max={item.quantity_allocated}
                       />
-                      <span className="text-sm font-medium">{item.unit}</span>
+                      <span className="text-sm font-medium">{itemUnit}</span>
                     </div>
                   </div>
                 </div>
@@ -77,7 +93,7 @@ export function EndShiftConsumables({
                 <div className="flex justify-between items-center border-t pt-3 mt-1">
                   <span className="text-sm font-medium">Sold:</span>
                   <span className="font-medium text-green-600">
-                    {sold} {item.unit} (₹{revenue.toFixed(2)})
+                    {sold} {itemUnit} (₹{revenue.toFixed(2)})
                   </span>
                 </div>
               </div>

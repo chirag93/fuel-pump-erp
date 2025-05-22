@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { EndShiftReadings } from './EndShiftReadings';
 import { EndShiftSales } from './EndShiftSales';
 import { EndShiftCashExpenses } from './EndShiftCashExpenses';
-import { EndShiftConsumables } from './EndShiftConsumables';
+import { EndShiftConsumables, AllocatedConsumable, ReturnedConsumablesMap } from './EndShiftConsumables';
 import { useEndShiftDialog } from '@/hooks/useEndShiftDialog';
 import { ShiftDetailsSection } from './ShiftDetailsSection';
 import { ExpensesSection } from './ExpensesSection';

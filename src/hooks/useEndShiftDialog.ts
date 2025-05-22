@@ -5,6 +5,7 @@ import { SelectedShiftData } from '@/types/shift';
 import { useToast } from '@/hooks/use-toast';
 import { calculateFuelUsage, getFuelLevels } from '@/utils/fuelCalculations';
 import { normalizeFuelType } from '@/utils/fuelCalculations';
+import { AllocatedConsumable, ReturnedConsumablesMap } from '@/components/shift/EndShiftConsumables';
 
 export interface FuelReading {
   fuel_type: string;
@@ -30,13 +31,6 @@ interface CashReconciliation {
   difference: number;
 }
 
-interface AllocatedConsumable {
-  id: string;
-  name: string;
-  quantity_allocated: number;
-  quantity_returned?: number | null;
-}
-
 export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () => void) => {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -46,7 +40,7 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
   const [fuelSalesByType, setFuelSalesByType] = useState<Record<string, number>>({});
   const [fuelRates, setFuelRates] = useState<Record<string, number>>({});
   const [allocatedConsumables, setAllocatedConsumables] = useState<AllocatedConsumable[]>([]);
-  const [returnedConsumables, setReturnedConsumables] = useState<Record<string, number>>({});
+  const [returnedConsumables, setReturnedConsumables] = useState<ReturnedConsumablesMap>({});
   const [consumablesExpense, setConsumablesExpense] = useState(0);
   
   const [cashReconciliation, setCashReconciliation] = useState<CashReconciliation>({
@@ -260,7 +254,8 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
           consumable_id,
           consumables (
             name,
-            price_per_unit
+            price_per_unit,
+            unit
           )
         `)
         .eq('shift_id', shiftData.id);
@@ -270,18 +265,19 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
       if (data && data.length > 0) {
         console.log('Found consumables for this shift:', data);
         
-        const formattedConsumables = data.map(item => ({
+        const formattedConsumables: AllocatedConsumable[] = data.map(item => ({
           id: item.id,
           name: item.consumables?.name || 'Unknown Item',
           quantity_allocated: item.quantity_allocated || 0,
           quantity_returned: item.quantity_returned || 0,
-          price_per_unit: item.consumables?.price_per_unit || 0
+          price_per_unit: item.consumables?.price_per_unit || 0,
+          unit: item.consumables?.unit || 'unit'
         }));
         
         setAllocatedConsumables(formattedConsumables);
         
         // Initialize returned consumables state
-        const returnedMap: Record<string, number> = {};
+        const returnedMap: ReturnedConsumablesMap = {};
         formattedConsumables.forEach(item => {
           returnedMap[item.id] = item.quantity_returned || 0;
         });
@@ -318,8 +314,8 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
     const newExpenses = allocatedConsumables.reduce((total, item) => {
       const returnedQty = id === item.id ? quantity : (returnedConsumables[item.id] || 0);
       const consumed = item.quantity_allocated - returnedQty;
-      const price = item.price_per_unit || 0;
-      return total + (consumed * price);
+      const itemPrice = item.price_per_unit || 0;
+      return total + (consumed * itemPrice);
     }, 0);
     
     setConsumablesExpense(newExpenses);
@@ -350,7 +346,9 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
         : Math.max(0, reading.closing_reading - reading.opening_reading);
       
       const normalizedType = normalizeFuelType(reading.fuel_type);
-      updatedSalesByType[normalizedType] = dispensed;
+      if (normalizedType) {
+        updatedSalesByType[normalizedType] = dispensed;
+      }
       newTotalLiters += dispensed;
     });
     
@@ -464,7 +462,7 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
       for (const reading of formData.readings) {
         // Get the specific testing fuel for this type
         const fuelType = normalizeFuelType(reading.fuel_type);
-        const testingFuelForType = formData.testing_fuel_by_type?.[fuelType] || 0;
+        const testingFuelForType = fuelType && formData.testing_fuel_by_type?.[fuelType] || 0;
         
         const { error: readingError } = await supabase
           .from('readings')
