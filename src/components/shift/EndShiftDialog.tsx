@@ -54,7 +54,8 @@ const EndShiftDialog = ({
     handleNewShiftInputChange,
     handleStaffChange,
     handleSubmit,
-    isDataLoaded
+    isDataLoaded,
+    loadingMessage
   } = useEndShiftDialogLogic(shiftId, staffId, pumpId, openingReading, onComplete);
 
   // Add state to track if dialog is being dismissed
@@ -62,12 +63,20 @@ const EndShiftDialog = ({
   // Add initial loading state for when data is still being fetched
   const [initialLoading, setInitialLoading] = useState(true);
 
-  // Track initial loading state
+  // Track initial loading state with enhanced checks
   useEffect(() => {
     if (isDataLoaded) {
+      console.log("Data loaded successfully:", { formData, isEditingCompletedShift });
       setInitialLoading(false);
     }
-  }, [isDataLoaded]);
+  }, [isDataLoaded, formData]);
+
+  // Debug logging for data updates
+  useEffect(() => {
+    if (formData && Object.values(formData).some(value => value !== 0 && value !== '')) {
+      console.log("Form data updated:", formData);
+    }
+  }, [formData]);
 
   const onSubmitHandler = async () => {
     const success = await handleSubmit();
@@ -112,7 +121,9 @@ const EndShiftDialog = ({
         {initialLoading ? (
           <div className="flex flex-col items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-            <p className="text-sm text-muted-foreground">Loading shift data...</p>
+            <p className="text-sm text-muted-foreground">
+              {loadingMessage || "Loading shift data..."}
+            </p>
           </div>
         ) : (
           <>

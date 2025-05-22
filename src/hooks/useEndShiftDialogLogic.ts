@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 
@@ -65,6 +65,7 @@ export function useEndShiftDialogLogic(
   openingReading: number,
   onComplete: () => void
 ) {
+  // State variables
   const [mode, setMode] = useState<'end-only' | 'end-and-start'>('end-only');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,8 +74,10 @@ export function useEndShiftDialogLogic(
   const [indentSales, setIndentSales] = useState<number>(0);
   const [retryCount, setRetryCount] = useState(0);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const maxRetries = 5; // Increased from 3 to 5
+  const [loadingMessage, setLoadingMessage] = useState<string>('Loading shift data...');
+  const maxRetries = 5;
   
+  // Default form data state
   const [formData, setFormData] = useState<ShiftFormData>({
     closing_reading: 0,
     cash_remaining: 0,
@@ -101,12 +104,26 @@ export function useEndShiftDialogLogic(
   
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   
-  // Reset retry count when shift ID changes
+  // Reset everything when shift ID changes
   useEffect(() => {
     if (shiftId) {
       setRetryCount(0);
       setIsDataLoaded(false);
       setError(null);
+      setLoadingMessage('Loading shift data...');
+      
+      console.log('Initializing with shift ID:', shiftId);
+      
+      // Reset form data to prevent stale data
+      setFormData({
+        closing_reading: 0,
+        cash_remaining: 0,
+        card_sales: 0,
+        upi_sales: 0,
+        cash_sales: 0,
+        indent_sales: 0,
+        expenses: 0
+      });
     }
   }, [shiftId]);
 
@@ -132,15 +149,23 @@ export function useEndShiftDialogLogic(
       });
       
       // Fetch indent sales for staff
-      fetchStaffIndentSales(staffId);
+      if (staffId) {
+        fetchStaffIndentSales(staffId);
+      }
     }
     
     setError(null);
   }, [isEditingCompletedShift, pumpId, staffId, shiftId]);
 
   // Fetch indent sales for the staff during this shift
-  const fetchStaffIndentSales = async (staffId: string) => {
+  const fetchStaffIndentSales = useCallback(async (staffId: string) => {
+    if (!staffId || !shiftId) {
+      console.log("Missing staffId or shiftId for indent sales fetch");
+      return;
+    }
+    
     try {
+      setLoadingMessage('Checking indent sales...');
       console.log("Fetching indent sales for staff:", staffId);
       
       // Get the shift start time to find indents during this shift
@@ -197,124 +222,73 @@ export function useEndShiftDialogLogic(
     } catch (error) {
       console.error('Error fetching staff indent sales:', error);
     }
-  };
-
-  // Enhanced exponential backoff retry function
-  const retryWithBackoff = async (fn: () => Promise<void>, attempt = 0) => {
-    try {
-      await fn();
-    } catch (error) {
-      const maxAttempts = maxRetries;
-      if (attempt < maxAttempts) {
-        // Exponential backoff with jitter
-        const delay = Math.min(1000 * Math.pow(2, attempt), 10000) + Math.random() * 1000;
-        console.log(`Retry attempt ${attempt + 1}/${maxAttempts} after ${delay.toFixed(0)}ms`);
-        
-        setTimeout(() => {
-          retryWithBackoff(fn, attempt + 1);
-        }, delay);
-      } else {
-        throw error;
-      }
-    }
-  };
+  }, [shiftId]);
 
   // Check if we're editing a completed shift with improved error handling
-  useEffect(() => {
-    const checkShiftStatus = async () => {
-      if (!shiftId) {
-        console.log("No shift ID provided, skipping shift status check");
-        return;
+  const checkShiftStatus = useCallback(async () => {
+    if (!shiftId) {
+      console.log("No shift ID provided, skipping shift status check");
+      return;
+    }
+    
+    try {
+      console.log("Checking shift status for ID:", shiftId);
+      setLoading(true);
+      setLoadingMessage('Checking shift status...');
+      
+      // Use maybeSingle instead of single for better error handling
+      const { data, error } = await supabase
+        .from('shifts')
+        .select('status, end_time')
+        .eq('id', shiftId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Supabase error checking shift status:', error);
+        throw error;
       }
       
-      try {
-        console.log("Checking shift status for ID:", shiftId);
-        setLoading(true);
-        
-        // Use maybeSingle instead of single for better error handling
-        const { data, error } = await supabase
-          .from('shifts')
-          .select('status, end_time')
-          .eq('id', shiftId)
-          .maybeSingle();
-        
-        if (error) {
-          console.error('Supabase error checking shift status:', error);
-          throw error;
-        }
-        
-        console.log("Shift status data:", data);
-        
-        if (!data) {
-          console.warn(`No shift found with ID ${shiftId}`);
-          throw new Error(`No shift found with ID ${shiftId}`);
-        }
-        
-        // If shift has end_time and status is completed, we're editing a completed shift
-        if (data.end_time && data.status === 'completed') {
-          console.log("Editing a completed shift");
-          setIsEditingCompletedShift(true);
-          
-          // Load the existing data for this completed shift
-          await loadCompletedShiftData(shiftId);
-        } else {
-          console.log("Not editing a completed shift");
-          setIsEditingCompletedShift(false);
-          // Reset to end-only mode for active shifts by default
-          setMode('end-only');
-        }
-        
-        setIsDataLoaded(true);
-      } catch (err) {
-        console.error('Error checking shift status:', err);
-        
-        // Implement improved retry logic
-        if (retryCount < maxRetries) {
-          console.log(`Retrying shift status check (${retryCount + 1}/${maxRetries})`);
-          setRetryCount(prevCount => prevCount + 1);
-          
-          // Use exponential backoff for retries
-          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
-          setTimeout(() => {
-            checkShiftStatus();
-          }, delay);
-        } else {
-          console.error(`Failed all ${maxRetries} retry attempts when checking shift status`);
-          toast({
-            title: "Error",
-            description: "Failed to check shift status. Please try again.",
-            variant: "destructive"
-          });
-          setError("Failed to check shift status. Please try refreshing the page.");
-          setIsDataLoaded(true); // Mark as loaded even though there was an error
-        }
-      } finally {
-        setLoading(false);
+      console.log("Shift status data:", data);
+      
+      if (!data) {
+        console.warn(`No shift found with ID ${shiftId}`);
+        throw new Error(`No shift found with ID ${shiftId}`);
       }
-    };
-    
-    if (shiftId) {
-      try {
-        // Use the retry with backoff mechanism
-        retryWithBackoff(async () => {
-          await checkShiftStatus();
-        }).catch(err => {
-          console.error("All retry attempts failed:", err);
-          setError("Failed to check shift status after multiple attempts. Please try again later.");
-          setIsDataLoaded(true);
-        });
-      } catch (error) {
-        console.error("Fatal error in shift status check:", error);
-        setError("A critical error occurred. Please try refreshing the page.");
-        setIsDataLoaded(true);
+      
+      // If shift has end_time and status is completed, we're editing a completed shift
+      if (data.end_time && data.status === 'completed') {
+        console.log("Editing a completed shift");
+        setIsEditingCompletedShift(true);
+        
+        // Load the existing data for this completed shift
+        await loadCompletedShiftData(shiftId);
+      } else {
+        console.log("Not editing a completed shift");
+        setIsEditingCompletedShift(false);
+        // Reset to end-only mode for active shifts by default
+        setMode('end-only');
       }
+      
+      setIsDataLoaded(true);
+    } catch (err) {
+      console.error('Error checking shift status:', err);
+      setError("Failed to check shift status. Please try again.");
+      return Promise.reject(err);
+    } finally {
+      setLoading(false);
     }
-  }, [shiftId, retryCount, maxRetries]);
+  }, [shiftId]);
 
   // Load data for completed shift with better error handling
-  const loadCompletedShiftData = async (shiftId: string) => {
+  const loadCompletedShiftData = useCallback(async (shiftId: string) => {
+    if (!shiftId) {
+      console.error("Cannot load completed shift data: Missing shift ID");
+      return Promise.reject(new Error("Missing shift ID"));
+    }
+    
     try {
       console.log("Loading completed shift data for ID:", shiftId);
+      setLoadingMessage('Loading shift readings...');
       
       // Get existing readings to check schema, using maybeSingle for better error handling
       const { data: readingData, error: readingError } = await supabase
@@ -337,7 +311,8 @@ export function useEndShiftDialogLogic(
         // Handle the case where indent_sales might not exist in older records
         const indentSalesValue = readingData.indent_sales !== undefined ? readingData.indent_sales : 0;
         
-        setFormData({
+        // Make sure we have valid numbers for all fields
+        const formValues = {
           closing_reading: readingData.closing_reading || 0,
           cash_remaining: readingData.cash_remaining || 0,
           card_sales: readingData.card_sales || 0,
@@ -345,7 +320,11 @@ export function useEndShiftDialogLogic(
           cash_sales: readingData.cash_sales || 0,
           indent_sales: indentSalesValue,
           expenses: expensesValue
-        });
+        };
+        
+        console.log("Setting form data:", formValues);
+        
+        setFormData(formValues);
       } else {
         console.log("No reading data found for this shift");
         toast({
@@ -356,19 +335,62 @@ export function useEndShiftDialogLogic(
       }
     } catch (err) {
       console.error('Error loading completed shift data:', err);
-      toast({
-        title: "Error",
-        description: "Failed to load shift data. Please try again.",
-        variant: "destructive"
-      });
-      throw err; // Propagate error to be handled by the retry mechanism
+      setError("Failed to load shift data. Please try again.");
+      return Promise.reject(err);
     }
-  };
+  }, []);
+
+  // Implement a robust retry mechanism with exponential backoff
+  useEffect(() => {
+    const loadShiftData = async () => {
+      if (!shiftId) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        await checkShiftStatus();
+      } catch (error) {
+        console.error("Error in loadShiftData:", error);
+        
+        if (retryCount < maxRetries) {
+          const nextRetry = retryCount + 1;
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000) + Math.random() * 1000;
+          
+          console.log(`Retrying shift data load (${nextRetry}/${maxRetries}) after ${delay.toFixed(0)}ms`);
+          setLoadingMessage(`Loading data (retry ${nextRetry}/${maxRetries})...`);
+          setRetryCount(nextRetry);
+          
+          setTimeout(() => {
+            loadShiftData();
+          }, delay);
+        } else {
+          setError("Failed to load shift data after multiple attempts. Please try again later.");
+          setIsDataLoaded(true); // Mark as loaded even though there was an error
+          
+          toast({
+            title: "Error",
+            description: "Failed to load shift data after multiple attempts.",
+            variant: "destructive"
+          });
+        }
+      } finally {
+        if (retryCount >= maxRetries) {
+          setLoading(false);
+        }
+      }
+    };
+    
+    if (shiftId && !isDataLoaded) {
+      loadShiftData();
+    }
+  }, [shiftId, retryCount, isDataLoaded, checkShiftStatus, maxRetries]);
 
   // Fetch fuel price for calculations
   useEffect(() => {
     const fetchFuelPrice = async () => {
       try {
+        setLoadingMessage('Fetching fuel prices...');
         const { data, error } = await supabase
           .from('fuel_settings')
           .select('current_price')
@@ -391,6 +413,7 @@ export function useEndShiftDialogLogic(
   useEffect(() => {
     const fetchStaff = async () => {
       try {
+        setLoadingMessage('Loading staff data...');
         const { data, error } = await supabase
           .from('staff')
           .select('id, name')
@@ -417,7 +440,12 @@ export function useEndShiftDialogLogic(
     const upiSales = Number(formData.upi_sales) || 0;
     const cashSales = Number(formData.cash_sales) || 0;
     const indentSales = Number(formData.indent_sales) || 0;
-    setTotalSales(cardSales + upiSales + cashSales + indentSales);
+    
+    const total = cardSales + upiSales + cashSales + indentSales;
+    setTotalSales(total);
+    
+    // Debug log for sales calculation
+    console.log("Calculated sales:", { cardSales, upiSales, cashSales, indentSales, total });
   }, [formData.card_sales, formData.upi_sales, formData.cash_sales, formData.indent_sales]);
   
   // Calculate cash reconciliation
@@ -440,18 +468,25 @@ export function useEndShiftDialogLogic(
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    // Convert to number but handle empty string
+    const numericValue = value === '' ? '' : parseFloat(value) || 0;
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value === '' ? '' : parseFloat(value) || 0
+      [name]: numericValue
     }));
+    
+    console.log(`Form field "${name}" updated to:`, numericValue);
   };
   
   // Handle new shift input changes
   const handleNewShiftInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    const numericValue = value === '' ? '' : parseFloat(value) || 0;
+    
     setNewShiftData(prev => ({
       ...prev,
-      [name]: value === '' ? '' : parseFloat(value) || 0
+      [name]: numericValue
     }));
   };
   
@@ -493,193 +528,17 @@ export function useEndShiftDialogLogic(
     
     setLoading(true);
     setError(null);
+    setLoadingMessage('Processing...');
     
     try {
       if (isEditingCompletedShift) {
-        // Get existing readings to check schema
-        const { data: existingReadings, error: readingsCheckError } = await supabase
-          .from('readings')
-          .select('*')
-          .eq('shift_id', shiftId)
-          .limit(1);
-          
-        if (readingsCheckError) {
-          console.error('Supabase error fetching existing readings:', readingsCheckError);
-          throw readingsCheckError;
-        }
-        
-        // Properly typed existingReadings array to accommodate indent_sales
-        const typedExistingReadings = existingReadings as ReadingData[] | null;
-        
-        // Check if indent_sales column exists in the readings table
-        const hasIndentSalesColumn = typedExistingReadings && 
-          typedExistingReadings.length > 0 && 
-          'indent_sales' in typedExistingReadings[0];
-        
-        // Prepare update data for readings
-        const baseUpdateData: Record<string, any> = {
-          closing_reading: formData.closing_reading,
-          cash_remaining: formData.cash_remaining,
-          card_sales: formData.card_sales,
-          upi_sales: formData.upi_sales,
-          cash_sales: formData.cash_sales,
-          expenses: formData.expenses
-        };
-        
-        // Only add indent_sales if the column exists
-        if (hasIndentSalesColumn) {
-          baseUpdateData.indent_sales = formData.indent_sales;
-        }
-        
-        console.log("Updating readings with data:", baseUpdateData);
-        
-        // Update readings
-        const { error: updateError } = await supabase
-          .from('readings')
-          .update(baseUpdateData)
-          .eq('shift_id', shiftId);
-          
-        if (updateError) {
-          console.error('Supabase error updating readings:', updateError);
-          throw updateError;
-        }
-        
+        await updateCompletedShift();
         toast({
           title: "Success",
           description: "Shift details updated successfully."
         });
       } else {
-        // End the current shift
-        const now = new Date().toISOString();
-        
-        // Update the shift record
-        const { error: shiftError } = await supabase
-          .from('shifts')
-          .update({
-            end_time: now,
-            status: 'completed',
-            cash_remaining: formData.cash_remaining
-          })
-          .eq('id', shiftId);
-          
-        if (shiftError) {
-          console.error('Supabase error updating shift:', shiftError);
-          throw shiftError;
-        }
-        
-        // Get existing readings to check schema
-        const { data: existingReadings, error: readingsCheckError } = await supabase
-          .from('readings')
-          .select('*')
-          .eq('shift_id', shiftId)
-          .limit(1);
-          
-        if (readingsCheckError) {
-          console.error('Supabase error fetching existing readings:', readingsCheckError);
-          throw readingsCheckError;
-        }
-        
-        // Properly typed existingReadings array to accommodate indent_sales
-        const typedExistingReadings = existingReadings as ReadingData[] | null;
-        
-        // Check if indent_sales column exists in the readings table
-        const hasIndentSalesColumn = typedExistingReadings && 
-          typedExistingReadings.length > 0 && 
-          'indent_sales' in typedExistingReadings[0];
-        
-        // Prepare update data for readings
-        const baseUpdateData: Record<string, any> = {
-          closing_reading: formData.closing_reading,
-          cash_remaining: formData.cash_remaining,
-          card_sales: formData.card_sales,
-          upi_sales: formData.upi_sales,
-          cash_sales: formData.cash_sales,
-          expenses: formData.expenses
-        };
-        
-        // Only add indent_sales if the column exists
-        if (hasIndentSalesColumn) {
-          baseUpdateData.indent_sales = formData.indent_sales;
-        }
-        
-        // Update readings
-        const { error: updateError } = await supabase
-          .from('readings')
-          .update(baseUpdateData)
-          .eq('shift_id', shiftId);
-          
-        if (updateError) {
-          console.error('Supabase error updating readings:', updateError);
-          throw updateError;
-        }
-        
-        // If we're also starting a new shift
-        if (mode === 'end-and-start' && newShiftData.staff_id) {
-          // Get current shift type to determine next shift type
-          const { data: currentShift, error: currentShiftError } = await supabase
-            .from('shifts')
-            .select('shift_type')
-            .eq('id', shiftId)
-            .maybeSingle();
-            
-          if (currentShiftError) {
-            console.error('Supabase error fetching current shift:', currentShiftError);
-            throw currentShiftError;
-          }
-          
-          let nextShiftType = 'day'; // Default
-          
-          // Determine next shift type based on current shift
-          if (currentShift) {
-            if (currentShift.shift_type === 'morning') {
-              nextShiftType = 'evening';
-            } else if (currentShift.shift_type === 'evening') {
-              nextShiftType = 'night';
-            } else if (currentShift.shift_type === 'night') {
-              nextShiftType = 'morning';
-            } else if (currentShift.shift_type === 'day') {
-              nextShiftType = 'night';
-            }
-          }
-          
-          // Create a new shift
-          const { data: newShift, error: newShiftError } = await supabase
-            .from('shifts')
-            .insert([{
-              staff_id: newShiftData.staff_id,
-              shift_type: nextShiftType,
-              start_time: now,
-              status: 'active'
-            }])
-            .select();
-            
-          if (newShiftError) {
-            console.error('Supabase error creating new shift:', newShiftError);
-            throw newShiftError;
-          }
-          
-          if (!newShift || newShift.length === 0) {
-            throw new Error("Failed to create new shift");
-          }
-          
-          // Create associated reading record
-          const { error: newReadingError } = await supabase
-            .from('readings')
-            .insert([{
-              shift_id: newShift[0].id,
-              staff_id: newShiftData.staff_id,
-              pump_id: pumpId,
-              date: newShiftData.date,
-              opening_reading: formData.closing_reading, // Use closing reading as opening reading
-              cash_given: newShiftData.cash_given
-            }]);
-            
-          if (newReadingError) {
-            console.error('Supabase error creating new reading:', newReadingError);
-            throw newReadingError;
-          }
-        }
-        
+        await endCurrentShift();
         toast({
           title: "Success",
           description: mode === 'end-only' 
@@ -706,6 +565,199 @@ export function useEndShiftDialogLogic(
     }
   };
 
+  // Update a completed shift
+  const updateCompletedShift = async () => {
+    if (!shiftId) {
+      throw new Error("Missing shift ID");
+    }
+    
+    // Get existing readings to check schema
+    const { data: existingReadings, error: readingsCheckError } = await supabase
+      .from('readings')
+      .select('*')
+      .eq('shift_id', shiftId)
+      .limit(1);
+      
+    if (readingsCheckError) {
+      console.error('Supabase error fetching existing readings:', readingsCheckError);
+      throw readingsCheckError;
+    }
+    
+    // Properly typed existingReadings array to accommodate indent_sales
+    const typedExistingReadings = existingReadings as ReadingData[] | null;
+    
+    // Check if indent_sales column exists in the readings table
+    const hasIndentSalesColumn = typedExistingReadings && 
+      typedExistingReadings.length > 0 && 
+      'indent_sales' in typedExistingReadings[0];
+    
+    // Prepare update data for readings
+    const baseUpdateData: Record<string, any> = {
+      closing_reading: formData.closing_reading,
+      cash_remaining: formData.cash_remaining,
+      card_sales: formData.card_sales,
+      upi_sales: formData.upi_sales,
+      cash_sales: formData.cash_sales,
+      expenses: formData.expenses
+    };
+    
+    // Only add indent_sales if the column exists
+    if (hasIndentSalesColumn) {
+      baseUpdateData.indent_sales = formData.indent_sales;
+    }
+    
+    console.log("Updating readings with data:", baseUpdateData);
+    
+    // Update readings
+    const { error: updateError } = await supabase
+      .from('readings')
+      .update(baseUpdateData)
+      .eq('shift_id', shiftId);
+      
+    if (updateError) {
+      console.error('Supabase error updating readings:', updateError);
+      throw updateError;
+    }
+  };
+
+  // End the current shift
+  const endCurrentShift = async () => {
+    const now = new Date().toISOString();
+    
+    // Update the shift record
+    const { error: shiftError } = await supabase
+      .from('shifts')
+      .update({
+        end_time: now,
+        status: 'completed',
+        cash_remaining: formData.cash_remaining
+      })
+      .eq('id', shiftId);
+      
+    if (shiftError) {
+      console.error('Supabase error updating shift:', shiftError);
+      throw shiftError;
+    }
+    
+    // Get existing readings to check schema
+    const { data: existingReadings, error: readingsCheckError } = await supabase
+      .from('readings')
+      .select('*')
+      .eq('shift_id', shiftId)
+      .limit(1);
+      
+    if (readingsCheckError) {
+      console.error('Supabase error fetching existing readings:', readingsCheckError);
+      throw readingsCheckError;
+    }
+    
+    // Properly typed existingReadings array to accommodate indent_sales
+    const typedExistingReadings = existingReadings as ReadingData[] | null;
+    
+    // Check if indent_sales column exists in the readings table
+    const hasIndentSalesColumn = typedExistingReadings && 
+      typedExistingReadings.length > 0 && 
+      'indent_sales' in typedExistingReadings[0];
+    
+    // Prepare update data for readings
+    const baseUpdateData: Record<string, any> = {
+      closing_reading: formData.closing_reading,
+      cash_remaining: formData.cash_remaining,
+      card_sales: formData.card_sales,
+      upi_sales: formData.upi_sales,
+      cash_sales: formData.cash_sales,
+      expenses: formData.expenses
+    };
+    
+    // Only add indent_sales if the column exists
+    if (hasIndentSalesColumn) {
+      baseUpdateData.indent_sales = formData.indent_sales;
+    }
+    
+    // Update readings
+    const { error: updateError } = await supabase
+      .from('readings')
+      .update(baseUpdateData)
+      .eq('shift_id', shiftId);
+      
+    if (updateError) {
+      console.error('Supabase error updating readings:', updateError);
+      throw updateError;
+    }
+    
+    // If we're also starting a new shift
+    if (mode === 'end-and-start' && newShiftData.staff_id) {
+      await startNewShift(now);
+    }
+  };
+
+  // Start a new shift
+  const startNewShift = async (startTime: string) => {
+    // Get current shift type to determine next shift type
+    const { data: currentShift, error: currentShiftError } = await supabase
+      .from('shifts')
+      .select('shift_type')
+      .eq('id', shiftId)
+      .maybeSingle();
+      
+    if (currentShiftError) {
+      console.error('Supabase error fetching current shift:', currentShiftError);
+      throw currentShiftError;
+    }
+    
+    let nextShiftType = 'day'; // Default
+    
+    // Determine next shift type based on current shift
+    if (currentShift) {
+      if (currentShift.shift_type === 'morning') {
+        nextShiftType = 'evening';
+      } else if (currentShift.shift_type === 'evening') {
+        nextShiftType = 'night';
+      } else if (currentShift.shift_type === 'night') {
+        nextShiftType = 'morning';
+      } else if (currentShift.shift_type === 'day') {
+        nextShiftType = 'night';
+      }
+    }
+    
+    // Create a new shift
+    const { data: newShift, error: newShiftError } = await supabase
+      .from('shifts')
+      .insert([{
+        staff_id: newShiftData.staff_id,
+        shift_type: nextShiftType,
+        start_time: startTime,
+        status: 'active'
+      }])
+      .select();
+      
+    if (newShiftError) {
+      console.error('Supabase error creating new shift:', newShiftError);
+      throw newShiftError;
+    }
+    
+    if (!newShift || newShift.length === 0) {
+      throw new Error("Failed to create new shift");
+    }
+    
+    // Create associated reading record
+    const { error: newReadingError } = await supabase
+      .from('readings')
+      .insert([{
+        shift_id: newShift[0].id,
+        staff_id: newShiftData.staff_id,
+        pump_id: pumpId,
+        date: newShiftData.date,
+        opening_reading: formData.closing_reading, // Use closing reading as opening reading
+        cash_given: newShiftData.cash_given
+      }]);
+      
+    if (newReadingError) {
+      console.error('Supabase error creating new reading:', newReadingError);
+      throw newReadingError;
+    }
+  };
+
   // Calculate fuel metrics for display
   const fuelLiters = formData.closing_reading - openingReading > 0 
     ? formData.closing_reading - openingReading 
@@ -728,6 +780,7 @@ export function useEndShiftDialogLogic(
     expectedSalesAmount,
     openingReading,
     isDataLoaded,
+    loadingMessage,
     handleInputChange,
     handleNewShiftInputChange,
     handleStaffChange,

@@ -1,4 +1,5 @@
 
+import { useState } from 'react';
 import { Shift } from '@/types/shift';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { DollarSign, ClipboardList } from 'lucide-react';
 import { formatDate, formatTime } from '@/utils/dateUtils';
 import { safeNumberFormat, formatMoney } from '@/utils/formatUtils';
+import { useToast } from '@/hooks/use-toast';
 
 interface CompletedShiftsTableProps {
   completedShifts: Shift[];
@@ -13,6 +15,9 @@ interface CompletedShiftsTableProps {
 }
 
 export function CompletedShiftsTable({ completedShifts, onEditShift }: CompletedShiftsTableProps) {
+  const [processingShiftId, setProcessingShiftId] = useState<string | null>(null);
+  const { toast } = useToast();
+
   // Sort shifts by date in descending order (newest first)
   const sortedShifts = [...completedShifts].sort((a, b) => {
     const dateA = a.end_time ? new Date(a.end_time) : new Date(a.date || Date.now());
@@ -25,6 +30,39 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
     const startTime = shift.start_time ? formatTime(shift.start_time) : 'N/A';
     const endTime = shift.end_time ? formatTime(shift.end_time) : 'N/A';
     return `${startTime} - ${endTime}`;
+  };
+
+  const handleEditClick = (shift: Shift) => {
+    try {
+      // Validate that the shift has necessary data
+      if (!shift.id) {
+        toast({
+          title: "Error",
+          description: "Cannot edit shift: Missing shift ID",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log("Editing shift with data:", shift);
+      setProcessingShiftId(shift.id);
+      
+      // Call the parent handler
+      onEditShift(shift);
+      
+      // Reset processing state after a short delay
+      setTimeout(() => {
+        setProcessingShiftId(null);
+      }, 500);
+    } catch (error) {
+      console.error("Error handling edit shift click:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+      setProcessingShiftId(null);
+    }
   };
 
   return (
@@ -79,6 +117,8 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
                   ? formatDate(shift.end_time) 
                   : formatDate(shift.date || new Date().toISOString());
                 
+                const isProcessing = processingShiftId === shift.id;
+                
                 return (
                   <TableRow key={shift.id}>
                     <TableCell className="font-medium">{shift.staff_name || 'Unknown'}</TableCell>
@@ -104,9 +144,14 @@ export function CompletedShiftsTable({ completedShifts, onEditShift }: Completed
                         variant="outline" 
                         size="sm" 
                         className="gap-1"
-                        onClick={() => onEditShift(shift)}
+                        onClick={() => handleEditClick(shift)}
+                        disabled={isProcessing}
                       >
-                        <ClipboardList size={14} />
+                        {isProcessing ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <ClipboardList size={14} />
+                        )}
                         Edit
                       </Button>
                     </TableCell>
