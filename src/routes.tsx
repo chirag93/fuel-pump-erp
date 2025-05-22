@@ -38,13 +38,13 @@ const AppRoutes = () => {
       {/* Main app routes - protected by auth */}
       <Route element={
         <AuthGuard feature="dashboard">
-          <Outlet />
+          <MainLayout>
+            <Outlet />
+          </MainLayout>
         </AuthGuard>
       }>
-        <Route element={<Layout><Outlet /></Layout>}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          {/* Add other protected routes here */}
-        </Route>
+        <Route path="/dashboard" element={<Dashboard />} />
+        {/* Add other protected routes here */}
       </Route>
       
       {/* Super Admin routes */}
