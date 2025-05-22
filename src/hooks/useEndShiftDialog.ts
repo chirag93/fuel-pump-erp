@@ -462,7 +462,8 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
       for (const reading of formData.readings) {
         // Get the specific testing fuel for this type
         const fuelType = normalizeFuelType(reading.fuel_type);
-        const testingFuelForType = fuelType && formData.testing_fuel_by_type?.[fuelType] || 0;
+        // Fix: Convert the object key to string when accessing testing_fuel_by_type
+        const testingFuelForType = fuelType && formData.testing_fuel_by_type?.[fuelType.toString()] || 0;
         
         const { error: readingError } = await supabase
           .from('readings')
