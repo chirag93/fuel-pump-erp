@@ -19,7 +19,7 @@ import SuperAdminSettings from './pages/SuperAdminSettings';
 import SuperAdminAnalytics from './pages/SuperAdminAnalytics';
 import SuperAdminFuelPumps from './superadmin/pages/SuperAdminFuelPumps';
 import { AuthGuard } from './components/auth/AuthGuard';
-// Fix import - import as default instead of named export
+// Import as default
 import SuperAdminProtectedRoute from './components/auth/SuperAdminProtectedRoute';
 
 const AppRoutes = () => {
