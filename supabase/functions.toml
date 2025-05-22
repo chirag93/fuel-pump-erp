@@ -14,3 +14,7 @@ verify_jwt = false
 [functions.create-fuel-pump]
 verify_jwt = false
 # JWT verification is disabled, using custom token-based auth instead for better security
+
+[functions.delete-fuel-pump]
+verify_jwt = false
+# JWT verification is disabled, using custom token-based auth instead for better security
