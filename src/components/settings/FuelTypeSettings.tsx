@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -289,9 +288,102 @@ export function FuelTypeSettings() {
     setIsEditFuelDialogOpen(true);
   };
   
-  const handleDeleteFuelType = (fuel: FuelSettings) => {
-    setFuelToDelete(fuel);
-    setIsDeleteAlertOpen(true);
+  const handleDeleteFuelType = async (fuel: FuelSettings) => {
+    // Check if the fuel type is in use before showing the deletion confirmation
+    try {
+      if (!fuelPumpId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in with a fuel pump account to delete fuel types",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Check if fuel type is used in transactions
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('count')
+        .eq('fuel_pump_id', fuelPumpId)
+        .eq('fuel_type', fuel.fuel_type)
+        .single();
+        
+      if (transactionsError && transactionsError.code !== 'PGRST116') {
+        console.error("Error checking transactions:", transactionsError);
+        throw transactionsError;
+      }
+      
+      // Check if fuel type is used in indents
+      const { data: indentsData, error: indentsError } = await supabase
+        .from('indents')
+        .select('count')
+        .eq('fuel_pump_id', fuelPumpId)
+        .eq('fuel_type', fuel.fuel_type)
+        .single();
+        
+      if (indentsError && indentsError.code !== 'PGRST116') {
+        console.error("Error checking indents:", indentsError);
+        throw indentsError;
+      }
+      
+      // Check if fuel type is used in daily readings
+      const { data: readingsData, error: readingsError } = await supabase
+        .from('daily_readings')
+        .select('count')
+        .eq('fuel_pump_id', fuelPumpId)
+        .eq('fuel_type', fuel.fuel_type)
+        .single();
+        
+      if (readingsError && readingsError.code !== 'PGRST116') {
+        console.error("Error checking daily readings:", readingsError);
+        throw readingsError;
+      }
+      
+      // Check if fuel type is used in pump settings
+      const { data: pumpSettingsData, error: pumpSettingsError } = await supabase
+        .from('pump_settings')
+        .select('fuel_types')
+        .eq('fuel_pump_id', fuelPumpId);
+        
+      if (pumpSettingsError) {
+        console.error("Error checking pump settings:", pumpSettingsError);
+        throw pumpSettingsError;
+      }
+      
+      // Check if this fuel type is used in any pump
+      const fuelTypeUsedInPump = pumpSettingsData?.some(pump => 
+        pump.fuel_types && pump.fuel_types.some((type: string) => 
+          type.toLowerCase() === fuel.fuel_type.toLowerCase()
+        )
+      );
+      
+      // Count references to this fuel type
+      const transactionCount = transactionsData?.count || 0;
+      const indentCount = indentsData?.count || 0;
+      const readingCount = readingsData?.count || 0;
+      
+      const totalReferences = parseInt(transactionCount) + parseInt(indentCount) + parseInt(readingCount) + (fuelTypeUsedInPump ? 1 : 0);
+      
+      if (totalReferences > 0) {
+        // Fuel type is in use, show error toast instead of deletion dialog
+        toast({
+          title: "Cannot Delete Fuel Type",
+          description: `"${fuel.fuel_type}" is currently in use in ${totalReferences} place${totalReferences > 1 ? 's' : ''} and cannot be deleted.`,
+          variant: "destructive"
+        });
+      } else {
+        // Safe to delete, show confirmation dialog
+        setFuelToDelete(fuel);
+        setIsDeleteAlertOpen(true);
+      }
+    } catch (error) {
+      console.error('Error checking fuel type usage:', error);
+      toast({
+        title: "Error",
+        description: "Failed to check if fuel type is in use. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   
   const confirmDeleteFuelType = async () => {
