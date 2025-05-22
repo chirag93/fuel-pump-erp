@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { SelectedShiftData } from '@/types/shift';
@@ -139,7 +140,8 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
         // Initialize testing_fuel_by_type based on available fuel types
         const testingByType: Record<string, number> = {};
         Object.keys(usageByType).forEach(fuelType => {
-          testingByType[fuelType] = 0;
+          // Ensure fuelType is a string (it should be since it's from Object.keys)
+          testingByType[String(fuelType)] = 0;
         });
         
         // Fetch existing data for the first reading
@@ -348,7 +350,9 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
       
       const normalizedType = normalizeFuelType(reading.fuel_type);
       if (normalizedType) {
-        updatedSalesByType[normalizedType] = dispensed;
+        // Ensure normalizedType is treated as a string when used as an object key
+        const normalizedTypeStr = String(normalizedType);
+        updatedSalesByType[normalizedTypeStr] = dispensed;
       }
       newTotalLiters += dispensed;
     });
@@ -386,12 +390,12 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
       ...prev,
       testing_fuel_by_type: {
         ...(prev.testing_fuel_by_type || {}),
-        [fuelType]: value
+        [String(fuelType)]: value
       },
       // Also update the total testing fuel value
       testing_fuel: Object.entries({
         ...(prev.testing_fuel_by_type || {}),
-        [fuelType]: value
+        [String(fuelType)]: value
       }).reduce((sum, [_, val]) => sum + val, 0)
     }));
   };
@@ -548,3 +552,4 @@ export const useEndShiftDialog = (shiftData: SelectedShiftData, onComplete: () =
     handleSubmit
   };
 };
+
